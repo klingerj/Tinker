@@ -4,23 +4,25 @@
 
 static int SampleBenchmarkFunc()
 {
-    volatile uint32_t num = 0;
-    for (uint32_t i = 0; i < 100000000; ++i)
+    uint32_t num = 0;
+    for (uint32_t i = 0; i < 10000000; ++i)
     {
-    	num += i;
+    	num += i*i;
     }
     return num;
 }
 
+OPTIMIZATIONS_OFF
 int main()
 {
     TINKER_BENCHMARK_HEADER()
     TINKER_BENCHMARK("Benchmark 1", SampleBenchmarkFunc)
     TINKER_BENCHMARK("Benchmark 2", []() {
-        volatile int a = SampleBenchmarkFunc();
-        volatile int b = a * SampleBenchmarkFunc();
+        int a = SampleBenchmarkFunc();
+        int b = a * SampleBenchmarkFunc();
         return a + b;
     })
     
     exit(EXIT_SUCCESS);
 }
+OPTIMIZATIONS_ON
