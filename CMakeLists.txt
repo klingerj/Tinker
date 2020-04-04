@@ -11,6 +11,11 @@ set(SOURCE_LIST
     "Source/Math/VectorTypes.h"
     "Source/Math/VectorTypes.cpp"
     "Source/System/CoreDefines.h"
+    "Source/System/WorkerThreadPool.h"
+    "Source/System/WorkerThreadPool.cpp"
+    "Source/Platform/PlatformAPI.h"
+    "Source/Platform/Win32Layer.cpp"
+    "Source/Containers/RingBuffer.h"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST})
 add_executable(Tinker ${SOURCE_LIST})

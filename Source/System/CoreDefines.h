@@ -22,3 +22,5 @@ typedef int64_t  int64;
 #define OPTIMIZATIONS_ON __pragma(optimize( "", on ))
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
 #endif
+
+#define BYTE_ALIGN(n) alignas(n)

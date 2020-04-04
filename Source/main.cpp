@@ -1,4 +1,12 @@
+#include "System/WorkerThreadPool.h"
+
 int main()
 {
-    return 0;
+    g_WorkerThreadPool.NewJob([]() {
+        int a = 0;
+        int b = 1;
+        return a + b;
+        });
+
+    exit(EXIT_SUCCESS);
 }
