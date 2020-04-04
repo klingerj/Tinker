@@ -1,11 +1,11 @@
 #include "TinkerBenchmark.h"
 
-#include <stdint.h>
+#include "MathBenchmarks/VectorTypeBenchmarks.h"
 
-static int SampleBenchmarkFunc()
+static uint32 SampleBenchmarkFunc()
 {
-    uint32_t num = 0;
-    for (uint32_t i = 0; i < 10000000; ++i)
+    uint32 num = 0;
+    for (uint32 i = 0; i < 10000000; ++i)
     {
     	num += i*i;
     }
@@ -15,13 +15,18 @@ static int SampleBenchmarkFunc()
 OPTIMIZATIONS_OFF
 int main()
 {
+    // Samples
     TINKER_BENCHMARK_HEADER()
-    TINKER_BENCHMARK("Benchmark 1", SampleBenchmarkFunc)
-    TINKER_BENCHMARK("Benchmark 2", []() {
-        int a = SampleBenchmarkFunc();
-        int b = a * SampleBenchmarkFunc();
+    TINKER_BENCHMARK("Sample 1", SampleBenchmarkFunc)
+    TINKER_BENCHMARK("Sample 2", []() {
+        uint32 a = SampleBenchmarkFunc();
+        uint32 b = a * SampleBenchmarkFunc();
         return a + b;
     })
+    
+    // Vector benchmarks
+    TINKER_BENCHMARK("Vector benchmark - v2 Add, Scalar, 10M", BM_v2Add_Scalar)
+    TINKER_BENCHMARK("Vector benchmark - v2 Add, Vectorized, 10M", BM_v2Add_Vectorized)
     
     exit(EXIT_SUCCESS);
 }

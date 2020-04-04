@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Source/System/CoreTypes.h"
+
 #include <windows.h>
 #include <iostream>
 
@@ -11,7 +13,7 @@
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
 #endif
 
-#define NUM_SAMPLES 25
+#define NUM_SAMPLES 10
 #define SEC_2_MSEC 0.0001f
 
 #define TINKER_BENCHMARK_HEADER() \
@@ -21,7 +23,7 @@
 #define TINKER_PRINT_STATS(timeSamples) \
         float bestTime = FLT_MAX, avgTime = 0.0f, worstTime = FLT_MIN; \
         float timeSum = 0.0f; \
-        for (uint32_t i = 0; i < NUM_SAMPLES; ++i) \
+        for (uint32 i = 0; i < NUM_SAMPLES; ++i) \
         { \
             timeSum += timeSamples[i]; \
             bestTime = MIN(bestTime, timeSamples[i]); \
@@ -36,7 +38,7 @@
         std::cout << str << ":\n"; \
         float timeSamples[NUM_SAMPLES] = {}; \
         LARGE_INTEGER start = {}, end = {}; \
-        for (uint32_t i = 0; i < NUM_SAMPLES; ++i) \
+        for (uint32 i = 0; i < NUM_SAMPLES; ++i) \
         { \
             QueryPerformanceCounter(&start); \
             func(); \
