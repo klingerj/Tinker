@@ -1,22 +1,14 @@
 #pragma once
 
-#include "../Source/System/CoreTypes.h"
+#include "../Source/System/CoreDefines.h"
 
 #include <windows.h>
 #include <iostream>
 
-#define MAX(a, b) (a > b) ? a : b;
-#define MIN(a, b) (a < b) ? a : b;
-
-#ifdef _WIN32
-#define OPTIMIZATIONS_ON __pragma(optimize( "", on ))
-#define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
-#endif
-
 #define NUM_SAMPLES 10
 #define SEC_2_MSEC 0.0001f
 
-#define TINKER_BENCHMARK_HEADER() \
+#define TINKER_BENCHMARK_HEADER \
         std::cout << "Tinker Engine Benchmarks\n"; \
         std::cout << "Number of times each benchmark will be run: " << NUM_SAMPLES << "\n\n";
 
