@@ -1,0 +1,39 @@
+#pragma once
+
+#include "../../Source/Math/VectorTypes.h"
+
+// V2
+void Test_v2ConstructorDefault();
+void Test_v2ConstructorV2();
+void Test_v2ConstructorArray();
+void Test_v2ConstructorF1();
+void Test_v2ConstructorF2();
+void Test_v2OpAdd();
+void Test_v2OpSub();
+void Test_v2OpMul();
+void Test_v2OpDiv();
+void Test_v2OpAddEq();
+void Test_v2OpSubEq();
+void Test_v2OpMulEq();
+void Test_v2OpDivEq();
+void Test_v2Eq();
+void Test_v2NEq();
+
+// M2
+void Test_m2ConstructorDefault();
+void Test_m2ConstructorM2();
+void Test_m2ConstructorArray();
+void Test_m2ConstructorF1();
+void Test_m2Constructor2V2();
+void Test_m2ConstructorF4();
+void Test_m2OpAdd();
+void Test_m2OpSub();
+void Test_m2OpMulM2();
+void Test_m2OpMulV2();
+void Test_m2OpDiv();
+void Test_m2OpAddEq();
+void Test_m2OpSubEq();
+void Test_m2OpMulEq();
+void Test_m2OpDivEq();
+void Test_m2Eq();
+void Test_m2NEq();
