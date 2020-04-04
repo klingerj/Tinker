@@ -8,6 +8,9 @@ endif()
 # Engine project
 set(SOURCE_LIST
     "Source/Main.cpp"
+    "Source/Math/VectorTypes.h"
+    "Source/Math/VectorTypes.cpp"
+    "Source/System/CoreTypes.h"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST})
 add_executable(Tinker ${SOURCE_LIST})
@@ -17,6 +20,8 @@ install (TARGETS Tinker DESTINATION bin)
 set(SOURCE_LIST_BENCHMARK
     "Benchmark/BenchmarkMain.cpp"
     "Benchmark/TinkerBenchmark.h"
+    "Benchmark/MathBenchmarks/VectorTypeBenchmarks.h"
+    "Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST_BENCHMARK})
 add_executable(TinkerBenchmark ${SOURCE_LIST_BENCHMARK})
