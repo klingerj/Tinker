@@ -1,5 +1,5 @@
-#include "../../Source/Containers/RingBuffer.h"
-#include "../../Source/System/WorkerThreadPool.h"
+#include "../../Include/Containers/RingBuffer.h"
+#include "../../Include/System/WorkerThreadPool.h"
 #include "../TinkerTest.h"
 
 void Test_RingBufferConstructorDefault()
