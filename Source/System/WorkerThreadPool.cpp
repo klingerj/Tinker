@@ -1,8 +1,21 @@
 #include "WorkerThreadPool.h"
+#include <emmintrin.h>
+//WorkerThreadPool g_WorkerThreadPool;
 
-WorkerThreadPool g_WorkerThreadPool;
-
-void PushNewJob(WorkerThread* thread, WorkerJob* job)
+THREAD_FUNC_TYPE WorkerThreadFunction(void* arg)
 {
-    thread->m_jobs.Push(job);
+    ThreadInfo* info = (ThreadInfo*)(arg);
+    
+    while (!info->terminate)
+    {
+        if (info->jobs.Size() > 0)
+        {
+            WorkerJob* job = info->jobs.Pop();
+            (*job)();
+            job->m_done = true;
+        }
+        _mm_pause();
+    }
+    
+    Platform::EndThread();
 }

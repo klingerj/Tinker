@@ -7,6 +7,8 @@
 class WorkerJob
 {
 public:
+    volatile bool m_done = false;
+
     virtual void operator()() = 0;
 };
 
@@ -14,35 +16,65 @@ public:
 template <typename T>
 class JobFunc : public WorkerJob
 {
-private:
-    T m_t;
-    bool m_done = false;
-
 public:
+    T m_t;
+
     JobFunc(T t) : m_t(t) {}
     virtual void operator()() override { m_t(); };
 };
 
-typedef struct worker_thread
+typedef struct thread_info
 {
-    RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> m_jobs;
-    uint32 m_threadId = 0;
-} WorkerThread;
-void PushNewJob(WorkerThread* thread, WorkerJob* job);
+    BYTE_ALIGN(64) volatile bool terminate;
+    uint8 m_threadId;
+    BYTE_ALIGN(64) RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> jobs;
+} ThreadInfo;
+THREAD_FUNC_TYPE WorkerThreadFunction(void* arg);
+
 
 class WorkerThreadPool
 {
 private:
-    WorkerThread m_threads[4];
+    ThreadInfo m_threads[16];
 
 public:
+    WorkerThreadPool() : WorkerThreadPool(16) {}
+
+    WorkerThreadPool(uint32 NumThreads)
+    {
+        for (uint32 i = 0; i < MIN(NumThreads, 16); ++i)
+        {
+            m_threads[i] = ThreadInfo();
+            m_threads[i].m_threadId = i;
+            Platform::LaunchThread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, m_threads + i);
+        }
+    }
+    
+    ~WorkerThreadPool()
+    {
+        for (uint8 i = 0; i < 16; ++i)
+        {
+            m_threads[i].terminate = true;
+        }
+    }
+
     template <typename T>
     WorkerJob* NewJob(T t)
     {
         WorkerJob* newJob = new JobFunc(t);
-        PushNewJob(m_threads, newJob);
+
+        // Amazing scheduler
+        for (uint8 i = 0; i < 16; ++i)
+        {
+            if (m_threads[i].jobs.Size() < 64)
+            {
+                m_threads[i].jobs.Push(newJob);
+                break;
+            }
+        }
+
         return newJob;
     }
 };
 
-extern WorkerThreadPool g_WorkerThreadPool;
+//extern WorkerThreadPool g_WorkerThreadPool;
