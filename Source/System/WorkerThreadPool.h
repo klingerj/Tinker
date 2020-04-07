@@ -26,7 +26,7 @@ public:
 typedef struct thread_info
 {
     BYTE_ALIGN(64) volatile bool terminate;
-    uint8 m_threadId;
+    volatile uint8 m_threadId;
     BYTE_ALIGN(64) RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> jobs;
 } ThreadInfo;
 THREAD_FUNC_TYPE WorkerThreadFunction(void* arg);
@@ -44,7 +44,7 @@ public:
     {
         for (uint32 i = 0; i < MIN(NumThreads, 16); ++i)
         {
-            m_threads[i] = ThreadInfo();
+            m_threads[i].terminate = false;
             m_threads[i].m_threadId = i;
             Platform::LaunchThread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, m_threads + i);
         }
@@ -76,5 +76,3 @@ public:
         return newJob;
     }
 };
-
-//extern WorkerThreadPool g_WorkerThreadPool;
