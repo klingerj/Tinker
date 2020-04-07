@@ -1,44 +1,49 @@
 #pragma once
 
-#include "../System/CoreDefines.h"
+#include "../System/SystemDefines.h"
 #include "../Platform/PlatformAPI.h"
 
 template <typename T, uint32 U>
 // TODO: assert U >= 1?
 class RingBuffer
 {
+private:
+    uint32 _SIZE;
 public:
-    BYTE_ALIGN(64) T* m_data;
-    BYTE_ALIGN(4) volatile uint32 head = UINT32_MAX;
-    BYTE_ALIGN(4) volatile uint32 tail = UINT32_MAX;
+    T* m_data = nullptr;
+    BYTE_ALIGN(64) volatile uint32 m_head = UINT32_MAX;
+    BYTE_ALIGN(64) volatile uint32 m_tail = UINT32_MAX;
 
     RingBuffer()
     {
-        m_data = new T[U];
+        _SIZE = POW2_ROUNDUP(U);
     }
 
     ~RingBuffer()
     {
-        delete m_data;
+        if (m_data) delete m_data;
     }
 
     void Push(T ele)
     {
-        m_data[AtomicIncrement32(&head) & (U - 1)] = ele;
+        if (!m_data) m_data = new T[_SIZE];
+        m_data[Platform::AtomicIncrement32(&m_head) & (_SIZE - 1)] = ele;
     }
 
     T Pop()
     {
-        return m_data[AtomicIncrement32(&tail) & (U - 1)];
+        T ToReturn = m_data[Platform::AtomicIncrement32(&m_tail) & (_SIZE - 1)];
+        return ToReturn;
     }
 
     uint32 Capacity() const
     {
-        return U;
+        return _SIZE;
     }
 
     uint32 Size() const
     {
-        return (head & (U - 1)) - (tail & (U - 1));
+        uint32 size = m_head - m_tail;
+        return size;
     }
 };

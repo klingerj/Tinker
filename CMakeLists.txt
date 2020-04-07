@@ -10,7 +10,7 @@ set(SOURCE_LIST
     "Source/Main.cpp"
     "Source/Math/VectorTypes.h"
     "Source/Math/VectorTypes.cpp"
-    "Source/System/CoreDefines.h"
+    "Source/System/SystemDefines.h"
     "Source/System/WorkerThreadPool.h"
     "Source/System/WorkerThreadPool.cpp"
     "Source/Platform/PlatformAPI.h"
@@ -19,7 +19,7 @@ set(SOURCE_LIST
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST})
 add_executable(Tinker ${SOURCE_LIST})
-install (TARGETS Tinker DESTINATION bin)
+install(TARGETS Tinker DESTINATION bin)
 
 # Benchmark project
 set(SOURCE_LIST_BENCHMARK
@@ -30,15 +30,17 @@ set(SOURCE_LIST_BENCHMARK
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST_BENCHMARK})
 add_executable(TinkerBenchmark ${SOURCE_LIST_BENCHMARK})
-install (TARGETS TinkerBenchmark DESTINATION bin)
+install(TARGETS TinkerBenchmark DESTINATION bin)
 
 # Unit Testing project
 set(SOURCE_LIST_TEST
     "Test/TestMain.cpp"
     "Test/TinkerTest.h"
-    "Test/MathTests/VectorTypeTests.cpp"
+    "Source/Platform/Win32Layer.cpp"
+    "Source/System/WorkerThreadPool.cpp"
     "Test/MathTests/VectorTypeTests.h"
+    "Test/ContainerTests/RingBufferTests.h"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST_TEST})
 add_executable(TinkerTest ${SOURCE_LIST_TEST})
-install (TARGETS TinkerTest DESTINATION bin)
+install(TARGETS TinkerTest DESTINATION bin)

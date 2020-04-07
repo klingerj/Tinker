@@ -1,6 +1,7 @@
 #include "TinkerTest.h"
 
 #include "MathTests/VectorTypeTests.h"
+#include "ContainerTests/RingBufferTests.h"
 
 uint8 g_AssertFailedFlag = 0;
 
@@ -43,4 +44,11 @@ int main()
     TINKER_TEST("M2 Operator/=", Test_m2OpDivEq);
     TINKER_TEST("M2 Operator==", Test_m2Eq);
     TINKER_TEST("M2 Operator!=", Test_m2NEq);
+
+    TINKER_TEST_PRINT_NAME("Ring Buffer");
+    TINKER_TEST("Ring Buffer Constructor Default", Test_RingBufferConstructorDefault);
+    TINKER_TEST("Ring Buffer Push One", Test_RingBufferPushOne);
+    TINKER_TEST("Ring Buffer Push Many Overflow", Test_RingBufferPushManyOverflow);
+    TINKER_TEST("Ring Buffer Push One Pop One", Test_RingBufferPushOnePopOne);
+    TINKER_TEST("Ring Buffer Push Many Pop Many", Test_RingBufferPushManyPopMany);
 }

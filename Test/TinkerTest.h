@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Source/System/CoreDefines.h"
+#include "../Source/System/SystemDefines.h"
 
 #include <iostream>
 
