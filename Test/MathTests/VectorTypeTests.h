@@ -1,4 +1,4 @@
-#include "../../Source/Math/VectorTypes.h"
+#include "../../Include/Math/VectorTypes.h"
 #include "../TinkerTest.h"
 
 // V2
