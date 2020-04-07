@@ -1,6 +1,5 @@
 #include "WorkerThreadPool.h"
 #include <emmintrin.h>
-//WorkerThreadPool g_WorkerThreadPool;
 
 THREAD_FUNC_TYPE WorkerThreadFunction(void* arg)
 {

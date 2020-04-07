@@ -18,7 +18,7 @@ int main()
         
         for (int16 i = 0; i < numJobs; ++i)
         {
-            while(!jobs[i]->m_done);
+            while (!jobs[i]->m_done);
             delete jobs[i];
         }
 
