@@ -5,7 +5,8 @@ int main()
 {
     volatile int a = 0;
     {
-        WorkerThreadPool pool(16);
+        WorkerThreadPool pool;
+        pool.Startup(16);
 
         constexpr uint16 numJobs = 1024;
         WorkerJob* jobs[numJobs];
@@ -16,12 +17,13 @@ int main()
             });
         }
         
-        for (int16 i = 0; i < numJobs; ++i)
+        for (uint16 i = 0; i < numJobs; ++i)
         {
             while (!jobs[i]->m_done);
             delete jobs[i];
         }
 
+        pool.Shutdown();
         std::cout << "A: " << a << std::endl;
     }
 

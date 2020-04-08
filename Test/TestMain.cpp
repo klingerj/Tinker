@@ -47,8 +47,8 @@ int main()
 
     TINKER_TEST_PRINT_NAME("Ring Buffer");
     TINKER_TEST("Ring Buffer Constructor Default", Test_RingBufferConstructorDefault);
-    TINKER_TEST("Ring Buffer Push One", Test_RingBufferPushOne);
-    TINKER_TEST("Ring Buffer Push Many Overflow", Test_RingBufferPushManyOverflow);
-    TINKER_TEST("Ring Buffer Push One Pop One", Test_RingBufferPushOnePopOne);
-    TINKER_TEST("Ring Buffer Push Many Pop Many", Test_RingBufferPushManyPopMany);
+    TINKER_TEST("Ring Buffer Enqueue One", Test_RingBufferEnqueueOne);
+    TINKER_TEST("Ring Buffer Enqueue Many Overflow", Test_RingBufferEnqueueManyOverflow);
+    TINKER_TEST("Ring Buffer Enqueue One Dequeue One", Test_RingBufferEnqueueOneDequeueOne);
+    TINKER_TEST("Ring Buffer Enqueue Many Dequeue Many", Test_RingBufferEnqueueManyDequeueMany);
 }

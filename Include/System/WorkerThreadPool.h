@@ -25,32 +25,39 @@ public:
 
 typedef struct thread_info
 {
-    BYTE_ALIGN(64) volatile bool terminate;
-    volatile uint8 m_threadId;
+    BYTE_ALIGN(64) volatile bool terminate = false;
+    volatile bool didTerminate = true;
+    volatile uint8 threadId = 0;
     BYTE_ALIGN(64) RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> jobs;
 } ThreadInfo;
 THREAD_FUNC_TYPE WorkerThreadFunction(void* arg);
-
 
 class WorkerThreadPool
 {
 private:
     ThreadInfo m_threads[16];
+    uint8 m_schedulerCounter = 0;
+    uint8 m_numThreads = 0;
 
 public:
-    WorkerThreadPool() : WorkerThreadPool(16) {}
+    WorkerThreadPool() {}
+    ~WorkerThreadPool() {}
 
-    WorkerThreadPool(uint32 NumThreads)
+    void Startup(uint32 NumThreads)
     {
-        for (uint32 i = 0; i < MIN(NumThreads, 16); ++i)
+        m_numThreads = MIN(NumThreads, 16);
+        for (uint32 i = 0; i < m_numThreads; ++i)
         {
+            while(!m_threads[i].didTerminate);
             m_threads[i].terminate = false;
-            m_threads[i].m_threadId = i;
+            m_threads[i].didTerminate = false;
+            m_threads[i].threadId = i;
+            m_threads[i].jobs.Clear();
             Platform::LaunchThread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, m_threads + i);
         }
     }
-    
-    ~WorkerThreadPool()
+
+    void Shutdown()
     {
         for (uint8 i = 0; i < 16; ++i)
         {
@@ -64,14 +71,8 @@ public:
         WorkerJob* newJob = new JobFunc(t);
 
         // Amazing scheduler
-        for (uint8 i = 0; i < 16; ++i)
-        {
-            if (m_threads[i].jobs.Size() < 64)
-            {
-                m_threads[i].jobs.Push(newJob);
-                break;
-            }
-        }
+        m_threads[m_schedulerCounter].jobs.Enqueue(newJob);
+        m_schedulerCounter = (m_schedulerCounter + 1) % m_numThreads;
 
         return newJob;
     }
