@@ -10,6 +10,11 @@ endif()
 
 # Engine project - builds as .lib
 set(SOURCE_LIST
+    "Include/Math/VectorTypes.h"
+    "Include/System/SystemDefines.h"
+    "Include/System/WorkerThreadPool.h"
+    "Include/Platform/PlatformAPI.h"
+    "Include/Containers/RingBuffer.h"
     "Source/System/WorkerThreadPool.cpp"
     "Source/Platform/Win32Layer.cpp"
     "Source/Math/VectorTypes.cpp"

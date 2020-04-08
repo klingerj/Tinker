@@ -4,7 +4,12 @@
 
 namespace Platform
 {
+    // Atomic ops
+    uint32 AtomicGet(uint32* p);
     uint32 AtomicIncrement32(uint32 volatile *ptr);
+
+    // Intrinsics
+    void PauseCPU();
 
 #define WORKER_THREAD_STACK_SIZE SIZE_2MB
 

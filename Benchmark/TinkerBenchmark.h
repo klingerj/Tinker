@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <iostream>
 
-#define NUM_SAMPLES 10
+#define NUM_SAMPLES 5
 #define SEC_2_MSEC 0.0001f
 
 #define TINKER_BENCHMARK_HEADER \
@@ -35,6 +35,22 @@
             QueryPerformanceCounter(&start); \
             func(); \
             QueryPerformanceCounter(&end); \
+            timeSamples[i] = (end.QuadPart - start.QuadPart) * SEC_2_MSEC; \
+        } \
+        TINKER_PRINT_STATS(timeSamples); \
+        }
+
+#define TINKER_BENCHMARK_STARTUP_SHUTDOWN(str, funcSU, func, funcSD) { \
+        std::cout << str << ":\n"; \
+        float timeSamples[NUM_SAMPLES] = {}; \
+        LARGE_INTEGER start = {}, end = {}; \
+        for (uint32 i = 0; i < NUM_SAMPLES; ++i) \
+        { \
+            funcSU(); \
+            QueryPerformanceCounter(&start); \
+            func(); \
+            QueryPerformanceCounter(&end); \
+            funcSD(); \
             timeSamples[i] = (end.QuadPart - start.QuadPart) * SEC_2_MSEC; \
         } \
         TINKER_PRINT_STATS(timeSamples); \

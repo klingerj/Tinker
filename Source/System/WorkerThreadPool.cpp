@@ -1,5 +1,4 @@
 #include "../../Include/System/WorkerThreadPool.h"
-#include <emmintrin.h> // TODO: move me
 
 THREAD_FUNC_TYPE WorkerThreadFunction(void* arg)
 {
@@ -9,12 +8,14 @@ THREAD_FUNC_TYPE WorkerThreadFunction(void* arg)
     {
         if (info->jobs.Size() > 0)
         {
-            WorkerJob* job = info->jobs.Pop();
+            WorkerJob* job;
+            info->jobs.Dequeue(&job);
             (*job)();
             job->m_done = true;
         }
-        _mm_pause();
+        Platform::PauseCPU();
     }
     
+    info->didTerminate = true;
     Platform::EndThread();
 }
