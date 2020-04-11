@@ -15,6 +15,7 @@ int main()
     TINKER_TEST("V2 Constructor Array", Test_v2ConstructorArray);
     TINKER_TEST("V2 Constructor One param", Test_v2ConstructorF1);
     TINKER_TEST("V2 Constructor Two param", Test_v2ConstructorF2);
+    TINKER_TEST("V2 Operator[]", Test_v2OpBracket);
     TINKER_TEST("V2 Operator+", Test_v2OpAdd);
     TINKER_TEST("V2 Operator-", Test_v2OpSub);
     TINKER_TEST("V2 Operator*", Test_v2OpMul);
@@ -33,10 +34,12 @@ int main()
     TINKER_TEST("M2 Constructor One param", Test_m2ConstructorF1);
     TINKER_TEST("M2 Constructor Two param", Test_m2Constructor2V2);
     TINKER_TEST("M2 Constructor Four param", Test_m2ConstructorF4);
+    TINKER_TEST("M2 Operator[]", Test_m2OpBracket);
     TINKER_TEST("M2 Operator+", Test_m2OpAdd);
     TINKER_TEST("M2 Operator-", Test_m2OpSub);
     TINKER_TEST("M2 Operator* M2", Test_m2OpMulM2);
     TINKER_TEST("M2 Operator* V2", Test_m2OpMulV2);
+    TINKER_TEST("M2 V2 MUL SIMD", Test_m2V2MulSIMD);
     TINKER_TEST("M2 Operator/", Test_m2OpDiv);
     TINKER_TEST("M2 Operator+=", Test_m2OpAddEq);
     TINKER_TEST("M2 Operator-=", Test_m2OpSubEq);
