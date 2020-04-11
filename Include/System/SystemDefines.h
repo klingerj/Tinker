@@ -20,14 +20,19 @@ typedef int64_t  int64;
 #define MIN(a, b) ((a < b) ? a : b)
 
 #define ISPOW2(x) x && ((x & (x - 1)) == 0)
+
+template <typename T>
+T LOG2(T x)
+{
+    T i = 1;
+    for (; x >> i; ++i) {}
+    return i;
+}
+
 template <typename T>
 T POW2(T x)
 {
-    T i = 1;
-    for (; x >> i; ++i)
-    {
-    }
-    return 1 << i;
+    return 1 << LOG2(x);
 }
 #define POW2_ROUNDUP(x) ISPOW2(x) ? x : POW2(x);
 

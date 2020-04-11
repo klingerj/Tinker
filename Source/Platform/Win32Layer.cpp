@@ -1,11 +1,9 @@
 #include "../../Include/Platform/PlatformAPI.h"
 
-#include <emmintrin.h>
-
-#ifdef _WIN32
 #include <windows.h>
 #include <process.h>
-#endif
+
+#include <emmintrin.h>
 
 namespace Tinker
 {
@@ -13,16 +11,12 @@ namespace Tinker
     {
         uint32 AtomicIncrement32(uint32 volatile* ptr)
         {
-#ifdef _WIN32
             return InterlockedIncrement(ptr);
-#endif
         }
 
         uint32 AtomicGet(uint32 *p)
         {
-#ifdef _WIN32
             return *(volatile uint32*)p;
-#endif
         }
 
         void PauseCPU()
@@ -32,16 +26,22 @@ namespace Tinker
 
         uint64 LaunchThread(THREAD_FUNC(func), uint32 stackSize, void* argList)
         {
-#ifdef _WIN32
             return _beginthread(func, stackSize, argList);
-#endif
         }
 
         void EndThread()
         {
-#ifdef _WIN32
             _endthread();
-#endif
+        }
+
+        void* AllocAligned(size_t size, size_t alignment)
+        {
+            return _aligned_malloc(size, alignment);
+        }
+
+        void FreeAligned(void* ptr)
+        {
+            _aligned_free(ptr);
         }
     }
 }

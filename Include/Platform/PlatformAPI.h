@@ -20,7 +20,12 @@ namespace Tinker
         // Intrinsics
         void PauseCPU();
 
+        // Threading
         uint64 LaunchThread(THREAD_FUNC(func), uint32 stackSize, void* argList);
         void EndThread();
+
+        // Memory
+        void* AllocAligned(size_t size, size_t alignment);
+        void FreeAligned(void* ptr);
     }
 }
