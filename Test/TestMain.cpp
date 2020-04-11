@@ -2,6 +2,7 @@
 
 #include "MathTests/VectorTypeTests.h"
 #include "ContainerTests/RingBufferTests.h"
+#include "MemoryTests/AllocatorTests.h"
 
 uint8 g_AssertFailedFlag = 0;
 
@@ -54,4 +55,9 @@ int main()
     TINKER_TEST("Ring Buffer Enqueue Many Overflow", Test_RingBufferEnqueueManyOverflow);
     TINKER_TEST("Ring Buffer Enqueue One Dequeue One", Test_RingBufferEnqueueOneDequeueOne);
     TINKER_TEST("Ring Buffer Enqueue Many Dequeue Many", Test_RingBufferEnqueueManyDequeueMany);
+
+    TINKER_TEST_PRINT_NAME("Memory Allocators");
+    TINKER_TEST("Linear, 1K 1-byte size, 1-aligned allocs, no allocator alignment", Test_Linear_NoAlignment);
+    TINKER_TEST("Linear, 1K 1-byte size, 16-aligned allocs, no allocator alignment", Test_Linear_Alignment);
+    TINKER_TEST("Linear, 1K 1-byte size, 1-aligned allocs, no allocator alignment, w/ dealloc", Test_Linear_NoAlignment_WithDealloc);
 }

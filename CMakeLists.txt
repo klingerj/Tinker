@@ -13,6 +13,7 @@ set(SOURCE_LIST
     "Include/Math/VectorTypes.h"
     "Include/System/SystemDefines.h"
     "Include/System/WorkerThreadPool.h"
+    "Include/System/Allocators.h"
     "Include/Platform/PlatformAPI.h"
     "Include/Containers/RingBuffer.h"
     "Source/System/WorkerThreadPool.cpp"
@@ -52,6 +53,7 @@ set(SOURCE_LIST_TEST
     "Test/TinkerTest.h"
     "Test/MathTests/VectorTypeTests.h"
     "Test/ContainerTests/RingBufferTests.h"
+    "Test/MemoryTests/AllocatorTests.h"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE_LIST_TEST})
 add_executable(TinkerTest ${SOURCE_LIST_TEST})

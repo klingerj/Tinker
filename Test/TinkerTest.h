@@ -6,7 +6,7 @@
 
 extern uint8 g_AssertFailedFlag;
 
-#define MAX_TEST_NAME_CHARS 50
+#define MAX_TEST_NAME_CHARS 90
 
 #define TINKER_TEST_ASSERT(cond) \
             g_AssertFailedFlag = !(cond); \

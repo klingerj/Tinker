@@ -50,11 +50,13 @@ public:
 
     const T& operator[](size_t index) const
     {
+        TINKER_ASSERT(index < 2);
         return m_data[index];
     }
 
     T& operator[](size_t index)
     {
+        TINKER_ASSERT(index < 2);
         return m_data[index];
     }
 
