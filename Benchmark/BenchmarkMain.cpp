@@ -25,12 +25,13 @@ int main()
     });*/
     
     // Vector benchmarks
-    TINKER_BENCHMARK("VectorType - V2 Add, Scalar, 10M", BM_v2Add_Scalar);
-    TINKER_BENCHMARK("VectorType - V2 Add, Vectorized, 10M", BM_v2Add_Vectorized);
-    TINKER_BENCHMARK("VectorType - M2i * V2i, Scalar, 10M", BM_m2MulV2_iScalar);
-    TINKER_BENCHMARK("VectorType - M2F * V2F, Scalar, 10M", BM_m2MulV2_fScalar);
-    TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M2F * V2F, Scalar, Multithreaded x10 threads, 10M", BM_m2MulV2_iScalar_MT_Startup, BM_m2MulV2_iScalar_MT, BM_m2MulV2_iScalar_MT_Shutdown);
-    //TINKER_BENCHMARK("VectorType benchmark - M2F * V2F, Vectorized, 10M", BM_m2MulV2_fVectorized);
+    TINKER_BENCHMARK("VectorType - V2 Add, Scalar", BM_v2Add_Scalar);
+    TINKER_BENCHMARK("VectorType - V2 Add, Vectorized", BM_v2Add_Vectorized);
+    TINKER_BENCHMARK("VectorType - M2I * V2I, Scalar", BM_m2MulV2_iScalar);
+    TINKER_BENCHMARK("VectorType benchmark - M2I * V2I, Vectorized", BM_m2MulV2_iVectorized);
+    TINKER_BENCHMARK("VectorType - M2F * V2F, Scalar", BM_m2MulV2_fScalar);
+    TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M2F * V2F, Scalar, Multithreaded x10 threads", BM_m2MulV2_fScalar_MT_Startup, BM_m2MulV2_fScalar_MT, BM_m2MulV2_fScalar_MT_Shutdown);
+    TINKER_BENCHMARK("VectorType benchmark - M2F * V2F, Vectorized", BM_m2MulV2_fVectorized);
     
     exit(EXIT_SUCCESS);
 }

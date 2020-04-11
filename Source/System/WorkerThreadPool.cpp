@@ -1,21 +1,24 @@
 #include "../../Include/System/WorkerThreadPool.h"
 
-THREAD_FUNC_TYPE WorkerThreadFunction(void* arg)
+namespace Tinker
 {
-    ThreadInfo* info = (ThreadInfo*)(arg);
-    
-    while (!info->terminate)
+    THREAD_FUNC_TYPE WorkerThreadFunction(void* arg)
     {
-        if (info->jobs.Size() > 0)
+        ThreadInfo* info = (ThreadInfo*)(arg);
+
+        while (!info->terminate)
         {
-            WorkerJob* job;
-            info->jobs.Dequeue(&job);
-            (*job)();
-            job->m_done = true;
+            if (info->jobs.Size() > 0)
+            {
+                WorkerJob* job;
+                info->jobs.Dequeue(&job);
+                (*job)();
+                job->m_done = true;
+            }
+            Platform::PauseCPU();
         }
-        Platform::PauseCPU();
+
+        info->didTerminate = true;
+        Platform::EndThread();
     }
-    
-    info->didTerminate = true;
-    Platform::EndThread();
 }

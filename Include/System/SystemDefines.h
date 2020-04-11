@@ -36,6 +36,14 @@ T POW2(T x)
 #ifdef _WIN32
 #define OPTIMIZATIONS_ON __pragma(optimize( "", on ))
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
+
+#ifdef _DEBUG
+#include <assert.h>
+#define TINKER_ASSERT(cond) assert((cond))
+#else
+#define TINKER_ASSERT(cond)
+#endif
+
 #endif
 
 #define BYTE_ALIGN(n) alignas(n)

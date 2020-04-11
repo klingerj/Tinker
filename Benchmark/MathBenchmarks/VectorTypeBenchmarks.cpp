@@ -2,6 +2,8 @@
 
 #include "../Include/System/WorkerThreadPool.h"
 
+using namespace Tinker;
+
 WorkerThreadPool g_threadpool;
 
 void BM_v2Add_Scalar()
@@ -23,12 +25,21 @@ void BM_v2Add_Vectorized()
 
 void BM_m2MulV2_iScalar()
 {
-    m2i m = { 1, 2, 3, 4 };
-    v2i v = { 5, 6 };
-
+    v2i v = { 4, 5 };
     for (uint32 i = 0; i < 10000000; ++i)
     {
+        m2i m = { (int32)i, (int32)i + 1, (int32)i + 2, (int32)i + 3 };
         v = m * v;
+    }
+}
+
+void BM_m2MulV2_iVectorized()
+{
+    v2i v = { 4, 5 };
+    for (uint32 i = 0; i < 10000000; ++i)
+    {
+        m2i m = { (int32)i, (int32)i + 1, (int32)i + 2, (int32)i + 3 };
+        v = VectorOps::Mul_SIMD(v, m);
     }
 }
 
@@ -43,20 +54,20 @@ void BM_m2MulV2_fScalar()
     }
 }
 
-void BM_m2MulV2_iScalar_MT_Startup()
+void BM_m2MulV2_fScalar_MT_Startup()
 {
-    g_threadpool.Startup(8);
+    g_threadpool.Startup(10);
 }
 
-void BM_m2MulV2_iScalar_MT()
+void BM_m2MulV2_fScalar_MT()
 {
-    constexpr uint32 workSize = 10000000; // 10M
-    constexpr uint32 numJobs = 8;
+    constexpr uint32 workSize = 10000000;
+    constexpr uint32 numJobs = 10;
     WorkerJob* jobs[numJobs];
     for (uint16 i = 0; i < numJobs; ++i)
     {
         jobs[i] = g_threadpool.NewJob([&]() {
-            m2f m = { 1.0f, 2.0f, 3.0f, 4.0f };
+            const m2f m = { 1.0f, 2.0f, 3.0f, 4.0f };
             v2f v = { 5.0f, 6.0f };
 
             for (uint32 i = 0; i < workSize / numJobs; ++i)
@@ -77,12 +88,18 @@ void BM_m2MulV2_iScalar_MT()
     }
 }
 
-void BM_m2MulV2_iScalar_MT_Shutdown()
+void BM_m2MulV2_fScalar_MT_Shutdown()
 {
     g_threadpool.Shutdown();
 }
 
 void BM_m2MulV2_fVectorized()
 {
-    // TODO: SSE/AVX version of m2 * v2 mul
+    m2f m = { 1.0f, 2.0f, 3.0f, 4.0f };
+    v2f v = { 5.0f, 6.0f };
+
+    for (uint32 i = 0; i < 10000000; ++i)
+    {
+        v = VectorOps::Mul_SIMD(v, m);
+    }
 }

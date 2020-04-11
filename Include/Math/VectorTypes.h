@@ -48,6 +48,16 @@ public:
         this->y = y;
     }
 
+    const T& operator[](size_t index) const
+    {
+        return m_data[index];
+    }
+
+    T& operator[](size_t index)
+    {
+        return m_data[index];
+    }
+
     vec2<T> operator+(const vec2<T>& other)
     {
         return { x + other.x, y + other.y };
@@ -128,6 +138,7 @@ public:
 
     mat2(const T& x)
     {
+        // Initialize diagonal
         m_data[0] = x;
         m_data[1] = {};
         m_data[2] = {};
@@ -136,18 +147,28 @@ public:
 
     mat2(const vec2<T>& a, vec2<T> b)
     {
-        m_data[0] = a.x;
-        m_data[1] = a.y;
-        m_data[2] = b.x;
-        m_data[3] = b.y;
+        // Column-major
+        m_data[0] = a.x; m_data[2] = b.x;
+        m_data[1] = a.y; m_data[3] = b.y;
     }
 
     mat2(const T& x00, const T& x01, const T& x10, const T& x11)
     {
-        m_data[0] = x00;
-        m_data[1] = x01;
-        m_data[2] = x10;
-        m_data[3] = x11;
+        // Column-major
+        m_data[0] = x00; m_data[2] = x10;
+        m_data[1] = x01; m_data[3] = x11;
+    }
+
+    vec2<T>& operator[](size_t index)
+    {
+        TINKER_ASSERT(index < 2);
+        return *(vec2<T>*)(&m_data[index * 2]);
+    }
+
+    const vec2<T>& operator[](size_t index) const
+    {
+        TINKER_ASSERT(index < 2);
+        return *(vec2<T>*)(&m_data[index * 2]);
     }
 
     mat2<T> operator+(const mat2<T>& other)
@@ -226,8 +247,7 @@ public:
 template <typename T>
 vec2<T> operator*(const mat2<T>& m, const vec2<T> v)
 {
-    // TODO: Implement vectorized versions of this.
-    return { m.m_data[0] * v.x + m.m_data[1] * v.y, m.m_data[2] * v.x + m.m_data[3] * v.y };
+    return { m[0][0] * v.x + m[1][0] * v.y, m[0][1] * v.x + m[1][1] * v.y };
 }
 
 template <typename T>
@@ -254,3 +274,10 @@ typedef vec2<float>  v2f;
 typedef mat2<uint32> m2ui;
 typedef mat2<int32>  m2i;
 typedef mat2<float>  m2f;
+
+namespace VectorOps
+{
+    v2f Mul_SIMD(const v2f& v, const m2f& m);
+    v2i Mul_SIMD(const v2i& v, const m2i& m);
+    v2ui Mul_SIMD(const v2ui& v, const m2ui& m);
+}
