@@ -46,8 +46,8 @@ void Test_Linear_NoAlignment_WithDealloc()
 
     for (uint16 i = 0; i < 1024; ++i)
     {
-        uint8* ptr = (uint8*)allocator.Alloc(1, 1);
-        TINKER_TEST_ASSERT(ptr);
+        uint8* ptr2 = (uint8*)allocator.Alloc(1, 1);
+        TINKER_TEST_ASSERT(ptr2);
     }
     ptr = (uint8*)allocator.Alloc(1, 1);
     TINKER_TEST_ASSERT(!ptr);

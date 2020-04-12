@@ -10,6 +10,7 @@ namespace Tinker
     {
     public:
         volatile bool m_done = false;
+        virtual ~WorkerJob() {}
 
         virtual void operator()() = 0;
     };
@@ -29,7 +30,7 @@ namespace Tinker
     {
         BYTE_ALIGN(64) volatile bool terminate = false;
         volatile bool didTerminate = true;
-        volatile uint8 threadId = 0;
+        volatile uint32 threadId = 0;
         BYTE_ALIGN(64) Containers::RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> jobs;
     } ThreadInfo;
     THREAD_FUNC_TYPE WorkerThreadFunction(void* arg);
@@ -38,8 +39,8 @@ namespace Tinker
     {
     private:
         ThreadInfo m_threads[16];
-        uint8 m_schedulerCounter = 0;
-        uint8 m_numThreads = 0;
+        uint32 m_schedulerCounter = 0;
+        uint32 m_numThreads = 0;
 
     public:
         WorkerThreadPool() {}
