@@ -2,7 +2,7 @@
 
 #include "MathBenchmarks/VectorTypeBenchmarks.h"
 
-static uint32 SampleBenchmarkFunc()
+/*static uint32 SampleBenchmarkFunc()
 {
     uint32 num = 0;
     for (uint32 i = 0; i < 10000000; ++i)
@@ -10,7 +10,7 @@ static uint32 SampleBenchmarkFunc()
     	num += i*i;
     }
     return num;
-}
+}*/
 
 OPTIMIZATIONS_OFF
 int main()

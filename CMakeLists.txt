@@ -5,7 +5,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakePredefinedTargets")
 
 if(WIN32)
-    set(CMAKE_CXX_FLAGS "/std:c++17 /O2 /W3 /WX /EHsc")
+    set(CMAKE_CXX_FLAGS "/std:c++17 /O2 /W4 /WX /wd4201 /wd4324 /wd4100 /wd4189 /EHsc")
 endif()
 
 # Engine project - builds as .lib
