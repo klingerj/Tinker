@@ -5,8 +5,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakePredefinedTargets")
 
 if(WIN32)
-    set(CMAKE_CXX_FLAGS "/nologo /std:c++17 /MT /O2 /Oi /W4 /WX /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm-")
+    set(CMAKE_CXX_FLAGS "/nologo /std:c++17 /MT /O2 /W4 /WX /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm-")
     #add_link_options("/subsystem:windows,5.1") # for running on XP
+    add_link_options("/opt:ref")
 endif()
 
 # Engine project - builds as .lib
