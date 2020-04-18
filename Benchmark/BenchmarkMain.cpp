@@ -12,7 +12,7 @@
     return num;
 }*/
 
-OPTIMIZATIONS_OFF
+//OPTIMIZATIONS_OFF
 int main()
 {
     // Samples
@@ -35,4 +35,4 @@ int main()
     
     exit(EXIT_SUCCESS);
 }
-OPTIMIZATIONS_ON
+//OPTIMIZATIONS_ON

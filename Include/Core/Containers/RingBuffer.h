@@ -1,14 +1,14 @@
 #pragma once
 
-#include "../System/SystemDefines.h"
-#include "../Platform/PlatformAPI.h"
+#include "../../Core/CoreDefines.h"
+#include "../Include/PlatformGameAPI.h"
 
 namespace Tinker
 {
     namespace Containers
     {
         // Single Producer, Single Consumer wait-free queue
-        template <typename T, uint32 U> // TODO: assert U >= 1?
+        template <typename T, uint32 size> // TODO: assert Size >= 1?
         class RingBuffer
         {
         private:
@@ -21,7 +21,7 @@ namespace Tinker
 
             RingBuffer()
             {
-                _SIZE = POW2_ROUNDUP(U);
+                _SIZE = POW2_ROUNDUP(size);
                 _MASK = _SIZE - 1;
                 m_data = new T[_SIZE];
             }
@@ -45,7 +45,7 @@ namespace Tinker
             // Should only be called from the producer
             void Enqueue(T ele)
             {
-                uint32 head = Platform::AtomicGet(&m_head);
+                uint32 head = Platform::AtomicGet32(&m_head);
                 m_data[head & _MASK] = ele;
                 Platform::AtomicIncrement32(&m_head);
             }
@@ -53,7 +53,7 @@ namespace Tinker
             // Should only be called from the consumer
             void Dequeue(T* ele)
             {
-                uint32 tail = Platform::AtomicGet(&m_tail);
+                uint32 tail = Platform::AtomicGet32(&m_tail);
                 *ele = m_data[tail & _MASK];
                 Platform::AtomicIncrement32(&m_tail);
             }
@@ -61,8 +61,8 @@ namespace Tinker
             // Can be called from either producer or consumer
             uint32 Size()
             {
-                uint32 head = Platform::AtomicGet(&m_head);
-                uint32 tail = Platform::AtomicGet(&m_tail);
+                uint32 head = Platform::AtomicGet32(&m_head);
+                uint32 tail = Platform::AtomicGet32(&m_tail);
                 return head - tail;
             }
         };
