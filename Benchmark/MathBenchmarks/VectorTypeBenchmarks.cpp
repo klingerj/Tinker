@@ -1,8 +1,9 @@
 #include "VectorTypeBenchmarks.h"
 
-#include "../Include/System/WorkerThreadPool.h"
+#include "../Platform/Win32WorkerThreadPool.cpp"
 
 using namespace Tinker;
+using namespace Platform;
 
 WorkerThreadPool g_threadpool;
 
@@ -66,7 +67,7 @@ void BM_m2MulV2_fScalar_MT()
     WorkerJob* jobs[numJobs];
     for (uint16 i = 0; i < numJobs; ++i)
     {
-        jobs[i] = g_threadpool.NewJob([&]() {
+        jobs[i] = CreateNewThreadJob([&]() {
             const m2f m = { 1.0f, 2.0f, 3.0f, 4.0f };
             v2f v = { 5.0f, 6.0f };
 
@@ -75,6 +76,10 @@ void BM_m2MulV2_fScalar_MT()
                 v = m * v;
             }
         });
+    }
+    for (uint16 i = 0; i < numJobs; ++i)
+    {
+        g_threadpool.EnqueueNewThreadJob(jobs[i]);
     }
 
     for (uint16 i = 0; i < numJobs; ++i)

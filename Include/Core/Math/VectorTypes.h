@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../System/SystemDefines.h"
+#include "Core/CoreDefines.h"
 
 template <typename T>
 class vec2
