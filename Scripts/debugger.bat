@@ -1,2 +1,6 @@
 @echo off
-devenv /debugexe Build/TinkerPlatform.exe
+pushd ..
+pushd .\Build
+devenv /debugexe ..\Build\TinkerPlatform.exe
+popd
+popd
