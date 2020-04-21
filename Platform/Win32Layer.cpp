@@ -15,8 +15,11 @@ typedef struct win32_game_code
 
 static void LoadGameCode(Win32GameCode* GameCode)
 {
-    CopyFile("Build/TinkerGame.dll", "Build/TinkerGame_hotload.dll", FALSE);
-    GameCode->GameDll = LoadLibraryA("Build/TinkerGame_hotload.dll");
+    const char* GameDllStr = "TinkerGame.dll";
+    const char* GameDllHotloadStr = "TinkerGame_hotload.dll";
+
+    CopyFile(GameDllStr, GameDllHotloadStr, FALSE);
+    GameCode->GameDll = LoadLibraryA(GameDllHotloadStr);
     if (GameCode->GameDll)
     {
         GameCode->GameUpdate = (game_update *)GetProcAddress(GameCode->GameDll, "GameUpdate");
