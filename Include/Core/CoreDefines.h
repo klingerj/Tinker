@@ -13,12 +13,6 @@ typedef int16_t  int16;
 typedef int32_t  int32;
 typedef int64_t  int64;
 
-#ifdef _DEBUG
-#define WORKING_DIR "Debug/"
-#else
-#define WORKING_DIR "Release/"
-#endif
-
 #define SIZE_1MB 1024
 #define SIZE_2MB 1024 * 2
 
