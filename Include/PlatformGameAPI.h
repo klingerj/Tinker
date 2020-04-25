@@ -26,6 +26,8 @@ namespace Tinker
             virtual void operator()() override { m_t(); };
         };
 
+        void WaitOnJob(WorkerJob* job);
+
         template <typename T>
         WorkerJob* CreateNewThreadJob(T t)
         {
@@ -43,6 +45,9 @@ namespace Tinker
 
         #define GAME_UPDATE(name) uint32 name(Tinker::Platform::GameMemory* memory)
         typedef GAME_UPDATE(game_update);
+
+        // I/O
+        void Print(const char* str, size_t len);
 
         // Memory
         void* AllocAligned(size_t size, size_t alignment);
