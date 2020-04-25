@@ -3,12 +3,13 @@
 #include "../Include/Core/Math/VectorTypes.h"
 #include "../Include/Core/Containers/RingBuffer.h"
 
-#include <iostream>
+#include <cstring>
 
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
-    std::cout << "Joe" << std::endl;
+    const char* msg = "Joe\n";
+    Tinker::Platform::Print(msg, strlen(msg));
 
     uint32 a;
     uint32 b = Tinker::Platform::AtomicGet32(&a);

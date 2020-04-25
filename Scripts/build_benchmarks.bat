@@ -27,6 +27,20 @@ if "%BuildConfig%" == "Debug" (
     )
 
 rem *********************************************************************************************************
+rem TinkerCore - static library
+set SourceListCore=..\Core\Math\VectorTypes.cpp
+
+if "%BuildConfig%" == "Debug" (
+    set DebugCompileFlagsCore=/FdTinkerCore.pdb
+    ) else (
+    set DebugCompileFlagsCore=
+    )
+echo.
+echo Building TinkerCore.lib...
+cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore%
+lib user32.lib /machine:x64 /Wx /out:TinkerCore.lib /nologo
+
+rem *********************************************************************************************************
 rem TinkerBenchmark - benchmarking
 set SourceListBenchmark=../Platform/Win32PlatformGameAPI.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp ../Core/Math/VectorTypes.cpp
 if "%BuildConfig%" == "Debug" (
