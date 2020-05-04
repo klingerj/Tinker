@@ -121,8 +121,15 @@ template <typename T>
 class mat2
 {
 public:
-    T m_data[4];
-
+    union
+    {
+        T m_data[4];
+        struct
+        {
+            vec2<T> m_cols[2];
+        };
+    };
+    
     mat2()
     {
         for (uint8 i = 0; i < 4; ++i) m_data[i] = {};
@@ -133,7 +140,7 @@ public:
         for (uint8 i = 0; i < 4; ++i) m_data[i] = other.m_data[i];
     }
 
-    mat2(T* data)
+    mat2(const T* data)
     {
         for (uint8 i = 0; i < 4; ++i) m_data[i] = data[i];
     }
@@ -147,7 +154,7 @@ public:
         m_data[3] = x;
     }
 
-    mat2(const vec2<T>& a, vec2<T> b)
+    mat2(const vec2<T>& a, const vec2<T>& b)
     {
         // Column-major
         m_data[0] = a.x; m_data[2] = b.x;
@@ -161,16 +168,16 @@ public:
         m_data[1] = x01; m_data[3] = x11;
     }
 
-    vec2<T>& operator[](size_t index)
-    {
-        TINKER_ASSERT(index < 2);
-        return *(vec2<T>*)(&m_data[index * 2]);
-    }
-
     const vec2<T>& operator[](size_t index) const
     {
         TINKER_ASSERT(index < 2);
-        return *(vec2<T>*)(&m_data[index * 2]);
+        return m_cols[index];
+    }
+
+    vec2<T>& operator[](size_t index)
+    {
+        TINKER_ASSERT(index < 2);
+        return m_cols[index];
     }
 
     mat2<T> operator+(const mat2<T>& other)
@@ -247,7 +254,7 @@ public:
 };
 
 template <typename T>
-vec2<T> operator*(const mat2<T>& m, const vec2<T> v)
+vec2<T> operator*(const mat2<T>& m, const vec2<T>& v)
 {
     return { m[0][0] * v.x + m[1][0] * v.y, m[0][1] * v.x + m[1][1] * v.y };
 }
@@ -406,7 +413,14 @@ template <typename T>
 class mat4
 {
 public:
-    T m_data[16];
+    union
+    {
+        T m_data[16];
+        struct
+        {
+            vec4<T> m_cols[4];
+        };
+    };
 
     mat4()
     {
@@ -418,7 +432,7 @@ public:
         for (uint8 i = 0; i < 16; ++i) m_data[i] = other.m_data[i];
     }
 
-    mat4(T* data)
+    mat4(const T* data)
     {
         for (uint8 i = 0; i < 16; ++i) m_data[i] = data[i];
     }
@@ -447,7 +461,7 @@ public:
         m_data[15] = x;
     }
 
-    mat4(const vec4<T>& a, vec4<T> b, vec4<T> c, vec4<T> d)
+    mat4(const vec4<T>& a, const vec4<T>& b, const vec4<T>& c, const vec4<T>& d)
     {
         // Column-major
         m_data[0] = a.x; m_data[4] = b.x; m_data[8]  = c.x; m_data[12] = d.x;
@@ -468,16 +482,16 @@ public:
         m_data[3] = x03; m_data[7] = x13; m_data[11] = x23; m_data[15] = x33;
     }
 
-    vec4<T>& operator[](size_t index)
-    {
-        TINKER_ASSERT(index < 4);
-        return *(vec4<T>*)(&m_data[index * 4]);
-    }
-
     const vec4<T>& operator[](size_t index) const
     {
         TINKER_ASSERT(index < 4);
-        return *(vec4<T>*)(&m_data[index * 4]);
+        return m_cols[index];
+    }
+
+    vec4<T>& operator[](size_t index)
+    {
+        TINKER_ASSERT(index < 4);
+        return m_cols[index];
     }
 
     mat4<T> operator+(const mat4<T>& other)
@@ -554,7 +568,7 @@ public:
 };
 
 template <typename T>
-vec4<T> operator*(const mat4<T>& m, const vec4<T> v)
+vec4<T> operator*(const mat4<T>& m, const vec4<T>& v)
 {
     return {
         m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z + m[3][0] * v.w,

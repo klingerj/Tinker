@@ -2,6 +2,7 @@
 
 #include "MathBenchmarks/VectorTypeBenchmarks.h"
 
+
 int main()
 {
     TINKER_BENCHMARK_HEADER;
