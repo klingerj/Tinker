@@ -5,8 +5,8 @@
 #include <windows.h>
 #include <iostream>
 
-#define NUM_SAMPLES 5
-#define SEC_2_MSEC 0.0001f
+#define NUM_SAMPLES 25
+#define SEC_2_MSEC 1000.0f
 
 #define TINKER_BENCHMARK_HEADER \
         std::cout << "Tinker Engine Benchmarks\n"; \
@@ -29,13 +29,14 @@
 #define TINKER_BENCHMARK(str, func) { \
         std::cout << str << ":\n"; \
         float timeSamples[NUM_SAMPLES] = {}; \
-        LARGE_INTEGER start = {}, end = {}; \
+        LARGE_INTEGER start = {}, end = {}, freq = {}; \
+        QueryPerformanceFrequency(&freq); \
         for (uint32 i = 0; i < NUM_SAMPLES; ++i) \
         { \
             QueryPerformanceCounter(&start); \
             func(); \
             QueryPerformanceCounter(&end); \
-            timeSamples[i] = (end.QuadPart - start.QuadPart) * SEC_2_MSEC; \
+            timeSamples[i] = (float)(end.QuadPart - start.QuadPart) * SEC_2_MSEC / (float)freq.QuadPart; \
         } \
         TINKER_PRINT_STATS(timeSamples); \
         }
@@ -43,15 +44,16 @@
 #define TINKER_BENCHMARK_STARTUP_SHUTDOWN(str, funcSU, func, funcSD) { \
         std::cout << str << ":\n"; \
         float timeSamples[NUM_SAMPLES] = {}; \
-        LARGE_INTEGER start = {}, end = {}; \
+        LARGE_INTEGER start = {}, end = {}, freq = {}; \
+        QueryPerformanceFrequency(&freq); \
+        funcSU(); \
         for (uint32 i = 0; i < NUM_SAMPLES; ++i) \
         { \
-            funcSU(); \
             QueryPerformanceCounter(&start); \
             func(); \
             QueryPerformanceCounter(&end); \
-            funcSD(); \
-            timeSamples[i] = (end.QuadPart - start.QuadPart) * SEC_2_MSEC; \
+            timeSamples[i] = (float)(end.QuadPart - start.QuadPart) * SEC_2_MSEC / (float)freq.QuadPart; \
         } \
+        funcSD(); \
         TINKER_PRINT_STATS(timeSamples); \
         }

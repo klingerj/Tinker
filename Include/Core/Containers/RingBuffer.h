@@ -61,8 +61,8 @@ namespace Tinker
             // Can be called from either producer or consumer
             uint32 Size()
             {
-                uint32 head = Platform::AtomicGet32(&m_head);
-                uint32 tail = Platform::AtomicGet32(&m_tail);
+                const uint32 head = Platform::AtomicGet32(&m_head);
+                const uint32 tail = Platform::AtomicGet32(&m_tail);
                 return head - tail;
             }
         };

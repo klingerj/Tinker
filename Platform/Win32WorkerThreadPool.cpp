@@ -51,7 +51,6 @@ namespace Tinker
                 m_numThreads = MIN(NumThreads, 16);
                 for (uint32 i = 0; i < m_numThreads; ++i)
                 {
-                    while(!m_threads[i].didTerminate);
                     m_threads[i].terminate = false;
                     m_threads[i].didTerminate = false;
                     m_threads[i].threadId = i;
@@ -62,9 +61,13 @@ namespace Tinker
 
             void Shutdown()
             {
-                for (uint8 i = 0; i < 16; ++i)
+                for (uint8 i = 0; i < m_numThreads; ++i)
                 {
                     m_threads[i].terminate = true;
+                }
+                for (uint8 i = 0; i < m_numThreads; ++i)
+                {
+                    while(!m_threads[i].didTerminate);
                 }
             }
 
