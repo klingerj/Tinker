@@ -11,6 +11,10 @@ v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
 const uint32 numVectors = 1 << 24;
 
+const uint32 numJobs = 128;
+const uint32 jobSize = numVectors / numJobs;
+WorkerJob* jobs[numJobs];
+
 void BM_v2_Startup()
 {
     g_v2s = (v2f*)AllocAligned(numVectors * sizeof(v2f), 64);
@@ -78,15 +82,8 @@ void BM_m2MulV2_fScalar_MT_Startup()
 {
     g_threadpool.Startup(10);
     BM_v2_Startup();
-}
 
-void BM_m2MulV2_fScalar_MT()
-{
-    const uint32 numJobs = 64;
-    const uint32 jobSize = numVectors / numJobs;
-    WorkerJob* jobs[numJobs];
     v2f* const vectors = g_v2s;
-
     for (uint32 i = 0; i < numJobs; ++i)
     {
         jobs[i] = CreateNewThreadJob([=]() {
@@ -98,6 +95,14 @@ void BM_m2MulV2_fScalar_MT()
                 vectors[index] = m * vectors[index];
             }
         });
+    }
+}
+
+void BM_m2MulV2_fScalar_MT()
+{
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        jobs[i]->m_done = false;
         g_threadpool.EnqueueNewThreadJob(jobs[i]);
     }
 
@@ -105,17 +110,16 @@ void BM_m2MulV2_fScalar_MT()
     {
         WaitOnJob(jobs[i]);
     }
-
-    for (uint32 i = 0; i < numJobs; ++i)
-    {
-        delete jobs[i];
-    }
 }
 
 void BM_m2MulV2_fScalar_MT_Shutdown()
 {
     g_threadpool.Shutdown();
     BM_v2_Shutdown();
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        delete jobs[i];
+    }
 }
 
 void BM_m2MulV2_fVectorized()
