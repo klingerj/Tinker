@@ -14,7 +14,7 @@ namespace Tinker
         {
             BYTE_ALIGN(64) volatile bool terminate = false;
             volatile bool didTerminate = true;
-            volatile uint32 threadId = 0;
+            uint32 threadId = 0;
             BYTE_ALIGN(64) Containers::RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> jobs;
         } ThreadInfo;
 
