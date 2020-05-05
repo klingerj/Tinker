@@ -31,7 +31,8 @@ namespace Tinker
         template <typename T>
         WorkerJob* CreateNewThreadJob(T t)
         {
-            return new JobFunc(t);
+            JobFunc<T>* jobMem = (JobFunc<T>*)AllocAligned(sizeof(JobFunc<T>), 64);
+            return new (jobMem) JobFunc(t);
         }
 
         #define ENQUEUE_WORKER_THREAD_JOB(name) void name(WorkerJob* newJob)

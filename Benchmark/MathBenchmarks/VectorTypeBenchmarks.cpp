@@ -11,7 +11,7 @@ v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
 const uint32 numVectors = 1 << 24;
 
-const uint32 numJobs = 128;
+const uint32 numJobs = 30;
 const uint32 jobSize = numVectors / numJobs;
 WorkerJob* jobs[numJobs];
 
@@ -80,7 +80,7 @@ void BM_m2MulV2_fScalar()
 
 void BM_m2MulV2_fScalar_MT_Startup()
 {
-    g_threadpool.Startup(10);
+    g_threadpool.Startup(15);
     BM_v2_Startup();
 
     v2f* const vectors = g_v2s;
@@ -118,7 +118,7 @@ void BM_m2MulV2_fScalar_MT_Shutdown()
     BM_v2_Shutdown();
     for (uint32 i = 0; i < numJobs; ++i)
     {
-        delete jobs[i];
+        FreeAligned(jobs[i]);
     }
 }
 
