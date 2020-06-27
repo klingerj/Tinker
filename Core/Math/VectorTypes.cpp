@@ -56,9 +56,9 @@ namespace VectorOps
     void Mul_SIMD(const v4f& v, const m4f& m, v4f& out)
     {
         // All parameters must be 16-byte aligned
-        TINKER_ASSERT(!((&v) & 15));
-        TINKER_ASSERT(!((&m) & 15));
-        TINKER_ASSERT(!((&out) & 15));
+        TINKER_ASSERT(!(((size_t)&v) & 15));
+        TINKER_ASSERT(!(((size_t)&m) & 15));
+        TINKER_ASSERT(!(((size_t)&out) & 15));
 
         __m128 vec = _mm_load_ps(v.m_data);
         __m128 vx = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(0, 0, 0, 0));

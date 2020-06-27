@@ -31,7 +31,7 @@ namespace Tinker
                     (*job)();
                     job->m_done = true;
                 }
-                Platform::PauseCPU();
+                //Platform::PauseCPU();
             }
 
             info->didTerminate = true;
@@ -54,7 +54,6 @@ namespace Tinker
                     m_threads[i].terminate = false;
                     m_threads[i].didTerminate = false;
                     m_threads[i].threadId = i;
-                    m_threads[i].jobs.Clear();
                     _beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, m_threads + i);
                 }
             }
