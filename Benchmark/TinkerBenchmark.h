@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <iostream>
 
-#define NUM_SAMPLES 25
+#define NUM_SAMPLES 10
 #define SEC_2_MSEC 1000.0f
 
 #define TINKER_BENCHMARK_HEADER \

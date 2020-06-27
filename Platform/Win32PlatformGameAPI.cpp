@@ -9,7 +9,7 @@ namespace Tinker
     {
         void WaitOnJob(WorkerJob* job)
         {
-            while(!job->m_done);
+            while (!job->m_done);
         }
 
         // I/O

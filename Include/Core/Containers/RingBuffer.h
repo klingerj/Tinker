@@ -23,12 +23,12 @@ namespace Tinker
             {
                 _SIZE = POW2_ROUNDUP(size);
                 _MASK = _SIZE - 1;
-                m_data = new T[_SIZE];
+                m_data = (T*)Platform::AllocAligned(_SIZE * sizeof(T), 64);
             }
 
             ~RingBuffer()
             {
-                if (m_data) delete m_data;
+                if (m_data) Platform::FreeAligned(m_data);
             }
 
             uint32 Capacity() const

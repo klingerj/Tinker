@@ -41,6 +41,33 @@ ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
 {
     g_ThreadPool.EnqueueNewThreadJob(newJob);
 }
+#include <assert.h>
+static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandStream)
+{
+    TINKER_ASSERT(graphicsCommandStream->m_numCommands <= graphicsCommandStream->m_maxCommands);
+
+    // TODO: sort commands, record command buffers on separate threads, etc
+    for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
+    {
+        TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
+        switch (graphicsCommandStream->m_graphicsCommands[i].m_commandType)
+        {
+        case eGraphicsCmdDrawCall:
+        {
+            const char* msg = "Issued a draw call!\n";
+            Print(msg, strlen(msg));
+            // TODO: do api-specific graphics stuff
+            break;
+        }
+        default:
+        {
+            // Invalid command type
+            TINKER_ASSERT(false);
+            break;
+        }
+        }
+    }
+}
 
 int WINAPI
 wWinMain(HINSTANCE hInstance,
@@ -50,18 +77,32 @@ wWinMain(HINSTANCE hInstance,
 {
     AllocConsole();
 
-    GameMemory GameMem = {};
-    GameMem.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
+    PlatformAPIFuncs platformAPIFuncs = {};
+    platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
 
-    for (;;)
+    GraphicsCommandStream graphicsCommandStream = {};
+    graphicsCommandStream.m_numCommands = 0;
+    graphicsCommandStream.m_maxCommands = 2; // TODO: set with compile flag
+    graphicsCommandStream.m_graphicsCommands = new GraphicsCommand[graphicsCommandStream.m_maxCommands];
+
+    Win32GameCode GameCode = {};
+
+    // Start threadpool
+    g_ThreadPool.Startup(10);
+
+    volatile bool runGame = true;
+    while (runGame)
     {
-        Win32GameCode GameCode = {};
         ReloadGameCode(&GameCode);
         
-        GameCode.GameUpdate(&GameMem);
+        GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
+
+        ProcessGraphicsCommandStream(&graphicsCommandStream);
 
         Sleep(2000); // TODO: remove once we add file timestamp checking
     }
+
+    //g_ThreadPool.Shutdown();
 
     //return 0;
 }

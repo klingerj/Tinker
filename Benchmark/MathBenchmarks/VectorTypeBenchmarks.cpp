@@ -9,9 +9,9 @@ WorkerThreadPool g_threadpool;
 
 v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
-const uint32 numVectors = 1 << 24;
+const uint32 numVectors = 2 << 24;
 
-const uint32 numJobs = 30;
+const uint32 numJobs = 15;
 const uint32 jobSize = numVectors / numJobs;
 WorkerJob* jobs[numJobs];
 
@@ -74,13 +74,13 @@ void BM_m2MulV2_fScalar()
 
     for (uint32 i = 0; i < numVectors; ++i)
     {
-        vectors[i] = m * vectors[i];
+        vectors[i] = m* vectors[i];
     }
 }
 
 void BM_m2MulV2_fScalar_MT_Startup()
 {
-    g_threadpool.Startup(15);
+    g_threadpool.Startup(10);
     BM_v2_Startup();
 
     v2f* const vectors = g_v2s;
@@ -92,7 +92,7 @@ void BM_m2MulV2_fScalar_MT_Startup()
             for (uint32 j = 0; j < jobSize; ++j)
             {
                 uint32 index = j + i * jobSize;
-                vectors[index] = m * vectors[index];
+                vectors[index] = m* vectors[index];
             }
         });
     }
@@ -103,6 +103,10 @@ void BM_m2MulV2_fScalar_MT()
     for (uint32 i = 0; i < numJobs; ++i)
     {
         jobs[i]->m_done = false;
+    }
+
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
         g_threadpool.EnqueueNewThreadJob(jobs[i]);
     }
 

@@ -16,16 +16,16 @@ if "%BuildConfig%" NEQ "Debug" (
     )
 
 rem *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++17 /MT /W4 /WX /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm-
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm-
 set CommonLinkFlags=/incremental:no /opt:ref
 
 if "%BuildConfig%" == "Debug" (
     echo Debug mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od
+    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd
     set CommonLinkFlags=%CommonLinkFlags% /debug:full
     ) else (
     echo Release mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /O2
+    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
 rem *********************************************************************************************************
@@ -33,7 +33,7 @@ rem TinkerCore - static library
 set SourceListCore=..\Core\Math\VectorTypes.cpp
 
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsCore=/FdTinkerCore.pdb
+    set DebugCompileFlagsCore=/FdTinkerCore.pdb /MTd
     ) else (
     set DebugCompileFlagsCore=
     )
