@@ -11,29 +11,42 @@ static GAME_UPDATE(GameUpdateStub) { return 0; }
 typedef struct win32_game_code
 {
     HMODULE GameDll = 0;
+    FILETIME lastWriteTime = {};
     game_update *GameUpdate = GameUpdateStub;
 } Win32GameCode;
 
-static void ReloadGameCode(Win32GameCode* GameCode)
+static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
-    // Unload old code
-    if (GameCode->GameDll)
-    {
-        FreeLibrary(GameCode->GameDll);
-        GameCode->GameUpdate = GameUpdateStub;
-    }
-
     // TODO: check file timestamp
-
-    // Load new code
-    const char* GameDllStr = "TinkerGame.dll";
-    const char* GameDllHotloadStr = "TinkerGame_hotload.dll";
-
-    CopyFile(GameDllStr, GameDllHotloadStr, FALSE);
-    GameCode->GameDll = LoadLibraryA(GameDllHotloadStr);
-    if (GameCode->GameDll)
+    WIN32_FIND_DATA findData;
+    HANDLE findHandle = FindFirstFile(gameDllSourcePath, &findData);
+    if (findHandle != INVALID_HANDLE_VALUE)
     {
-        GameCode->GameUpdate = (game_update *)GetProcAddress(GameCode->GameDll, "GameUpdate");
+        FindClose(findHandle);
+        if (CompareFileTime(&findData.ftLastWriteTime, &GameCode->lastWriteTime))
+        {
+            // Unload old code
+            if (GameCode->GameDll)
+            {
+                FreeLibrary(GameCode->GameDll);
+                GameCode->GameUpdate = GameUpdateStub;
+            }
+
+            // Dll has been updated, reload the code
+            const char* GameDllHotloadStr = "TinkerGame_hotload.dll";
+            CopyFile(gameDllSourcePath, GameDllHotloadStr, FALSE);
+            GameCode->GameDll = LoadLibraryA(GameDllHotloadStr);
+            if (GameCode->GameDll)
+            {
+                GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
+                GameCode->lastWriteTime = findData.ftLastWriteTime;
+            }
+        }
+    }
+    else
+    {
+        // TODO: Log? Fail?
+        // Game code does not get reloaded
     }
 }
 
@@ -192,7 +205,8 @@ wWinMain(HINSTANCE hInstance,
     graphicsCommandStream.m_graphicsCommands = new GraphicsCommand[graphicsCommandStream.m_maxCommands];
 
     Win32GameCode GameCode = {};
-    ReloadGameCode(&GameCode);
+    const char* GameDllStr = "TinkerGame.dll";
+    ReloadGameCode(&GameCode, GameDllStr);
 
     // Start threadpool
     g_ThreadPool.Startup(10);
@@ -206,8 +220,8 @@ wWinMain(HINSTANCE hInstance,
 
         ProcessGraphicsCommandStream(&graphicsCommandStream);
 
-        Sleep(2000); // TODO: remove once we add file timestamp checking
-        ReloadGameCode(&GameCode);
+        //Sleep(2000); // TODO: remove once we add file timestamp checking
+        ReloadGameCode(&GameCode, GameDllStr);
     }
 
     g_ThreadPool.Shutdown();
