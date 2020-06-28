@@ -40,7 +40,7 @@ if "%BuildConfig%" == "Debug" (
 echo.
 echo Building TinkerCore.lib...
 cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore%
-lib user32.lib /machine:x64 /Wx /out:TinkerCore.lib /nologo
+lib /machine:x64 /Wx /out:TinkerCore.lib /nologo
 
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe
@@ -53,9 +53,10 @@ if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=
     set DebugLinkFlagsPlatform=
     )
+set LibsToLink=user32.lib
 echo.
 echo Building TinkerPlatform.exe...
-cl %CommonCompileFlags% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe 
+cl %CommonCompileFlags% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe 
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
