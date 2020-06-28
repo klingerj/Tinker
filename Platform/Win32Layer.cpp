@@ -52,21 +52,96 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
         switch (graphicsCommandStream->m_graphicsCommands[i].m_commandType)
         {
-        case eGraphicsCmdDrawCall:
+            case eGraphicsCmdDrawCall:
+            {
+                const char* msg = "Issued a draw call!\n";
+                Print(msg, strlen(msg));
+                // TODO: do api-specific graphics stuff
+                break;
+            }
+            default:
+            {
+                // Invalid command type
+                TINKER_ASSERT(false);
+                break;
+            }
+        }
+    }
+}
+
+static void PlatformShutdown()
+{
+    g_ThreadPool.Shutdown();
+}
+
+LRESULT CALLBACK WindowProc(HWND hwnd,
+    UINT uMsg,
+    WPARAM wParam,
+    LPARAM lParam)
+{
+    LRESULT result = 0;
+
+    switch (uMsg)
+    {
+        case WM_CREATE:
         {
-            const char* msg = "Issued a draw call!\n";
+            const char* msg = "create\n";
             Print(msg, strlen(msg));
-            // TODO: do api-specific graphics stuff
+            break;
+        }
+        case WM_SIZE:
+        {
+            const char* msg = "size\n";
+            Print(msg, strlen(msg));
+            break;
+        }
+        case WM_DESTROY:
+        {
+            const char* msg = "destroy\n";
+            Print(msg, strlen(msg));
+            break;
+        }
+        case WM_CLOSE:
+        {
+            const char* msg = "close\n";
+            Print(msg, strlen(msg));
+            PlatformShutdown();
+            break;
+        }
+        case WM_ACTIVATEAPP:
+        {
+            const char* msg = "activate app\n";
+            Print(msg, strlen(msg));
             break;
         }
         default:
         {
-            // Invalid command type
-            TINKER_ASSERT(false);
+            result = DefWindowProc(hwnd, uMsg, wParam, lParam);
             break;
         }
+    }
+
+    return result;
+}
+
+static void ProcessWindowMessages()
+{
+    MSG msg = {};
+    for (;;)
+    {
+        BOOL Result = GetMessage(&msg, 0, 0, 0);
+        if (Result > 0)
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        else
+        {
+            // Done
+            break;
         }
     }
+    
 }
 
 int WINAPI
@@ -75,8 +150,40 @@ wWinMain(HINSTANCE hInstance,
          PWSTR pCmdLine,
          int nCmdShow)
 {
+    // Setup console and window
     AllocConsole();
 
+    WNDCLASS WindowClass = {};
+    WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+    WindowClass.lpfnWndProc = WindowProc;
+    WindowClass.hInstance = hInstance;
+    //WindowClass.hIcon = ;
+    WindowClass.lpszClassName = "Tinker Platform Window";
+    if (!RegisterClass(&WindowClass))
+    {
+        // TODO: Log? Fail?
+        return 1;
+    }
+    HWND WindowHandle =
+        CreateWindowEx(0,
+                       WindowClass.lpszClassName,
+                       "Tinker",
+                       WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                       CW_USEDEFAULT,
+                       CW_USEDEFAULT,
+                       CW_USEDEFAULT,
+                       CW_USEDEFAULT,
+                       0,
+                       0,
+                       hInstance,
+                       0);
+    if (!WindowHandle)
+    {
+        // TODO: Log? Fail?
+        return 1;
+    }
+
+    // Init data passed from platform to game
     PlatformAPIFuncs platformAPIFuncs = {};
     platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
 
@@ -90,9 +197,11 @@ wWinMain(HINSTANCE hInstance,
     // Start threadpool
     g_ThreadPool.Startup(10);
 
+    // Main loop
     volatile bool runGame = true;
     while (runGame)
     {
+        ProcessWindowMessages();
         ReloadGameCode(&GameCode);
         
         GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
@@ -102,7 +211,6 @@ wWinMain(HINSTANCE hInstance,
         Sleep(2000); // TODO: remove once we add file timestamp checking
     }
 
-    //g_ThreadPool.Shutdown();
-
-    //return 0;
+    PlatformShutdown();
+    return 0;
 }
