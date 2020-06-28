@@ -7,15 +7,13 @@
 
 static void Test_Thread_Func()
 {
-    const char* msg = "I am from a thread.\n";
-    Tinker::Platform::Print(msg, strlen(msg));
+    Tinker::Platform::PrintDebugString("I am from a thread.\n");
 }
 
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
-    const char* msg = "Joe\n";
-    Tinker::Platform::Print(msg, strlen(msg));
+    Tinker::Platform::PrintDebugString("Joe\n");
 
     // Test a thread job
     Tinker::Platform::WorkerJob* job = Tinker::Platform::CreateNewThreadJob(Test_Thread_Func);

@@ -1,4 +1,5 @@
 #include "../Include/PlatformGameAPI.h"
+#include "../Include/Platform/Win32Vulkan.h"
 #include "Win32WorkerThreadPool.cpp"
 
 #include <windows.h>
@@ -54,8 +55,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         {
             case eGraphicsCmdDrawCall:
             {
-                const char* msg = "Issued a draw call!\n";
-                Print(msg, strlen(msg));
+                PrintDebugString("Issued a draw call!\n");
                 // TODO: do api-specific graphics stuff
                 break;
             }
@@ -69,11 +69,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
     }
 }
 
-static void PlatformShutdown()
-{
-    g_ThreadPool.Shutdown();
-}
-
+volatile bool runGame = true;
 LRESULT CALLBACK WindowProc(HWND hwnd,
     UINT uMsg,
     WPARAM wParam,
@@ -85,33 +81,29 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     {
         case WM_CREATE:
         {
-            const char* msg = "create\n";
-            Print(msg, strlen(msg));
+            OutputDebugStringA("create\n");
             break;
         }
         case WM_SIZE:
         {
-            const char* msg = "size\n";
-            Print(msg, strlen(msg));
+            OutputDebugStringA("size\n");
             break;
         }
         case WM_DESTROY:
         {
-            const char* msg = "destroy\n";
-            Print(msg, strlen(msg));
+            OutputDebugStringA("destroy\n");
             break;
         }
         case WM_CLOSE:
         {
-            const char* msg = "close\n";
-            Print(msg, strlen(msg));
-            PlatformShutdown();
+            OutputDebugStringA("close\n");
+            PostQuitMessage(0);
+            runGame = false;
             break;
         }
         case WM_ACTIVATEAPP:
         {
-            const char* msg = "activate app\n";
-            Print(msg, strlen(msg));
+            OutputDebugStringA("activateapp\n");
             break;
         }
         default:
@@ -129,8 +121,8 @@ static void ProcessWindowMessages()
     MSG msg = {};
     for (;;)
     {
-        BOOL Result = GetMessage(&msg, 0, 0, 0);
-        if (Result > 0)
+        BOOL Result = PeekMessage(&msg, 0, 0, 0, PM_REMOVE);
+        if (Result)
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
@@ -150,23 +142,21 @@ wWinMain(HINSTANCE hInstance,
          PWSTR pCmdLine,
          int nCmdShow)
 {
-    // Setup console and window
-    AllocConsole();
-
-    WNDCLASS WindowClass = {};
-    WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-    WindowClass.lpfnWndProc = WindowProc;
-    WindowClass.hInstance = hInstance;
+    // Setup window
+    WNDCLASS windowClass = {};
+    windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+    windowClass.lpfnWndProc = WindowProc;
+    windowClass.hInstance = hInstance;
     //WindowClass.hIcon = ;
-    WindowClass.lpszClassName = "Tinker Platform Window";
-    if (!RegisterClass(&WindowClass))
+    windowClass.lpszClassName = "Tinker Platform Window";
+    if (!RegisterClass(&windowClass))
     {
         // TODO: Log? Fail?
         return 1;
     }
-    HWND WindowHandle =
+    HWND windowHandle =
         CreateWindowEx(0,
-                       WindowClass.lpszClassName,
+                       windowClass.lpszClassName,
                        "Tinker",
                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                        CW_USEDEFAULT,
@@ -177,7 +167,16 @@ wWinMain(HINSTANCE hInstance,
                        0,
                        hInstance,
                        0);
-    if (!WindowHandle)
+    if (!windowHandle)
+    {
+        // TODO: Log? Fail?
+        return 1;
+    }
+
+    // Init Vulkan
+    VulkanContextResources vulkanContextResources = {};
+    int result = InitVulkan(&vulkanContextResources, hInstance, windowHandle);
+    if (result)
     {
         // TODO: Log? Fail?
         return 1;
@@ -193,24 +192,26 @@ wWinMain(HINSTANCE hInstance,
     graphicsCommandStream.m_graphicsCommands = new GraphicsCommand[graphicsCommandStream.m_maxCommands];
 
     Win32GameCode GameCode = {};
+    ReloadGameCode(&GameCode);
 
     // Start threadpool
     g_ThreadPool.Startup(10);
 
     // Main loop
-    volatile bool runGame = true;
     while (runGame)
     {
         ProcessWindowMessages();
-        ReloadGameCode(&GameCode);
         
         GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
 
         ProcessGraphicsCommandStream(&graphicsCommandStream);
 
         Sleep(2000); // TODO: remove once we add file timestamp checking
+        ReloadGameCode(&GameCode);
     }
 
-    PlatformShutdown();
+    g_ThreadPool.Shutdown();
+    DestroyVulkan(&vulkanContextResources);
+
     return 0;
 }

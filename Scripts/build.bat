@@ -30,7 +30,7 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerCore - static library
-set SourceListCore=..\Core\Math\VectorTypes.cpp
+set SourceListCore=../Core/Math/VectorTypes.cpp
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsCore=/FdTinkerCore.pdb /MTd
@@ -44,7 +44,7 @@ lib /machine:x64 /Wx /out:TinkerCore.lib /nologo
 
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe
-set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp
+set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Vulkan.cpp
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
@@ -53,10 +53,20 @@ if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=
     set DebugLinkFlagsPlatform=
     )
-set LibsToLink=user32.lib
+
 echo.
 echo Building TinkerPlatform.exe...
-cl %CommonCompileFlags% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe 
+
+rem Vulkan
+set VulkanVersion=1.2.141.2
+echo Using Vulkan v%VulkanVersion%
+echo.
+set VulkanPath="C:\VulkanSDK"\%VulkanVersion%
+
+set CompileIncludePaths=%VulkanPath%\Include
+set LibsToLink=user32.lib %VulkanPath%\Lib\vulkan-1.lib
+
+cl %CommonCompileFlags% /I %CompileIncludePaths% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe 
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
