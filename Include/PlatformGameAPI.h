@@ -7,7 +7,7 @@ namespace Tinker
     namespace Platform
     {
         // I/O
-        void Print(const char* str, size_t len);
+        void PrintDebugString(const char* str);
 
         // Memory
         void* AllocAligned(size_t size, size_t alignment);

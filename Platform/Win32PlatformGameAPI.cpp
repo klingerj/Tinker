@@ -13,14 +13,9 @@ namespace Tinker
         }
 
         // I/O
-        void Print(const char* str, size_t len)
+        void PrintDebugString(const char* str)
         {
-            HANDLE stdout = CreateFileA("CONOUT$", GENERIC_WRITE,  FILE_SHARE_WRITE, FALSE, OPEN_EXISTING, 0, 0);
-            if (stdout)
-            {
-                DWORD numBytesWritten;
-                WriteFile(stdout, str, (DWORD)len, &numBytesWritten, 0);
-            }
+            OutputDebugStringA(str);
         }
 
         // Memory
