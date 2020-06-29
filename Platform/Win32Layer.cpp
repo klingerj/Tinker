@@ -55,7 +55,7 @@ ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
 {
     g_ThreadPool.EnqueueNewThreadJob(newJob);
 }
-#include <assert.h>
+
 static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandStream)
 {
     TINKER_ASSERT(graphicsCommandStream->m_numCommands <= graphicsCommandStream->m_maxCommands);
