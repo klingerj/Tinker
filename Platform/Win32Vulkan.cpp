@@ -1,5 +1,4 @@
 #include "../Include/Platform/Win32Vulkan.h"
-#include "../Include/Core/CoreDefines.h"
 
 #include <cstring>
 
@@ -123,7 +122,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
                                         VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                                         VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     dbgUtilsMsgCreateInfo.pfnUserCallback = DebugCallbackFunc;
-    dbgUtilsMsgCreateInfo.pUserData = nullptr; // Optional
+    dbgUtilsMsgCreateInfo.pUserData = nullptr;
 
     PFN_vkCreateDebugUtilsMessengerEXT dbgCreateFunc = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vulkanContextResources->instance, "vkCreateDebugUtilsMessengerEXT");
     if (dbgCreateFunc)
@@ -136,8 +135,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
     }
     #endif
 
-    // TODO: create the other devices and such
-
+    // Surface
     VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo = {};
     win32SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     win32SurfaceCreateInfo.hinstance = hInstance;
@@ -149,6 +147,115 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
         // TODO: Log? Fail?
         return 1;
     }
+
+    // Physical device
+    uint32 numPhysicalDevices = 0;
+    vkEnumeratePhysicalDevices(vulkanContextResources->instance, &numPhysicalDevices, nullptr);
+
+    if (numPhysicalDevices == 0)
+    {
+        // TODO: Log? Fail?
+    }
+
+    VkPhysicalDevice* physicalDevices = new VkPhysicalDevice[numPhysicalDevices];
+    vkEnumeratePhysicalDevices(vulkanContextResources->instance, &numPhysicalDevices, physicalDevices);
+
+    for (uint32 uiPhysicalDevice = 0; uiPhysicalDevice < numPhysicalDevices; ++uiPhysicalDevice)
+    {
+        VkPhysicalDevice currPhysicalDevice = physicalDevices[uiPhysicalDevice];
+
+        VkPhysicalDeviceProperties physicalDeviceProperties;
+        VkPhysicalDeviceFeatures physicalDeviceFeatures;
+        vkGetPhysicalDeviceProperties(currPhysicalDevice, &physicalDeviceProperties);
+        vkGetPhysicalDeviceFeatures(currPhysicalDevice, &physicalDeviceFeatures);
+
+        if (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        {
+            // Queue family
+            uint32 numQueueFamilies = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(currPhysicalDevice, &numQueueFamilies, nullptr);
+
+            VkQueueFamilyProperties* queueFamilyProperties = new VkQueueFamilyProperties[numQueueFamilies];
+            vkGetPhysicalDeviceQueueFamilyProperties(currPhysicalDevice, &numQueueFamilies, queueFamilyProperties);
+
+            bool graphicsSupport = false;
+            bool presentationSupport = false;
+
+            for (uint32 uiQueueFamily = 0; uiQueueFamily < numQueueFamilies; ++uiQueueFamily)
+            {
+                if (queueFamilyProperties[uiQueueFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+                {
+                    graphicsSupport = true;
+                    vulkanContextResources->graphicsQueueIndex = uiQueueFamily;
+                }
+
+                VkBool32 presentSupport;
+                vkGetPhysicalDeviceSurfaceSupportKHR(currPhysicalDevice, uiQueueFamily, vulkanContextResources->surface, &presentSupport);
+                if (presentSupport)
+                {
+                    presentationSupport = true;
+                    vulkanContextResources->presentationQueueIndex = uiQueueFamily;
+                }
+            }
+
+            if (graphicsSupport && presentationSupport)
+            {
+                // Select the current physical device
+                vulkanContextResources->physicalDevice = currPhysicalDevice;
+                break;
+            }
+
+            delete queueFamilyProperties;
+        }
+    }
+    delete physicalDevices;
+
+    if (vulkanContextResources->physicalDevice == VK_NULL_HANDLE)
+    {
+        // We did not select a physical device
+        // TODO: Log? Fail?
+    }
+
+    // Logical device
+    const uint32 numQueues = 2;
+    VkDeviceQueueCreateInfo deviceQueueCreateInfos[numQueues] = {};
+
+    // Create graphics queue
+    deviceQueueCreateInfos[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    deviceQueueCreateInfos[0].queueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+    deviceQueueCreateInfos[0].queueCount = 1;
+    float graphicsQueuePriority = 1.0f;
+    deviceQueueCreateInfos[0].pQueuePriorities = &graphicsQueuePriority;
+
+    // Create presentation queue
+    deviceQueueCreateInfos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    deviceQueueCreateInfos[1].queueFamilyIndex = vulkanContextResources->presentationQueueIndex;
+    deviceQueueCreateInfos[1].queueCount = 1;
+    float presentationQueuePriority = 1.0f;
+    deviceQueueCreateInfos[1].pQueuePriorities = &presentationQueuePriority;
+
+    VkDeviceCreateInfo deviceCreateInfo = {};
+    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
+    deviceCreateInfo.queueCreateInfoCount = numQueues;
+    VkPhysicalDeviceFeatures requestedPhysicalDeviceFeatures = {};
+    // TODO: request physical device features
+    deviceCreateInfo.pEnabledFeatures = &requestedPhysicalDeviceFeatures;
+    deviceCreateInfo.enabledLayerCount = 0;
+    deviceCreateInfo.ppEnabledLayerNames = nullptr;
+    deviceCreateInfo.enabledExtensionCount = 0;
+    deviceCreateInfo.ppEnabledExtensionNames = nullptr;
+
+    result = vkCreateDevice(vulkanContextResources->physicalDevice, &deviceCreateInfo, nullptr, &vulkanContextResources->device);
+    if (result != VK_SUCCESS)
+    {
+        // TODO: Log? Fail?
+        return 1;
+    }
+
+    // Graphics queue
+    vkGetDeviceQueue(vulkanContextResources->device, vulkanContextResources->graphicsQueueIndex, 0, &vulkanContextResources->graphicsQueue);
+    vkGetDeviceQueue(vulkanContextResources->device, vulkanContextResources->presentationQueueIndex, 0, &vulkanContextResources->presentationQueue);
 
     return 0;
 }
@@ -168,6 +275,7 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources)
     }
     #endif
 
+    vkDestroyDevice(vulkanContextResources->device, nullptr);
     vkDestroySurfaceKHR(vulkanContextResources->instance, vulkanContextResources->surface, nullptr);
     vkDestroyInstance(vulkanContextResources->instance, nullptr);
 }
