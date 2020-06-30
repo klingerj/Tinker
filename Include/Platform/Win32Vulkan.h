@@ -7,6 +7,7 @@
 
 typedef struct vulkan_context_res
 {
+    VkDebugUtilsMessengerEXT debugMessenger;
     VkSurfaceKHR surface;
     VkInstance instance;
 } VulkanContextResources;
