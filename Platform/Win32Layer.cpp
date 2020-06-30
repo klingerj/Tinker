@@ -218,7 +218,6 @@ wWinMain(HINSTANCE hInstance,
 
         ProcessGraphicsCommandStream(&graphicsCommandStream);
 
-        //Sleep(2000); // TODO: remove once we add file timestamp checking
         ReloadGameCode(&GameCode, GameDllStr);
     }
 
