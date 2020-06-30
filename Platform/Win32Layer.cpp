@@ -33,7 +33,7 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
 
             const char* GameDllHotloadStr = "TinkerGame_hotload.dll";
             CopyFile(gameDllSourcePath, GameDllHotloadStr, FALSE);
-            GameCode->GameDll = LoadLibraryA(GameDllHotloadStr);
+            GameCode->GameDll = LoadLibrary(GameDllHotloadStr);
             if (GameCode->GameDll)
             {
                 GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
@@ -92,29 +92,29 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     {
         case WM_CREATE:
         {
-            OutputDebugStringA("create\n");
+            OutputDebugString("create\n");
             break;
         }
         case WM_SIZE:
         {
-            OutputDebugStringA("size\n");
+            OutputDebugString("size\n");
             break;
         }
         case WM_DESTROY:
         {
-            OutputDebugStringA("destroy\n");
+            OutputDebugString("destroy\n");
             break;
         }
         case WM_CLOSE:
         {
-            OutputDebugStringA("close\n");
+            OutputDebugString("close\n");
             PostQuitMessage(0);
             runGame = false;
             break;
         }
         case WM_ACTIVATEAPP:
         {
-            OutputDebugStringA("activateapp\n");
+            OutputDebugString("activateapp\n");
             break;
         }
         default:

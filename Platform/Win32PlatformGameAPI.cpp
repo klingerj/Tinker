@@ -15,7 +15,7 @@ namespace Tinker
         // I/O
         void PrintDebugString(const char* str)
         {
-            OutputDebugStringA(str);
+            OutputDebugString(str);
         }
 
         // Memory
