@@ -17,7 +17,6 @@ typedef struct win32_game_code
 
 static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
-    // TODO: check file timestamp
     WIN32_FIND_DATA findData;
     HANDLE findHandle = FindFirstFile(gameDllSourcePath, &findData);
     if (findHandle != INVALID_HANDLE_VALUE)
@@ -32,7 +31,6 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
                 GameCode->GameUpdate = GameUpdateStub;
             }
 
-            // Dll has been updated, reload the code
             const char* GameDllHotloadStr = "TinkerGame_hotload.dll";
             CopyFile(gameDllSourcePath, GameDllHotloadStr, FALSE);
             GameCode->GameDll = LoadLibraryA(GameDllHotloadStr);
@@ -132,7 +130,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
 static void ProcessWindowMessages()
 {
     MSG msg = {};
-    for (;;)
+    while (1)
     {
         BOOL Result = PeekMessage(&msg, 0, 0, 0, PM_REMOVE);
         if (Result)
