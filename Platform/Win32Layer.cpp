@@ -186,7 +186,8 @@ wWinMain(HINSTANCE hInstance,
 
     // Init Vulkan
     VulkanContextResources vulkanContextResources = {};
-    int result = InitVulkan(&vulkanContextResources, hInstance, windowHandle);
+    // TODO: set desired window dims with settings file
+    int result = InitVulkan(&vulkanContextResources, hInstance, windowHandle, 1920, 1080);
     if (result)
     {
         // TODO: Log? Fail?
