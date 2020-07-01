@@ -18,6 +18,7 @@ typedef int64_t  int64;
 
 #define MAX(a, b) ((a > b) ? a : b)
 #define MIN(a, b) ((a < b) ? a : b)
+#define CLAMP(a, b, c) MIN(MAX(a, b), c)
 
 #define ISPOW2(x) x && ((x & (x - 1)) == 0)
 

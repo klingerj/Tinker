@@ -15,7 +15,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 }
 #endif
 
-int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstance, HWND windowHandle)
+int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstance, HWND windowHandle, uint32 width, uint32 height)
 {
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -160,6 +160,9 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
     VkPhysicalDevice* physicalDevices = new VkPhysicalDevice[numPhysicalDevices];
     vkEnumeratePhysicalDevices(vulkanContextResources->instance, &numPhysicalDevices, physicalDevices);
 
+    const uint32 numRequiredPhysicalDeviceExtensions = 1;
+    const char* requiredPhysicalDeviceExtensions[numRequiredPhysicalDeviceExtensions] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
     for (uint32 uiPhysicalDevice = 0; uiPhysicalDevice < numPhysicalDevices; ++uiPhysicalDevice)
     {
         VkPhysicalDevice currPhysicalDevice = physicalDevices[uiPhysicalDevice];
@@ -180,7 +183,9 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
 
             bool graphicsSupport = false;
             bool presentationSupport = false;
+            bool extensionSupport[numRequiredPhysicalDeviceExtensions] = { false };
 
+            // Check queue family properties
             for (uint32 uiQueueFamily = 0; uiQueueFamily < numQueueFamilies; ++uiQueueFamily)
             {
                 if (queueFamilyProperties[uiQueueFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT)
@@ -198,6 +203,39 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
                 }
             }
 
+            uint32 numAvailablePhysicalDeviceExtensions = 0;
+            vkEnumerateDeviceExtensionProperties(currPhysicalDevice, nullptr, &numAvailablePhysicalDeviceExtensions, nullptr);
+
+            if (numAvailablePhysicalDeviceExtensions == 0)
+            {
+                // TODO: Log? Fail?
+            }
+
+            VkExtensionProperties* availablePhysicalDeviceExtensions = new VkExtensionProperties[numAvailablePhysicalDeviceExtensions];
+            vkEnumerateDeviceExtensionProperties(currPhysicalDevice, nullptr, &numAvailablePhysicalDeviceExtensions, availablePhysicalDeviceExtensions);
+
+            for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
+            {
+                for (uint32 uiAvailExt = 0; uiAvailExt < numAvailablePhysicalDeviceExtensions; ++uiAvailExt)
+                {
+                    if (!strcmp(availablePhysicalDeviceExtensions[uiAvailExt].extensionName, requiredPhysicalDeviceExtensions[uiReqExt]))
+                    {
+                        extensionSupport[uiReqExt] = true;
+                        break;
+                    }
+                }
+            }
+            delete availablePhysicalDeviceExtensions;
+
+            for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
+            {
+                if (!extensionSupport[uiReqExt])
+                {
+                    // TODO: Log? Fail?
+                }
+            }
+
+            // Extension support assumed at this point
             if (graphicsSupport && presentationSupport)
             {
                 // Select the current physical device
@@ -243,8 +281,8 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
     deviceCreateInfo.pEnabledFeatures = &requestedPhysicalDeviceFeatures;
     deviceCreateInfo.enabledLayerCount = 0;
     deviceCreateInfo.ppEnabledLayerNames = nullptr;
-    deviceCreateInfo.enabledExtensionCount = 0;
-    deviceCreateInfo.ppEnabledExtensionNames = nullptr;
+    deviceCreateInfo.enabledExtensionCount = numRequiredPhysicalDeviceExtensions;
+    deviceCreateInfo.ppEnabledExtensionNames = requiredPhysicalDeviceExtensions;
 
     result = vkCreateDevice(vulkanContextResources->physicalDevice, &deviceCreateInfo, nullptr, &vulkanContextResources->device);
     if (result != VK_SUCCESS)
@@ -253,9 +291,138 @@ int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstan
         return 1;
     }
 
-    // Graphics queue
+    // Queues
     vkGetDeviceQueue(vulkanContextResources->device, vulkanContextResources->graphicsQueueIndex, 0, &vulkanContextResources->graphicsQueue);
     vkGetDeviceQueue(vulkanContextResources->device, vulkanContextResources->presentationQueueIndex, 0, &vulkanContextResources->presentationQueue);
+
+    // Swap chain
+    VkSurfaceCapabilitiesKHR capabilities;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanContextResources->physicalDevice, vulkanContextResources->surface, &capabilities);
+
+    VkExtent2D optimalExtent = {};
+    if (capabilities.currentExtent.width != 0xffffffff)
+    {
+        optimalExtent = capabilities.currentExtent;
+    }
+    else
+    {
+        optimalExtent.width = CLAMP(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+        optimalExtent.height = CLAMP(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+    }
+
+    uint32 numSwapChainImages = capabilities.minImageCount + 1;
+    if (capabilities.maxImageCount > 0) // 0 can indicate no maximum
+    {
+        numSwapChainImages = MIN(numSwapChainImages, capabilities.maxImageCount);
+    }
+
+    uint32 numAvailableSurfaceFormats;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanContextResources->physicalDevice, vulkanContextResources->surface, &numAvailableSurfaceFormats, nullptr);
+
+    if (numAvailableSurfaceFormats == 0)
+    {
+        // TODO: Log? Fail?
+    }
+
+    VkSurfaceFormatKHR* availableSurfaceFormats = new VkSurfaceFormatKHR[numAvailableSurfaceFormats];
+    vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanContextResources->physicalDevice, vulkanContextResources->surface, &numAvailableSurfaceFormats, availableSurfaceFormats);
+
+    VkSurfaceFormatKHR chosenFormat = availableSurfaceFormats[0];
+    for (uint32 uiAvailFormat = 1; uiAvailFormat < numAvailableSurfaceFormats; ++uiAvailFormat)
+    {
+        if (availableSurfaceFormats[uiAvailFormat].format == VK_FORMAT_B8G8R8A8_SRGB &&
+            availableSurfaceFormats[uiAvailFormat].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            chosenFormat = availableSurfaceFormats[uiAvailFormat];
+        }
+    }
+    delete availableSurfaceFormats;
+
+    uint32 numAvailablePresentModes = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanContextResources->physicalDevice, vulkanContextResources->surface, &numAvailablePresentModes, nullptr);
+
+    if (numAvailablePresentModes == 0)
+    {
+        // TODO: Log? Fail?
+    }
+
+    VkPresentModeKHR* availablePresentModes = new VkPresentModeKHR[numAvailablePresentModes];
+    vkGetPhysicalDeviceSurfacePresentModesKHR(vulkanContextResources->physicalDevice, vulkanContextResources->surface, &numAvailablePresentModes, availablePresentModes);
+
+    VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    for (uint32 uiAvailPresMode = 0; uiAvailPresMode < numAvailablePresentModes; ++uiAvailPresMode)
+    {
+        if (availablePresentModes[uiAvailPresMode] == VK_PRESENT_MODE_MAILBOX_KHR)
+        {
+            chosenPresentMode = availablePresentModes[uiAvailPresMode];
+        }
+    }
+    delete availablePresentModes;
+
+    VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
+    swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    swapChainCreateInfo.surface = vulkanContextResources->surface;
+    swapChainCreateInfo.minImageCount = numSwapChainImages;
+    swapChainCreateInfo.imageFormat = chosenFormat.format;
+    swapChainCreateInfo.imageColorSpace = chosenFormat.colorSpace;
+    swapChainCreateInfo.imageExtent = optimalExtent;
+    swapChainCreateInfo.imageArrayLayers = 1;
+    swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    if (vulkanContextResources->graphicsQueueIndex != vulkanContextResources->presentationQueueIndex) {
+        const uint32 numQueueFamilyIndices = 2;
+        uint32 queueFamilyIndices[numQueueFamilyIndices] = { vulkanContextResources->graphicsQueueIndex, vulkanContextResources->presentationQueueIndex };
+        swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        swapChainCreateInfo.queueFamilyIndexCount = numQueueFamilyIndices;
+        swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
+    }
+    else {
+        swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        swapChainCreateInfo.queueFamilyIndexCount = 0;
+        swapChainCreateInfo.pQueueFamilyIndices = nullptr;
+    }
+    swapChainCreateInfo.preTransform = capabilities.currentTransform;
+    swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    swapChainCreateInfo.presentMode = chosenPresentMode;
+
+    vulkanContextResources->swapChainExtent = optimalExtent;
+    vulkanContextResources->swapChainFormat = chosenFormat.format;
+    vulkanContextResources->numSwapChainImages = numSwapChainImages;
+
+    result = vkCreateSwapchainKHR(vulkanContextResources->device, &swapChainCreateInfo, nullptr, &vulkanContextResources->swapChain);
+    if (result != VK_SUCCESS)
+    {
+        // TODO: Log? Fail?
+    }
+
+    vkGetSwapchainImagesKHR(vulkanContextResources->device, vulkanContextResources->swapChain, &numSwapChainImages, nullptr);
+    vulkanContextResources->swapChainImages = new VkImage[numSwapChainImages];
+    vkGetSwapchainImagesKHR(vulkanContextResources->device, vulkanContextResources->swapChain, &numSwapChainImages, vulkanContextResources->swapChainImages);
+
+    vulkanContextResources->swapChainImageViews = new VkImageView[numSwapChainImages];
+    for (uint32 uiImageView = 0; uiImageView < numSwapChainImages; ++uiImageView)
+    {
+        VkImageViewCreateInfo imageViewCreateInfo = {};
+        imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        imageViewCreateInfo.image = vulkanContextResources->swapChainImages[uiImageView];
+        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        imageViewCreateInfo.format = vulkanContextResources->swapChainFormat;
+        imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+        imageViewCreateInfo.subresourceRange.levelCount = 1;
+        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+        result = vkCreateImageView(vulkanContextResources->device, &imageViewCreateInfo, nullptr, &vulkanContextResources->swapChainImageViews[uiImageView]);
+        if (result != VK_SUCCESS)
+        {
+            // TODO: Log? Fail?
+        }
+    }
 
     return 0;
 }
@@ -275,6 +442,14 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources)
     }
     #endif
 
+    delete vulkanContextResources->swapChainImages;
+    for (uint32 uiImageView = 0; uiImageView < vulkanContextResources->numSwapChainImages; ++uiImageView)
+    {
+        vkDestroyImageView(vulkanContextResources->device, vulkanContextResources->swapChainImageViews[uiImageView], nullptr);
+    }
+    delete vulkanContextResources->swapChainImageViews;
+
+    vkDestroySwapchainKHR(vulkanContextResources->device, vulkanContextResources->swapChain, nullptr);
     vkDestroyDevice(vulkanContextResources->device, nullptr);
     vkDestroySurfaceKHR(vulkanContextResources->instance, vulkanContextResources->surface, nullptr);
     vkDestroyInstance(vulkanContextResources->instance, nullptr);
