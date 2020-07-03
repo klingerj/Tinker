@@ -1,4 +1,5 @@
 #include "../Include/PlatformGameAPI.h"
+#include "../Include/Platform/Win32Utilities.h"
 #include "../Include/Platform/Win32Vulkan.h"
 #include "Win32WorkerThreadPool.cpp"
 
@@ -78,6 +79,13 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
             }
         }
     }
+}
+
+static void SubmitFrameToGPU(Graphics::VulkanContextResources* vulkanContextResources)
+{
+    using namespace Graphics;
+    // TODO: switch statement based on chosen graphics API
+    SubmitFrame(vulkanContextResources);
 }
 
 volatile bool runGame = true;
@@ -165,6 +173,11 @@ wWinMain(HINSTANCE hInstance,
         // TODO: Log? Fail?
         return 1;
     }
+    
+    // TODO: load from settings file
+    uint32 width = 800;
+    uint32 height = 600;
+
     HWND windowHandle =
         CreateWindowEx(0,
                        windowClass.lpszClassName,
@@ -172,8 +185,8 @@ wWinMain(HINSTANCE hInstance,
                        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                        CW_USEDEFAULT,
                        CW_USEDEFAULT,
-                       CW_USEDEFAULT,
-                       CW_USEDEFAULT,
+                       width,
+                       height,
                        0,
                        0,
                        hInstance,
@@ -185,9 +198,9 @@ wWinMain(HINSTANCE hInstance,
     }
 
     // Init Vulkan
-    VulkanContextResources vulkanContextResources = {};
+    Graphics::VulkanContextResources vulkanContextResources = {};
     // TODO: set desired window dims with settings file
-    int result = InitVulkan(&vulkanContextResources, hInstance, windowHandle, 1920, 1080);
+    int result = Graphics::InitVulkan(&vulkanContextResources, hInstance, windowHandle, width, height);
     if (result)
     {
         // TODO: Log? Fail?
@@ -197,6 +210,7 @@ wWinMain(HINSTANCE hInstance,
     // Init data passed from platform to game
     PlatformAPIFuncs platformAPIFuncs = {};
     platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
+    platformAPIFuncs.ReadEntireFile = ReadEntireFile;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
@@ -218,6 +232,7 @@ wWinMain(HINSTANCE hInstance,
         GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
 
         ProcessGraphicsCommandStream(&graphicsCommandStream);
+        SubmitFrameToGPU(&vulkanContextResources);
 
         ReloadGameCode(&GameCode, GameDllStr);
     }

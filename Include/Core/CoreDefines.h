@@ -4,6 +4,13 @@
 #include <math.h>
 #include <cmath>
 
+#ifdef _DEBUG
+#include <assert.h>
+#define TINKER_ASSERT(cond) assert((cond))
+#else
+#define TINKER_ASSERT(cond)
+#endif
+
 typedef uint8_t  uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
@@ -39,17 +46,15 @@ T POW2(T x)
 
 #define FLOAT_EQUAL(a, b) fabs(a - b) < FLT_EPSILON
 
+inline uint32 SafeTruncateUint64(uint64 value)
+{
+    TINKER_ASSERT(value <= 0xffffffff);
+    return (uint32)value;
+}
+
 #ifdef _WIN32
 #define OPTIMIZATIONS_ON __pragma(optimize( "", on ))
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
-
-#ifdef _DEBUG
-#include <assert.h>
-#define TINKER_ASSERT(cond) assert((cond))
-#else
-#define TINKER_ASSERT(cond)
-#endif
-
 #endif
 
 #define BYTE_ALIGN(n) alignas(n)

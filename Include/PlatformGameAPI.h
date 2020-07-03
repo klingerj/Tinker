@@ -51,7 +51,10 @@ namespace Tinker
 
         #define ENQUEUE_WORKER_THREAD_JOB(name) void name(WorkerJob* newJob)
         typedef ENQUEUE_WORKER_THREAD_JOB(enqueue_worker_thread_job);
-        
+
+        #define READ_ENTIRE_FILE(name) uint8* name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
+        typedef READ_ENTIRE_FILE(read_entire_file);
+
         // Graphics
         enum
         {
@@ -87,8 +90,10 @@ namespace Tinker
         {
             // TODO: more functions, e.g. graphics resource creation
             enqueue_worker_thread_job* EnqueueWorkerThreadJob;
+            read_entire_file* ReadEntireFile;
         } PlatformAPIFuncs;
 
+        // Game side
         #define GAME_UPDATE(name) uint32 name(Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
         typedef GAME_UPDATE(game_update);
     }

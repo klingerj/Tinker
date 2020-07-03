@@ -32,6 +32,12 @@ namespace Tinker
                 uint32 numSwapChainImages = 0;
 
                 // TODO: move this stuff elsewhere
+                VkFence fence = VK_NULL_HANDLE;
+                VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
+                VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
+                VkCommandBuffer* commandBuffers = nullptr;
+                VkCommandPool commandPool = VK_NULL_HANDLE;
+                VkFramebuffer* swapChainFramebuffers = nullptr;
                 VkRenderPass renderPass = VK_NULL_HANDLE;
                 VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
                 VkPipeline pipeline = VK_NULL_HANDLE;
@@ -42,6 +48,9 @@ namespace Tinker
 
             void InitGraphicsPipelineResources(VulkanContextResources* vulkanContextResources);
             void InitRenderPassResources(VulkanContextResources* vulkanContextResources);
+
+            void SubmitFrame(VulkanContextResources* vulkanContextResources);
+            void WaitForIdleDevice(VulkanContextResources* vulkanContextResources);
         }
     }
 }
