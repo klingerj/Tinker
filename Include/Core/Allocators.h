@@ -6,30 +6,39 @@ namespace Tinker
 {
     namespace Memory
     {
-        template <size_t Size, size_t Alignment = 1>
+        template <size_t Size = 0, size_t Alignment = 1>
         class LinearAllocator
         {
         private:
+            size_t m_size;
             uint8* m_ownedMemPtr = nullptr;
             size_t m_nextAllocOffset = 0;
 
         public:
             LinearAllocator()
             {
-                TINKER_ASSERT(Size > 0);
                 TINKER_ASSERT(ISPOW2(Alignment));
-                m_ownedMemPtr = (uint8*)Platform::AllocAligned(Size, Alignment);
+                m_size = Size;
+                if (m_size > 0)
+                {
+                    m_ownedMemPtr = (uint8*)Platform::AllocAligned(Size, Alignment);
+                }
+                else
+                {
+                    // User must specify alloc'd memory with Init()
+                }
             }
 
             ~LinearAllocator()
             {
-                Free();
+                if (m_ownedMemPtr) Platform::FreeAligned(m_ownedMemPtr);
             }
 
-            void Free()
+            void Init(size_t size, size_t alignment)
             {
-                m_nextAllocOffset = 0;
-                if (m_ownedMemPtr) Platform::FreeAligned(m_ownedMemPtr);
+                TINKER_ASSERT(size > 0);
+                m_size = size;
+                m_ownedMemPtr = (uint8*)Platform::AllocAligned(m_size, Alignment);
             }
 
             uint8* Alloc(size_t size, size_t alignment)
@@ -45,7 +54,7 @@ namespace Tinker
                 
                 // Check that the allocator has room for this allocation
                 size_t allocSize = alignedPtrAsNum - memPtrAsNum + size;
-                if (allocSize > Size - m_nextAllocOffset) return nullptr;
+                if (allocSize > m_size - m_nextAllocOffset) return nullptr;
 
                 // Return new pointer
                 uint8* newAllocPtr = (uint8*)alignedPtrAsNum;
