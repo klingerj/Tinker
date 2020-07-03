@@ -7,24 +7,41 @@
 
 #include <windows.h>
 
-typedef struct vulkan_context_res
+namespace Tinker
 {
-    VkInstance instance                      = VK_NULL_HANDLE;
-    VkDebugUtilsMessengerEXT debugMessenger;
-    VkPhysicalDevice physicalDevice          = VK_NULL_HANDLE;
-    uint32 graphicsQueueIndex                = 0xffffffff;
-    uint32 presentationQueueIndex            = 0xffffffff;
-    VkDevice device                          = VK_NULL_HANDLE;
-    VkQueue graphicsQueue                    = VK_NULL_HANDLE;
-    VkQueue presentationQueue                = VK_NULL_HANDLE;
-    VkSurfaceKHR surface                     = VK_NULL_HANDLE;
-    VkSwapchainKHR swapChain                 = VK_NULL_HANDLE;
-    VkExtent2D swapChainExtent               = { 0, 0 };
-    VkFormat swapChainFormat                 = VK_FORMAT_UNDEFINED;
-    VkImage* swapChainImages                 = nullptr;
-    VkImageView* swapChainImageViews         = nullptr;
-    uint32 numSwapChainImages                = 0;
-} VulkanContextResources;
+    namespace Platform
+    {
+        namespace Graphics
+        {
+            typedef struct vulkan_context_res
+            {
+                VkInstance instance = VK_NULL_HANDLE;
+                VkDebugUtilsMessengerEXT debugMessenger;
+                VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+                uint32 graphicsQueueIndex = 0xffffffff;
+                uint32 presentationQueueIndex = 0xffffffff;
+                VkDevice device = VK_NULL_HANDLE;
+                VkQueue graphicsQueue = VK_NULL_HANDLE;
+                VkQueue presentationQueue = VK_NULL_HANDLE;
+                VkSurfaceKHR surface = VK_NULL_HANDLE;
+                VkSwapchainKHR swapChain = VK_NULL_HANDLE;
+                VkExtent2D swapChainExtent = { 0, 0 };
+                VkFormat swapChainFormat = VK_FORMAT_UNDEFINED;
+                VkImage* swapChainImages = nullptr;
+                VkImageView* swapChainImageViews = nullptr;
+                uint32 numSwapChainImages = 0;
 
-int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstance, HWND windowHandle, uint32 width, uint32 height);
-void DestroyVulkan(VulkanContextResources* vulkanContextResources);
+                // TODO: move this stuff elsewhere
+                VkRenderPass renderPass = VK_NULL_HANDLE;
+                VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+                VkPipeline pipeline = VK_NULL_HANDLE;
+            } VulkanContextResources;
+
+            int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstance, HWND windowHandle, uint32 width, uint32 height);
+            void DestroyVulkan(VulkanContextResources* vulkanContextResources);
+
+            void InitGraphicsPipelineResources(VulkanContextResources* vulkanContextResources);
+            void InitRenderPassResources(VulkanContextResources* vulkanContextResources);
+        }
+    }
+}
