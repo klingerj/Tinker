@@ -38,8 +38,8 @@ if "%BuildConfig%" == "Debug" (
     )
 echo.
 echo Building TinkerCore.lib...
-cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore%
-lib /machine:x64 /Wx /out:TinkerCore.lib /nologo
+cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore% /Fo:TinkerCore.obj
+lib /verbose /machine:x64 /Wx /out:TinkerCore.lib /nologo TinkerCore.obj
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
