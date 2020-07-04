@@ -541,6 +541,7 @@ namespace Tinker
 
                 VkFenceCreateInfo fenceCreateInfo = {};
                 fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+                fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
                 result = vkCreateFence(vulkanContextResources->device, &fenceCreateInfo, nullptr, &vulkanContextResources->fence);
                 if (result != VK_SUCCESS)
@@ -747,6 +748,8 @@ namespace Tinker
 
                 VkSubpassDependency subpassDependency = {};
                 subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+                subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependency.srcAccessMask = 0;
                 subpassDependency.dstSubpass = 0;
                 subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
                 subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
