@@ -33,14 +33,14 @@ rem TinkerCore - static library
 set SourceListCore=../Core/Math/VectorTypes.cpp
 
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsCore=/FdTinkerCore.pdb /MTd
+    set DebugCompileFlagsCore=/FdTinkerCore.pdb
     ) else (
     set DebugCompileFlagsCore=
     )
 echo.
 echo Building TinkerCore.lib...
-cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore%
-lib /machine:x64 /Wx /out:TinkerCore.lib /nologo
+cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore% /Fo:TinkerCore.obj
+lib /verbose /machine:x64 /Wx /out:TinkerCore.lib /nologo TinkerCore.obj
 
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe

@@ -14,16 +14,16 @@ if "%BuildConfig%" NEQ "Debug" (
     )
 
 rem *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++17 /MT /W4 /WX /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm-
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm-
 set CommonLinkFlags=/incremental:no /opt:ref
 
 if "%BuildConfig%" == "Debug" (
     echo Debug mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od
+    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd
     set CommonLinkFlags=%CommonLinkFlags% /debug:full
     ) else (
     echo Release mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /O2
+    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
 rem *********************************************************************************************************
@@ -37,8 +37,8 @@ if "%BuildConfig%" == "Debug" (
     )
 echo.
 echo Building TinkerCore.lib...
-cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore%
-lib user32.lib /machine:x64 /Wx /out:TinkerCore.lib /nologo
+cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore% /Fo:TinkerCore.obj
+lib /verbose /machine:x64 /Wx /out:TinkerCore.lib /nologo TinkerCore.obj
 
 rem *********************************************************************************************************
 rem TinkerTest - unit testing
