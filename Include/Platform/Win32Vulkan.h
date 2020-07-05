@@ -8,13 +8,14 @@
 
 #include <windows.h>
 
+#define VULKAN_MAX_BUFFERS 8
+
 namespace Tinker
 {
     namespace Platform
     {
         namespace Graphics
         {
-
             typedef struct vulkan_context_res
             {
                 VkInstance instance = VK_NULL_HANDLE;
@@ -34,8 +35,12 @@ namespace Tinker
                 uint32 numSwapChainImages = 0;
 
                 // TODO: move this stuff elsewhere
-                VkBuffer buffers[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE };
-                VkDeviceMemory deviceMemory[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE };
+                uint32 numAllocatedVertexBuffers = 0;
+                uint32 numAllocatedStagingBuffers = 0;
+                VkBuffer vertexBuffers[VULKAN_MAX_BUFFERS] = {};
+                VkBuffer stagingBuffers[VULKAN_MAX_BUFFERS] = {};
+                VkDeviceMemory vertexDeviceMemory[VULKAN_MAX_BUFFERS] = {};
+                VkDeviceMemory stagingDeviceMemory[VULKAN_MAX_BUFFERS] = {};
                 VkFence fence = VK_NULL_HANDLE;
                 VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
                 VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
@@ -61,7 +66,9 @@ namespace Tinker
             void SubmitFrame(VulkanContextResources* vulkanContextResources);
             void WaitForIdleDevice(VulkanContextResources* vulkanContextResources);
 
-            void* CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
+            void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& deviceMemory);
+            uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
+            void* CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
         }
     }
 }

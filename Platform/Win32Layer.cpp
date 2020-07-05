@@ -13,7 +13,7 @@ typedef struct win32_game_code
 {
     HMODULE GameDll = 0;
     FILETIME lastWriteTime = {};
-    game_update *GameUpdate = GameUpdateStub;
+    game_update* GameUpdate = GameUpdateStub;
 } Win32GameCode;
 
 static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
@@ -65,27 +65,39 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
         switch (graphicsCommandStream->m_graphicsCommands[i].m_commandType)
         {
-            case eGraphicsCmdDrawCall:
-            {
-                PrintDebugString("Issued a draw call!\n");
-                // TODO: do api-specific graphics stuff
-                break;
-            }
-            default:
-            {
-                // Invalid command type
-                TINKER_ASSERT(false);
-                break;
-            }
+        case eGraphicsCmdDrawCall:
+        {
+            PrintDebugString("Issued a draw call!\n");
+            // TODO: do api-specific graphics stuff
+            break;
+        }
+        default:
+        {
+            // Invalid command type
+            TINKER_ASSERT(false);
+            break;
+        }
         }
     }
 }
 
-static void SubmitFrameToGPU(Graphics::VulkanContextResources* vulkanContextResources)
+Graphics::VulkanContextResources vulkanContextResources;
+static void SubmitFrameToGPU()
 {
-    using namespace Graphics;
     // TODO: switch statement based on chosen graphics API
-    SubmitFrame(vulkanContextResources);
+    SubmitFrame(&vulkanContextResources);
+}
+
+CREATE_VERTEX_BUFFER(CreateVertexBuffer)
+{
+    // TODO: switch statement based on chosen graphics API
+    return CreateVertexBuffer(&vulkanContextResources, sizeInBytes);
+}
+
+CREATE_STAGING_BUFFER(CreateStagingBuffer)
+{
+    // TODO: switch statement based on chosen graphics API
+    return CreateStagingBuffer(&vulkanContextResources, sizeInBytes);
 }
 
 volatile bool runGame = true;
@@ -98,38 +110,38 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
 
     switch (uMsg)
     {
-        case WM_CREATE:
-        {
-            OutputDebugString("create\n");
-            break;
-        }
-        case WM_SIZE:
-        {
-            OutputDebugString("size\n");
-            break;
-        }
-        case WM_DESTROY:
-        {
-            OutputDebugString("destroy\n");
-            break;
-        }
-        case WM_CLOSE:
-        {
-            OutputDebugString("close\n");
-            PostQuitMessage(0);
-            runGame = false;
-            break;
-        }
-        case WM_ACTIVATEAPP:
-        {
-            OutputDebugString("activateapp\n");
-            break;
-        }
-        default:
-        {
-            result = DefWindowProc(hwnd, uMsg, wParam, lParam);
-            break;
-        }
+    case WM_CREATE:
+    {
+        OutputDebugString("create\n");
+        break;
+    }
+    case WM_SIZE:
+    {
+        OutputDebugString("size\n");
+        break;
+    }
+    case WM_DESTROY:
+    {
+        OutputDebugString("destroy\n");
+        break;
+    }
+    case WM_CLOSE:
+    {
+        OutputDebugString("close\n");
+        PostQuitMessage(0);
+        runGame = false;
+        break;
+    }
+    case WM_ACTIVATEAPP:
+    {
+        OutputDebugString("activateapp\n");
+        break;
+    }
+    default:
+    {
+        result = DefWindowProc(hwnd, uMsg, wParam, lParam);
+        break;
+    }
     }
 
     return result;
@@ -152,14 +164,14 @@ static void ProcessWindowMessages()
             break;
         }
     }
-    
+
 }
 
 int WINAPI
 wWinMain(HINSTANCE hInstance,
-         HINSTANCE hPrevInstance,
-         PWSTR pCmdLine,
-         int nCmdShow)
+    HINSTANCE hPrevInstance,
+    PWSTR pCmdLine,
+    int nCmdShow)
 {
     // Get system info
     SYSTEM_INFO systemInfo;
@@ -177,24 +189,24 @@ wWinMain(HINSTANCE hInstance,
         // TODO: Log? Fail?
         return 1;
     }
-    
+
     // TODO: load from settings file
     uint32 width = 800;
     uint32 height = 600;
 
     HWND windowHandle =
         CreateWindowEx(0,
-                       windowClass.lpszClassName,
-                       "Tinker",
-                       WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                       CW_USEDEFAULT,
-                       CW_USEDEFAULT,
-                       width,
-                       height,
-                       0,
-                       0,
-                       hInstance,
-                       0);
+            windowClass.lpszClassName,
+            "Tinker",
+            WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+            CW_USEDEFAULT,
+            CW_USEDEFAULT,
+            width,
+            height,
+            0,
+            0,
+            hInstance,
+            0);
     if (!windowHandle)
     {
         // TODO: Log? Fail?
@@ -202,7 +214,7 @@ wWinMain(HINSTANCE hInstance,
     }
 
     // Init Vulkan
-    Graphics::VulkanContextResources vulkanContextResources = {};
+    vulkanContextResources = {};
     // TODO: set desired window dims with settings file
     int result = Graphics::InitVulkan(&vulkanContextResources, hInstance, windowHandle, width, height);
     if (result)
@@ -215,10 +227,12 @@ wWinMain(HINSTANCE hInstance,
     PlatformAPIFuncs platformAPIFuncs = {};
     platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
     platformAPIFuncs.ReadEntireFile = ReadEntireFile;
+    platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
+    platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
-    graphicsCommandStream.m_maxCommands = 2; // TODO: set with compile flag
+    graphicsCommandStream.m_maxCommands = 32; // TODO: set with compile flag
     graphicsCommandStream.m_graphicsCommands = new GraphicsCommand[graphicsCommandStream.m_maxCommands];
 
     Win32GameCode GameCode = {};
@@ -233,11 +247,11 @@ wWinMain(HINSTANCE hInstance,
     while (runGame)
     {
         ProcessWindowMessages();
-        
+
         GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
 
         ProcessGraphicsCommandStream(&graphicsCommandStream);
-        SubmitFrameToGPU(&vulkanContextResources);
+        SubmitFrameToGPU();
 
         ReloadGameCode(&GameCode, GameDllStr);
     }

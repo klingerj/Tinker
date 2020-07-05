@@ -10,9 +10,18 @@ static void Test_Thread_Func()
     Tinker::Platform::PrintDebugString("I am from a thread.\n");
 }
 
+static bool isGameInitted = false;
+
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
+    if (!isGameInitted)
+    {
+        // TODO: one-time init stuff
+
+        isGameInitted = true;
+    }
+
     Tinker::Platform::PrintDebugString("Joe\n");
 
     // Test a thread job
