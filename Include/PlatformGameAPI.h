@@ -85,12 +85,19 @@ namespace Tinker
             uint32 m_maxCommands;
         } GraphicsCommandStream;
 
+        #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes)
+        typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
+
+        #define CREATE_STAGING_BUFFER(name) void* name(uint32 sizeInBytes)
+        typedef CREATE_STAGING_BUFFER(create_staging_buffer);
+        
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
         {
-            // TODO: more functions, e.g. graphics resource creation
             enqueue_worker_thread_job* EnqueueWorkerThreadJob;
             read_entire_file* ReadEntireFile;
+            create_vertex_buffer* CreateVertexBuffer;
+            create_staging_buffer* CreateStagingBuffer;
         } PlatformAPIFuncs;
 
         // Game side
