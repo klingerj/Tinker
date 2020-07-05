@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../Include/Core/CoreDefines.h"
+#include "../Core/Math/VectorTypes.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
@@ -13,6 +14,7 @@ namespace Tinker
     {
         namespace Graphics
         {
+
             typedef struct vulkan_context_res
             {
                 VkInstance instance = VK_NULL_HANDLE;
@@ -32,6 +34,8 @@ namespace Tinker
                 uint32 numSwapChainImages = 0;
 
                 // TODO: move this stuff elsewhere
+                VkBuffer buffers[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE };
+                VkDeviceMemory deviceMemory[2] = { VK_NULL_HANDLE, VK_NULL_HANDLE };
                 VkFence fence = VK_NULL_HANDLE;
                 VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
                 VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
@@ -43,6 +47,11 @@ namespace Tinker
                 VkPipeline pipeline = VK_NULL_HANDLE;
             } VulkanContextResources;
 
+            typedef struct vertex_position
+            {
+                v4f position;
+            } VulkanVertexPosition;
+
             int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstance, HWND windowHandle, uint32 width, uint32 height);
             void DestroyVulkan(VulkanContextResources* vulkanContextResources);
 
@@ -51,6 +60,8 @@ namespace Tinker
 
             void SubmitFrame(VulkanContextResources* vulkanContextResources);
             void WaitForIdleDevice(VulkanContextResources* vulkanContextResources);
+
+            void* CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
         }
     }
 }
