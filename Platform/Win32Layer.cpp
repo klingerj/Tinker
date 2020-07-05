@@ -161,6 +161,10 @@ wWinMain(HINSTANCE hInstance,
          PWSTR pCmdLine,
          int nCmdShow)
 {
+    // Get system info
+    SYSTEM_INFO systemInfo;
+    GetSystemInfo(&systemInfo);
+
     // Setup window
     WNDCLASS windowClass = {};
     windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
@@ -222,7 +226,8 @@ wWinMain(HINSTANCE hInstance,
     ReloadGameCode(&GameCode, GameDllStr);
 
     // Start threadpool
-    g_ThreadPool.Startup(10);
+    uint32 numThreads = systemInfo.dwNumberOfProcessors;
+    g_ThreadPool.Startup(numThreads / 2);
 
     // Main loop
     while (runGame)
