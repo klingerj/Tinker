@@ -460,6 +460,12 @@ namespace Tinker
                     }
                 }
 
+                // Buffers - TODO: move this
+                uint32 numVertBytes = sizeof(v4f) * 3;
+                void* buffer = CreateVertexBuffer(vulkanContextResources, numVertBytes);
+                v4f positions[] = { v4f(0.0f, -0.5f, 0.0f, 1.0f), v4f(0.5f, 0.5f, 0.0f, 1.0f), v4f(-0.5f, 0.5f, 0.0f, 1.0f) };
+                memcpy(buffer, positions, numVertBytes);
+
                 // Command pool and buffers
 
                 VkCommandPoolCreateInfo commandPoolCreateInfo = {};
@@ -512,6 +518,10 @@ namespace Tinker
 
                     vkCmdBeginRenderPass(vulkanContextResources->commandBuffers[uiCommandBuffer], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
                     vkCmdBindPipeline(vulkanContextResources->commandBuffers[uiCommandBuffer], VK_PIPELINE_BIND_POINT_GRAPHICS, vulkanContextResources->pipeline);
+
+                    VkBuffer vertexBuffers[] = { vulkanContextResources->buffers[0] };
+                    VkDeviceSize offsets[] = { 0 };
+                    vkCmdBindVertexBuffers(vulkanContextResources->commandBuffers[uiCommandBuffer], 0, 1, vertexBuffers, offsets);
 
                     vkCmdDraw(vulkanContextResources->commandBuffers[uiCommandBuffer], 3, 1, 0, 0);
 
@@ -600,12 +610,25 @@ namespace Tinker
                 shaderStages[1].pName = "main";
 
                 // Fixed function
+                const uint32 numBindings = 1;
+                VkVertexInputBindingDescription vertexInputBindDescs[numBindings] = {};
+                vertexInputBindDescs[0].binding = 0;
+                vertexInputBindDescs[0].stride = sizeof(VulkanVertexPosition);
+                vertexInputBindDescs[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+                const uint32 numAttributes = 1;
+                VkVertexInputAttributeDescription vertexInputAttrDescs[numAttributes] = {};
+                vertexInputAttrDescs[0].binding = 0;
+                vertexInputAttrDescs[0].location = 0;
+                vertexInputAttrDescs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                vertexInputAttrDescs[0].offset = 0;
+
                 VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
                 vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-                vertexInputInfo.vertexBindingDescriptionCount = 0;
-                vertexInputInfo.pVertexBindingDescriptions = nullptr;
-                vertexInputInfo.vertexAttributeDescriptionCount = 0;
-                vertexInputInfo.pVertexAttributeDescriptions = nullptr;
+                vertexInputInfo.vertexBindingDescriptionCount = numBindings;
+                vertexInputInfo.pVertexBindingDescriptions = vertexInputBindDescs;
+                vertexInputInfo.vertexAttributeDescriptionCount = numAttributes;
+                vertexInputInfo.pVertexAttributeDescriptions = vertexInputAttrDescs;
 
                 VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
                 inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -819,9 +842,80 @@ namespace Tinker
                 vkQueueWaitIdle(vulkanContextResources->presentationQueue);
             }
 
+            void* CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
+            {
+                static uint32 bufferCtr = 0;
+
+                VkBufferCreateInfo bufferCreateInfo = {};
+                bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+                bufferCreateInfo.size = sizeInBytes;
+                bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+                
+                VkResult result = vkCreateBuffer(vulkanContextResources->device, &bufferCreateInfo, nullptr, &vulkanContextResources->buffers[bufferCtr]);
+                if (result != VK_SUCCESS)
+                {
+                    // TODO: Fail
+                    return NULL;
+                }
+
+                VkMemoryRequirements memRequirements;
+                vkGetBufferMemoryRequirements(vulkanContextResources->device, vulkanContextResources->buffers[bufferCtr], &memRequirements);
+                uint32 requiredMemProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+                // Check for memory type support
+                VkPhysicalDeviceMemoryProperties memProperties;
+                vkGetPhysicalDeviceMemoryProperties(vulkanContextResources->physicalDevice, &memProperties);
+
+                uint32 memTypeIndex = 0xffffffff;
+                for (uint32 uiMemType = 0; uiMemType < memProperties.memoryTypeCount; ++uiMemType)
+                {
+                    if (((1 << uiMemType) & memRequirements.memoryTypeBits) &&
+                        (memProperties.memoryTypes[uiMemType].propertyFlags & requiredMemProps) == requiredMemProps)
+                    {
+                        memTypeIndex = uiMemType;
+                    }
+                }
+                if (memTypeIndex == 0xffffffff)
+                {
+                    // TODO: Fail?
+                }
+
+                VkMemoryAllocateInfo memAllocInfo = {};
+                memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+                memAllocInfo.allocationSize = memRequirements.size;
+                memAllocInfo.memoryTypeIndex = memTypeIndex;
+                result = vkAllocateMemory(vulkanContextResources->device, &memAllocInfo, nullptr, &vulkanContextResources->deviceMemory[bufferCtr]);
+                if (result != VK_SUCCESS)
+                {
+                    // TODO: Fail
+                    return NULL;
+                }
+
+                vkBindBufferMemory(vulkanContextResources->device, vulkanContextResources->buffers[bufferCtr], vulkanContextResources->deviceMemory[bufferCtr], 0);
+
+                void* buffer;
+                vkMapMemory(vulkanContextResources->device, vulkanContextResources->deviceMemory[bufferCtr], 0, sizeInBytes, 0, &buffer);
+
+                ++bufferCtr;
+
+                return buffer;
+            }
+
             void DestroyVulkan(VulkanContextResources* vulkanContextResources)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this
+
+                for (uint32 uiBuffer = 0; uiBuffer < 2; ++uiBuffer)
+                {
+                    vkDestroyBuffer(vulkanContextResources->device, vulkanContextResources->buffers[uiBuffer], nullptr);
+                    
+                    if (vulkanContextResources->deviceMemory[uiBuffer] != VK_NULL_HANDLE)
+                    {
+                        vkUnmapMemory(vulkanContextResources->device, vulkanContextResources->deviceMemory[uiBuffer]);
+                    }
+                    vkFreeMemory(vulkanContextResources->device, vulkanContextResources->deviceMemory[uiBuffer], nullptr);
+                }
 
                 vkDestroyPipeline(vulkanContextResources->device, vulkanContextResources->pipeline, nullptr);
                 vkDestroyPipelineLayout(vulkanContextResources->device, vulkanContextResources->pipelineLayout, nullptr);
