@@ -59,7 +59,9 @@ namespace Tinker
                 v4f position;
             } VulkanVertexPosition;
 
-            int InitVulkan(VulkanContextResources* vulkanContextResources, HINSTANCE hInstance, HWND windowHandle, uint32 width, uint32 height);
+            int InitVulkan(VulkanContextResources* vulkanContextResources,
+                HINSTANCE hInstance, HWND windowHandle,
+                uint32 width, uint32 height);
             void DestroyVulkan(VulkanContextResources* vulkanContextResources);
 
             void InitGraphicsPipelineResources(VulkanContextResources* vulkanContextResources);
@@ -71,10 +73,22 @@ namespace Tinker
             void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
             void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
 
-            void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& deviceMemory);
+            void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
+                VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
+                VkBuffer& buffer, VkDeviceMemory& deviceMemory);
             uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
             uint32 CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
             void* GetStagingBufferMemory(VulkanContextResources* vulkanContextResources, uint32 stagingBufferHandle);
+
+            // Graphics command recording
+            void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
+                uint32 vertexBufferHandle, uint32 indexBufferHandle,
+                uint32 numIndices, uint32 numVertices);
+            void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
+                uint32 stagingBufferHandle, uint32 vertexBufferHandle, uint32 indexBufferHandle);
+
+            void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources);
+            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources);
         }
     }
 }

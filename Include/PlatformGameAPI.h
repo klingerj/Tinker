@@ -59,6 +59,9 @@ namespace Tinker
         enum
         {
             eGraphicsCmdDrawCall = 0,
+            eGraphicsCmdMemTransfer,
+            eGraphicsCmdRenderPassBegin,
+            eGraphicsCmdRenderPassEnd,
             eGraphicsCmdMax
         };
 
@@ -71,6 +74,9 @@ namespace Tinker
                 struct
                 {
                     // TODO: resources/descriptors/uniform buffers
+                    uint32 m_numIndices;
+                    uint32 m_numVertices;
+                    uint32 m_numUVs;
                     uint32 m_indexBufferHandle;
                     uint32 m_vertexBufferHandle;
                     uint32 m_uvBufferHandle;
@@ -79,10 +85,23 @@ namespace Tinker
                 // Memory transfer
                 struct
                 {
+                    uint32 m_sizeInBytes;
                     uint32 m_dstBufferType; // 0 = vertex, 1 = index. TODO: shouldn't use this
-                    uint32 m_stagingBufferHandle; // src
-                    uint32 m_vertexBufferHandle; // dst
-                    uint32 m_indexBufferHandle; // dst
+                    uint32 m_srcStagingBufferHandle; // src
+                    uint32 m_dstVertexBufferHandle; // dst
+                    uint32 m_dstIndexBufferHandle; // dst
+                };
+
+                // Begin render pass
+                struct
+                {
+                    uint32 m_renderPassHandle;
+                };
+
+                // End render pass
+                struct
+                {
+                    uint32 m_renderPassHandle;
                 };
 
                 // TODO: other commands

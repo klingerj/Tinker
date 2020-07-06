@@ -78,20 +78,47 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
     for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
     {
         TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
-        switch (graphicsCommandStream->m_graphicsCommands[i].m_commandType)
+
+        const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
+        switch (currentCmd.m_commandType)
         {
-        case eGraphicsCmdDrawCall:
-        {
-            PrintDebugString("Issued a draw call!\n");
-            // TODO: do api-specific graphics stuff
-            break;
-        }
-        default:
-        {
-            // Invalid command type
-            TINKER_ASSERT(false);
-            break;
-        }
+            case eGraphicsCmdDrawCall:
+            {
+                // TODO: switch statement based on chosen graphics API
+                VulkanRecordCommandDrawCall(&vulkanContextResources,
+                    currentCmd.m_vertexBufferHandle, currentCmd.m_indexBufferHandle,
+                    currentCmd.m_numIndices, currentCmd.m_numVertices);
+                break;
+            }
+
+            case eGraphicsCmdMemTransfer:
+            {
+                // TODO: switch statement based on chosen graphics API
+                VulkanRecordCommandMemoryTransfer(&vulkanContextResources, currentCmd.m_sizeInBytes,
+                    currentCmd.m_srcStagingBufferHandle,
+                    currentCmd.m_dstVertexBufferHandle,
+                    currentCmd.m_dstIndexBufferHandle);
+                break;
+            }
+
+            case eGraphicsCmdRenderPassBegin:
+            {
+                VulkanRecordCommandRenderPassBegin(&vulkanContextResources);
+                break;
+            }
+
+            case eGraphicsCmdRenderPassEnd:
+            {
+                VulkanRecordCommandRenderPassEnd(&vulkanContextResources);
+                break;
+            }
+
+            default:
+            {
+                // Invalid command type
+                TINKER_ASSERT(false);
+                break;
+            }
         }
     }
 
@@ -132,38 +159,38 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
 
     switch (uMsg)
     {
-    case WM_CREATE:
-    {
-        OutputDebugString("create\n");
-        break;
-    }
-    case WM_SIZE:
-    {
-        OutputDebugString("size\n");
-        break;
-    }
-    case WM_DESTROY:
-    {
-        OutputDebugString("destroy\n");
-        break;
-    }
-    case WM_CLOSE:
-    {
-        OutputDebugString("close\n");
-        PostQuitMessage(0);
-        runGame = false;
-        break;
-    }
-    case WM_ACTIVATEAPP:
-    {
-        OutputDebugString("activateapp\n");
-        break;
-    }
-    default:
-    {
-        result = DefWindowProc(hwnd, uMsg, wParam, lParam);
-        break;
-    }
+        case WM_CREATE:
+        {
+            OutputDebugString("create\n");
+            break;
+        }
+        case WM_SIZE:
+        {
+            OutputDebugString("size\n");
+            break;
+        }
+        case WM_DESTROY:
+        {
+            OutputDebugString("destroy\n");
+            break;
+        }
+        case WM_CLOSE:
+        {
+            OutputDebugString("close\n");
+            PostQuitMessage(0);
+            runGame = false;
+            break;
+        }
+        case WM_ACTIVATEAPP:
+        {
+            OutputDebugString("activateapp\n");
+            break;
+        }
+        default:
+        {
+            result = DefWindowProc(hwnd, uMsg, wParam, lParam);
+            break;
+        }
     }
 
     return result;
@@ -251,6 +278,7 @@ wWinMain(HINSTANCE hInstance,
     platformAPIFuncs.ReadEntireFile = ReadEntireFile;
     platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
     platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
+    platformAPIFuncs.GetStagingBufferMemory = GetStagingBufferMemory;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
