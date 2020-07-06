@@ -172,6 +172,7 @@ namespace Tinker
                 TINKER_ASSERT(handle < m_maxPoolElements);
                 m_pool[handle].m_nextFreeEleIdx = m_freeListHead;
                 m_freeListHead = handle;
+                --m_numAllocdElements;
             }
         };
     }
