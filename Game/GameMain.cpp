@@ -30,14 +30,16 @@ GAME_UPDATE(GameUpdate)
 {
     if (!isGameInitted)
     {
-        uint32 numVertBytes = sizeof(v4f) * 3;
+        uint32 numVertBytes = sizeof(v4f) * 4; // aligned memory size
         uint32 vertexBufferHandle = platformFuncs->CreateVertexBuffer(numVertBytes);
-        uint32 stagingBufferHandle = platformFuncs->CreateStagingBuffer(numVertBytes);
-        void* stagingBufferMemPtr = platformFuncs->GetStagingBufferMemory(stagingBufferHandle);
+        Tinker::Platform::StagingBufferData data = platformFuncs->CreateStagingBuffer(numVertBytes);
+        uint32 stagingBufferHandle = data.handle;
+        void* stagingBufferMemPtr = data.memory;
 
         uint32 vertexBufferHandle2 = platformFuncs->CreateVertexBuffer(numVertBytes);
-        uint32 stagingBufferHandle2 = platformFuncs->CreateStagingBuffer(numVertBytes);
-        void* stagingBufferMemPtr2 = platformFuncs->GetStagingBufferMemory(stagingBufferHandle2);
+        data = platformFuncs->CreateStagingBuffer(numVertBytes);
+        uint32 stagingBufferHandle2 = data.handle;
+        void* stagingBufferMemPtr2 = data.memory;
 
         gameGraphicsData.m_vertexBufferHandle = vertexBufferHandle;
         gameGraphicsData.m_stagingBufferHandle = stagingBufferHandle;
@@ -128,4 +130,15 @@ GAME_UPDATE(GameUpdate)
     poolAllocator.Dealloc(firstEle);*/
 
     return 0;
+}
+
+GAME_DESTROY(GameDestroy)
+{
+    if (isGameInitted)
+    {
+        platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_vertexBufferHandle);
+        platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_vertexBufferHandle2);
+        platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle);
+        platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle2);
+    }
 }

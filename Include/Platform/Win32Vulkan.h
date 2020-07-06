@@ -1,14 +1,15 @@
 #pragma once
 
-#include "../../Include/Core/CoreDefines.h"
+#include "../Core/CoreDefines.h"
 #include "../Core/Math/VectorTypes.h"
+#include "../Core/Allocators.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 
 #include <windows.h>
 
-#define VULKAN_MAX_BUFFERS 8
+#define VULKAN_MAX_BUFFERS 128
 
 namespace Tinker
 {
@@ -36,13 +37,9 @@ namespace Tinker
                 uint32 currentSwapChainImage = 0xffffffff;
 
                 // TODO: move this stuff elsewhere
-                uint32 numAllocatedVertexBuffers = 0;
-                uint32 numAllocatedStagingBuffers = 0;
-                VkBuffer vertexBuffers[VULKAN_MAX_BUFFERS] = {};
-                VkBuffer stagingBuffers[VULKAN_MAX_BUFFERS * 2] = {};
-                VkDeviceMemory vertexDeviceMemory[VULKAN_MAX_BUFFERS] = {};
-                VkDeviceMemory stagingDeviceMemory[VULKAN_MAX_BUFFERS * 2] = {};
-                void* stagingBufferMappedPtrs[VULKAN_MAX_BUFFERS * 2] = {};
+                Memory::PoolAllocator<VkBuffer> vulkanBufferPool;
+                Memory::PoolAllocator<VkDeviceMemory> vulkanDeviceMemoryPool;
+                Memory::PoolAllocator<void*> vulkanMappedMemPtrPool;
                 VkFence fence = VK_NULL_HANDLE;
                 VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
                 VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
@@ -58,6 +55,12 @@ namespace Tinker
             {
                 v4f position;
             } VulkanVertexPosition;
+
+            typedef struct vulkan_staging_buffer_data
+            {
+                uint32 handle;
+                void* mappedMemory;
+            } VulkanStagingBufferData;
 
             int InitVulkan(VulkanContextResources* vulkanContextResources,
                 HINSTANCE hInstance, HWND windowHandle,
@@ -77,8 +80,9 @@ namespace Tinker
                 VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
                 VkBuffer& buffer, VkDeviceMemory& deviceMemory);
             uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
-            uint32 CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
-            void* GetStagingBufferMemory(VulkanContextResources* vulkanContextResources, uint32 stagingBufferHandle);
+            VulkanStagingBufferData CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
+            void DestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
+            void DestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,

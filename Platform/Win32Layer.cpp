@@ -9,11 +9,13 @@ using namespace Tinker;
 using namespace Platform;
 
 static GAME_UPDATE(GameUpdateStub) { return 0; }
+static GAME_DESTROY(GameDestroyStub) {}
 typedef struct win32_game_code
 {
     HMODULE GameDll = 0;
     FILETIME lastWriteTime = {};
     game_update* GameUpdate = GameUpdateStub;
+    game_destroy* GameDestroy = GameDestroyStub;
 } Win32GameCode;
 
 static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
@@ -30,6 +32,7 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
             {
                 FreeLibrary(GameCode->GameDll);
                 GameCode->GameUpdate = GameUpdateStub;
+                GameCode->GameDestroy = GameDestroyStub;
             }
 
             const char* GameDllHotloadStr = "TinkerGame_hotload.dll";
@@ -38,6 +41,7 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
             if (GameCode->GameDll)
             {
                 GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
+                GameCode->GameDestroy = (game_destroy*)GetProcAddress(GameCode->GameDll, "GameDestroy");
                 GameCode->lastWriteTime = findData.ftLastWriteTime;
             }
         }
@@ -140,13 +144,22 @@ CREATE_VERTEX_BUFFER(CreateVertexBuffer)
 CREATE_STAGING_BUFFER(CreateStagingBuffer)
 {
     // TODO: switch statement based on chosen graphics API
-    return CreateStagingBuffer(&vulkanContextResources, sizeInBytes);
+    Graphics::VulkanStagingBufferData vulkanData = CreateStagingBuffer(&vulkanContextResources, sizeInBytes);
+    StagingBufferData data;
+    memcpy(&data, &vulkanData, sizeof(Graphics::    VulkanStagingBufferData));
+    return data;
 }
 
-GET_STAGING_BUFFER_MEMORY(GetStagingBufferMemory)
+DESTROY_VERTEX_BUFFER(DestroyVertexBuffer)
 {
     // TODO: switch statement based on chosen graphics API
-    return GetStagingBufferMemory(&vulkanContextResources, stagingBufferHandle);
+    DestroyVertexBuffer(&vulkanContextResources, handle);
+}
+
+DESTROY_STAGING_BUFFER(DestroyStagingBuffer)
+{
+    // TODO: switch statement based on chosen graphics API
+    DestroyStagingBuffer(&vulkanContextResources, handle);
 }
 
 volatile bool runGame = true;
@@ -278,7 +291,8 @@ wWinMain(HINSTANCE hInstance,
     platformAPIFuncs.ReadEntireFile = ReadEntireFile;
     platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
     platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
-    platformAPIFuncs.GetStagingBufferMemory = GetStagingBufferMemory;
+    platformAPIFuncs.DestroyVertexBuffer = DestroyVertexBuffer;
+    platformAPIFuncs.DestroyStagingBuffer = DestroyStagingBuffer;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
@@ -305,6 +319,8 @@ wWinMain(HINSTANCE hInstance,
 
         ReloadGameCode(&GameCode, GameDllStr);
     }
+
+    GameCode.GameDestroy(&platformAPIFuncs);
 
     g_ThreadPool.Shutdown();
     DestroyVulkan(&vulkanContextResources);
