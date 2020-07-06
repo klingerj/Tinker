@@ -538,14 +538,6 @@ namespace Tinker
                     vulkanContextResources->stagingDeviceMemory[uiBuffer] = VK_NULL_HANDLE;
                     vulkanContextResources->stagingBufferMappedPtrs[uiBuffer] = NULL;
                 }
-                
-                // TODO: move this
-                uint32 numVertBytes = sizeof(v4f) * 3;
-                uint32 vertexBufferHandle = CreateVertexBuffer(vulkanContextResources, numVertBytes);
-                uint32 stagingBufferHandle = CreateStagingBuffer(vulkanContextResources, numVertBytes);
-                void* stagingBufferMemPtr = GetStagingBufferMemory(vulkanContextResources, stagingBufferHandle);
-                v4f positions[] = { v4f(0.0f, -0.5f, 0.0f, 1.0f), v4f(0.5f, 0.5f, 0.0f, 1.0f), v4f(-0.5f, 0.5f, 0.0f, 1.0f) };
-                memcpy(stagingBufferMemPtr, positions, numVertBytes);
 
                 // Command pool
                 VkCommandPoolCreateInfo commandPoolCreateInfo = {};
@@ -983,72 +975,29 @@ namespace Tinker
             void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
             {
                 // Acquire
-                uint32 nextSwapChainImageIndex = 0xffffffff;
+                uint32 currentSwapChainImageIndex = 0xffffffff;
                 VkResult result = vkAcquireNextImageKHR(vulkanContextResources->device, 
                     vulkanContextResources->swapChain,
                     (uint64)-1,
                     vulkanContextResources->swapChainImageAvailableSemaphore,
                     VK_NULL_HANDLE,
-                    &nextSwapChainImageIndex);
+                    &currentSwapChainImageIndex);
                 if (result != VK_SUCCESS)
                 {
                     // TODO: Log?
                 }
-                vulkanContextResources->currentSwapChainImage = nextSwapChainImageIndex;
+                vulkanContextResources->currentSwapChainImage = currentSwapChainImageIndex;
 
                 VkCommandBufferBeginInfo commandBufferBeginInfo = {};
                 commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
                 commandBufferBeginInfo.flags = 0;
                 commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
-                result = vkBeginCommandBuffer(vulkanContextResources->commandBuffers[nextSwapChainImageIndex], &commandBufferBeginInfo);
+                result = vkBeginCommandBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage], &commandBufferBeginInfo);
                 if (result != VK_SUCCESS)
                 {
                     // TODO: Fail? Log?
                 }
-
-                for (uint32 uiBufferCopy = 0; uiBufferCopy < vulkanContextResources->numAllocatedVertexBuffers; ++uiBufferCopy)
-                {
-                    VkBufferCopy bufferCopy = {};
-                    bufferCopy.srcOffset = 0;
-                    bufferCopy.dstOffset = 0;
-                    bufferCopy.size = sizeof(v4f) * 3;
-                    vkCmdCopyBuffer(vulkanContextResources->commandBuffers[nextSwapChainImageIndex],
-                        vulkanContextResources->stagingBuffers[uiBufferCopy],
-                        vulkanContextResources->vertexBuffers[uiBufferCopy],
-                        1, &bufferCopy);
-                }
-
-                VkRenderPassBeginInfo renderPassBeginInfo = {};
-                renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-                renderPassBeginInfo.renderPass = vulkanContextResources->renderPass;
-                renderPassBeginInfo.framebuffer = vulkanContextResources->swapChainFramebuffers[nextSwapChainImageIndex];
-                renderPassBeginInfo.renderArea.offset = { 0, 0 };
-                renderPassBeginInfo.renderArea.extent = vulkanContextResources->swapChainExtent;
-
-                VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-                renderPassBeginInfo.clearValueCount = 1;
-                renderPassBeginInfo.pClearValues = &clearColor;
-
-                vkCmdBeginRenderPass(vulkanContextResources->commandBuffers[nextSwapChainImageIndex],
-                    &renderPassBeginInfo,
-                    VK_SUBPASS_CONTENTS_INLINE);
-
-                vkCmdBindPipeline(vulkanContextResources->commandBuffers[nextSwapChainImageIndex],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    vulkanContextResources->pipeline);
-
-                for (uint32 uiBuffer = 0; uiBuffer < vulkanContextResources->numAllocatedVertexBuffers; ++uiBuffer)
-                {
-                    VkBuffer vertexBuffers[] = { vulkanContextResources->vertexBuffers[uiBuffer] };
-                    VkDeviceSize offsets[] = { 0 };
-                    vkCmdBindVertexBuffers(vulkanContextResources->commandBuffers[nextSwapChainImageIndex],
-                        0, 1, vertexBuffers, offsets);
-
-                    vkCmdDraw(vulkanContextResources->commandBuffers[nextSwapChainImageIndex], 3, 1, 0, 0);
-                }
-
-                vkCmdEndRenderPass(vulkanContextResources->commandBuffers[nextSwapChainImageIndex]);
             }
 
             void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
@@ -1060,21 +1009,79 @@ namespace Tinker
                 }
             }
 
+            void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
+                uint32 vertexBufferHandle, uint32 indexBufferHandle,
+                uint32 numIndices, uint32 numVertices)
+            {
+                VkBuffer vertexBuffers[] = { vulkanContextResources->vertexBuffers[vertexBufferHandle] };
+                VkDeviceSize offsets[] = { 0 };
+                vkCmdBindVertexBuffers(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                    0, 1, vertexBuffers, offsets);
+
+                vkCmdDraw(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage], numVertices, 1, 0, 0);
+            }
+
+            void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
+                uint32 stagingBufferHandle, uint32 vertexBufferHandle, uint32 indexBufferHandle)
+            {
+                /*VkBuffer dstBufferHandle = vertexBufferHandle != 0xffffffff ? vulkanContextResources->vertexBuffers[vertexBufferHandle] :
+                                                                              vulkanContextResources->indexBuffers[vertexBufferHandle];*/
+                VkBuffer dstBuffer = vulkanContextResources->vertexBuffers[vertexBufferHandle];
+                VkBufferCopy bufferCopy = {};
+                bufferCopy.srcOffset = 0;
+                bufferCopy.dstOffset = 0;
+                bufferCopy.size = sizeInBytes;
+                vkCmdCopyBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                    vulkanContextResources->stagingBuffers[stagingBufferHandle],
+                    dstBuffer,
+                    1, &bufferCopy);
+            }
+
+            void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources)
+            {
+                VkRenderPassBeginInfo renderPassBeginInfo = {};
+                renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+                renderPassBeginInfo.renderPass = vulkanContextResources->renderPass;
+                renderPassBeginInfo.framebuffer = vulkanContextResources->swapChainFramebuffers[vulkanContextResources->currentSwapChainImage];
+                renderPassBeginInfo.renderArea.offset = { 0, 0 };
+                renderPassBeginInfo.renderArea.extent = vulkanContextResources->swapChainExtent;
+
+                VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+                renderPassBeginInfo.clearValueCount = 1;
+                renderPassBeginInfo.pClearValues = &clearColor;
+
+                vkCmdBeginRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                    &renderPassBeginInfo,
+                    VK_SUBPASS_CONTENTS_INLINE);
+
+                vkCmdBindPipeline(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    vulkanContextResources->pipeline);
+            }
+
+            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources)
+            {
+                vkCmdEndRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
+            }
+
             void DestroyVulkan(VulkanContextResources* vulkanContextResources)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this
 
-                for (uint32 uiBuffer = 0; uiBuffer < vulkanContextResources->numAllocatedVertexBuffers; ++uiBuffer)
+                for (uint32 uiBuffer = 0; uiBuffer < vulkanContextResources->numAllocatedStagingBuffers; ++uiBuffer)
                 {
-                    vkDestroyBuffer(vulkanContextResources->device, vulkanContextResources->vertexBuffers[uiBuffer], nullptr);
                     vkDestroyBuffer(vulkanContextResources->device, vulkanContextResources->stagingBuffers[uiBuffer], nullptr);
-                    
                     if (vulkanContextResources->stagingDeviceMemory[uiBuffer] != VK_NULL_HANDLE)
                     {
                         vkUnmapMemory(vulkanContextResources->device, vulkanContextResources->stagingDeviceMemory[uiBuffer]);
                     }
-                    vkFreeMemory(vulkanContextResources->device, vulkanContextResources->vertexDeviceMemory[uiBuffer], nullptr);
                     vkFreeMemory(vulkanContextResources->device, vulkanContextResources->stagingDeviceMemory[uiBuffer], nullptr);
+                }
+
+                for (uint32 uiBuffer = 0; uiBuffer < vulkanContextResources->numAllocatedVertexBuffers; ++uiBuffer)
+                {
+                    vkDestroyBuffer(vulkanContextResources->device, vulkanContextResources->vertexBuffers[uiBuffer], nullptr);
+                    vkFreeMemory(vulkanContextResources->device, vulkanContextResources->vertexDeviceMemory[uiBuffer], nullptr);
                 }
 
                 vkDestroyPipeline(vulkanContextResources->device, vulkanContextResources->pipeline, nullptr);
