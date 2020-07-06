@@ -67,6 +67,7 @@ namespace Tinker
             uint32 m_commandType;
             union
             {
+                // Draw call
                 struct
                 {
                     // TODO: resources/descriptors/uniform buffers
@@ -74,6 +75,16 @@ namespace Tinker
                     uint32 m_vertexBufferHandle;
                     uint32 m_uvBufferHandle;
                 };
+
+                // Memory transfer
+                struct
+                {
+                    uint32 m_dstBufferType; // 0 = vertex, 1 = index. TODO: shouldn't use this
+                    uint32 m_stagingBufferHandle; // src
+                    uint32 m_vertexBufferHandle; // dst
+                    uint32 m_indexBufferHandle; // dst
+                };
+
                 // TODO: other commands
             };
         } GraphicsCommand;
@@ -88,8 +99,11 @@ namespace Tinker
         #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes)
         typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
 
-        #define CREATE_STAGING_BUFFER(name) void* name(uint32 sizeInBytes)
+        #define CREATE_STAGING_BUFFER(name) uint32 name(uint32 sizeInBytes)
         typedef CREATE_STAGING_BUFFER(create_staging_buffer);
+
+        #define GET_STAGING_BUFFER_MEMORY(name) void* name(uint32 stagingBufferHandle)
+        typedef GET_STAGING_BUFFER_MEMORY(get_staging_buffer_memory);
         
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
@@ -98,6 +112,7 @@ namespace Tinker
             read_entire_file* ReadEntireFile;
             create_vertex_buffer* CreateVertexBuffer;
             create_staging_buffer* CreateStagingBuffer;
+            get_staging_buffer_memory* GetStagingBufferMemory;
         } PlatformAPIFuncs;
 
         // Game side

@@ -33,14 +33,16 @@ namespace Tinker
                 VkImage* swapChainImages = nullptr;
                 VkImageView* swapChainImageViews = nullptr;
                 uint32 numSwapChainImages = 0;
+                uint32 currentSwapChainImage = 0xffffffff;
 
                 // TODO: move this stuff elsewhere
                 uint32 numAllocatedVertexBuffers = 0;
                 uint32 numAllocatedStagingBuffers = 0;
                 VkBuffer vertexBuffers[VULKAN_MAX_BUFFERS] = {};
-                VkBuffer stagingBuffers[VULKAN_MAX_BUFFERS] = {};
+                VkBuffer stagingBuffers[VULKAN_MAX_BUFFERS * 2] = {};
                 VkDeviceMemory vertexDeviceMemory[VULKAN_MAX_BUFFERS] = {};
-                VkDeviceMemory stagingDeviceMemory[VULKAN_MAX_BUFFERS] = {};
+                VkDeviceMemory stagingDeviceMemory[VULKAN_MAX_BUFFERS * 2] = {};
+                void* stagingBufferMappedPtrs[VULKAN_MAX_BUFFERS * 2] = {};
                 VkFence fence = VK_NULL_HANDLE;
                 VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
                 VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
@@ -66,9 +68,13 @@ namespace Tinker
             void SubmitFrame(VulkanContextResources* vulkanContextResources);
             void WaitForIdleDevice(VulkanContextResources* vulkanContextResources);
 
+            void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
+            void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
+
             void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags, VkBuffer& buffer, VkDeviceMemory& deviceMemory);
             uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
-            void* CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
+            uint32 CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
+            void* GetStagingBufferMemory(VulkanContextResources* vulkanContextResources, uint32 stagingBufferHandle);
         }
     }
 }

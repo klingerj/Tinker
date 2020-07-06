@@ -55,11 +55,26 @@ ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
     g_ThreadPool.EnqueueNewThreadJob(newJob);
 }
 
+Graphics::VulkanContextResources vulkanContextResources;
+
+void BeginFrameRecording()
+{
+    // TODO: switch statement based on chosen graphics API
+    BeginVulkanCommandRecording(&vulkanContextResources);
+}
+
+void EndFrameRecording()
+{
+    // TODO: switch statement based on chosen graphics API
+    EndVulkanCommandRecording(&vulkanContextResources);
+}
+
 static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandStream)
 {
     TINKER_ASSERT(graphicsCommandStream->m_numCommands <= graphicsCommandStream->m_maxCommands);
 
-    // TODO: sort commands, record command buffers on separate threads, etc
+    BeginFrameRecording();
+
     for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
     {
         TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
@@ -79,9 +94,10 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         }
         }
     }
+
+    EndFrameRecording();
 }
 
-Graphics::VulkanContextResources vulkanContextResources;
 static void SubmitFrameToGPU()
 {
     // TODO: switch statement based on chosen graphics API
@@ -98,6 +114,12 @@ CREATE_STAGING_BUFFER(CreateStagingBuffer)
 {
     // TODO: switch statement based on chosen graphics API
     return CreateStagingBuffer(&vulkanContextResources, sizeInBytes);
+}
+
+GET_STAGING_BUFFER_MEMORY(GetStagingBufferMemory)
+{
+    // TODO: switch statement based on chosen graphics API
+    return GetStagingBufferMemory(&vulkanContextResources, stagingBufferHandle);
 }
 
 volatile bool runGame = true;
@@ -216,7 +238,7 @@ wWinMain(HINSTANCE hInstance,
     // Init Vulkan
     vulkanContextResources = {};
     // TODO: set desired window dims with settings file
-    int result = Graphics::InitVulkan(&vulkanContextResources, hInstance, windowHandle, width, height);
+    int result = InitVulkan(&vulkanContextResources, hInstance, windowHandle, width, height);
     if (result)
     {
         // TODO: Log? Fail?
