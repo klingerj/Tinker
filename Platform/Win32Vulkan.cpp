@@ -1091,6 +1091,8 @@ namespace Tinker
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 vkDestroyBuffer(vulkanContextResources->device, *vulkanContextResources->vulkanBufferPool.PtrFromHandle(handle), nullptr);
                 vkFreeMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle), nullptr);
+                vulkanContextResources->vulkanBufferPool.Dealloc(handle);
+                vulkanContextResources->vulkanDeviceMemoryPool.Dealloc(handle);
             }
 
             void DestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
@@ -1099,6 +1101,8 @@ namespace Tinker
                 vkDestroyBuffer(vulkanContextResources->device, *vulkanContextResources->vulkanBufferPool.PtrFromHandle(handle), nullptr);
                 vkUnmapMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle));
                 vkFreeMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle), nullptr);
+                vulkanContextResources->vulkanBufferPool.Dealloc(handle);
+                vulkanContextResources->vulkanDeviceMemoryPool.Dealloc(handle);
             }
 
             void DestroyVulkan(VulkanContextResources* vulkanContextResources)
