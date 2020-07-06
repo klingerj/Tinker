@@ -1,6 +1,5 @@
 #include "../Include/Platform/Win32Vulkan.h"
 #include "../Include/Platform/Win32Utilities.h"
-#include "../Include/Core/Allocators.h"
 
 #include <cstring>
 
@@ -529,15 +528,9 @@ namespace Tinker
                     }
                 }
 
-                // Buffers
-                for (uint32 uiBuffer = 0; uiBuffer < VULKAN_MAX_BUFFERS; ++uiBuffer)
-                {
-                    vulkanContextResources->vertexBuffers[uiBuffer] = VK_NULL_HANDLE;
-                    vulkanContextResources->stagingBuffers[uiBuffer] = VK_NULL_HANDLE;
-                    vulkanContextResources->vertexDeviceMemory[uiBuffer] = VK_NULL_HANDLE;
-                    vulkanContextResources->stagingDeviceMemory[uiBuffer] = VK_NULL_HANDLE;
-                    vulkanContextResources->stagingBufferMappedPtrs[uiBuffer] = NULL;
-                }
+                vulkanContextResources->vulkanBufferPool.Init(VULKAN_MAX_BUFFERS, 16);
+                vulkanContextResources->vulkanDeviceMemoryPool.Init(VULKAN_MAX_BUFFERS, 16);
+                vulkanContextResources->vulkanMappedMemPtrPool.Init(VULKAN_MAX_BUFFERS, 16);
 
                 // Command pool
                 VkCommandPoolCreateInfo commandPoolCreateInfo = {};
@@ -940,36 +933,63 @@ namespace Tinker
 
             uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
             {
+                uint32 newBufferHandle =
+                    vulkanContextResources->vulkanBufferPool.Alloc();
+                VkBuffer* newBuffer =
+                    vulkanContextResources->vulkanBufferPool.PtrFromHandle(newBufferHandle);
+
+                TINKER_ASSERT(newBufferHandle != 0xffffffff);
+
+                uint32 newDeviceMemoryHandle =
+                    vulkanContextResources->vulkanDeviceMemoryPool.Alloc();
+                VkDeviceMemory* newDeviceMemory =
+                    vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(newDeviceMemoryHandle);
+
+                TINKER_ASSERT(newDeviceMemoryHandle != 0xffffffff);
+
                 CreateBuffer(vulkanContextResources, sizeInBytes,
                     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    vulkanContextResources->vertexBuffers[vulkanContextResources->numAllocatedVertexBuffers],
-                    vulkanContextResources->vertexDeviceMemory[vulkanContextResources->numAllocatedVertexBuffers]);
+                    *newBuffer,
+                    *newDeviceMemory);
                 
-                return vulkanContextResources->numAllocatedVertexBuffers++;
+                return newBufferHandle;
             }
 
-            uint32 CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
+            VulkanStagingBufferData CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
             {
+                uint32 newBufferHandle =
+                    vulkanContextResources->vulkanBufferPool.Alloc();
+                VkBuffer* newBuffer =
+                    vulkanContextResources->vulkanBufferPool.PtrFromHandle(newBufferHandle);
+
+                TINKER_ASSERT(newBufferHandle != 0xffffffff);
+
+                uint32 newDeviceMemoryHandle =
+                    vulkanContextResources->vulkanDeviceMemoryPool.Alloc();
+                VkDeviceMemory* newDeviceMemory =
+                    vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(newDeviceMemoryHandle);
+
+                TINKER_ASSERT(newDeviceMemoryHandle != 0xffffffff);
+
                 CreateBuffer(vulkanContextResources, sizeInBytes,
                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    vulkanContextResources->stagingBuffers[vulkanContextResources->numAllocatedStagingBuffers],
-                    vulkanContextResources->stagingDeviceMemory[vulkanContextResources->numAllocatedStagingBuffers]);
+                    *newBuffer,
+                    *newDeviceMemory);
 
-                void* buffer;
-                vkMapMemory(vulkanContextResources->device,
-                    vulkanContextResources->stagingDeviceMemory[vulkanContextResources->numAllocatedStagingBuffers],
-                    0, sizeInBytes, 0, &buffer);
+                uint32 newMappedMemHandle =
+                    vulkanContextResources->vulkanMappedMemPtrPool.Alloc();
+                void** newMappedMem =
+                    vulkanContextResources->vulkanMappedMemPtrPool.PtrFromHandle(newMappedMemHandle);
 
-                vulkanContextResources->stagingBufferMappedPtrs[vulkanContextResources->numAllocatedStagingBuffers] = buffer;
+                vkMapMemory(vulkanContextResources->device, *newDeviceMemory, 0, sizeInBytes, 0, newMappedMem);
 
-                return vulkanContextResources->numAllocatedStagingBuffers++;
-            }
+                VulkanStagingBufferData data;
+                data.handle = newBufferHandle;
+                data.mappedMemory = *newMappedMem;
 
-            void* GetStagingBufferMemory(VulkanContextResources* vulkanContextResources, uint32 stagingBufferHandle)
-            {
-                return vulkanContextResources->stagingBufferMappedPtrs[stagingBufferHandle];
+                return data;
             }
 
             void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
@@ -1013,7 +1033,7 @@ namespace Tinker
                 uint32 vertexBufferHandle, uint32 indexBufferHandle,
                 uint32 numIndices, uint32 numVertices)
             {
-                VkBuffer vertexBuffers[] = { vulkanContextResources->vertexBuffers[vertexBufferHandle] };
+                VkBuffer vertexBuffers[] = { *vulkanContextResources->vulkanBufferPool.PtrFromHandle(vertexBufferHandle) };
                 VkDeviceSize offsets[] = { 0 };
                 vkCmdBindVertexBuffers(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                     0, 1, vertexBuffers, offsets);
@@ -1026,17 +1046,19 @@ namespace Tinker
             {
                 /*VkBuffer dstBufferHandle = vertexBufferHandle != 0xffffffff ? vulkanContextResources->vertexBuffers[vertexBufferHandle] :
                                                                               vulkanContextResources->indexBuffers[vertexBufferHandle];*/
-                VkBuffer dstBuffer = vulkanContextResources->vertexBuffers[vertexBufferHandle];
+                VkBuffer& dstBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(vertexBufferHandle);
+                VkBuffer& srcBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(stagingBufferHandle);
+                
                 VkBufferCopy bufferCopy = {};
                 bufferCopy.srcOffset = 0;
                 bufferCopy.dstOffset = 0;
                 bufferCopy.size = sizeInBytes;
                 vkCmdCopyBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    vulkanContextResources->stagingBuffers[stagingBufferHandle],
+                    srcBuffer,
                     dstBuffer,
                     1, &bufferCopy);
             }
-
+            
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources)
             {
                 VkRenderPassBeginInfo renderPassBeginInfo = {};
@@ -1064,25 +1086,24 @@ namespace Tinker
                 vkCmdEndRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
             }
 
+            void DestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+                vkDestroyBuffer(vulkanContextResources->device, *vulkanContextResources->vulkanBufferPool.PtrFromHandle(handle), nullptr);
+                vkFreeMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle), nullptr);
+            }
+
+            void DestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+                vkDestroyBuffer(vulkanContextResources->device, *vulkanContextResources->vulkanBufferPool.PtrFromHandle(handle), nullptr);
+                vkUnmapMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle));
+                vkFreeMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle), nullptr);
+            }
+
             void DestroyVulkan(VulkanContextResources* vulkanContextResources)
             {
-                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this
-
-                for (uint32 uiBuffer = 0; uiBuffer < vulkanContextResources->numAllocatedStagingBuffers; ++uiBuffer)
-                {
-                    vkDestroyBuffer(vulkanContextResources->device, vulkanContextResources->stagingBuffers[uiBuffer], nullptr);
-                    if (vulkanContextResources->stagingDeviceMemory[uiBuffer] != VK_NULL_HANDLE)
-                    {
-                        vkUnmapMemory(vulkanContextResources->device, vulkanContextResources->stagingDeviceMemory[uiBuffer]);
-                    }
-                    vkFreeMemory(vulkanContextResources->device, vulkanContextResources->stagingDeviceMemory[uiBuffer], nullptr);
-                }
-
-                for (uint32 uiBuffer = 0; uiBuffer < vulkanContextResources->numAllocatedVertexBuffers; ++uiBuffer)
-                {
-                    vkDestroyBuffer(vulkanContextResources->device, vulkanContextResources->vertexBuffers[uiBuffer], nullptr);
-                    vkFreeMemory(vulkanContextResources->device, vulkanContextResources->vertexDeviceMemory[uiBuffer], nullptr);
-                }
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
 
                 vkDestroyPipeline(vulkanContextResources->device, vulkanContextResources->pipeline, nullptr);
                 vkDestroyPipelineLayout(vulkanContextResources->device, vulkanContextResources->pipelineLayout, nullptr);

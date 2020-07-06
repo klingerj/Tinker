@@ -118,11 +118,20 @@ namespace Tinker
         #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes)
         typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
 
-        #define CREATE_STAGING_BUFFER(name) uint32 name(uint32 sizeInBytes)
+        #define DESTROY_VERTEX_BUFFER(name) void name(uint32 handle)
+        typedef DESTROY_VERTEX_BUFFER(destroy_vertex_buffer);
+
+        typedef struct staging_buffer_data
+        {
+            uint32 handle;
+            void* memory;
+        } StagingBufferData;
+
+        #define CREATE_STAGING_BUFFER(name) StagingBufferData name(uint32 sizeInBytes)
         typedef CREATE_STAGING_BUFFER(create_staging_buffer);
 
-        #define GET_STAGING_BUFFER_MEMORY(name) void* name(uint32 stagingBufferHandle)
-        typedef GET_STAGING_BUFFER_MEMORY(get_staging_buffer_memory);
+        #define DESTROY_STAGING_BUFFER(name) void name(uint32 handle)
+        typedef DESTROY_STAGING_BUFFER(destroy_staging_buffer);
         
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
@@ -131,11 +140,15 @@ namespace Tinker
             read_entire_file* ReadEntireFile;
             create_vertex_buffer* CreateVertexBuffer;
             create_staging_buffer* CreateStagingBuffer;
-            get_staging_buffer_memory* GetStagingBufferMemory;
+            destroy_vertex_buffer* DestroyVertexBuffer;
+            destroy_staging_buffer* DestroyStagingBuffer;
         } PlatformAPIFuncs;
 
         // Game side
         #define GAME_UPDATE(name) uint32 name(Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
         typedef GAME_UPDATE(game_update);
+
+        #define GAME_DESTROY(name) void name(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+        typedef GAME_DESTROY(game_destroy);
     }
 }

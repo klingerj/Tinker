@@ -95,7 +95,7 @@ namespace Tinker
             template <typename U>
             using PoolElement = struct pool_element<U>;
             PoolElement<T>* m_pool = nullptr;
-            const uint32 m_elementSizeInBytes = sizeof(PoolElement<T>);
+            uint32 m_elementSizeInBytes = sizeof(PoolElement<T>);
 
             void InitFreeListPtrs()
             {
