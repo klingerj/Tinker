@@ -111,15 +111,21 @@ GAME_UPDATE(GameUpdate)
     Tinker::Platform::GraphicsCommand* graphicsCmdBase = graphicsCommandStream->m_graphicsCommands;
     memcpy(graphicsCmdBase, testCmd, commandsSize);
     graphicsCmdBase += commandsSize;
-
-    uint32 a;
-    uint32 b = Tinker::Platform::AtomicGet32(&a);
     
-    Tinker::Memory::LinearAllocator<1024, 1> linearAllocator;
+    /*Tinker::Memory::PoolAllocator<v4f> poolAllocator;
+    poolAllocator.Init(2048, 1);
+    uint32 firstEle = poolAllocator.Alloc();
+    uint32 secondEle = poolAllocator.Alloc();
+    uint32 thirdEle = poolAllocator.Alloc();
 
-    v2f v;
+    v4f* vec = poolAllocator.PtrFromHandle(firstEle);
+    vec->x = 1.0f;
+    vec->y = 2.0f;
+    vec->z = 3.0f;
+    vec->w = 4.0f;
 
-    Tinker::Containers::RingBuffer<v2f, 1024> ringBuffer;
+    poolAllocator.Dealloc(secondEle);
+    poolAllocator.Dealloc(firstEle);*/
 
     return 0;
 }
