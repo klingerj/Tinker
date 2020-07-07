@@ -3,6 +3,7 @@
 #include "../Core/CoreDefines.h"
 #include "../Core/Math/VectorTypes.h"
 #include "../Core/Allocators.h"
+#include "GraphicsTypes.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
@@ -79,17 +80,16 @@ namespace Tinker
             void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
                 VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
                 VkBuffer& buffer, VkDeviceMemory& deviceMemory);
-            uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
+            uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, BufferType bufferType);
             VulkanStagingBufferData CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
             void DestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
             void DestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
-                uint32 vertexBufferHandle, uint32 indexBufferHandle,
-                uint32 numIndices, uint32 numVertices);
-            void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
-                uint32 stagingBufferHandle, uint32 vertexBufferHandle, uint32 indexBufferHandle);
+                uint32 vertexBufferHandle, uint32 indexBufferHandle, uint32 numIndices, uint32 numVertices);
+            void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
+                uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle);
 
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources);
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources);
