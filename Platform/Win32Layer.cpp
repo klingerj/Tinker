@@ -98,10 +98,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
             case eGraphicsCmdMemTransfer:
             {
                 // TODO: switch statement based on chosen graphics API
-                VulkanRecordCommandMemoryTransfer(&vulkanContextResources, currentCmd.m_sizeInBytes,
-                    currentCmd.m_srcStagingBufferHandle,
-                    currentCmd.m_dstVertexBufferHandle,
-                    currentCmd.m_dstIndexBufferHandle);
+                VulkanRecordCommandMemoryTransfer(&vulkanContextResources,
+                    currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle);
                 break;
             }
 
@@ -138,15 +136,17 @@ static void SubmitFrameToGPU()
 CREATE_VERTEX_BUFFER(CreateVertexBuffer)
 {
     // TODO: switch statement based on chosen graphics API
-    return CreateVertexBuffer(&vulkanContextResources, sizeInBytes);
+    return CreateVertexBuffer(&vulkanContextResources, sizeInBytes, bufferType);
 }
 
 CREATE_STAGING_BUFFER(CreateStagingBuffer)
 {
     // TODO: switch statement based on chosen graphics API
-    Graphics::VulkanStagingBufferData vulkanData = CreateStagingBuffer(&vulkanContextResources, sizeInBytes);
-    StagingBufferData data;
-    memcpy(&data, &vulkanData, sizeof(Graphics::    VulkanStagingBufferData));
+    Graphics::VulkanStagingBufferData vulkanData =
+        CreateStagingBuffer(&vulkanContextResources, sizeInBytes);
+
+    Graphics::StagingBufferData data;
+    memcpy(&data, &vulkanData, sizeof(Graphics::VulkanStagingBufferData));
     return data;
 }
 

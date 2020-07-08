@@ -697,7 +697,7 @@ namespace Tinker
                 rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
                 rasterizer.lineWidth = 1.0f;
                 rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-                rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+                rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
                 rasterizer.depthBiasEnable = VK_FALSE;
                 rasterizer.depthBiasConstantFactor = 0.0f;
                 rasterizer.depthBiasClamp = 0.0f;
@@ -931,7 +931,7 @@ namespace Tinker
                 vkBindBufferMemory(vulkanContextResources->device, buffer, deviceMemory, 0);
             }
 
-            uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
+            uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, BufferType bufferType)
             {
                 uint32 newBufferHandle =
                     vulkanContextResources->vulkanBufferPool.Alloc();
@@ -947,8 +947,30 @@ namespace Tinker
 
                 TINKER_ASSERT(newDeviceMemoryHandle != 0xffffffff);
 
+                VkBufferUsageFlags usageFlags = {};
+                switch (bufferType)
+                {
+                    case eVertexBuffer:
+                    {
+                        usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                        break;
+                    }
+
+                    case eIndexBuffer:
+                    {
+                        usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                        break;
+                    }
+
+                    default:
+                    {
+                        break;
+                    }
+                }
+                usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
                 CreateBuffer(vulkanContextResources, sizeInBytes,
-                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    usageFlags,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                     *newBuffer,
                     *newDeviceMemory);
@@ -1038,16 +1060,19 @@ namespace Tinker
                 vkCmdBindVertexBuffers(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                     0, 1, vertexBuffers, offsets);
 
-                vkCmdDraw(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage], numVertices, 1, 0, 0);
+                VkBuffer& indexBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(indexBufferHandle);
+                vkCmdBindIndexBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                    indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+                vkCmdDrawIndexed(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                    numIndices, 1, 0, 0, 0);
             }
 
-            void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
-                uint32 stagingBufferHandle, uint32 vertexBufferHandle, uint32 indexBufferHandle)
+            void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
+                uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle)
             {
-                /*VkBuffer dstBufferHandle = vertexBufferHandle != 0xffffffff ? vulkanContextResources->vertexBuffers[vertexBufferHandle] :
-                                                                              vulkanContextResources->indexBuffers[vertexBufferHandle];*/
-                VkBuffer& dstBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(vertexBufferHandle);
-                VkBuffer& srcBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(stagingBufferHandle);
+                VkBuffer& dstBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(dstBufferHandle);
+                VkBuffer& srcBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(srcBufferHandle);
                 
                 VkBufferCopy bufferCopy = {};
                 bufferCopy.srcOffset = 0;
