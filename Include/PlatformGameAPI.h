@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/CoreDefines.h"
+#include "Platform/GraphicsTypes.h"
 
 namespace Tinker
 {
@@ -86,10 +87,8 @@ namespace Tinker
                 struct
                 {
                     uint32 m_sizeInBytes;
-                    uint32 m_dstBufferType; // 0 = vertex, 1 = index. TODO: shouldn't use this
-                    uint32 m_srcStagingBufferHandle; // src
-                    uint32 m_dstVertexBufferHandle; // dst
-                    uint32 m_dstIndexBufferHandle; // dst
+                    uint32 m_srcBufferHandle; // src
+                    uint32 m_dstBufferHandle; // dst
                 };
 
                 // Begin render pass
@@ -115,19 +114,13 @@ namespace Tinker
             uint32 m_maxCommands;
         } GraphicsCommandStream;
 
-        #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes)
+        #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes, Graphics::BufferType bufferType)
         typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
 
         #define DESTROY_VERTEX_BUFFER(name) void name(uint32 handle)
         typedef DESTROY_VERTEX_BUFFER(destroy_vertex_buffer);
 
-        typedef struct staging_buffer_data
-        {
-            uint32 handle;
-            void* memory;
-        } StagingBufferData;
-
-        #define CREATE_STAGING_BUFFER(name) StagingBufferData name(uint32 sizeInBytes)
+        #define CREATE_STAGING_BUFFER(name) Graphics::StagingBufferData name(uint32 sizeInBytes)
         typedef CREATE_STAGING_BUFFER(create_staging_buffer);
 
         #define DESTROY_STAGING_BUFFER(name) void name(uint32 handle)
