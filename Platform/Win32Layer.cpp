@@ -105,7 +105,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
             case eGraphicsCmdRenderPassBegin:
             {
-                VulkanRecordCommandRenderPassBegin(&vulkanContextResources);
+                VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_framebufferHandle);
                 break;
             }
 
@@ -150,6 +150,24 @@ CREATE_STAGING_BUFFER(CreateStagingBuffer)
     return data;
 }
 
+CREATE_FRAMEBUFFER(CreateFramebuffer)
+{
+    // TODO: switch statement based on chosen graphics API
+    return CreateFramebuffer(&vulkanContextResources, imageViewResourceHandles, numImageViewResourceHandles);
+}
+
+CREATE_IMAGE_RESOURCE(CreateImageResource)
+{
+    // TODO: switch statement based on chosen graphics API
+    return CreateImageResource(&vulkanContextResources, width, height);
+}
+
+CREATE_IMAGE_VIEW_RESOURCE(CreateImageViewResource)
+{
+    // TODO: switch statement based on chosen graphics API
+    return CreateImageViewResource(&vulkanContextResources, imageResourceHandle);
+}
+
 DESTROY_VERTEX_BUFFER(DestroyVertexBuffer)
 {
     // TODO: switch statement based on chosen graphics API
@@ -160,6 +178,24 @@ DESTROY_STAGING_BUFFER(DestroyStagingBuffer)
 {
     // TODO: switch statement based on chosen graphics API
     DestroyStagingBuffer(&vulkanContextResources, handle);
+}
+
+DESTROY_FRAMEBUFFER(DestroyFramebuffer)
+{
+    // TODO: switch statement based on chosen graphics API
+    DestroyFramebuffer(&vulkanContextResources, handle);
+}
+
+DESTROY_IMAGE_RESOURCE(DestroyImageResource)
+{
+    // TODO: switch statement based on chosen graphics API
+    DestroyImageResource(&vulkanContextResources, handle);
+}
+
+DESTROY_IMAGE_VIEW_RESOURCE(DestroyImageViewResource)
+{
+    // TODO: switch statement based on chosen graphics API
+    DestroyImageViewResource(&vulkanContextResources, handle);
 }
 
 volatile bool runGame = true;
@@ -293,6 +329,12 @@ wWinMain(HINSTANCE hInstance,
     platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
     platformAPIFuncs.DestroyVertexBuffer = DestroyVertexBuffer;
     platformAPIFuncs.DestroyStagingBuffer = DestroyStagingBuffer;
+    platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
+    platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
+    platformAPIFuncs.CreateImageResource = CreateImageResource;
+    platformAPIFuncs.DestroyImageResource = DestroyImageResource;
+    platformAPIFuncs.CreateImageViewResource = CreateImageViewResource;
+    platformAPIFuncs.DestroyImageViewResource = DestroyImageViewResource;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
