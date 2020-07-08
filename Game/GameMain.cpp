@@ -2,40 +2,65 @@
 #include "../Include/Core/Allocators.h"
 #include "../Include/Core/Math/VectorTypes.h"
 #include "../Include/Core/Containers/RingBuffer.h"
+#include "GameGraphicsTypes.h"
 
 #include <cstring>
+#include <vector>
 
 static void Test_Thread_Func()
 {
     Tinker::Platform::PrintDebugString("I am from a thread.\n");
 }
 
-typedef struct game_graphic_data
-{
-    uint32 m_vertexBufferHandle;
-    uint32 m_stagingBufferHandle;
-    void* m_stagingBufferMemPtr;
-    uint32 m_indexBufferHandle;
-    uint32 m_stagingBufferHandle3;
-    void* m_stagingBufferMemPtr3;
-
-    uint32 m_vertexBufferHandle2;
-    uint32 m_stagingBufferHandle2;
-    void* m_stagingBufferMemPtr2;
-    uint32 m_indexBufferHandle2;
-    uint32 m_stagingBufferHandle4;
-    void* m_stagingBufferMemPtr4;
-} GameGraphicsData;
+DefaultGeometry<4, 6> defaultQuad = {
+    0xffffffff,
+    0xffffffff,
+    0xffffffff,
+    0xffffffff,
+    v4f(-1.0f, -1.0f, 0.0f, 1.0f),
+    v4f(1.0f, -1.0f, 0.0f, 1.0f),
+    v4f(-1.0f, 1.0f, 0.0f, 1.0f),
+    v4f(1.0f, 1.0f, 0.0f, 1.0f),
+    0, 1, 2, 2, 1, 3
+};
 
 static GameGraphicsData gameGraphicsData = {};
+
+static std::vector<Tinker::Platform::GraphicsCommand> graphicsCommands;
 
 static bool isGameInitted = false;
 
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
+    graphicsCommands.clear();
+
     if (!isGameInitted)
     {
+        graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
+
+        // Default geometry
+        defaultQuad.m_vertexBufferHandle = platformFuncs->CreateVertexBuffer(sizeof(defaultQuad.m_points), Tinker::Platform::Graphics::BufferType::eVertexBuffer);
+        defaultQuad.m_indexBufferHandle = platformFuncs->CreateVertexBuffer(sizeof(defaultQuad.m_points), Tinker::Platform::Graphics::BufferType::eIndexBuffer);
+        Tinker::Platform::Graphics::StagingBufferData stagingBufferData = platformFuncs->CreateStagingBuffer(sizeof(defaultQuad.m_points));
+        defaultQuad.m_stagingBufferHandle_vert = stagingBufferData.handle;
+        memcpy(stagingBufferData.memory, defaultQuad.m_points, sizeof(defaultQuad.m_points));
+        stagingBufferData = platformFuncs->CreateStagingBuffer(sizeof(defaultQuad.m_indices));
+        defaultQuad.m_stagingBufferHandle_idx = stagingBufferData.handle;
+        memcpy(stagingBufferData.memory, defaultQuad.m_indices, sizeof(defaultQuad.m_points));
+
+        Tinker::Platform::GraphicsCommand command;
+        command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
+        command.m_sizeInBytes = sizeof(defaultQuad.m_points);
+        command.m_dstBufferHandle = defaultQuad.m_vertexBufferHandle;
+        command.m_srcBufferHandle = defaultQuad.m_stagingBufferHandle_vert;
+        graphicsCommands.push_back(command);
+        command.m_sizeInBytes = sizeof(defaultQuad.m_indices);
+        command.m_dstBufferHandle = defaultQuad.m_indexBufferHandle;
+        command.m_srcBufferHandle = defaultQuad.m_stagingBufferHandle_idx;
+        graphicsCommands.push_back(command);
+
+        // Game graphics
         uint32 numVertBytes = sizeof(v4f) * 4; // aligned memory size
         uint32 numIdxBytes = sizeof(uint32) * 4; // aligned memory size
         uint32 vertexBufferHandle = platformFuncs->CreateVertexBuffer(numVertBytes, Tinker::Platform::Graphics::BufferType::eVertexBuffer);
@@ -70,6 +95,10 @@ GAME_UPDATE(GameUpdate)
         gameGraphicsData.m_stagingBufferHandle4 = stagingBufferHandle4;
         gameGraphicsData.m_stagingBufferMemPtr4 = stagingBufferMemPtr4;
 
+        gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(800, 600);
+        gameGraphicsData.m_imageViewHandle = platformFuncs->CreateImageViewResource(gameGraphicsData.m_imageHandle);
+        gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1);
+
         isGameInitted = true;
     }
 
@@ -92,57 +121,86 @@ GAME_UPDATE(GameUpdate)
     platformFuncs->EnqueueWorkerThreadJob(job);
     Tinker::Platform::WaitOnJob(job);
 
-    // Issue a test draw command
-    const uint32 numCommands = 8;
-    Tinker::Platform::GraphicsCommand testCmd[numCommands];
-    uint32 commandsSize = sizeof(Tinker::Platform::GraphicsCommand) * numCommands;
+    // Issue graphics commands
+    Tinker::Platform::GraphicsCommand command;
 
-    testCmd[0].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
-    testCmd[0].m_sizeInBytes = numVertBytes;
-    testCmd[0].m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle;
-    testCmd[0].m_dstBufferHandle = gameGraphicsData.m_vertexBufferHandle;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
+    command.m_sizeInBytes = numVertBytes;
+    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle;
+    command.m_dstBufferHandle = gameGraphicsData.m_vertexBufferHandle;
+    graphicsCommands.push_back(command);
 
-    testCmd[1].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
-    testCmd[1].m_sizeInBytes = numVertBytes;
-    testCmd[1].m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle2;
-    testCmd[1].m_dstBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
+    command.m_sizeInBytes = numVertBytes;
+    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle2;
+    command.m_dstBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
+    graphicsCommands.push_back(command);
 
-    testCmd[2].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
-    testCmd[2].m_sizeInBytes = numIdxBytes;
-    testCmd[2].m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle3;
-    testCmd[2].m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
+    command.m_sizeInBytes = numIdxBytes;
+    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle3;
+    command.m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle;
+    graphicsCommands.push_back(command);
 
-    testCmd[3].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
-    testCmd[3].m_sizeInBytes = numIdxBytes;
-    testCmd[3].m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle4;
-    testCmd[3].m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle2;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdMemTransfer;
+    command.m_sizeInBytes = numIdxBytes;
+    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle4;
+    command.m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle2;
+    graphicsCommands.push_back(command);
 
-    testCmd[4].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
-    testCmd[4].m_renderPassHandle = 0xffffffff;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
+    command.m_renderPassHandle = 0xffffffff;
+    command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
+    graphicsCommands.push_back(command);
 
-    testCmd[5].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
-    testCmd[5].m_numIndices = 3;
-    testCmd[5].m_numUVs = 0;
-    testCmd[5].m_numVertices = 3;
-    testCmd[5].m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle;
-    testCmd[5].m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle;
-    testCmd[5].m_uvBufferHandle = 0xffffffff;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
+    command.m_numIndices = 3;
+    command.m_numUVs = 0;
+    command.m_numVertices = 3;
+    command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle;
+    command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle;
+    command.m_uvBufferHandle = 0xffffffff;
+    graphicsCommands.push_back(command);
 
-    testCmd[6].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
-    testCmd[6].m_numIndices = 3;
-    testCmd[6].m_numUVs = 0;
-    testCmd[6].m_numVertices = 3;
-    testCmd[6].m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
-    testCmd[6].m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
-    testCmd[6].m_uvBufferHandle = 0xffffffff;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
+    command.m_numIndices = 3;
+    command.m_numUVs = 0;
+    command.m_numVertices = 3;
+    command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
+    command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
+    command.m_uvBufferHandle = 0xffffffff;
+    graphicsCommands.push_back(command);
 
-    testCmd[7].m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
-    testCmd[7].m_renderPassHandle = 0xffffffff;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
+    command.m_renderPassHandle = 0xffffffff;
+    graphicsCommands.push_back(command);
     
-    graphicsCommandStream->m_numCommands = numCommands;
+    // Blit to screen
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
+    command.m_renderPassHandle = 0xffffffff;
+    command.m_framebufferHandle = 0xffffffff;
+    graphicsCommands.push_back(command);
+
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
+    command.m_numIndices = 3;
+    command.m_numUVs = 0;
+    command.m_numVertices = 3;
+    /*command.m_indexBufferHandle = defaultQuad.m_indexBufferHandle;
+    command.m_vertexBufferHandle = defaultQuad.m_vertexBufferHandle;*/
+    command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
+    command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
+    command.m_uvBufferHandle = 0xffffffff;
+    graphicsCommands.push_back(command);
+
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
+    command.m_renderPassHandle = 0xffffffff;
+    graphicsCommands.push_back(command);
+
+    graphicsCommandStream->m_numCommands = (uint32)graphicsCommands.size();
     Tinker::Platform::GraphicsCommand* graphicsCmdBase = graphicsCommandStream->m_graphicsCommands;
-    memcpy(graphicsCmdBase, testCmd, commandsSize);
-    graphicsCmdBase += commandsSize;
+    uint32 graphicsCmdSizeInBytes = (uint32)graphicsCommands.size() * sizeof(Tinker::Platform::GraphicsCommand);
+    memcpy(graphicsCmdBase, graphicsCommands.data(), graphicsCmdSizeInBytes);
+    graphicsCmdBase += graphicsCmdSizeInBytes;
 
     return 0;
 }
@@ -151,6 +209,13 @@ GAME_DESTROY(GameDestroy)
 {
     if (isGameInitted)
     {
+        // Default geometry
+        platformFuncs->DestroyVertexBuffer(defaultQuad.m_vertexBufferHandle);
+        platformFuncs->DestroyVertexBuffer(defaultQuad.m_indexBufferHandle);
+        platformFuncs->DestroyStagingBuffer(defaultQuad.m_stagingBufferHandle_vert);
+        platformFuncs->DestroyStagingBuffer(defaultQuad.m_stagingBufferHandle_idx);
+
+        // Game graphics
         platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_vertexBufferHandle);
         platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_vertexBufferHandle2);
         platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle);
@@ -159,5 +224,9 @@ GAME_DESTROY(GameDestroy)
         platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_indexBufferHandle2);
         platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle3);
         platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle4);
+
+        platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
+        platformFuncs->DestroyImageResource(gameGraphicsData.m_imageHandle);
+        platformFuncs->DestroyImageViewResource(gameGraphicsData.m_imageViewHandle);
     }
 }

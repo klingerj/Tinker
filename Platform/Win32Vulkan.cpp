@@ -27,6 +27,14 @@ namespace Tinker
                 HINSTANCE hInstance, HWND windowHandle,
                 uint32 width, uint32 height)
             {
+                vulkanContextResources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                //vulkanContextResources->vulkanBufferPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                //vulkanContextResources->vulkanDeviceMemoryPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                vulkanContextResources->vulkanMappedMemPtrPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                vulkanContextResources->vulkanFramebufferPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                //vulkanContextResources->vulkanImagePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                vulkanContextResources->vulkanImageViewPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+
                 VkApplicationInfo applicationInfo = {};
                 applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
                 applicationInfo.pApplicationName = "Tinker with Vulkan";
@@ -470,7 +478,7 @@ namespace Tinker
                     &numSwapChainImages,
                     vulkanContextResources->swapChainImages);
 
-                vulkanContextResources->swapChainImageViews = new VkImageView[numSwapChainImages];
+                vulkanContextResources->swapChainImageViewHandles = new uint32[numSwapChainImages];
                 for (uint32 uiImageView = 0; uiImageView < numSwapChainImages; ++uiImageView)
                 {
                     VkImageViewCreateInfo imageViewCreateInfo = {};
@@ -488,10 +496,14 @@ namespace Tinker
                     imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
                     imageViewCreateInfo.subresourceRange.layerCount = 1;
 
+                    uint32 newImageViewHandle = vulkanContextResources->vulkanImageViewPool.Alloc();
+                    vulkanContextResources->swapChainImageViewHandles[uiImageView] = newImageViewHandle;
+                    VkImageView* newImageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(newImageViewHandle);
+
                     result = vkCreateImageView(vulkanContextResources->device,
                         &imageViewCreateInfo,
                         nullptr,
-                        &vulkanContextResources->swapChainImageViews[uiImageView]);
+                        newImageView);
                     if (result != VK_SUCCESS)
                     {
                         // TODO: Log? Fail?
@@ -502,11 +514,19 @@ namespace Tinker
                 InitGraphicsPipelineResources(vulkanContextResources);
 
                 // Swap chain framebuffers
-                vulkanContextResources->swapChainFramebuffers = new VkFramebuffer[vulkanContextResources->numSwapChainImages];
+                vulkanContextResources->swapChainFramebufferHandles = new uint32[vulkanContextResources->numSwapChainImages];
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
                 {
+                    uint32 framebufferHandle = vulkanContextResources->vulkanFramebufferPool.Alloc();
+                    TINKER_ASSERT(framebufferHandle != 0xffffffff);
+
+                    vulkanContextResources->swapChainFramebufferHandles[uiFramebuffer] = framebufferHandle;
+
+                    VkFramebuffer* newFramebuffer =
+                        vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(framebufferHandle);
+
                     VkImageView attachments[] = {
-                        vulkanContextResources->swapChainImageViews[uiFramebuffer]
+                        *vulkanContextResources->vulkanImageViewPool.PtrFromHandle(vulkanContextResources->swapChainImageViewHandles[uiFramebuffer])
                     };
 
                     VkFramebufferCreateInfo framebufferCreateInfo = {};
@@ -521,16 +541,12 @@ namespace Tinker
                     result = vkCreateFramebuffer(vulkanContextResources->device,
                         &framebufferCreateInfo,
                         nullptr,
-                        &vulkanContextResources->swapChainFramebuffers[uiFramebuffer]);
+                        newFramebuffer);
                     if (result != VK_SUCCESS)
                     {
                         // TODO: Fail? Log?
                     }
                 }
-
-                vulkanContextResources->vulkanBufferPool.Init(VULKAN_MAX_BUFFERS, 16);
-                vulkanContextResources->vulkanDeviceMemoryPool.Init(VULKAN_MAX_BUFFERS, 16);
-                vulkanContextResources->vulkanMappedMemPtrPool.Init(VULKAN_MAX_BUFFERS, 16);
 
                 // Command pool
                 VkCommandPoolCreateInfo commandPoolCreateInfo = {};
@@ -881,6 +897,38 @@ namespace Tinker
                 vkQueueWaitIdle(vulkanContextResources->presentationQueue);
             }
 
+            void AllocGPUMemory(VulkanContextResources* vulkanContextResources, VkDeviceMemory* deviceMemory,
+                VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags)
+            {
+                // Check for memory type support
+                VkPhysicalDeviceMemoryProperties memProperties;
+                vkGetPhysicalDeviceMemoryProperties(vulkanContextResources->physicalDevice, &memProperties);
+
+                uint32 memTypeIndex = 0xffffffff;
+                for (uint32 uiMemType = 0; uiMemType < memProperties.memoryTypeCount; ++uiMemType)
+                {
+                    if (((1 << uiMemType) & memRequirements.memoryTypeBits) &&
+                        (memProperties.memoryTypes[uiMemType].propertyFlags & memPropertyFlags) == memPropertyFlags)
+                    {
+                        memTypeIndex = uiMemType;
+                    }
+                }
+                if (memTypeIndex == 0xffffffff)
+                {
+                    // TODO: Fail?
+                }
+
+                VkMemoryAllocateInfo memAllocInfo = {};
+                memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+                memAllocInfo.allocationSize = memRequirements.size;
+                memAllocInfo.memoryTypeIndex = memTypeIndex;
+                VkResult result = vkAllocateMemory(vulkanContextResources->device, &memAllocInfo, nullptr, deviceMemory);
+                if (result != VK_SUCCESS)
+                {
+                    // TODO: Fail
+                }
+            }
+
             void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
                 VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
                 VkBuffer& buffer, VkDeviceMemory& deviceMemory)
@@ -900,52 +948,19 @@ namespace Tinker
                 VkMemoryRequirements memRequirements;
                 vkGetBufferMemoryRequirements(vulkanContextResources->device, buffer, &memRequirements);
 
-                // Check for memory type support
-                VkPhysicalDeviceMemoryProperties memProperties;
-                vkGetPhysicalDeviceMemoryProperties(vulkanContextResources->physicalDevice, &memProperties);
-
-                uint32 memTypeIndex = 0xffffffff;
-                for (uint32 uiMemType = 0; uiMemType < memProperties.memoryTypeCount; ++uiMemType)
-                {
-                    if (((1 << uiMemType) & memRequirements.memoryTypeBits) &&
-                        (memProperties.memoryTypes[uiMemType].propertyFlags & propertyFlags) == propertyFlags)
-                    {
-                        memTypeIndex = uiMemType;
-                    }
-                }
-                if (memTypeIndex == 0xffffffff)
-                {
-                    // TODO: Fail?
-                }
-
-                VkMemoryAllocateInfo memAllocInfo = {};
-                memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-                memAllocInfo.allocationSize = memRequirements.size;
-                memAllocInfo.memoryTypeIndex = memTypeIndex;
-                result = vkAllocateMemory(vulkanContextResources->device, &memAllocInfo, nullptr, &deviceMemory);
-                if (result != VK_SUCCESS)
-                {
-                    // TODO: Fail
-                }
+                AllocGPUMemory(vulkanContextResources, &deviceMemory, memRequirements, propertyFlags);
 
                 vkBindBufferMemory(vulkanContextResources->device, buffer, deviceMemory, 0);
             }
 
             uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, BufferType bufferType)
             {
-                uint32 newBufferHandle =
-                    vulkanContextResources->vulkanBufferPool.Alloc();
-                VkBuffer* newBuffer =
-                    vulkanContextResources->vulkanBufferPool.PtrFromHandle(newBufferHandle);
+                uint32 newResourceHandle =
+                    vulkanContextResources->vulkanMemResourcePool.Alloc();
+                TINKER_ASSERT(newResourceHandle != 0xffffffff);
 
-                TINKER_ASSERT(newBufferHandle != 0xffffffff);
-
-                uint32 newDeviceMemoryHandle =
-                    vulkanContextResources->vulkanDeviceMemoryPool.Alloc();
-                VkDeviceMemory* newDeviceMemory =
-                    vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(newDeviceMemoryHandle);
-
-                TINKER_ASSERT(newDeviceMemoryHandle != 0xffffffff);
+                VulkanMemResource* newResource =
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
 
                 VkBufferUsageFlags usageFlags = {};
                 switch (bufferType)
@@ -972,43 +987,36 @@ namespace Tinker
                 CreateBuffer(vulkanContextResources, sizeInBytes,
                     usageFlags,
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    *newBuffer,
-                    *newDeviceMemory);
+                    newResource->buffer,
+                    newResource->deviceMemory);
                 
-                return newBufferHandle;
+                return newResourceHandle;
             }
 
             VulkanStagingBufferData CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
             {
-                uint32 newBufferHandle =
-                    vulkanContextResources->vulkanBufferPool.Alloc();
-                VkBuffer* newBuffer =
-                    vulkanContextResources->vulkanBufferPool.PtrFromHandle(newBufferHandle);
+                uint32 newResourceHandle =
+                    vulkanContextResources->vulkanMemResourcePool.Alloc();
+                TINKER_ASSERT(newResourceHandle != 0xffffffff);
 
-                TINKER_ASSERT(newBufferHandle != 0xffffffff);
-
-                uint32 newDeviceMemoryHandle =
-                    vulkanContextResources->vulkanDeviceMemoryPool.Alloc();
-                VkDeviceMemory* newDeviceMemory =
-                    vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(newDeviceMemoryHandle);
-
-                TINKER_ASSERT(newDeviceMemoryHandle != 0xffffffff);
+                VulkanMemResource* newResource =
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
 
                 CreateBuffer(vulkanContextResources, sizeInBytes,
                     VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                    *newBuffer,
-                    *newDeviceMemory);
+                    newResource->buffer,
+                    newResource->deviceMemory);
 
                 uint32 newMappedMemHandle =
                     vulkanContextResources->vulkanMappedMemPtrPool.Alloc();
                 void** newMappedMem =
                     vulkanContextResources->vulkanMappedMemPtrPool.PtrFromHandle(newMappedMemHandle);
 
-                vkMapMemory(vulkanContextResources->device, *newDeviceMemory, 0, sizeInBytes, 0, newMappedMem);
+                vkMapMemory(vulkanContextResources->device, newResource->deviceMemory, 0, sizeInBytes, 0, newMappedMem);
 
                 VulkanStagingBufferData data;
-                data.handle = newBufferHandle;
+                data.handle = newResourceHandle;
                 data.mappedMemory = *newMappedMem;
 
                 return data;
@@ -1055,12 +1063,12 @@ namespace Tinker
                 uint32 vertexBufferHandle, uint32 indexBufferHandle,
                 uint32 numIndices, uint32 numVertices)
             {
-                VkBuffer vertexBuffers[] = { *vulkanContextResources->vulkanBufferPool.PtrFromHandle(vertexBufferHandle) };
+                VkBuffer vertexBuffers[] = { vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(vertexBufferHandle)->buffer };
                 VkDeviceSize offsets[] = { 0 };
                 vkCmdBindVertexBuffers(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                     0, 1, vertexBuffers, offsets);
 
-                VkBuffer& indexBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(indexBufferHandle);
+                VkBuffer& indexBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(indexBufferHandle)->buffer;
                 vkCmdBindIndexBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                     indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
@@ -1071,8 +1079,8 @@ namespace Tinker
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle)
             {
-                VkBuffer& dstBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(dstBufferHandle);
-                VkBuffer& srcBuffer = *vulkanContextResources->vulkanBufferPool.PtrFromHandle(srcBufferHandle);
+                VkBuffer& dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle)->buffer;
+                VkBuffer& srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle)->buffer;
                 
                 VkBufferCopy bufferCopy = {};
                 bufferCopy.srcOffset = 0;
@@ -1084,12 +1092,19 @@ namespace Tinker
                     1, &bufferCopy);
             }
             
-            void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources)
+            void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources, uint32 framebufferHandle)
             {
                 VkRenderPassBeginInfo renderPassBeginInfo = {};
                 renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
                 renderPassBeginInfo.renderPass = vulkanContextResources->renderPass;
-                renderPassBeginInfo.framebuffer = vulkanContextResources->swapChainFramebuffers[vulkanContextResources->currentSwapChainImage];
+
+                if (framebufferHandle == 0xffffffff)
+                {
+                    framebufferHandle = vulkanContextResources->swapChainFramebufferHandles[vulkanContextResources->currentSwapChainImage];;
+                }
+                VkFramebuffer* framebuffer = vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(framebufferHandle);
+
+                renderPassBeginInfo.framebuffer = *framebuffer;
                 renderPassBeginInfo.renderArea.offset = { 0, 0 };
                 renderPassBeginInfo.renderArea.extent = vulkanContextResources->swapChainExtent;
 
@@ -1111,23 +1126,149 @@ namespace Tinker
                 vkCmdEndRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
             }
 
+            uint32 CreateFramebuffer(VulkanContextResources* vulkanContextResources,
+                uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles)
+            {
+                uint32 newFramebufferHandle = vulkanContextResources->vulkanFramebufferPool.Alloc();
+                TINKER_ASSERT(newFramebufferHandle != 0xffffffff);
+
+                VkFramebuffer* newFramebuffer =
+                    vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(newFramebufferHandle);
+                
+                VkImageView* attachments = new VkImageView[numImageViewResourceHandles];
+                for (uint32 uiImageView = 0; uiImageView < numImageViewResourceHandles; ++uiImageView)
+                {
+                    attachments[uiImageView] =
+                        *vulkanContextResources->vulkanImageViewPool.PtrFromHandle(imageViewResourceHandles[uiImageView]);
+                }
+
+                VkFramebufferCreateInfo framebufferCreateInfo = {};
+                framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferCreateInfo.renderPass = vulkanContextResources->renderPass;
+                framebufferCreateInfo.attachmentCount = 1;
+                framebufferCreateInfo.pAttachments = attachments;
+                framebufferCreateInfo.width = vulkanContextResources->swapChainExtent.width;
+                framebufferCreateInfo.height = vulkanContextResources->swapChainExtent.height;
+                framebufferCreateInfo.layers = 1;
+
+                VkResult result = vkCreateFramebuffer(vulkanContextResources->device,
+                    &framebufferCreateInfo,
+                    nullptr,
+                    newFramebuffer);
+                if (result != VK_SUCCESS)
+                {
+                    // TODO: Fail? Log?
+                }
+                delete attachments;
+
+                return newFramebufferHandle;
+            }
+            
+            uint32 CreateImageViewResource(VulkanContextResources* vulkanContextResources, uint32 imageResourceHandle)
+            {
+                uint32 newImageViewHandle = vulkanContextResources->vulkanImageViewPool.Alloc();
+                VkImageView* newImageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(newImageViewHandle);
+
+                VkImageViewCreateInfo imageViewCreateInfo = {};
+                imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+                imageViewCreateInfo.image = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageResourceHandle)->image;
+                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                imageViewCreateInfo.format = vulkanContextResources->swapChainFormat;
+                imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+                imageViewCreateInfo.subresourceRange.levelCount = 1;
+                imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+                imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+                VkResult result = vkCreateImageView(vulkanContextResources->device,
+                    &imageViewCreateInfo,
+                    nullptr,
+                    newImageView);
+                if (result != VK_SUCCESS)
+                {
+                    // TODO: Log? Fail?
+                }
+                return newImageViewHandle;
+            }
+
+            uint32 CreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height)
+            {
+                uint32 newResourceHandle = vulkanContextResources->vulkanMemResourcePool.Alloc();
+                VulkanMemResource* newResource =
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
+
+                VkImageCreateInfo imageCreateInfo = {};
+                imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+                imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+                imageCreateInfo.extent.width = width;
+                imageCreateInfo.extent.height = height;
+                imageCreateInfo.extent.depth = 1;
+                imageCreateInfo.mipLevels = 1;
+                imageCreateInfo.arrayLayers = 1;
+                imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+                imageCreateInfo.format = VK_FORMAT_B8G8R8A8_SRGB;
+                imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+                imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+                VkResult result = vkCreateImage(vulkanContextResources->device,
+                    &imageCreateInfo,
+                    nullptr,
+                    &newResource->image);
+                
+                VkMemoryRequirements memRequirements = {};
+                vkGetImageMemoryRequirements(vulkanContextResources->device, newResource->image, &memRequirements);
+                AllocGPUMemory(vulkanContextResources, &newResource->deviceMemory, memRequirements, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+                vkBindImageMemory(vulkanContextResources->device, newResource->image, newResource->deviceMemory, 0);
+
+                return newResourceHandle;
+            }
+
+            void DestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this
+                VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
+                vkDestroyImage(vulkanContextResources->device, resource->image, nullptr);
+                vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
+                vulkanContextResources->vulkanMemResourcePool.Dealloc(handle);
+            }
+
+            void DestroyImageViewResource(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this
+                vkDestroyImageView(vulkanContextResources->device, *vulkanContextResources->vulkanImageViewPool.PtrFromHandle(handle), nullptr);
+                vulkanContextResources->vulkanImageViewPool.Dealloc(handle);
+            }
+
+            void DestroyFramebuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+                VkFramebuffer* framebuffer = vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(handle);
+                vkDestroyFramebuffer(vulkanContextResources->device, *framebuffer, nullptr);
+                vulkanContextResources->vulkanFramebufferPool.Dealloc(handle);
+            }
+
             void DestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
-                vkDestroyBuffer(vulkanContextResources->device, *vulkanContextResources->vulkanBufferPool.PtrFromHandle(handle), nullptr);
-                vkFreeMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle), nullptr);
-                vulkanContextResources->vulkanBufferPool.Dealloc(handle);
-                vulkanContextResources->vulkanDeviceMemoryPool.Dealloc(handle);
+                VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
+                vkDestroyBuffer(vulkanContextResources->device, resource->buffer, nullptr);
+                vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
+                vulkanContextResources->vulkanMemResourcePool.Dealloc(handle);
             }
 
             void DestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
-                vkDestroyBuffer(vulkanContextResources->device, *vulkanContextResources->vulkanBufferPool.PtrFromHandle(handle), nullptr);
-                vkUnmapMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle));
-                vkFreeMemory(vulkanContextResources->device, *vulkanContextResources->vulkanDeviceMemoryPool.PtrFromHandle(handle), nullptr);
-                vulkanContextResources->vulkanBufferPool.Dealloc(handle);
-                vulkanContextResources->vulkanDeviceMemoryPool.Dealloc(handle);
+                VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
+                vkDestroyBuffer(vulkanContextResources->device, resource->buffer, nullptr);
+                vkUnmapMemory(vulkanContextResources->device, resource->deviceMemory);
+                vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
+                vulkanContextResources->vulkanMemResourcePool.Dealloc(handle);
             }
 
             void DestroyVulkan(VulkanContextResources* vulkanContextResources)
@@ -1140,9 +1281,10 @@ namespace Tinker
 
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
                 {
-                    vkDestroyFramebuffer(vulkanContextResources->device, vulkanContextResources->swapChainFramebuffers[uiFramebuffer], nullptr);
+                    uint32 framebufferHandle = vulkanContextResources->swapChainFramebufferHandles[uiFramebuffer];
+                    DestroyFramebuffer(vulkanContextResources, framebufferHandle);
                 }
-                delete vulkanContextResources->swapChainFramebuffers;
+                delete vulkanContextResources->swapChainFramebufferHandles;
 
                 vkDestroyCommandPool(vulkanContextResources->device, vulkanContextResources->commandPool, nullptr);
                 delete vulkanContextResources->commandBuffers;
@@ -1169,9 +1311,9 @@ namespace Tinker
                 delete vulkanContextResources->swapChainImages;
                 for (uint32 uiImageView = 0; uiImageView < vulkanContextResources->numSwapChainImages; ++uiImageView)
                 {
-                    vkDestroyImageView(vulkanContextResources->device, vulkanContextResources->swapChainImageViews[uiImageView], nullptr);
+                    DestroyImageViewResource(vulkanContextResources, vulkanContextResources->swapChainImageViewHandles[uiImageView]);
                 }
-                delete vulkanContextResources->swapChainImageViews;
+                delete vulkanContextResources->swapChainImageViewHandles;
 
                 vkDestroySwapchainKHR(vulkanContextResources->device, vulkanContextResources->swapChain, nullptr);
                 vkDestroyDevice(vulkanContextResources->device, nullptr);

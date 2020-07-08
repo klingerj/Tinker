@@ -95,6 +95,7 @@ namespace Tinker
                 struct
                 {
                     uint32 m_renderPassHandle;
+                    uint32 m_framebufferHandle;
                 };
 
                 // End render pass
@@ -125,6 +126,24 @@ namespace Tinker
 
         #define DESTROY_STAGING_BUFFER(name) void name(uint32 handle)
         typedef DESTROY_STAGING_BUFFER(destroy_staging_buffer);
+
+        #define CREATE_FRAMEBUFFER(name) uint32 name(uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles)
+        typedef CREATE_FRAMEBUFFER(create_framebuffer);
+
+        #define DESTROY_FRAMEBUFFER(name) void name(uint32 handle)
+        typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
+
+        #define CREATE_IMAGE_RESOURCE(name) uint32 name(uint32 width, uint32 height)
+        typedef CREATE_IMAGE_RESOURCE(create_image_resource);
+
+        #define DESTROY_IMAGE_RESOURCE(name) void name(uint32 handle)
+        typedef DESTROY_IMAGE_RESOURCE(destroy_image_resource);
+
+        #define CREATE_IMAGE_VIEW_RESOURCE(name) uint32 name(uint32 imageResourceHandle)
+        typedef CREATE_IMAGE_VIEW_RESOURCE(create_image_view_resource);
+
+        #define DESTROY_IMAGE_VIEW_RESOURCE(name) void name(uint32 handle)
+        typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);
         
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
@@ -135,6 +154,12 @@ namespace Tinker
             create_staging_buffer* CreateStagingBuffer;
             destroy_vertex_buffer* DestroyVertexBuffer;
             destroy_staging_buffer* DestroyStagingBuffer;
+            create_framebuffer* CreateFramebuffer;
+            destroy_framebuffer* DestroyFramebuffer;
+            create_image_resource* CreateImageResource;
+            destroy_image_resource* DestroyImageResource;
+            create_image_view_resource* CreateImageViewResource;
+            destroy_image_view_resource* DestroyImageViewResource;
         } PlatformAPIFuncs;
 
         // Game side
