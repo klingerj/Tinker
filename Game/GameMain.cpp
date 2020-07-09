@@ -9,7 +9,7 @@
 
 static void Test_Thread_Func()
 {
-    Tinker::Platform::PrintDebugString("I am from a thread.\n");
+    //Tinker::Platform::PrintDebugString("I am from a thread.\n");
 }
 
 DefaultGeometry<4, 6> defaultQuad = {
@@ -25,6 +25,8 @@ DefaultGeometry<4, 6> defaultQuad = {
 };
 
 static GameGraphicsData gameGraphicsData = {};
+uint32 gameWidth = 1920;
+uint32 gameHeight = 1080;
 
 static std::vector<Tinker::Platform::GraphicsCommand> graphicsCommands;
 
@@ -41,7 +43,7 @@ GAME_UPDATE(GameUpdate)
 
         // Default geometry
         defaultQuad.m_vertexBufferHandle = platformFuncs->CreateVertexBuffer(sizeof(defaultQuad.m_points), Tinker::Platform::Graphics::BufferType::eVertexBuffer);
-        defaultQuad.m_indexBufferHandle = platformFuncs->CreateVertexBuffer(sizeof(defaultQuad.m_points), Tinker::Platform::Graphics::BufferType::eIndexBuffer);
+        defaultQuad.m_indexBufferHandle = platformFuncs->CreateVertexBuffer(sizeof(defaultQuad.m_indices), Tinker::Platform::Graphics::BufferType::eIndexBuffer);
         Tinker::Platform::Graphics::StagingBufferData stagingBufferData = platformFuncs->CreateStagingBuffer(sizeof(defaultQuad.m_points));
         defaultQuad.m_stagingBufferHandle_vert = stagingBufferData.handle;
         memcpy(stagingBufferData.memory, defaultQuad.m_points, sizeof(defaultQuad.m_points));
@@ -62,7 +64,7 @@ GAME_UPDATE(GameUpdate)
 
         // Game graphics
         uint32 numVertBytes = sizeof(v4f) * 4; // aligned memory size
-        uint32 numIdxBytes = sizeof(uint32) * 4; // aligned memory size
+        uint32 numIdxBytes = sizeof(uint32) * 16; // aligned memory size
         uint32 vertexBufferHandle = platformFuncs->CreateVertexBuffer(numVertBytes, Tinker::Platform::Graphics::BufferType::eVertexBuffer);
         Tinker::Platform::Graphics::StagingBufferData data = platformFuncs->CreateStagingBuffer(numVertBytes);
         uint32 stagingBufferHandle = data.handle;
@@ -95,9 +97,9 @@ GAME_UPDATE(GameUpdate)
         gameGraphicsData.m_stagingBufferHandle4 = stagingBufferHandle4;
         gameGraphicsData.m_stagingBufferMemPtr4 = stagingBufferMemPtr4;
 
-        gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(800, 600);
+        gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(gameWidth, gameHeight);
         gameGraphicsData.m_imageViewHandle = platformFuncs->CreateImageViewResource(gameGraphicsData.m_imageHandle);
-        gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1);
+        gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1, gameWidth, gameHeight);
 
         isGameInitted = true;
     }
@@ -114,7 +116,7 @@ GAME_UPDATE(GameUpdate)
     memcpy(gameGraphicsData.m_stagingBufferMemPtr2, positions2, numVertBytes);
     memcpy(gameGraphicsData.m_stagingBufferMemPtr4, indices2, numIdxBytes);
 
-    Tinker::Platform::PrintDebugString("Joe\n");
+    //Tinker::Platform::PrintDebugString("Joe\n");
 
     // Test a thread job
     Tinker::Platform::WorkerJob* job = Tinker::Platform::CreateNewThreadJob(Test_Thread_Func);
@@ -151,6 +153,8 @@ GAME_UPDATE(GameUpdate)
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
     command.m_renderPassHandle = 0xffffffff;
     command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
+    command.m_renderWidth = gameWidth;
+    command.m_renderHeight = gameHeight;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
@@ -179,6 +183,8 @@ GAME_UPDATE(GameUpdate)
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
     command.m_renderPassHandle = 0xffffffff;
     command.m_framebufferHandle = 0xffffffff;
+    command.m_renderWidth = 0;
+    command.m_renderHeight = 0;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;

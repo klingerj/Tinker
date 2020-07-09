@@ -96,6 +96,8 @@ namespace Tinker
                 {
                     uint32 m_renderPassHandle;
                     uint32 m_framebufferHandle;
+                    uint32 m_renderWidth;
+                    uint32 m_renderHeight;
                 };
 
                 // End render pass
@@ -127,7 +129,7 @@ namespace Tinker
         #define DESTROY_STAGING_BUFFER(name) void name(uint32 handle)
         typedef DESTROY_STAGING_BUFFER(destroy_staging_buffer);
 
-        #define CREATE_FRAMEBUFFER(name) uint32 name(uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles)
+        #define CREATE_FRAMEBUFFER(name) uint32 name(uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles, uint32 width, uint32 height)
         typedef CREATE_FRAMEBUFFER(create_framebuffer);
 
         #define DESTROY_FRAMEBUFFER(name) void name(uint32 handle)
