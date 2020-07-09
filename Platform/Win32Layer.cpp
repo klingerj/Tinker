@@ -105,7 +105,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
             case eGraphicsCmdRenderPassBegin:
             {
-                VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_framebufferHandle);
+                VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_framebufferHandle,
+                    currentCmd.m_renderWidth, currentCmd.m_renderHeight);
                 break;
             }
 
@@ -153,7 +154,9 @@ CREATE_STAGING_BUFFER(CreateStagingBuffer)
 CREATE_FRAMEBUFFER(CreateFramebuffer)
 {
     // TODO: switch statement based on chosen graphics API
-    return CreateFramebuffer(&vulkanContextResources, imageViewResourceHandles, numImageViewResourceHandles);
+    return CreateFramebuffer(&vulkanContextResources,
+        imageViewResourceHandles, numImageViewResourceHandles,
+        width, height);
 }
 
 CREATE_IMAGE_RESOURCE(CreateImageResource)
@@ -215,7 +218,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         }
         case WM_SIZE:
         {
-            OutputDebugString("size\n");
+            //OutputDebugString("size\n");
             break;
         }
         case WM_DESTROY:
