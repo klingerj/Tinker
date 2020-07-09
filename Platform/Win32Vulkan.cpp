@@ -410,6 +410,8 @@ namespace Tinker
                     // TODO: Fail? Log?
                 }
 
+                vulkanContextResources->isInitted = true;
+
                 return 0;
             }
 
@@ -592,10 +594,13 @@ namespace Tinker
                             &vulkanContextResources->swapChainImageViewHandles[uiFramebuffer], 1,
                             vulkanContextResources->swapChainExtent.width, vulkanContextResources->swapChainExtent.height);
                 }
+
+                vulkanContextResources->isSwapChainValid = true;
             }
 
             void DestroySwapChain(VulkanContextResources* vulkanContextResources)
             {
+                vulkanContextResources->isSwapChainValid = false;
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
 
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
