@@ -218,7 +218,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         }
         case WM_SIZE:
         {
-            //OutputDebugString("size\n");
+            // TODO: switch statement based on chosen graphics API
+            if (vulkanContextResources.isInitted)
+            {
+                if (wParam == 1) // window minimized - can't create swap chain with size 0
+                {
+                    vulkanContextResources.isSwapChainValid = false;
+                }
+                else
+                {
+                    DestroySwapChain(&vulkanContextResources);
+                    CreateSwapChain(&vulkanContextResources);
+                }
+            }
             break;
         }
         case WM_DESTROY:
@@ -357,10 +369,13 @@ wWinMain(HINSTANCE hInstance,
     {
         ProcessWindowMessages();
 
-        GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
-
-        ProcessGraphicsCommandStream(&graphicsCommandStream);
-        SubmitFrameToGPU();
+        // TODO: switch statement based on chosen graphics API
+        if (vulkanContextResources.isSwapChainValid)
+        {
+            GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
+            ProcessGraphicsCommandStream(&graphicsCommandStream);
+            SubmitFrameToGPU();
+        }
 
         ReloadGameCode(&GameCode, GameDllStr);
     }

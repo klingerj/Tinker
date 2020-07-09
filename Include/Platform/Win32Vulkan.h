@@ -30,6 +30,8 @@ namespace Tinker
 
             typedef struct vulkan_context_res
             {
+                bool isInitted = false;
+                bool isSwapChainValid = false;
                 VkInstance instance = VK_NULL_HANDLE;
                 VkDebugUtilsMessengerEXT debugMessenger;
                 VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
