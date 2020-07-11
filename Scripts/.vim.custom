@@ -1,0 +1,8 @@
+:set guifont=Inconsolata_SemiBold:h12:W600:cANSI
+:colorscheme briofita
+:nnoremap <silent> <F1> :terminal<CR><c-w>x<c-w>k:vsplit<CR>
+let @y = "build.bat Debug\n"
+let @z = "build.bat Release\n"
+nnoremap <m-m> <c-w>j
+tnoremap <m-m> <c-w>"y<c-w>k
+tnoremap <m-n> <c-w>"z<c-w>k
