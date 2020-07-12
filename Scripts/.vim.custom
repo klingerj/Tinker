@@ -1,3 +1,6 @@
+:set noundofile
+:set backupdir=~/vimtmp//
+:set directory=~/vimtmp//
 :set guifont=Inconsolata_SemiBold:h12:W600:cANSI
 :colorscheme briofita
 :nnoremap <silent> <F1> :terminal<CR><c-w>x<c-w>k:vsplit<CR>
