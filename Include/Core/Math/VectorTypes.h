@@ -616,6 +616,6 @@ namespace VectorOps
     v2ui Mul_SIMD(const v2ui& v, const m2ui& m);
 
     void Mul_SIMD(const v4f& v, const m4f& m, v4f& out);
-    v4i Mul_SIMD(const v4i& v, const m4i& m);
-    v4ui Mul_SIMD(const v4ui& v, const m4ui& m);
+    void Mul_SIMD(const v4i& v, const m4i& m, v4i& out);
+    void Mul_SIMD(const v4ui& v, const m4ui& m, v4ui& out);
 }

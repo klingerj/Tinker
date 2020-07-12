@@ -81,19 +81,25 @@ namespace VectorOps
         __m128 sum  = _mm_add_ps(sum1, sum2);
 
         _mm_stream_ps((float*)&out, sum);
-        //_mm_sfence();
     }
 
-    v4i Mul_SIMD(const v4i& v, const m4i& m)
+    void Mul_SIMD(const v4i& v, const m4i& m, v4i& out)
     {
-        __m128i vx = _mm_setr_epi32(v.x, v.x, v.x, v.x);
-        __m128i vy = _mm_setr_epi32(v.y, v.y, v.y, v.y);
-        __m128i vz = _mm_setr_epi32(v.z, v.z, v.z, v.z);
-        __m128i vw = _mm_setr_epi32(v.w, v.w, v.w, v.w);
-        __m128i mcol1 = _mm_setr_epi32(m[0][0], m[0][1], m[0][2], m[0][3]);
-        __m128i mcol2 = _mm_setr_epi32(m[1][0], m[1][1], m[1][2], m[1][3]);
-        __m128i mcol3 = _mm_setr_epi32(m[2][0], m[2][1], m[2][2], m[2][3]);
-        __m128i mcol4 = _mm_setr_epi32(m[3][0], m[3][1], m[3][2], m[3][3]);
+        // All parameters must be 16-byte aligned
+        TINKER_ASSERT(!(((size_t)&v) & 15));
+        TINKER_ASSERT(!(((size_t)&m) & 15));
+        TINKER_ASSERT(!(((size_t)&out) & 15));
+	 
+	__m128i vec = *(__m128i*)(&v.m_data);
+        __m128i vx = _mm_shuffle_epi32(vec, _MM_SHUFFLE(0, 0, 0, 0));
+        __m128i vy = _mm_shuffle_epi32(vec, _MM_SHUFFLE(1, 1, 1, 1));
+        __m128i vz = _mm_shuffle_epi32(vec, _MM_SHUFFLE(2, 2, 2, 2));
+        __m128i vw = _mm_shuffle_epi32(vec, _MM_SHUFFLE(3, 3, 3, 3));
+
+        __m128i mcol1 = *(__m128i*)(&m[0].m_data);
+        __m128i mcol2 = *(__m128i*)(&m[1].m_data);
+        __m128i mcol3 = *(__m128i*)(&m[2].m_data);
+        __m128i mcol4 = *(__m128i*)(&m[3].m_data);
 
         __m128i xProd = _mm_mullo_epi32(mcol1, vx);
         __m128i yProd = _mm_mullo_epi32(mcol2, vy);
@@ -104,19 +110,21 @@ namespace VectorOps
         __m128i sum2 = _mm_add_epi32(zProd, wProd);
         __m128i sum  = _mm_add_epi32(sum1, sum2);
 
-        return *(v4i*)(&sum);
+        _mm_stream_si128((__m128i*)&out, sum);
     }
 
-    v4ui Mul_SIMD(const v4ui& v, const m4ui& m)
+    void Mul_SIMD(const v4ui& v, const m4ui& m, v4ui& out)
     {
-        __m128i vx = _mm_setr_epi32(v.x, v.x, v.x, v.x);
-        __m128i vy = _mm_setr_epi32(v.y, v.y, v.y, v.y);
-        __m128i vz = _mm_setr_epi32(v.z, v.z, v.z, v.z);
-        __m128i vw = _mm_setr_epi32(v.w, v.w, v.w, v.w);
-        __m128i mcol1 = _mm_setr_epi32(m[0][0], m[0][1], m[0][2], m[0][3]);
-        __m128i mcol2 = _mm_setr_epi32(m[1][0], m[1][1], m[1][2], m[1][3]);
-        __m128i mcol3 = _mm_setr_epi32(m[2][0], m[2][1], m[2][2], m[2][3]);
-        __m128i mcol4 = _mm_setr_epi32(m[3][0], m[3][1], m[3][2], m[3][3]);
+	__m128i vec = *(__m128i*)(&v.m_data);
+        __m128i vx = _mm_shuffle_epi32(vec, _MM_SHUFFLE(0, 0, 0, 0));
+        __m128i vy = _mm_shuffle_epi32(vec, _MM_SHUFFLE(1, 1, 1, 1));
+        __m128i vz = _mm_shuffle_epi32(vec, _MM_SHUFFLE(2, 2, 2, 2));
+        __m128i vw = _mm_shuffle_epi32(vec, _MM_SHUFFLE(3, 3, 3, 3));
+
+        __m128i mcol1 = *(__m128i*)(&m[0].m_data);
+        __m128i mcol2 = *(__m128i*)(&m[1].m_data);
+        __m128i mcol3 = *(__m128i*)(&m[2].m_data);
+        __m128i mcol4 = *(__m128i*)(&m[3].m_data);
 
         __m128i xProd = _mm_mullo_epi32(mcol1, vx);
         __m128i yProd = _mm_mullo_epi32(mcol2, vy);
@@ -127,6 +135,6 @@ namespace VectorOps
         __m128i sum2 = _mm_add_epi32(zProd, wProd);
         __m128i sum  = _mm_add_epi32(sum1, sum2);
 
-        return *(v4ui*)(&sum);
+	_mm_stream_si128((__m128i*)&out, sum);
     }
 }
