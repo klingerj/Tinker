@@ -41,6 +41,7 @@ int main()
     TINKER_TEST("M2 Operator* M2", Test_m2OpMulM2);
     TINKER_TEST("M2 Operator* V2", Test_m2OpMulV2);
     TINKER_TEST("M2 V2 MUL SIMD", Test_m2V2MulSIMD);
+    TINKER_TEST("M4 V4 MUL SIMD", Test_m4V4MulSIMD);
     TINKER_TEST("M2 Operator/", Test_m2OpDiv);
     TINKER_TEST("M2 Operator+=", Test_m2OpAddEq);
     TINKER_TEST("M2 Operator-=", Test_m2OpSubEq);
