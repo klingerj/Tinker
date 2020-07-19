@@ -21,6 +21,7 @@ namespace Tinker
             BYTE_ALIGN(64) volatile bool terminate = false;
             volatile bool didTerminate = true;
             uint32 threadId = 0;
+            BYTE_ALIGN(64) HANDLE semaphoreHandle = INVALID_HANDLE_VALUE;
             BYTE_ALIGN(64) Containers::RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> jobs;
         } ThreadInfo;
 
@@ -30,6 +31,7 @@ namespace Tinker
 
             while (!info->terminate)
             {
+                WaitForSingleObjectEx(info->semaphoreHandle, INFINITE, FALSE);
                 if (info->jobs.Size() > 0)
                 {
                     WorkerJob* job;
@@ -65,6 +67,7 @@ namespace Tinker
                     m_threads[i].terminate = false;
                     m_threads[i].didTerminate = false;
                     m_threads[i].threadId = i;
+                    m_threads[i].semaphoreHandle = CreateSemaphoreEx(0, 0, NUM_JOBS_PER_WORKER, 0, 0, SEMAPHORE_ALL_ACCESS);
                     _beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, m_threads + i);
                 }
             }
@@ -85,6 +88,7 @@ namespace Tinker
             {
                 // Amazing scheduler
                 m_threads[m_schedulerCounter].jobs.Enqueue(newJob);
+                ReleaseSemaphore(m_threads[m_schedulerCounter].semaphoreHandle, 1, 0);
                 m_schedulerCounter = (m_schedulerCounter + 1) % m_numThreads;
             }
         };
