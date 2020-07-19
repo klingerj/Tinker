@@ -339,6 +339,7 @@ wWinMain(HINSTANCE hInstance,
     // Init data passed from platform to game
     PlatformAPIFuncs platformAPIFuncs = {};
     platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
+    platformAPIFuncs.WaitOnThreadJob = WaitOnJob;
     platformAPIFuncs.ReadEntireFile = ReadEntireFile;
     platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
     platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;

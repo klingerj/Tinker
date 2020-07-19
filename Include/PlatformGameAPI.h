@@ -14,14 +14,6 @@ namespace Tinker
         void* AllocAligned(size_t size, size_t alignment);
         void FreeAligned(void* ptr);
 
-        // Atomic Ops
-        uint32 AtomicIncrement32(uint32 volatile* ptr);
-        uint32 AtomicGet32(uint32* p);
-
-        // Intrinsics
-        void PauseCPU();
-
-        // Threading
         class WorkerJob
         {
         public:
@@ -41,14 +33,14 @@ namespace Tinker
             virtual void operator()() override { m_t(); };
         };
 
-        void WaitOnJob(WorkerJob* job);
-
         template <typename T>
         WorkerJob* CreateNewThreadJob(T t)
         {
             JobFunc<T>* jobMem = (JobFunc<T>*)AllocAligned(sizeof(JobFunc<T>), 64);
             return new (jobMem) JobFunc(t);
         }
+        #define WAIT_ON_THREAD_JOB(name) void name(WorkerJob* job)
+        typedef WAIT_ON_THREAD_JOB(wait_on_thread_job);
 
         #define ENQUEUE_WORKER_THREAD_JOB(name) void name(WorkerJob* newJob)
         typedef ENQUEUE_WORKER_THREAD_JOB(enqueue_worker_thread_job);
@@ -151,6 +143,7 @@ namespace Tinker
         typedef struct platform_api_functions
         {
             enqueue_worker_thread_job* EnqueueWorkerThreadJob;
+            wait_on_thread_job* WaitOnThreadJob;
             read_entire_file* ReadEntireFile;
             create_vertex_buffer* CreateVertexBuffer;
             create_staging_buffer* CreateStagingBuffer;

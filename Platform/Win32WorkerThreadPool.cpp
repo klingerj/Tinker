@@ -2,6 +2,7 @@
 #include "../Include/Core/Containers/RingBuffer.h"
 
 #include <process.h>
+//#include <string.h>
 
 #define NUM_JOBS_PER_WORKER 64
 #define WORKER_THREAD_STACK_SIZE SIZE_2MB
@@ -10,6 +11,11 @@ namespace Tinker
 {
     namespace Platform
     {
+        void WaitOnJob(WorkerJob* job)
+        {
+            while (!job->m_done);
+        }
+
         typedef struct thread_info
         {
             BYTE_ALIGN(64) volatile bool terminate = false;
@@ -29,9 +35,14 @@ namespace Tinker
                     WorkerJob* job;
                     info->jobs.Dequeue(&job);
                     (*job)();
+                    /*char buffer[50] = {};
+                    strcpy_s(buffer, "From thread Id: ");
+                    _itoa_s(info->threadId, buffer + 16, 10, 10);
+                    buffer[17] = '\n';
+                    buffer[18] = '\0';
+                    PrintDebugString(buffer);*/
                     job->m_done = true;
                 }
-                //Platform::PauseCPU();
             }
 
             info->didTerminate = true;

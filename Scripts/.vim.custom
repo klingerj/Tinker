@@ -3,6 +3,10 @@
 :set directory=~/vimtmp//
 :set guifont=Inconsolata_SemiBold:h12:W600:cANSI
 :colorscheme briofita
+:set ic
+:set tabstop=4
+:set expandtab
+:set shiftwidth=4
 :nnoremap <silent> <F1> :terminal<CR><c-w>x<c-w>k:vsplit<CR>
 let @y = "build.bat Debug\n"
 let @z = "build.bat Release\n"
