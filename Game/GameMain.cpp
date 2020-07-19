@@ -5,12 +5,14 @@
 #include "GameGraphicsTypes.h"
 
 #include <cstring>
+#include <string.h>
 #include <vector>
 
-static void Test_Thread_Func()
+/*static void Test_Thread_Func()
 {
-    //Tinker::Platform::PrintDebugString("I am from a thread.\n");
+    Tinker::Platform::PrintDebugString("I am from a thread.\n");
 }
+*/
 
 DefaultGeometry<4, 6> defaultQuad = {
     0xffffffff,
@@ -116,13 +118,31 @@ GAME_UPDATE(GameUpdate)
     memcpy(gameGraphicsData.m_stagingBufferMemPtr2, positions2, numVertBytes);
     memcpy(gameGraphicsData.m_stagingBufferMemPtr4, indices2, numIdxBytes);
 
-    //Tinker::Platform::PrintDebugString("Joe\n");
+    Tinker::Platform::PrintDebugString("Joe\n");
 
     // Test a thread job
-    Tinker::Platform::WorkerJob* job = Tinker::Platform::CreateNewThreadJob(Test_Thread_Func);
-    platformFuncs->EnqueueWorkerThreadJob(job);
-    Tinker::Platform::WaitOnJob(job);
-
+    Tinker::Platform::WorkerJob* jobs[32] = {};
+    for (uint32 i = 0; i < 32; ++i)
+    {
+        jobs[i] = Tinker::Platform::CreateNewThreadJob([=]()
+                {
+                    // TODO: custom string library...
+                    char* string = "I am from a thread";
+                    char dst[50] = "";
+                    strcpy_s(dst, string);
+                    _itoa_s(i, dst + strlen(string), 10, 10);
+                    if (i < 10) dst[strlen(string) + 1] = ' ';
+                    dst[strlen(string) + 2] = '\n';
+                    dst[strlen(string) + 3] = '\0';
+                    Tinker::Platform::PrintDebugString(dst);
+                });
+        platformFuncs->EnqueueWorkerThreadJob(jobs[i]);
+    }
+    for (uint32 i = 0; i < 32; ++i)
+    {
+        platformFuncs->WaitOnThreadJob(jobs[i]);
+    }
+    
     // Issue graphics commands
     Tinker::Platform::GraphicsCommand command;
 

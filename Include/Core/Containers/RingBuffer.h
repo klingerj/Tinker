@@ -2,13 +2,14 @@
 
 #include "../../Core/CoreDefines.h"
 #include "../Include/PlatformGameAPI.h"
+#include <atomic>
 
 namespace Tinker
 {
     namespace Containers
     {
         // Single Producer, Single Consumer wait-free queue
-        template <typename T, uint32 size> // TODO: assert Size >= 1?
+        template <typename T, uint32 size> // TODO: assert Size >= 1? or that it is a power of 2?
         class RingBuffer
         {
         private:
@@ -16,8 +17,8 @@ namespace Tinker
             uint32 _MASK;
         public:
             T* m_data = nullptr;
-            BYTE_ALIGN(64) uint32 m_head = 0;
-            BYTE_ALIGN(64) uint32 m_tail = 0;
+            BYTE_ALIGN(64) volatile std::atomic<uint32> m_head = 0;
+            BYTE_ALIGN(64) volatile std::atomic<uint32> m_tail = 0;
 
             RingBuffer()
             {
@@ -28,6 +29,7 @@ namespace Tinker
 
             ~RingBuffer()
             {
+                _mm_sfence();
                 if (m_data) Platform::FreeAligned(m_data);
             }
 
@@ -45,24 +47,31 @@ namespace Tinker
             // Should only be called from the producer
             void Enqueue(T ele)
             {
-                uint32 head = Platform::AtomicGet32(&m_head);
+                uint32 head = std::atomic_load_explicit(&m_head, std::memory_order_acquire);
                 m_data[head & _MASK] = ele;
-                Platform::AtomicIncrement32(&m_head);
+                
+                std::atomic_thread_fence(std::memory_order_release);
+                _mm_sfence();
+
+                atomic_fetch_add(&m_head, 1);
             }
 
             // Should only be called from the consumer
             void Dequeue(T* ele)
             {
-                uint32 tail = Platform::AtomicGet32(&m_tail);
+                uint32 tail = std::atomic_load_explicit(&m_tail, std::memory_order_acquire);
                 *ele = m_data[tail & _MASK];
-                Platform::AtomicIncrement32(&m_tail);
+
+                std::atomic_thread_fence(std::memory_order_acquire);
+
+                atomic_fetch_add(&m_tail, 1);
             }
 
             // Can be called from either producer or consumer
             uint32 Size()
             {
-                const uint32 head = Platform::AtomicGet32(&m_head);
-                const uint32 tail = Platform::AtomicGet32(&m_tail);
+                const uint32 head = atomic_load_explicit(&m_head, std::memory_order_acquire);
+                const uint32 tail = atomic_load_explicit(&m_tail, std::memory_order_acquire);
                 return head - tail;
             }
         };
