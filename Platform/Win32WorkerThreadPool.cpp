@@ -2,6 +2,7 @@
 #include "../Include/Core/Containers/RingBuffer.h"
 
 #include <process.h>
+#include <windows.h>
 //#include <string.h>
 
 #define NUM_JOBS_PER_WORKER 64
@@ -31,7 +32,6 @@ namespace Tinker
 
             while (!info->terminate)
             {
-                WaitForSingleObjectEx(info->semaphoreHandle, INFINITE, FALSE);
                 if (info->jobs.Size() > 0)
                 {
                     WorkerJob* job;
@@ -45,6 +45,8 @@ namespace Tinker
                     PrintDebugString(buffer);*/
                     job->m_done = true;
                 }
+
+                WaitForSingleObjectEx(info->semaphoreHandle, INFINITE, FALSE);
             }
 
             info->didTerminate = true;
@@ -77,6 +79,7 @@ namespace Tinker
                 for (uint8 i = 0; i < m_numThreads; ++i)
                 {
                     m_threads[i].terminate = true;
+                    ReleaseSemaphore(m_threads[i].semaphoreHandle, 1, 0);
                 }
                 for (uint8 i = 0; i < m_numThreads; ++i)
                 {

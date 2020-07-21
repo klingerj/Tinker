@@ -3,6 +3,7 @@
 #include "../../Core/CoreDefines.h"
 #include "../Include/PlatformGameAPI.h"
 #include <atomic>
+#include <xmmintrin.h>
 
 namespace Tinker
 {
@@ -29,7 +30,6 @@ namespace Tinker
 
             ~RingBuffer()
             {
-                _mm_sfence();
                 if (m_data) Platform::FreeAligned(m_data);
             }
 

@@ -7,13 +7,14 @@ using namespace Platform;
 
 WorkerThreadPool g_threadpool;
 
+const uint32 numJobs = 15;
+WorkerJob* jobs[numJobs];
+
 v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
-const uint32 numVectors = 2 << 24;
-
-const uint32 numJobs = 15;
-const uint32 jobSize = numVectors / numJobs;
-WorkerJob* jobs[numJobs];
+const uint32 jobSize = (64 / 8) * (2 << 10);
+const uint32 numVectors = numJobs * jobSize;
+const uint32 numIters = 100;
 
 void BM_v2_Startup()
 {
@@ -72,15 +73,18 @@ void BM_m2MulV2_fScalar()
     v2f* const vectors = g_v2s;
     m2f m = { 1.0f, 2.0f, 3.0f, 4.0f };
 
-    for (uint32 i = 0; i < numVectors; ++i)
+    for (uint32 iter = 0; iter < numIters; ++iter)
     {
-        vectors[i] = m* vectors[i];
+        for (uint32 i = 0; i < numVectors; ++i)
+        {
+            vectors[i] = m * vectors[i];
+        }
     }
 }
 
 void BM_m2MulV2_fScalar_MT_Startup()
 {
-    g_threadpool.Startup(10);
+    g_threadpool.Startup(15);
     BM_v2_Startup();
 
     v2f* const vectors = g_v2s;
@@ -89,10 +93,13 @@ void BM_m2MulV2_fScalar_MT_Startup()
         jobs[i] = CreateNewThreadJob([=]() {
             const m2f m = { 1.0f, 2.0f, 3.0f, 4.0f };
 
-            for (uint32 j = 0; j < jobSize; ++j)
+            for (uint32 iter = 0; iter < numIters; ++iter)
             {
-                uint32 index = j + i * jobSize;
-                vectors[index] = m* vectors[index];
+                for (uint32 j = 0; j < jobSize; ++j)
+                {
+                    uint32 index = j + i * jobSize;
+                    vectors[index] = m * vectors[index];
+                }
             }
         });
     }
