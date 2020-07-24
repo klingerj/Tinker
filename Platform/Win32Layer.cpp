@@ -1,6 +1,7 @@
 #include "../Include/PlatformGameAPI.h"
 #include "../Include/Platform/Win32Utilities.h"
 #include "../Include/Platform/Win32Vulkan.h"
+#include "../Include/Platform/Win32Logs.h"
 #include "Win32WorkerThreadPool.cpp"
 
 #include <windows.h>
@@ -48,8 +49,8 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     }
     else
     {
-        // TODO: Log? Fail?
         // Game code does not get reloaded
+        LogMsg("Failed to find game dll to reload!", eLogSeverityCritical);
     }
 }
 
@@ -299,7 +300,7 @@ wWinMain(HINSTANCE hInstance,
     windowClass.lpszClassName = "Tinker Platform Window";
     if (!RegisterClass(&windowClass))
     {
-        // TODO: Log? Fail?
+        LogMsg("Failed to register window class!", eLogSeverityCritical);
         return 1;
     }
 
@@ -322,7 +323,7 @@ wWinMain(HINSTANCE hInstance,
             0);
     if (!windowHandle)
     {
-        // TODO: Log? Fail?
+        LogMsg("Failed to create window!", eLogSeverityCritical);
         return 1;
     }
 
@@ -332,7 +333,7 @@ wWinMain(HINSTANCE hInstance,
     int result = InitVulkan(&vulkanContextResources, hInstance, windowHandle, width, height);
     if (result)
     {
-        // TODO: Log? Fail?
+        LogMsg("Failed to init graphics backend!", eLogSeverityCritical);
         return 1;
     }
 
