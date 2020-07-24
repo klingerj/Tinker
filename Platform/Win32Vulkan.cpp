@@ -1,5 +1,6 @@
 #include "../Include/Platform/Win32Vulkan.h"
 #include "../Include/Platform/Win32Utilities.h"
+#include "../Include/Platform/Win32Logs.h"
 
 #include <cstring>
 
@@ -75,7 +76,11 @@ namespace Tinker
                 
                 VkExtensionProperties* availableExtensions = new VkExtensionProperties[numAvailableExtensions];
                 vkEnumerateInstanceExtensionProperties(nullptr, &numAvailableExtensions, availableExtensions);
-                // TODO: log the available extensions?
+                LogMsg("******** Available Instance Extensions: ********", eLogSeverityInfo);
+                for (uint32 uiAvailExt = 0; uiAvailExt < numAvailableExtensions; ++uiAvailExt)
+                {
+                    LogMsg(availableExtensions[uiAvailExt].extensionName, eLogSeverityInfo);
+                }
                 delete availableExtensions;
 
                 // Validation layers
@@ -88,12 +93,18 @@ namespace Tinker
 
                 if (numAvailableLayers == 0)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Zero available instance layers!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 VkLayerProperties* availableLayers = new VkLayerProperties[numAvailableLayers];
                 vkEnumerateInstanceLayerProperties(&numAvailableLayers, availableLayers);
-                // TODO: log the available layers?
+
+                LogMsg("******** Available Instance Layers: ********", eLogSeverityInfo);
+                for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
+                {
+                    LogMsg(availableLayers[uiAvailLayer].layerName, eLogSeverityInfo);
+                }
 
                 bool layersSupported[numRequiredLayers] = { false };
                 for (uint32 uiReqLayer = 0; uiReqLayer < numRequiredLayers; ++uiReqLayer)
@@ -114,7 +125,9 @@ namespace Tinker
                 {
                     if (!layersSupported[uiReqLayer])
                     {
-                        // TODO: Log? Fail?
+                        LogMsg("Requested instance layer not supported!", eLogSeverityCritical);
+                        LogMsg(requestedLayersStr[uiReqLayer], eLogSeverityCritical);
+                        TINKER_ASSERT(0);
                     }
                 }
 
@@ -127,8 +140,8 @@ namespace Tinker
                     &vulkanContextResources->instance);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
-                    return 1;
+                    LogMsg("Failed to create Vulkan instance!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 #ifdef _DEBUG
@@ -156,7 +169,7 @@ namespace Tinker
                 }
                 else
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Failed to get create debug utils messenger proc addr!", eLogSeverityCritical);
                 }
                 #endif
 
@@ -172,8 +185,8 @@ namespace Tinker
                     &vulkanContextResources->surface);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
-                    return 1;
+                    LogMsg("Failed to create Win32SurfaceKHR!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 // Physical device
@@ -182,7 +195,8 @@ namespace Tinker
 
                 if (numPhysicalDevices == 0)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Zero available physical devices!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 VkPhysicalDevice* physicalDevices = new VkPhysicalDevice[numPhysicalDevices];
@@ -245,7 +259,8 @@ namespace Tinker
 
                         if (numAvailablePhysicalDeviceExtensions == 0)
                         {
-                            // TODO: Log? Fail?
+                            LogMsg("Zero available device extensions!", eLogSeverityCritical);
+                            TINKER_ASSERT(0);
                         }
 
                         VkExtensionProperties* availablePhysicalDeviceExtensions = new VkExtensionProperties[numAvailablePhysicalDeviceExtensions];
@@ -271,7 +286,9 @@ namespace Tinker
                         {
                             if (!extensionSupport[uiReqExt])
                             {
-                                // TODO: Log? Fail?
+                                LogMsg("Requested device extension not supported!", eLogSeverityCritical);
+                                LogMsg(requiredPhysicalDeviceExtensions[uiReqExt], eLogSeverityCritical);
+                                TINKER_ASSERT(0);
                             }
                         }
 
@@ -290,8 +307,8 @@ namespace Tinker
 
                 if (vulkanContextResources->physicalDevice == VK_NULL_HANDLE)
                 {
-                    // We did not select a physical device
-                    // TODO: Log? Fail?
+                    LogMsg("No physical device chosen!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 // Logical device
@@ -330,8 +347,8 @@ namespace Tinker
                     &vulkanContextResources->device);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
-                    return 1;
+                    LogMsg("Failed to create Vulkan device!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 // Queues
@@ -360,7 +377,7 @@ namespace Tinker
                     &vulkanContextResources->commandPool);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to create Vulkan command pool!", eLogSeverityCritical);
                 }
 
                 vulkanContextResources->commandBuffers = new VkCommandBuffer[vulkanContextResources->numSwapChainImages];
@@ -376,7 +393,7 @@ namespace Tinker
                     vulkanContextResources->commandBuffers);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to allocate Vulkan command buffers!", eLogSeverityCritical);
                 }
 
                 // Semaphores
@@ -389,7 +406,7 @@ namespace Tinker
                     &vulkanContextResources->swapChainImageAvailableSemaphore);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to create Vulkan semaphore!", eLogSeverityCritical);
                 }
                 result = vkCreateSemaphore(vulkanContextResources->device,
                     &semaphoreCreateInfo,
@@ -397,7 +414,7 @@ namespace Tinker
                     &vulkanContextResources->renderCompleteSemaphore);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to create Vulkan semaphore!", eLogSeverityCritical);
                 }
 
                 VkFenceCreateInfo fenceCreateInfo = {};
@@ -407,7 +424,7 @@ namespace Tinker
                 result = vkCreateFence(vulkanContextResources->device, &fenceCreateInfo, nullptr, &vulkanContextResources->fence);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to create Vulkan fence!", eLogSeverityCritical);
                 }
 
                 vulkanContextResources->isInitted = true;
@@ -449,7 +466,8 @@ namespace Tinker
 
                 if (numAvailableSurfaceFormats == 0)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Zero available Vulkan swap chain surface formats!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 VkSurfaceFormatKHR* availableSurfaceFormats = new VkSurfaceFormatKHR[numAvailableSurfaceFormats];
@@ -477,7 +495,8 @@ namespace Tinker
 
                 if (numAvailablePresentModes == 0)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Zero available Vulkan swap chain present modes!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 VkPresentModeKHR* availablePresentModes = new VkPresentModeKHR[numAvailablePresentModes];
@@ -537,7 +556,8 @@ namespace Tinker
                     &vulkanContextResources->swapChain);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Failed to create Vulkan swap chain!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 vkGetSwapchainImagesKHR(vulkanContextResources->device,
@@ -578,7 +598,8 @@ namespace Tinker
                         newImageView);
                     if (result != VK_SUCCESS)
                     {
-                        // TODO: Log? Fail?
+                        LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
                     }
                 }
 
@@ -635,7 +656,8 @@ namespace Tinker
                 VkResult result = vkCreateShaderModule(vulkanContextResources->device, &shaderModuleCreateInfo, nullptr, &shaderModule);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Failed to create Vulkan shader module!", eLogSeverityCritical);
+                    return VK_NULL_HANDLE;
                 }
                 return shaderModule;
             }
@@ -785,7 +807,8 @@ namespace Tinker
                     &vulkanContextResources->pipelineLayout);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to create Vulkan pipeline layout!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -814,7 +837,8 @@ namespace Tinker
                     &vulkanContextResources->pipeline);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to create Vulkan graphics pipeline!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 vkDestroyShaderModule(vulkanContextResources->device, vertexShaderModule, nullptr);
@@ -862,7 +886,8 @@ namespace Tinker
                 VkResult result = vkCreateRenderPass(vulkanContextResources->device, &renderPassCreateInfo, nullptr, &vulkanContextResources->renderPass);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Failed to create Vulkan render pass!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
             }
 
@@ -890,7 +915,7 @@ namespace Tinker
                 VkResult result = vkQueueSubmit(vulkanContextResources->graphicsQueue, 1, &submitInfo, vulkanContextResources->fence);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Failed to submit command buffer to queue!", eLogSeverityCritical);
                 }
 
                 // Present
@@ -907,16 +932,18 @@ namespace Tinker
 
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log?
+                    LogMsg("Failed to present swap chain!", eLogSeverityInfo);
                     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
                     {
+                        LogMsg("Recreating swap chain!", eLogSeverityInfo);
                         DestroySwapChain(vulkanContextResources);
                         CreateSwapChain(vulkanContextResources);
                         return; // Don't present on this frame
                     }
                     else
                     {
-                        // TODO: Fail?
+                        LogMsg("Not recreating swap chain!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
                     }
                 }
 
@@ -941,7 +968,8 @@ namespace Tinker
                 }
                 if (memTypeIndex == 0xffffffff)
                 {
-                    // TODO: Fail?
+                    LogMsg("Failed to find memory property flags!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 VkMemoryAllocateInfo memAllocInfo = {};
@@ -951,7 +979,8 @@ namespace Tinker
                 VkResult result = vkAllocateMemory(vulkanContextResources->device, &memAllocInfo, nullptr, deviceMemory);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail
+                    LogMsg("Failed to allocate gpu memory!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
             }
 
@@ -968,7 +997,8 @@ namespace Tinker
                 VkResult result = vkCreateBuffer(vulkanContextResources->device, &bufferCreateInfo, nullptr, &buffer);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail
+                    LogMsg("Failed to allocate Vulkan buffer!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 VkMemoryRequirements memRequirements;
@@ -1062,16 +1092,18 @@ namespace Tinker
                 vulkanContextResources->currentSwapChainImage = currentSwapChainImageIndex;
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log?
+                    LogMsg("Failed to acquire next swap chain image!", eLogSeverityInfo);
                     if (result == VK_ERROR_OUT_OF_DATE_KHR)
                     {
+                        LogMsg("Recreating swap chain!", eLogSeverityInfo);
                         DestroySwapChain(vulkanContextResources);
                         CreateSwapChain(vulkanContextResources);
                         return; // Don't present on this frame
                     }
                     else
                     {
-                        // TODO: Fail?
+                        LogMsg("Not recreating swap chain!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
                     }
                 }
 
@@ -1083,7 +1115,8 @@ namespace Tinker
                 result = vkBeginCommandBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage], &commandBufferBeginInfo);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to begin Vulkan command buffer!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
             }
 
@@ -1091,13 +1124,14 @@ namespace Tinker
             {
                 if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
                 {
-                    return;
+                    TINKER_ASSERT(0);
                 }
 
                 VkResult result = vkEndCommandBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to end Vulkan command buffer!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
             }
 
@@ -1107,7 +1141,7 @@ namespace Tinker
             {
                 if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
                 {
-                    return;
+                    TINKER_ASSERT(0);
                 }
 
                 VkBuffer vertexBuffers[] = { vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(vertexBufferHandle)->buffer };
@@ -1128,13 +1162,13 @@ namespace Tinker
             {
                 if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
                 {
-                    return;
+                    TINKER_ASSERT(0);
                 }
 
                 VkBuffer& dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle)->buffer;
                 VkBuffer& srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle)->buffer;
-                
                 VkBufferCopy bufferCopy = {};
+
                 bufferCopy.srcOffset = 0;
                 bufferCopy.dstOffset = 0;
                 bufferCopy.size = sizeInBytes;
@@ -1149,7 +1183,7 @@ namespace Tinker
             {
                 if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
                 {
-                    return;
+                    TINKER_ASSERT(0);
                 }
 
                 VkRenderPassBeginInfo renderPassBeginInfo = {};
@@ -1193,7 +1227,7 @@ namespace Tinker
             {
                 if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
                 {
-                    return;
+                    TINKER_ASSERT(0);
                 }
 
                 vkCmdEndRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
@@ -1231,7 +1265,8 @@ namespace Tinker
                     newFramebuffer);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Fail? Log?
+                    LogMsg("Failed to create Vulkan framebuffer!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
                 delete attachments;
 
@@ -1264,7 +1299,8 @@ namespace Tinker
                     newImageView);
                 if (result != VK_SUCCESS)
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
                 return newImageViewHandle;
             }
@@ -1304,7 +1340,7 @@ namespace Tinker
 
             void DestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
-                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
                 vkDestroyImage(vulkanContextResources->device, resource->image, nullptr);
                 vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
@@ -1313,7 +1349,7 @@ namespace Tinker
 
             void DestroyImageViewResource(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
-                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 vkDestroyImageView(vulkanContextResources->device, *vulkanContextResources->vulkanImageViewPool.PtrFromHandle(handle), nullptr);
                 vulkanContextResources->vulkanImageViewPool.Dealloc(handle);
             }
@@ -1369,7 +1405,8 @@ namespace Tinker
                 }
                 else
                 {
-                    // TODO: Log? Fail?
+                    LogMsg("Failed to get destroy debug utils messenger proc addr!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
                 #endif
 
