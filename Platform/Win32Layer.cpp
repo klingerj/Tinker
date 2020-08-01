@@ -2,6 +2,7 @@
 #include "../Include/Platform/Win32Utilities.h"
 #include "../Include/Platform/Win32Vulkan.h"
 #include "../Include/Platform/Win32Logs.h"
+#include "../Include/Platform/Win32Client.h"
 #include "Win32WorkerThreadPool.cpp"
 
 #include <windows.h>
@@ -214,7 +215,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     {
         case WM_CREATE:
         {
-            OutputDebugString("create\n");
+            //OutputDebugString("create\n");
             break;
         }
         case WM_SIZE:
@@ -236,19 +237,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         }
         case WM_DESTROY:
         {
-            OutputDebugString("destroy\n");
+            //OutputDebugString("destroy\n");
             break;
         }
         case WM_CLOSE:
         {
-            OutputDebugString("close\n");
+            //OutputDebugString("close\n");
             PostQuitMessage(0);
             runGame = false;
             break;
         }
         case WM_ACTIVATEAPP:
         {
-            OutputDebugString("activateapp\n");
+            //OutputDebugString("activateapp\n");
             break;
         }
         default:
@@ -366,10 +367,26 @@ wWinMain(HINSTANCE hInstance,
     uint32 numThreads = systemInfo.dwNumberOfProcessors;
     g_ThreadPool.Startup(numThreads / 2);
 
+    if (Network::InitClient() != 0)
+    {
+        LogMsg("Failed to init network client!", eLogSeverityCritical);
+        runGame = false;
+    }
+    else
+    {
+        LogMsg("Successfully initialized network client.", eLogSeverityInfo);
+    }
+
     // Main loop
     while (runGame)
     {
         ProcessWindowMessages();
+
+        if (Network::SendMessageToServer() != 0)
+        {
+            LogMsg("Failed to send message to server!", eLogSeverityCritical);
+            break;
+        }
 
         // TODO: switch statement based on chosen graphics API
         if (vulkanContextResources.isSwapChainValid)
@@ -384,6 +401,7 @@ wWinMain(HINSTANCE hInstance,
 
     GameCode.GameDestroy(&platformAPIFuncs);
 
+    Network::DisconnectFromServer();
     g_ThreadPool.Shutdown();
     DestroyVulkan(&vulkanContextResources);
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Core/CoreDefines.h"
+
 #include <windows.h>
 
 enum

@@ -44,7 +44,7 @@ lib /verbose /machine:x64 /Wx /out:TinkerCore.lib /nologo TinkerCore.obj
 
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe
-set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Vulkan.cpp
+set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Vulkan.cpp ../Platform/Win32Client.cpp
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
@@ -64,7 +64,7 @@ echo.
 set VulkanPath="C:\VulkanSDK"\%VulkanVersion%
 
 set CompileIncludePaths=%VulkanPath%\Include
-set LibsToLink=user32.lib %VulkanPath%\Lib\vulkan-1.lib
+set LibsToLink=user32.lib ws2_32.lib %VulkanPath%\Lib\vulkan-1.lib
 
 cl %CommonCompileFlags% /I %CompileIncludePaths% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe 
 
