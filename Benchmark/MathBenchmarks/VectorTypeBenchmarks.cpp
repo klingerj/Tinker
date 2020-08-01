@@ -5,16 +5,17 @@
 using namespace Tinker;
 using namespace Platform;
 
+const uint32 threadCount = 1;
 WorkerThreadPool g_threadpool;
 
-const uint32 numJobs = 15;
+const uint32 numJobs = threadCount * 1;
 WorkerJob* jobs[numJobs];
 
 v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
-const uint32 jobSize = (64 / 8) * (2 << 10);
+const uint32 jobSize = (sizeof(v4f)) * (2 << 18);
 const uint32 numVectors = numJobs * jobSize;
-const uint32 numIters = 100;
+const uint32 numIters = 4;
 
 void BM_v2_Startup()
 {
@@ -84,9 +85,12 @@ void BM_m2MulV2_fScalar()
 
 void BM_m2MulV2_fScalar_MT_Startup()
 {
-    g_threadpool.Startup(15);
+    g_threadpool.Startup(threadCount);
     BM_v2_Startup();
+}
 
+void BM_m2MulV2_fScalar_MT()
+{
     v2f* const vectors = g_v2s;
     for (uint32 i = 0; i < numJobs; ++i)
     {
@@ -103,10 +107,7 @@ void BM_m2MulV2_fScalar_MT_Startup()
             }
         });
     }
-}
 
-void BM_m2MulV2_fScalar_MT()
-{
     for (uint32 i = 0; i < numJobs; ++i)
     {
         jobs[i]->m_done = false;
@@ -155,6 +156,89 @@ void BM_v4_Startup()
 
 void BM_v4_Shutdown()
 {
+    FreeAligned(g_v4s);
+    g_v4s = nullptr;
+}
+
+void BM_v4_MT_Startup()
+{
+    g_threadpool.Startup(threadCount);
+    BM_v4_Startup();
+}
+
+void BM_m4MulV4_fScalar_MT()
+{
+    v4f* const vectors = g_v4s;
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        jobs[i] = CreateNewThreadJob([=]() {
+            const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+
+            for (uint32 iter = 0; iter < numIters; ++iter)
+            {
+                for (uint32 j = 0; j < jobSize; ++j)
+                {
+                    uint32 index = j + i * jobSize;
+                    vectors[index] = m * vectors[index];
+                }
+            }
+        });
+    }
+
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        jobs[i]->m_done = false;
+    }
+
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        g_threadpool.EnqueueNewThreadJob(jobs[i]);
+    }
+
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        WaitOnJob(jobs[i]);
+    }
+}
+
+void BM_m4MulV4_fVectorized_MT()
+{
+    v4f* const vectors = g_v4s;
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        jobs[i] = CreateNewThreadJob([=]() {
+            const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+
+            for (uint32 iter = 0; iter < numIters; ++iter)
+            {
+                for (uint32 j = 0; j < jobSize; ++j)
+                {
+                    uint32 index = j + i * jobSize;
+                    VectorOps::Mul_SIMD(vectors[index], m, vectors[index]);
+                }
+            }
+        });
+    }
+
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        jobs[i]->m_done = false;
+    }
+
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        g_threadpool.EnqueueNewThreadJob(jobs[i]);
+    }
+
+    for (uint32 i = 0; i < numJobs; ++i)
+    {
+        WaitOnJob(jobs[i]);
+    }
+}
+
+void BM_v4_MT_Shutdown()
+{
+    g_threadpool.Shutdown();
     FreeAligned(g_v4s);
     g_v4s = nullptr;
 }

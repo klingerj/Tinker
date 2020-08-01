@@ -135,6 +135,6 @@ namespace VectorOps
         __m128i sum2 = _mm_add_epi32(zProd, wProd);
         __m128i sum  = _mm_add_epi32(sum1, sum2);
 
-	_mm_stream_si128((__m128i*)&out, sum);
+	    _mm_stream_si128((__m128i*)&out, sum);
     }
 }

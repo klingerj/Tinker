@@ -16,5 +16,9 @@ void BM_m2MulV2_fScalar_MT_Shutdown();
 
 void BM_v4_Startup();
 void BM_v4_Shutdown();
+void BM_v4_MT_Startup();
+void BM_v4_MT_Shutdown();
 void BM_m4MulV4_fScalar();
 void BM_m4MulV4_fVectorized();
+void BM_m4MulV4_fScalar_MT();
+void BM_m4MulV4_fVectorized_MT();
