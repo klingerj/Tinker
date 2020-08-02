@@ -33,6 +33,8 @@ uint32 gameHeight = 1080;
 static std::vector<Tinker::Platform::GraphicsCommand> graphicsCommands;
 
 static bool isGameInitted = false;
+static const bool isMultiplayer = false;
+static bool connectedToServer = false;
 
 extern "C"
 GAME_UPDATE(GameUpdate)
@@ -41,6 +43,21 @@ GAME_UPDATE(GameUpdate)
 
     if (!isGameInitted)
     {
+        // Init network connection if multiplayer
+        if (isMultiplayer)
+        {
+            int result = platformFuncs->InitNetworkConnection();
+            if (result != 0)
+            {
+                connectedToServer = false;
+                return 1;
+            }
+            else
+            {
+                connectedToServer = true;
+            }
+        }
+
         graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
 
         // Default geometry
@@ -227,6 +244,19 @@ GAME_UPDATE(GameUpdate)
     uint32 graphicsCmdSizeInBytes = (uint32)graphicsCommands.size() * sizeof(Tinker::Platform::GraphicsCommand);
     memcpy(graphicsCmdBase, graphicsCommands.data(), graphicsCmdSizeInBytes);
     graphicsCmdBase += graphicsCmdSizeInBytes;
+
+    if (isGameInitted && isMultiplayer && connectedToServer)
+    {
+        int result = platformFuncs->SendMessageToServer();
+        if (result != 0)
+        {
+            return 1;
+        }
+        else
+        {
+            // Send message successfully
+        }
+    }
 
     return 0;
 }

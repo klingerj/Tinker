@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Core/CoreDefines.h"
+#include "../Include/Platform/Win32Logs.h"
 #include <windows.h>
 
 namespace Tinker
@@ -28,7 +29,7 @@ namespace Tinker
             }
             else
             {
-                // File doesn't exist - fail?
+                LogMsg("Unable to create file handle!", eLogSeverityWarning);
                 return 0;
             }
         }
@@ -39,7 +40,7 @@ namespace Tinker
             TINKER_ASSERT((!fileSizeInBytes && !buffer) || (fileSizeInBytes && buffer));
 
             HANDLE fileHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-            uint8* fileDataBuffer = NULL;
+            uint8* fileDataBuffer = nullptr;
 
             if (fileHandle != INVALID_HANDLE_VALUE)
             {
@@ -62,14 +63,14 @@ namespace Tinker
                 }
                 else
                 {
-                    //TODO: Fail?
+                    LogMsg("Unable to allocate buffer for reading file!", eLogSeverityCritical);
                 }
                 CloseHandle(fileHandle);
             }
             else
             {
-                // File doesn't exist - fail?
-                return NULL;
+                LogMsg("Unable to create file handle!", eLogSeverityWarning);
+                return nullptr;
             }
 
             return fileDataBuffer;

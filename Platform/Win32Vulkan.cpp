@@ -667,6 +667,7 @@ namespace Tinker
                 const char* vertexShaderFileName   = "..\\Shaders\\basic_vert.spv";
                 const char* fragmentShaderFileName = "..\\Shaders\\basic_frag.spv";
 
+                // TODO: check for errors in finding the shader files
                 uint32 vertexShaderFileSize   = GetFileSize(vertexShaderFileName);
                 uint32 fragmentShaderFileSize = GetFileSize(fragmentShaderFileName);
 
