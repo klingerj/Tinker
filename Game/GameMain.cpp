@@ -15,10 +15,10 @@
 */
 
 DefaultGeometry<4, 6> defaultQuad = {
-    0xffffffff,
-    0xffffffff,
-    0xffffffff,
-    0xffffffff,
+    TINKER_INVALID_HANDLE,
+    TINKER_INVALID_HANDLE,
+    TINKER_INVALID_HANDLE,
+    TINKER_INVALID_HANDLE,
     v4f(-1.0f, -1.0f, 0.0f, 1.0f),
     v4f(1.0f, -1.0f, 0.0f, 1.0f),
     v4f(-1.0f, 1.0f, 0.0f, 1.0f),
@@ -188,7 +188,7 @@ GAME_UPDATE(GameUpdate)
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
-    command.m_renderPassHandle = 0xffffffff;
+    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
     command.m_renderWidth = gameWidth;
     command.m_renderHeight = gameHeight;
@@ -200,7 +200,7 @@ GAME_UPDATE(GameUpdate)
     command.m_numVertices = 3;
     command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle;
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle;
-    command.m_uvBufferHandle = 0xffffffff;
+    command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
@@ -209,17 +209,17 @@ GAME_UPDATE(GameUpdate)
     command.m_numVertices = 3;
     command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
-    command.m_uvBufferHandle = 0xffffffff;
+    command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
-    command.m_renderPassHandle = 0xffffffff;
+    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     graphicsCommands.push_back(command);
     
     // Blit to screen
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
-    command.m_renderPassHandle = 0xffffffff;
-    command.m_framebufferHandle = 0xffffffff;
+    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
+    command.m_framebufferHandle = TINKER_INVALID_HANDLE;
     command.m_renderWidth = 0;
     command.m_renderHeight = 0;
     graphicsCommands.push_back(command);
@@ -232,11 +232,11 @@ GAME_UPDATE(GameUpdate)
     command.m_vertexBufferHandle = defaultQuad.m_vertexBufferHandle;*/
     command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
-    command.m_uvBufferHandle = 0xffffffff;
+    command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
-    command.m_renderPassHandle = 0xffffffff;
+    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     graphicsCommands.push_back(command);
 
     graphicsCommandStream->m_numCommands = (uint32)graphicsCommands.size();

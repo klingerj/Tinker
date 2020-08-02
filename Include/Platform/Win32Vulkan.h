@@ -35,8 +35,8 @@ namespace Tinker
                 VkInstance instance = VK_NULL_HANDLE;
                 VkDebugUtilsMessengerEXT debugMessenger;
                 VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-                uint32 graphicsQueueIndex = 0xffffffff;
-                uint32 presentationQueueIndex = 0xffffffff;
+                uint32 graphicsQueueIndex = TINKER_INVALID_HANDLE;
+                uint32 presentationQueueIndex = TINKER_INVALID_HANDLE;
                 VkDevice device = VK_NULL_HANDLE;
                 VkQueue graphicsQueue = VK_NULL_HANDLE;
                 VkQueue presentationQueue = VK_NULL_HANDLE;
@@ -48,7 +48,7 @@ namespace Tinker
                 uint32* swapChainImageViewHandles = nullptr;
                 uint32* swapChainFramebufferHandles = nullptr;
                 uint32 numSwapChainImages = 0;
-                uint32 currentSwapChainImage = 0xffffffff;
+                uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
                 uint32 windowWidth = 0;
                 uint32 windowHeight = 0;
 
