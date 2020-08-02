@@ -48,6 +48,12 @@ namespace Tinker
         #define READ_ENTIRE_FILE(name) uint8* name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
         typedef READ_ENTIRE_FILE(read_entire_file);
 
+        #define INIT_NETWORK_CONNECTION(name) int name()
+        typedef INIT_NETWORK_CONNECTION(init_network_connection);
+
+        #define SEND_MESSAGE_TO_SERVER(name) int name()
+        typedef SEND_MESSAGE_TO_SERVER(send_message_to_server);
+
         // Graphics
         enum
         {
@@ -145,6 +151,8 @@ namespace Tinker
             enqueue_worker_thread_job* EnqueueWorkerThreadJob;
             wait_on_thread_job* WaitOnThreadJob;
             read_entire_file* ReadEntireFile;
+            init_network_connection* InitNetworkConnection;
+            send_message_to_server* SendMessageToServer;
             create_vertex_buffer* CreateVertexBuffer;
             create_staging_buffer* CreateStagingBuffer;
             destroy_vertex_buffer* DestroyVertexBuffer;
