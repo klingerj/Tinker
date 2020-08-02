@@ -103,7 +103,7 @@ namespace Tinker
                 {
                     m_pool[uiEle].m_nextFreeEleIdx = uiEle + 1; // point to next element
                 }
-                m_pool[m_maxPoolElements - 1].m_nextFreeEleIdx = 0xffffffff;
+                m_pool[m_maxPoolElements - 1].m_nextFreeEleIdx = TINKER_INVALID_HANDLE;
             }
 
         public:
@@ -137,7 +137,7 @@ namespace Tinker
                 TINKER_ASSERT(m_maxPoolElements == 0);
                 // Only call Init() if you did not provide the number of elements as a template at compile-time.
 
-                TINKER_ASSERT(maxPoolElements > 0 && maxPoolElements < 0xffffffff);
+                TINKER_ASSERT(maxPoolElements > 0 && maxPoolElements < TINKER_INVALID_HANDLE);
                 m_maxPoolElements = maxPoolElements;
                 m_pool = (PoolElement<T>*)Platform::AllocAligned(m_maxPoolElements * m_elementSizeInBytes, alignment);
                 InitFreeListPtrs();
@@ -145,11 +145,11 @@ namespace Tinker
 
             uint32 Alloc()
             {
-                if (m_freeListHead == 0xffffffff)
+                if (m_freeListHead == TINKER_INVALID_HANDLE)
                 {
                     // Pool is full - resize?
                     TINKER_ASSERT(0);
-                    return 0xffffffff;
+                    return TINKER_INVALID_HANDLE;
                 }
                 else
                 {
@@ -159,7 +159,7 @@ namespace Tinker
 
                     if (m_numAllocdElements == m_maxPoolElements)
                     {
-                        m_freeListHead = 0xffffffff;
+                        m_freeListHead = TINKER_INVALID_HANDLE;
                     }
 
                     return newEle;

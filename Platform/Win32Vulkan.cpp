@@ -4,13 +4,16 @@
 
 #include <cstring>
 
+// TODO: move this to be a compile define
+#define ENABLE_VULKAN_VALIDATION_LAYERS
+
 namespace Tinker
 {
     namespace Platform
     {
         namespace Graphics
         {
-            #ifdef _DEBUG
+            #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
             static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
                 VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                 VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -49,7 +52,7 @@ namespace Tinker
                 instanceCreateInfo.pApplicationInfo = &applicationInfo;
 
                 const uint32 numRequiredExtensions = 
-                #ifdef _DEBUG
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
                 3
                 #else
                 2
@@ -59,7 +62,8 @@ namespace Tinker
                     VK_KHR_SURFACE_EXTENSION_NAME,
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 
-                    #ifdef _DEBUG
+                    
+                    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
                     , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
                     #endif
                 };
@@ -84,7 +88,7 @@ namespace Tinker
                 delete availableExtensions;
 
                 // Validation layers
-                #ifdef _DEBUG
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
                 const uint32 numRequiredLayers = 1;
                 const char* requestedLayersStr[numRequiredLayers] = { "VK_LAYER_KHRONOS_validation" };
 
@@ -144,7 +148,7 @@ namespace Tinker
                     TINKER_ASSERT(0);
                 }
 
-                #ifdef _DEBUG
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
                 // Debug utils callback
                 VkDebugUtilsMessengerCreateInfoEXT dbgUtilsMsgCreateInfo = {};
                 dbgUtilsMsgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -1014,7 +1018,7 @@ namespace Tinker
             {
                 uint32 newResourceHandle =
                     vulkanContextResources->vulkanMemResourcePool.Alloc();
-                TINKER_ASSERT(newResourceHandle != 0xffffffff);
+                TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
 
                 VulkanMemResource* newResource =
                     vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
@@ -1054,7 +1058,7 @@ namespace Tinker
             {
                 uint32 newResourceHandle =
                     vulkanContextResources->vulkanMemResourcePool.Alloc();
-                TINKER_ASSERT(newResourceHandle != 0xffffffff);
+                TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
 
                 VulkanMemResource* newResource =
                     vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
@@ -1082,7 +1086,7 @@ namespace Tinker
             void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
             {
                 // Acquire
-                uint32 currentSwapChainImageIndex = 0xffffffff;
+                uint32 currentSwapChainImageIndex = TINKER_INVALID_HANDLE;
                 VkResult result = vkAcquireNextImageKHR(vulkanContextResources->device, 
                     vulkanContextResources->swapChain,
                     (uint64)-1,
@@ -1123,7 +1127,7 @@ namespace Tinker
 
             void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
             {
-                if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
+                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
                     TINKER_ASSERT(0);
                 }
@@ -1140,7 +1144,7 @@ namespace Tinker
                 uint32 vertexBufferHandle, uint32 indexBufferHandle,
                 uint32 numIndices, uint32 numVertices)
             {
-                if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
+                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
                     TINKER_ASSERT(0);
                 }
@@ -1161,7 +1165,7 @@ namespace Tinker
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle)
             {
-                if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
+                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
                     TINKER_ASSERT(0);
                 }
@@ -1182,7 +1186,7 @@ namespace Tinker
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
                 uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight)
             {
-                if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
+                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
                     TINKER_ASSERT(0);
                 }
@@ -1191,7 +1195,7 @@ namespace Tinker
                 renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
                 renderPassBeginInfo.renderPass = vulkanContextResources->renderPass;
 
-                if (framebufferHandle == 0xffffffff)
+                if (framebufferHandle == TINKER_INVALID_HANDLE)
                 {
                     uint32 swapChainFramebufferHandle = vulkanContextResources->swapChainFramebufferHandles[vulkanContextResources->currentSwapChainImage];;
                     renderPassBeginInfo.framebuffer = *vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(swapChainFramebufferHandle);
@@ -1202,7 +1206,7 @@ namespace Tinker
                 }
 
                 renderPassBeginInfo.renderArea.offset = { 0, 0 };
-                if (framebufferHandle == 0xffffffff)
+                if (framebufferHandle == TINKER_INVALID_HANDLE)
                 {
                     renderPassBeginInfo.renderArea.extent = vulkanContextResources->swapChainExtent;
                 }
@@ -1226,7 +1230,7 @@ namespace Tinker
 
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources)
             {
-                if (vulkanContextResources->currentSwapChainImage == 0xffffffff)
+                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
                     TINKER_ASSERT(0);
                 }
@@ -1239,7 +1243,7 @@ namespace Tinker
                 uint32 width, uint32 height)
             {
                 uint32 newFramebufferHandle = vulkanContextResources->vulkanFramebufferPool.Alloc();
-                TINKER_ASSERT(newFramebufferHandle != 0xffffffff);
+                TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
 
                 VkFramebuffer* newFramebuffer =
                     vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(newFramebufferHandle);
@@ -1395,7 +1399,7 @@ namespace Tinker
                 vkDestroySemaphore(vulkanContextResources->device, vulkanContextResources->swapChainImageAvailableSemaphore, nullptr);
                 vkDestroyFence(vulkanContextResources->device, vulkanContextResources->fence, nullptr);
 
-                #ifdef _DEBUG
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
                 // Debug utils messenger
                 PFN_vkDestroyDebugUtilsMessengerEXT dbgDestroyFunc =
                     (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(vulkanContextResources->instance,

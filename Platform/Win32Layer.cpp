@@ -7,6 +7,11 @@
 
 #include <windows.h>
 
+// TODO: move these to be compile defines
+#define TINKER_PLATFORM_ENABLE_MULTITHREAD
+#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX 64
+#define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
+
 using namespace Tinker;
 using namespace Platform;
 
@@ -54,9 +59,8 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
                 GameCode->GameDestroy = GameDestroyStub;
             }
 
-            const char* GameDllHotloadStr = "TinkerGame_hotload.dll";
-            CopyFile(gameDllSourcePath, GameDllHotloadStr, FALSE);
-            GameCode->GameDll = LoadLibrary(GameDllHotloadStr);
+            CopyFile(gameDllSourcePath, TINKER_PLATFORM_HOTLOAD_FILENAME, FALSE);
+            GameCode->GameDll = LoadLibrary(TINKER_PLATFORM_HOTLOAD_FILENAME);
             if (GameCode->GameDll)
             {
                 GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
@@ -72,11 +76,19 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     }
 }
 
+#ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
 WorkerThreadPool g_ThreadPool;
 ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
 {
     g_ThreadPool.EnqueueNewThreadJob(newJob);
 }
+#else
+ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
+{
+    (*newJob)();
+    newJob->m_done = true;
+}
+#endif
 
 Graphics::VulkanContextResources vulkanContextResources;
 
@@ -257,7 +269,7 @@ CREATE_VERTEX_BUFFER(CreateVertexBuffer)
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return 0xffffffff;
+            return TINKER_INVALID_HANDLE;
         }
     }
 }
@@ -303,7 +315,7 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return 0xffffffff;
+            return TINKER_INVALID_HANDLE;
         }
     }
 }
@@ -322,7 +334,7 @@ CREATE_IMAGE_RESOURCE(CreateImageResource)
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return 0xffffffff;
+            return TINKER_INVALID_HANDLE;
         }
     }
 }
@@ -341,7 +353,7 @@ CREATE_IMAGE_VIEW_RESOURCE(CreateImageViewResource)
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return 0xffffffff;
+            return TINKER_INVALID_HANDLE;
         }
     }
 }
@@ -649,7 +661,7 @@ wWinMain(HINSTANCE hInstance,
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
-    graphicsCommandStream.m_maxCommands = 32; // TODO: set with compile flag
+    graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
     graphicsCommandStream.m_graphicsCommands = new GraphicsCommand[graphicsCommandStream.m_maxCommands];
 
     Win32GameCode GameCode = {};
@@ -657,8 +669,10 @@ wWinMain(HINSTANCE hInstance,
     ReloadGameCode(&GameCode, GameDllStr);
 
     // Start threadpool
+    #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     uint32 numThreads = systemInfo.dwNumberOfProcessors;
     g_ThreadPool.Startup(numThreads / 2);
+    #endif
 
     // Main loop
     while (runGame)
@@ -703,7 +717,11 @@ wWinMain(HINSTANCE hInstance,
     GameCode.GameDestroy(&platformAPIFuncs);
 
     Network::DisconnectFromServer();
+
+    #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     g_ThreadPool.Shutdown();
+    #endif
+
     DestroyVulkan(&vulkanContextResources);
 
     return 0;

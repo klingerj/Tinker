@@ -11,6 +11,8 @@
 #define TINKER_ASSERT(cond)
 #endif
 
+#define TINKER_INVALID_HANDLE 0xffffffff
+
 typedef uint8_t  uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
