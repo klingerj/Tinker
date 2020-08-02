@@ -7,10 +7,14 @@
 
 #include <windows.h>
 
-// TODO: move these to be compile defines
+// TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
+#ifndef TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX
 #define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX 64
+#endif
+#ifndef TINKER_PLATFORM_HOTLOAD_FILENAME
 #define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
+#endif
 
 using namespace Tinker;
 using namespace Platform;
