@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Core/CoreDefines.h"
-#include "../Include/Platform/Win32Logs.h"
+#include "../Include/Core/Logging.h"
 #include <windows.h>
 
 namespace Tinker

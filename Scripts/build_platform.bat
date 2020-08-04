@@ -5,7 +5,6 @@ if NOT EXIST .\Build mkdir .\Build
 pushd .\Build
 del TinkerCore.pdb > NUL 2> NUL
 del TinkerPlatform.pdb > NUL 2> NUL
-del TinkerGame*.pdb > NUL 2> NUL
 
 set BuildConfig=%1
 if "%BuildConfig%" NEQ "Debug" (
@@ -67,27 +66,6 @@ set CompileIncludePaths=%VulkanPath%\Include
 set LibsToLink=user32.lib ws2_32.lib %VulkanPath%\Lib\vulkan-1.lib
 
 cl %CommonCompileFlags% /I %CompileIncludePaths% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe 
-
-rem *********************************************************************************************************
-rem TinkerGame - shared library
-set SourceListGame=../Game/GameMain.cpp ../Platform/Win32PlatformGameAPI.cpp
-
-if "%TIME:~0,1%" == " " (
-    set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%
-    ) else (
-        set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__%TIME:~0,2%_%TIME:~3,2%_%TIME:~6,2%
-        )
-set GameDllPdbName=TinkerGame_%BuildTimestamp%.pdb
-if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsGame=/Fd%GameDllPdbName%
-    set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
-    ) else (
-    set DebugCompileFlagsGame=
-    set DebugLinkFlagsGame=
-    )
-echo.
-echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerCore.lib /DLL /export:GameUpdate /export:GameDestroy %DebugLinkFlagsGame% /out:TinkerGame.dll
 
 :DoneBuild
 popd
