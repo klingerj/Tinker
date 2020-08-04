@@ -1,6 +1,6 @@
 #include "../Include/Platform/Win32Vulkan.h"
 #include "../Include/Platform/Win32Utilities.h"
-#include "../Include/Platform/Win32Logs.h"
+#include "../Include/Core/Logging.h"
 
 #include <cstring>
 

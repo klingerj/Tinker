@@ -1,7 +1,7 @@
 #include "../Include/PlatformGameAPI.h"
 #include "../Include/Platform/Win32Utilities.h"
 #include "../Include/Platform/Win32Vulkan.h"
-#include "../Include/Platform/Win32Logs.h"
+#include "../Include/Core/Logging.h"
 #include "../Include/Platform/Win32Client.h"
 #include "Win32WorkerThreadPool.cpp"
 
@@ -20,6 +20,7 @@ using namespace Tinker;
 using namespace Platform;
 
 volatile bool runGame = true;
+PlatformAPIFuncs g_platformAPIFuncs;
 
 // TODO: implement other graphics APIs
 enum
@@ -58,6 +59,7 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
             // Unload old code
             if (GameCode->GameDll)
             {
+                GameCode->GameDestroy(&g_platformAPIFuncs);
                 FreeLibrary(GameCode->GameDll);
                 GameCode->GameUpdate = GameUpdateStub;
                 GameCode->GameDestroy = GameDestroyStub;
@@ -646,22 +648,22 @@ wWinMain(HINSTANCE hInstance,
     }
 
     // Init data passed from platform to game
-    PlatformAPIFuncs platformAPIFuncs = {};
-    platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
-    platformAPIFuncs.WaitOnThreadJob = WaitOnJob;
-    platformAPIFuncs.ReadEntireFile = ReadEntireFile;
-    platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;
-    platformAPIFuncs.SendMessageToServer = SendMessageToServer;
-    platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
-    platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
-    platformAPIFuncs.DestroyVertexBuffer = DestroyVertexBuffer;
-    platformAPIFuncs.DestroyStagingBuffer = DestroyStagingBuffer;
-    platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
-    platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
-    platformAPIFuncs.CreateImageResource = CreateImageResource;
-    platformAPIFuncs.DestroyImageResource = DestroyImageResource;
-    platformAPIFuncs.CreateImageViewResource = CreateImageViewResource;
-    platformAPIFuncs.DestroyImageViewResource = DestroyImageViewResource;
+    g_platformAPIFuncs = {};
+    g_platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
+    g_platformAPIFuncs.WaitOnThreadJob = WaitOnJob;
+    g_platformAPIFuncs.ReadEntireFile = ReadEntireFile;
+    g_platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;
+    g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
+    g_platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
+    g_platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
+    g_platformAPIFuncs.DestroyVertexBuffer = DestroyVertexBuffer;
+    g_platformAPIFuncs.DestroyStagingBuffer = DestroyStagingBuffer;
+    g_platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
+    g_platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
+    g_platformAPIFuncs.CreateImageResource = CreateImageResource;
+    g_platformAPIFuncs.DestroyImageResource = DestroyImageResource;
+    g_platformAPIFuncs.CreateImageViewResource = CreateImageViewResource;
+    g_platformAPIFuncs.DestroyImageViewResource = DestroyImageViewResource;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
@@ -704,7 +706,7 @@ wWinMain(HINSTANCE hInstance,
 
         if (shouldRenderFrame)
         {
-            int error = GameCode.GameUpdate(&platformAPIFuncs, &graphicsCommandStream);
+            int error = GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream);
             if (error != 0)
             {
                 LogMsg("Error occurred in game code! Shutting down application.", eLogSeverityCritical);
@@ -718,7 +720,7 @@ wWinMain(HINSTANCE hInstance,
         ReloadGameCode(&GameCode, GameDllStr);
     }
 
-    GameCode.GameDestroy(&platformAPIFuncs);
+    GameCode.GameDestroy(&g_platformAPIFuncs);
 
     Network::DisconnectFromServer();
 
@@ -726,7 +728,20 @@ wWinMain(HINSTANCE hInstance,
     g_ThreadPool.Shutdown();
     #endif
 
-    DestroyVulkan(&vulkanContextResources);
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            DestroyVulkan(&vulkanContextResources);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            break;
+        }
+    }
 
     return 0;
 }
