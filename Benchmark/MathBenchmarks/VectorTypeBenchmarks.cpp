@@ -13,9 +13,9 @@ WorkerJob* jobs[numJobs];
 
 v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
-const uint32 jobSize = (sizeof(v4f)) * (2 << 18);
+const uint32 jobSize = (sizeof(v4f)) * (2 << 12);
 const uint32 numVectors = numJobs * jobSize;
-const uint32 numIters = 4;
+const uint32 numIters = 50;
 
 void BM_v2_Startup()
 {
@@ -172,7 +172,7 @@ void BM_m4MulV4_fScalar_MT()
     for (uint32 i = 0; i < numJobs; ++i)
     {
         jobs[i] = CreateNewThreadJob([=]() {
-            const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+            alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
             for (uint32 iter = 0; iter < numIters; ++iter)
             {
@@ -207,7 +207,7 @@ void BM_m4MulV4_fVectorized_MT()
     for (uint32 i = 0; i < numJobs; ++i)
     {
         jobs[i] = CreateNewThreadJob([=]() {
-            const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+            alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
             for (uint32 iter = 0; iter < numIters; ++iter)
             {
@@ -246,21 +246,27 @@ void BM_v4_MT_Shutdown()
 void BM_m4MulV4_fScalar()
 {
     v4f* const vectors = g_v4s;
-    m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+    alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
-    for (uint32 i = 0; i < numVectors; ++i)
+    for (uint32 iter = 0; iter < numIters; ++iter)
     {
-        vectors[i] = m * vectors[i];
+        for (uint32 i = 0; i < numVectors; ++i)
+        {
+            vectors[i] = m * vectors[i];
+        }
     }
 }
 
 void BM_m4MulV4_fVectorized()
 {
     v4f* const vectors = g_v4s;
-    m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+    alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
-    for (uint32 i = 0; i < numVectors; ++i)
+    for (uint32 iter = 0; iter < numIters; ++iter)
     {
-        VectorOps::Mul_SIMD(vectors[i], m, vectors[i]);
+        for (uint32 i = 0; i < numVectors; ++i)
+        {
+            VectorOps::Mul_SIMD(vectors[i], m, vectors[i]);
+        }
     }
 }

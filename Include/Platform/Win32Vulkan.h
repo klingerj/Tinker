@@ -28,6 +28,12 @@ namespace Tinker
                 };
             } VulkanMemResource;
 
+            typedef struct vulkan_pipeline
+            {
+                VkPipeline graphicsPipeline;
+                VkPipelineLayout pipelineLayout;
+            } VulkanPipelineResource;
+
             typedef struct vulkan_context_res
             {
                 bool isInitted = false;
@@ -52,6 +58,7 @@ namespace Tinker
                 uint32 windowWidth = 0;
                 uint32 windowHeight = 0;
 
+                Memory::PoolAllocator<VulkanPipelineResource> vulkanPipelineResourcePool;
                 Memory::PoolAllocator<VulkanMemResource> vulkanMemResourcePool;
                 Memory::PoolAllocator<VkImageView> vulkanImageViewPool;
                 // TODO: move this stuff elsewhere
@@ -86,7 +93,6 @@ namespace Tinker
             void CreateSwapChain(VulkanContextResources* vulkanContextResources);
             void DestroySwapChain(VulkanContextResources* vulkanContextResources);
 
-            void InitGraphicsPipelineResources(VulkanContextResources* vulkanContextResources);
             void InitRenderPassResources(VulkanContextResources* vulkanContextResources);
             void AllocGPUMemory(VulkanContextResources* vulkanContextResources, VkDeviceMemory* deviceMem,
                 VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags);
@@ -116,11 +122,20 @@ namespace Tinker
             uint32 CreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height); // TODO: parameters
             void DestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle);
 
+            uint32 VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
+                    uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState,
+                    uint32 depthState, uint32 viewportWidth, uint32 viewportHeight);
+            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, uint32 handle);
+
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
                 uint32 vertexBufferHandle, uint32 indexBufferHandle, uint32 numIndices, uint32 numVertices);
+            void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
+                uint32 shaderHandle);
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle);
+            void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
+                uint32 srcImgHandle, uint32 dstImgHandle, uint32 width, uint32 height);
 
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
                 uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight);
