@@ -19,6 +19,8 @@ typedef struct game_graphic_data
     uint32 m_imageHandle;
     uint32 m_imageViewHandle;
     uint32 m_framebufferHandle;
+
+    uint32 m_shaderHandle;
 } GameGraphicsData;
 
 template <uint32 numPoints, uint32 numIndices>
@@ -36,3 +38,4 @@ template <uint32 numPoints, uint32 numIndices>
 using DefaultGeometry = struct default_geometry<numPoints, numIndices>;
 
 extern DefaultGeometry<4, 6> defaultQuad;
+

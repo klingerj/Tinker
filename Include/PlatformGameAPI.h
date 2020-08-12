@@ -48,6 +48,9 @@ namespace Tinker
         #define READ_ENTIRE_FILE(name) uint8* name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
         typedef READ_ENTIRE_FILE(read_entire_file);
 
+        #define GET_FILE_SIZE(name) uint32 name(const char* filename)
+        typedef GET_FILE_SIZE(get_file_size);
+
         #define INIT_NETWORK_CONNECTION(name) int name()
         typedef INIT_NETWORK_CONNECTION(init_network_connection);
 
@@ -57,10 +60,23 @@ namespace Tinker
         // Graphics
         enum
         {
+            eBlendStateAlphaBlend = 0,
+            eBlendStateMax
+        };
+
+        enum
+        {
+            eDepthStateTestOnWriteOn = 0,
+            eDepthStateMax
+        };
+
+        enum
+        {
             eGraphicsCmdDrawCall = 0,
             eGraphicsCmdMemTransfer,
             eGraphicsCmdRenderPassBegin,
             eGraphicsCmdRenderPassEnd,
+            eGraphicsCmdImageCopy,
             eGraphicsCmdMax
         };
 
@@ -79,6 +95,7 @@ namespace Tinker
                     uint32 m_indexBufferHandle;
                     uint32 m_vertexBufferHandle;
                     uint32 m_uvBufferHandle;
+                    uint32 m_shaderHandle;
                 };
 
                 // Memory transfer
@@ -102,6 +119,15 @@ namespace Tinker
                 struct
                 {
                     uint32 m_renderPassHandle;
+                };
+
+                // Image copy
+                struct
+                {
+                    uint32 m_width;
+                    uint32 m_height;
+                    uint32 m_srcImgHandle;
+                    uint32 m_dstImgHandle;
                 };
 
                 // TODO: other commands
@@ -144,6 +170,12 @@ namespace Tinker
 
         #define DESTROY_IMAGE_VIEW_RESOURCE(name) void name(uint32 handle)
         typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);
+
+        #define CREATE_GRAPHICS_PIPELINE(name) uint32 name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight)
+        typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
+
+        #define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 handle)
+        typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
         
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
@@ -151,6 +183,7 @@ namespace Tinker
             enqueue_worker_thread_job* EnqueueWorkerThreadJob;
             wait_on_thread_job* WaitOnThreadJob;
             read_entire_file* ReadEntireFile;
+            get_file_size* GetFileSize;
             init_network_connection* InitNetworkConnection;
             send_message_to_server* SendMessageToServer;
             create_vertex_buffer* CreateVertexBuffer;
@@ -163,6 +196,8 @@ namespace Tinker
             destroy_image_resource* DestroyImageResource;
             create_image_view_resource* CreateImageViewResource;
             destroy_image_view_resource* DestroyImageViewResource;
+            create_graphics_pipeline* CreateGraphicsPipeline;
+            destroy_graphics_pipeline* DestroyGraphicsPipeline;
         } PlatformAPIFuncs;
 
         // Game side

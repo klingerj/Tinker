@@ -27,8 +27,8 @@ DefaultGeometry<4, 6> defaultQuad = {
 };
 
 static GameGraphicsData gameGraphicsData = {};
-uint32 gameWidth = 1920;
-uint32 gameHeight = 1080;
+uint32 gameWidth = 784;
+uint32 gameHeight = 561;
 
 static std::vector<Tinker::Platform::GraphicsCommand> graphicsCommands;
 
@@ -120,6 +120,44 @@ GAME_UPDATE(GameUpdate)
         gameGraphicsData.m_imageViewHandle = platformFuncs->CreateImageViewResource(gameGraphicsData.m_imageHandle);
         gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1, gameWidth, gameHeight);
 
+        // TODO: move this stuff into the core engine
+        // sample usage code for creating shaders
+        //uint32 shaders[eNumBlendStates][eNumDepthStates];
+        // Assume all other shader characteristics are hard-coded rn
+        // Open shader files, get sizes, allocate them, load them
+        // For now shader pipeline layouts will come hardcoded with 3 sets:
+        // everything will go in their own giant arrays
+        // 0. Instance data structs (model matrix, other stuff, etc
+        // 1. Material properties (for now, 8 source textures)
+        // 2. View properties (for now, view mat, proj mat, viewproj mat, eventually shadow maps? light sources?)
+        /*for each blend state, for each depth state
+        {
+            shaderHandles[uiBlendState][uiDepthState] = CreateGraphicsPipelineShader(vertCode, fragCode,
+                numVertBytes, numFragBytes, blendState, depthState, cullMode, windowWidth, windowHeight);
+        }*/
+        const char* vertexShaderFileName   = "..\\Shaders\\basic_vert.spv";
+        const char* fragmentShaderFileName = "..\\Shaders\\basic_frag.spv";
+
+        // TODO: check for errors in finding the shader files
+        uint32 vertexShaderFileSize   = platformFuncs->GetFileSize(vertexShaderFileName);
+        uint32 fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
+
+        Tinker::Memory::LinearAllocator linearAllocator;
+        linearAllocator.Init(vertexShaderFileSize + fragmentShaderFileSize, 4);
+
+        uint8* vertexShaderBuffer   = linearAllocator.Alloc(vertexShaderFileSize, 1);
+        uint8* fragmentShaderBuffer = linearAllocator.Alloc(fragmentShaderFileSize, 1);
+        void* vertexShaderCode   = platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
+        void* fragmentShaderCode = platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
+        gameGraphicsData.m_shaderHandle = platformFuncs->CreateGraphicsPipeline(vertexShaderCode, vertexShaderFileSize, fragmentShaderCode, fragmentShaderFileSize, Tinker::Platform::eBlendStateAlphaBlend, Tinker::Platform::eDepthStateTestOnWriteOn, gameWidth, gameHeight); // TODO: replace with actual window width and height
+        // TODO: need to pass the window width and height in to this function
+        
+        // sample usage code for creating descriptors
+
+
+
+        // ideas for how/when to bind these
+
         isGameInitted = true;
     }
 
@@ -135,10 +173,10 @@ GAME_UPDATE(GameUpdate)
     memcpy(gameGraphicsData.m_stagingBufferMemPtr2, positions2, numVertBytes);
     memcpy(gameGraphicsData.m_stagingBufferMemPtr4, indices2, numIdxBytes);
 
-    Tinker::Platform::PrintDebugString("Joe\n");
+    //Tinker::Platform::PrintDebugString("Joe\n");
 
     // Test a thread job
-    Tinker::Platform::WorkerJob* jobs[32] = {};
+    /*Tinker::Platform::WorkerJob* jobs[32] = {};
     for (uint32 i = 0; i < 32; ++i)
     {
         jobs[i] = Tinker::Platform::CreateNewThreadJob([=]()
@@ -158,7 +196,7 @@ GAME_UPDATE(GameUpdate)
     for (uint32 i = 0; i < 32; ++i)
     {
         platformFuncs->WaitOnThreadJob(jobs[i]);
-    }
+    }*/
     
     // Issue graphics commands
     Tinker::Platform::GraphicsCommand command;
@@ -201,6 +239,7 @@ GAME_UPDATE(GameUpdate)
     command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle;
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
+    command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
@@ -210,12 +249,13 @@ GAME_UPDATE(GameUpdate)
     command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
+    command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     graphicsCommands.push_back(command);
-    
+
     // Blit to screen
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
@@ -224,19 +264,26 @@ GAME_UPDATE(GameUpdate)
     command.m_renderHeight = 0;
     graphicsCommands.push_back(command);
 
-    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
+    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
     command.m_numIndices = 3;
     command.m_numUVs = 0;
     command.m_numVertices = 3;
-    /*command.m_indexBufferHandle = defaultQuad.m_indexBufferHandle;
-    command.m_vertexBufferHandle = defaultQuad.m_vertexBufferHandle;*/
+    command.m_vertexBufferHandle = defaultQuad.m_vertexBufferHandle;
     command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
-    graphicsCommands.push_back(command);
+    command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
+    graphicsCommands.push_back(command);*/
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
+    graphicsCommands.push_back(command);
+
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdImageCopy;
+    command.m_srcImgHandle = gameGraphicsData.m_imageHandle;
+    command.m_dstImgHandle = TINKER_INVALID_HANDLE;
+    command.m_width = gameWidth;
+    command.m_height = gameHeight;
     graphicsCommands.push_back(command);
 
     graphicsCommandStream->m_numCommands = (uint32)graphicsCommands.size();

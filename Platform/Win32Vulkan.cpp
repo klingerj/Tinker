@@ -1,5 +1,5 @@
 #include "../Include/Platform/Win32Vulkan.h"
-#include "../Include/Platform/Win32Utilities.h"
+#include "../Include/PlatformGameAPI.h"
 #include "../Include/Core/Logging.h"
 
 #include <cstring>
@@ -13,6 +13,9 @@ namespace Tinker
     {
         namespace Graphics
         {
+            //NOTE: Must correspond the blend state enum in PlatformGameAPI.h
+            static VkPipelineColorBlendAttachmentState VulkanBlendStates[eBlendStateMax] = {};
+
             #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
             static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
                 VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -32,6 +35,7 @@ namespace Tinker
                 uint32 width, uint32 height)
             {
                 vulkanContextResources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                vulkanContextResources->vulkanPipelineResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanMappedMemPtrPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanFramebufferPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanImageViewPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
@@ -433,6 +437,20 @@ namespace Tinker
 
                 vulkanContextResources->isInitted = true;
 
+                VkPipelineColorBlendAttachmentState blendStateProperties = {};
+                blendStateProperties.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                                                      VK_COLOR_COMPONENT_G_BIT |
+                                                      VK_COLOR_COMPONENT_B_BIT |
+                                                      VK_COLOR_COMPONENT_A_BIT;
+                blendStateProperties.blendEnable = VK_TRUE;
+                blendStateProperties.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+                blendStateProperties.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                blendStateProperties.colorBlendOp = VK_BLEND_OP_ADD;
+                blendStateProperties.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+                blendStateProperties.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+                blendStateProperties.alphaBlendOp = VK_BLEND_OP_ADD;
+                VulkanBlendStates[eBlendStateAlphaBlend] = blendStateProperties;
+
                 return 0;
             }
 
@@ -527,7 +545,7 @@ namespace Tinker
                 swapChainCreateInfo.imageColorSpace = chosenFormat.colorSpace;
                 swapChainCreateInfo.imageExtent = optimalExtent;
                 swapChainCreateInfo.imageArrayLayers = 1;
-                swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+                swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
                 if (vulkanContextResources->graphicsQueueIndex != vulkanContextResources->presentationQueueIndex) {
                     const uint32 numQueueFamilyIndices = 2;
@@ -608,7 +626,6 @@ namespace Tinker
                 }
 
                 InitRenderPassResources(vulkanContextResources);
-                InitGraphicsPipelineResources(vulkanContextResources);
 
                 // Swap chain framebuffers
                 vulkanContextResources->swapChainFramebufferHandles = new uint32[vulkanContextResources->numSwapChainImages];
@@ -666,25 +683,14 @@ namespace Tinker
                 return shaderModule;
             }
 
-            void InitGraphicsPipelineResources(VulkanContextResources* vulkanContextResources)
+            uint32 VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources,
+                    void* vertexShaderCode, uint32 numVertexShaderBytes,
+                    void* fragmentShaderCode, uint32 numFragmentShaderBytes,
+                    uint32 blendState, uint32 depthState,
+                    uint32 viewportWidth, uint32 viewportHeight)
             {
-                const char* vertexShaderFileName   = "..\\Shaders\\basic_vert.spv";
-                const char* fragmentShaderFileName = "..\\Shaders\\basic_frag.spv";
-
-                // TODO: check for errors in finding the shader files
-                uint32 vertexShaderFileSize   = GetFileSize(vertexShaderFileName);
-                uint32 fragmentShaderFileSize = GetFileSize(fragmentShaderFileName);
-
-                Memory::LinearAllocator linearAllocator;
-                linearAllocator.Init(vertexShaderFileSize + fragmentShaderFileSize, 4);
-
-                uint8* vertexShaderBuffer   = linearAllocator.Alloc(vertexShaderFileSize, 1);
-                uint8* fragmentShaderBuffer = linearAllocator.Alloc(fragmentShaderFileSize, 1);
-                const char* vertexShaderCode   = (const char*)ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
-                const char* fragmentShaderCode = (const char*)ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
-
-                VkShaderModule vertexShaderModule   = CreateShaderModule(vertexShaderCode, vertexShaderFileSize, vulkanContextResources);
-                VkShaderModule fragmentShaderModule = CreateShaderModule(fragmentShaderCode, fragmentShaderFileSize, vulkanContextResources);
+                VkShaderModule vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources);
+                VkShaderModule fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources);
                 
                 // Programmable shader stages
                 VkPipelineShaderStageCreateInfo shaderStages[2] = {};
@@ -789,7 +795,8 @@ namespace Tinker
                 colorBlending.blendConstants[2] = 0.0f;
                 colorBlending.blendConstants[3] = 0.0f;
 
-                VkDynamicState dynamicStates[] = {
+                VkDynamicState dynamicStates[] =
+                {
                     VK_DYNAMIC_STATE_VIEWPORT,
                     VK_DYNAMIC_STATE_LINE_WIDTH
                 };
@@ -799,17 +806,22 @@ namespace Tinker
                 dynamicState.dynamicStateCount = 2;
                 dynamicState.pDynamicStates = dynamicStates;
 
-                VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+                uint32 newPipelineHandle = vulkanContextResources->vulkanPipelineResourcePool.Alloc();
+
+                VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
                 pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
                 pipelineLayoutInfo.setLayoutCount = 0;
                 pipelineLayoutInfo.pSetLayouts = nullptr;
                 pipelineLayoutInfo.pushConstantRangeCount = 0;
                 pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
+                VkPipelineLayout* pipelineLayout = &vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->pipelineLayout;
+
                 VkResult result = vkCreatePipelineLayout(vulkanContextResources->device,
                     &pipelineLayoutInfo,
                     nullptr,
-                    &vulkanContextResources->pipelineLayout);
+                    pipelineLayout);
+
                 if (result != VK_SUCCESS)
                 {
                     LogMsg("Failed to create Vulkan pipeline layout!", eLogSeverityCritical);
@@ -828,7 +840,8 @@ namespace Tinker
                 pipelineCreateInfo.pDepthStencilState = nullptr;
                 pipelineCreateInfo.pColorBlendState = &colorBlending;
                 pipelineCreateInfo.pDynamicState = nullptr;
-                pipelineCreateInfo.layout = vulkanContextResources->pipelineLayout;
+                // TODO: pass in the renderpass
+                pipelineCreateInfo.layout = *pipelineLayout;
                 pipelineCreateInfo.renderPass = vulkanContextResources->renderPass;
                 pipelineCreateInfo.subpass = 0;
                 pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -839,7 +852,8 @@ namespace Tinker
                     1,
                     &pipelineCreateInfo,
                     nullptr,
-                    &vulkanContextResources->pipeline);
+                    &vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->graphicsPipeline);
+
                 if (result != VK_SUCCESS)
                 {
                     LogMsg("Failed to create Vulkan graphics pipeline!", eLogSeverityCritical);
@@ -848,6 +862,8 @@ namespace Tinker
 
                 vkDestroyShaderModule(vulkanContextResources->device, vertexShaderModule, nullptr);
                 vkDestroyShaderModule(vulkanContextResources->device, fragmentShaderModule, nullptr);
+
+                return newPipelineHandle;
             }
 
             void InitRenderPassResources(VulkanContextResources* vulkanContextResources)
@@ -855,7 +871,7 @@ namespace Tinker
                 VkAttachmentDescription colorAttachment = {};
                 colorAttachment.format = vulkanContextResources->swapChainFormat;
                 colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
                 colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1162,6 +1178,16 @@ namespace Tinker
                     numIndices, 1, 0, 0, 0);
             }
 
+            void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
+                uint32 shaderHandle)
+            {
+                TINKER_ASSERT(shaderHandle != TINKER_INVALID_HANDLE);
+
+                VkPipeline* pipeline = &vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle)->graphicsPipeline;
+                vkCmdBindPipeline(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                    VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+            }
+
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle)
             {
@@ -1182,7 +1208,200 @@ namespace Tinker
                     dstBuffer,
                     1, &bufferCopy);
             }
-            
+
+            void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
+                uint32 srcImgHandle, uint32 dstImgHandle, uint32 width, uint32 height)
+            {
+                VkImage *srcImage = VK_NULL_HANDLE, *dstImage = VK_NULL_HANDLE;
+                VkImageMemoryBarrier imageBarrier = {};
+                imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+
+                if (srcImgHandle != TINKER_INVALID_HANDLE)
+                {
+                    srcImage = &vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcImgHandle)->image;
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                    imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.dstQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.image = *srcImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+                else
+                {
+                    srcImage = &vulkanContextResources->swapChainImages[vulkanContextResources->currentSwapChainImage];
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.image = *srcImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+
+                if (dstImgHandle != TINKER_INVALID_HANDLE)
+                {
+                    dstImage = &vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstImgHandle)->image;
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.dstQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.image = *dstImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+                else
+                {
+                    dstImage = &vulkanContextResources->swapChainImages[vulkanContextResources->currentSwapChainImage];
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.image = *dstImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+
+                VkImageCopy imageCopy = {};
+                imageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageCopy.srcSubresource.layerCount = 1;
+                imageCopy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageCopy.dstSubresource.layerCount = 1;
+                imageCopy.extent.width = width;
+                imageCopy.extent.height = height;
+                imageCopy.extent.depth = 1;
+
+                vkCmdCopyImage(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        *srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                        *dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        1,
+                        &imageCopy);
+
+                // Temporary: transfer from transfer layout back to present
+                if (srcImgHandle != TINKER_INVALID_HANDLE)
+                {
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.dstQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.image = *srcImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+                else
+                {
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.image = *srcImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+
+                if (dstImgHandle != TINKER_INVALID_HANDLE)
+                {
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.dstQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
+                    imageBarrier.image = *dstImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+                else
+                {
+                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                    imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.image = *dstImage;
+                    imageBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+                    vkCmdPipelineBarrier(
+                        vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        0,
+                        0, nullptr,
+                        0, nullptr,
+                        1, &imageBarrier);
+                }
+            }
+
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
                 uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight)
             {
@@ -1223,9 +1442,7 @@ namespace Tinker
                     &renderPassBeginInfo,
                     VK_SUBPASS_CONTENTS_INLINE);
 
-                vkCmdBindPipeline(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    vulkanContextResources->pipeline);
+                
             }
 
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources)
@@ -1327,7 +1544,7 @@ namespace Tinker
                 imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
                 imageCreateInfo.format = VK_FORMAT_B8G8R8A8_SRGB;
                 imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-                imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+                imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
                 VkResult result = vkCreateImage(vulkanContextResources->device,
                     &imageCreateInfo,
@@ -1341,6 +1558,16 @@ namespace Tinker
                 vkBindImageMemory(vulkanContextResources->device, newResource->image, newResource->deviceMemory, 0);
 
                 return newResourceHandle;
+            }
+
+            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+                VulkanPipelineResource* pipelineResource = vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(handle);
+
+                vkDestroyPipeline(vulkanContextResources->device, pipelineResource->graphicsPipeline, nullptr);
+                vkDestroyPipelineLayout(vulkanContextResources->device, pipelineResource->pipelineLayout, nullptr);
+                vulkanContextResources->vulkanPipelineResourcePool.Dealloc(handle);
             }
 
             void DestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle)

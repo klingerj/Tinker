@@ -1,5 +1,4 @@
 #include "../Include/PlatformGameAPI.h"
-#include "../Include/Platform/Win32Utilities.h"
 #include "../Include/Platform/Win32Vulkan.h"
 #include "../Include/Core/Logging.h"
 #include "../Include/Platform/Win32Client.h"
@@ -82,6 +81,74 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     }
 }
 
+GET_FILE_SIZE(GetFileSize)
+{
+    HANDLE fileHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+    uint32 fileSize = 0;
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        LARGE_INTEGER fileSizeInBytes = {};
+        if (GetFileSizeEx(fileHandle, &fileSizeInBytes))
+        {
+            fileSize = SafeTruncateUint64(fileSizeInBytes.QuadPart);
+        }
+        else
+        {
+            fileSize = 0;
+        }
+        CloseHandle(fileHandle);
+        return fileSize;
+    }
+    else
+    {
+        LogMsg("Unable to create file handle!", eLogSeverityWarning);
+        return 0;
+    }
+}
+
+READ_ENTIRE_FILE(ReadEntireFile)
+{
+    // User must specify a file size and the dest buffer, or neither.
+    TINKER_ASSERT((!fileSizeInBytes && !buffer) || (fileSizeInBytes && buffer));
+
+    HANDLE fileHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    uint8* fileDataBuffer = nullptr;
+
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        uint32 fileSize = 0;
+        if (fileSizeInBytes)
+        {
+            fileSize = fileSizeInBytes;
+        }
+        else
+        {
+            fileSize = GetFileSize(filename);
+        }
+
+        fileDataBuffer = buffer ? buffer : new uint8[fileSize];
+        if (fileDataBuffer)
+        {
+            DWORD numBytesRead = {};
+            ReadFile(fileHandle, fileDataBuffer, fileSize, &numBytesRead, 0);
+            TINKER_ASSERT(numBytesRead == fileSize);
+        }
+        else
+        {
+            LogMsg("Unable to allocate buffer for reading file!", eLogSeverityCritical);
+        }
+        CloseHandle(fileHandle);
+    }
+    else
+    {
+        LogMsg("Unable to create file handle!", eLogSeverityWarning);
+        return nullptr;
+    }
+
+    return fileDataBuffer;
+}
+
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
 WorkerThreadPool g_ThreadPool;
 ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
@@ -145,6 +212,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
 
         const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
+        uint32 currentShader = TINKER_INVALID_HANDLE;
+
         switch (currentCmd.m_commandType)
         {
             case eGraphicsCmdDrawCall:
@@ -153,7 +222,12 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        VulkanRecordCommandDrawCall(&vulkanContextResources,
+                        if (currentShader != currentCmd.m_shaderHandle)
+                        {
+                            Graphics::VulkanRecordCommandBindShader(&vulkanContextResources, currentCmd.m_shaderHandle);
+                            currentShader = currentCmd.m_shaderHandle;
+                        }
+                        Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
                             currentCmd.m_vertexBufferHandle, currentCmd.m_indexBufferHandle,
                             currentCmd.m_numIndices, currentCmd.m_numVertices);
                         break;
@@ -218,6 +292,28 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     case eGraphicsAPIVulkan:
                     {
                         VulkanRecordCommandRenderPassEnd(&vulkanContextResources);
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+                        runGame = false;
+                    }
+                }
+
+                break;
+            }
+
+            case eGraphicsCmdImageCopy:
+            {
+                switch (g_GlobalAppParams.m_graphicsAPI)
+                {
+                    case eGraphicsAPIVulkan:
+                    {
+                        VulkanRecordCommandImageCopy(&vulkanContextResources,
+                            currentCmd.m_srcImgHandle, currentCmd.m_dstImgHandle,
+                            currentCmd.m_width, currentCmd.m_height);
                         break;
                     }
 
@@ -364,6 +460,28 @@ CREATE_IMAGE_VIEW_RESOURCE(CreateImageViewResource)
     }
 }
 
+CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
+                    vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
+                    numFragmentShaderBytes, blendState, depthState,
+                    viewportWidth, viewportHeight);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            return TINKER_INVALID_HANDLE;
+        }
+    }
+}
+
 DESTROY_VERTEX_BUFFER(DestroyVertexBuffer)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
@@ -447,6 +565,25 @@ DESTROY_IMAGE_VIEW_RESOURCE(DestroyImageViewResource)
         case eGraphicsAPIVulkan:
         {
             Graphics::DestroyImageViewResource(&vulkanContextResources, handle);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            break;
+        }
+    }
+}
+
+DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            Graphics::VulkanDestroyGraphicsPipeline(&vulkanContextResources, handle);
             break;
         }
 
@@ -652,6 +789,7 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
     g_platformAPIFuncs.WaitOnThreadJob = WaitOnJob;
     g_platformAPIFuncs.ReadEntireFile = ReadEntireFile;
+    g_platformAPIFuncs.GetFileSize = GetFileSize;
     g_platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;
     g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
     g_platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
@@ -664,6 +802,8 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.DestroyImageResource = DestroyImageResource;
     g_platformAPIFuncs.CreateImageViewResource = CreateImageViewResource;
     g_platformAPIFuncs.DestroyImageViewResource = DestroyImageViewResource;
+    g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
+    g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
