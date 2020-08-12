@@ -225,6 +225,13 @@ GAME_UPDATE(GameUpdate)
     command.m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle2;
     graphicsCommands.push_back(command);
 
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdImageCopy;
+    command.m_srcImgHandle = gameGraphicsData.m_imageHandle;
+    command.m_dstImgHandle = TINKER_INVALID_HANDLE;
+    command.m_width = gameWidth;
+    command.m_height = gameHeight;
+    graphicsCommands.push_back(command);
+
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
@@ -257,12 +264,12 @@ GAME_UPDATE(GameUpdate)
     graphicsCommands.push_back(command);
 
     // Blit to screen
-    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
+    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     command.m_framebufferHandle = TINKER_INVALID_HANDLE;
     command.m_renderWidth = 0;
     command.m_renderHeight = 0;
-    graphicsCommands.push_back(command);
+    graphicsCommands.push_back(command);*/
 
     /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
     command.m_numIndices = 3;
@@ -275,16 +282,11 @@ GAME_UPDATE(GameUpdate)
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
     graphicsCommands.push_back(command);*/
 
-    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
+    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
-    graphicsCommands.push_back(command);
+    graphicsCommands.push_back(command);*/
 
-    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdImageCopy;
-    command.m_srcImgHandle = gameGraphicsData.m_imageHandle;
-    command.m_dstImgHandle = TINKER_INVALID_HANDLE;
-    command.m_width = gameWidth;
-    command.m_height = gameHeight;
-    graphicsCommands.push_back(command);
+    
 
     graphicsCommandStream->m_numCommands = (uint32)graphicsCommands.size();
     Tinker::Platform::GraphicsCommand* graphicsCmdBase = graphicsCommandStream->m_graphicsCommands;

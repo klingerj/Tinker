@@ -871,7 +871,7 @@ namespace Tinker
                 VkAttachmentDescription colorAttachment = {};
                 colorAttachment.format = vulkanContextResources->swapChainFormat;
                 colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
                 colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -922,7 +922,7 @@ namespace Tinker
                 submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
                 VkSemaphore waitSemaphores[1] = { vulkanContextResources->swapChainImageAvailableSemaphore };
-                VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+                VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT/* | VK_PIPELINE_STAGE_TRANSFER_BIT*/ };
                 submitInfo.waitSemaphoreCount = 1;
                 submitInfo.pWaitSemaphores = waitSemaphores;
                 submitInfo.pWaitDstStageMask = waitStages;
@@ -1230,8 +1230,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1251,8 +1251,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1263,8 +1263,8 @@ namespace Tinker
                 {
                     dstImage = &vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstImgHandle)->image;
                     imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                     imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
                     imageBarrier.dstQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
@@ -1273,8 +1273,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1284,8 +1284,8 @@ namespace Tinker
                 {
                     dstImage = &vulkanContextResources->swapChainImages[vulkanContextResources->currentSwapChainImage];
                     imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                     imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                     imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1294,8 +1294,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1321,8 +1321,8 @@ namespace Tinker
                 // Temporary: transfer from transfer layout back to present
                 if (srcImgHandle != TINKER_INVALID_HANDLE)
                 {
-                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
                     imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
@@ -1332,8 +1332,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1341,8 +1341,8 @@ namespace Tinker
                 }
                 else
                 {
-                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
                     imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1352,8 +1352,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1362,8 +1362,8 @@ namespace Tinker
 
                 if (dstImgHandle != TINKER_INVALID_HANDLE)
                 {
-                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
                     imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
@@ -1373,8 +1373,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1382,8 +1382,8 @@ namespace Tinker
                 }
                 else
                 {
-                    imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
                     imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1393,8 +1393,8 @@ namespace Tinker
 
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
-                        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT ,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_TRANSFER_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
