@@ -54,6 +54,9 @@ namespace Tinker
         #define INIT_NETWORK_CONNECTION(name) int name()
         typedef INIT_NETWORK_CONNECTION(init_network_connection);
 
+        #define END_NETWORK_CONNECTION(name) int name()
+        typedef END_NETWORK_CONNECTION(end_network_connection);
+
         #define SEND_MESSAGE_TO_SERVER(name) int name()
         typedef SEND_MESSAGE_TO_SERVER(send_message_to_server);
 
@@ -116,10 +119,10 @@ namespace Tinker
                 };
 
                 // End render pass
-                struct
+                // NOTE: For now, no data
+                /*struct
                 {
-                    uint32 m_renderPassHandle;
-                };
+                };*/
 
                 // Image copy
                 struct
@@ -153,7 +156,7 @@ namespace Tinker
         #define DESTROY_STAGING_BUFFER(name) void name(uint32 handle)
         typedef DESTROY_STAGING_BUFFER(destroy_staging_buffer);
 
-        #define CREATE_FRAMEBUFFER(name) uint32 name(uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles, uint32 width, uint32 height)
+        #define CREATE_FRAMEBUFFER(name) uint32 name(uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles, uint32 width, uint32 height, uint32 renderPassHandle)
         typedef CREATE_FRAMEBUFFER(create_framebuffer);
 
         #define DESTROY_FRAMEBUFFER(name) void name(uint32 handle)
@@ -171,11 +174,17 @@ namespace Tinker
         #define DESTROY_IMAGE_VIEW_RESOURCE(name) void name(uint32 handle)
         typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);
 
-        #define CREATE_GRAPHICS_PIPELINE(name) uint32 name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight)
+        #define CREATE_GRAPHICS_PIPELINE(name) uint32 name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle)
         typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
         #define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 handle)
         typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
+
+        #define CREATE_RENDER_PASS(name) uint32 name()
+        typedef CREATE_RENDER_PASS(create_render_pass);
+
+        #define DESTROY_RENDER_PASS(name) void name(uint32 handle)
+        typedef DESTROY_RENDER_PASS(destroy_render_pass);
         
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
@@ -185,6 +194,7 @@ namespace Tinker
             read_entire_file* ReadEntireFile;
             get_file_size* GetFileSize;
             init_network_connection* InitNetworkConnection;
+            end_network_connection* EndNetworkConnection;
             send_message_to_server* SendMessageToServer;
             create_vertex_buffer* CreateVertexBuffer;
             create_staging_buffer* CreateStagingBuffer;
@@ -198,10 +208,12 @@ namespace Tinker
             destroy_image_view_resource* DestroyImageViewResource;
             create_graphics_pipeline* CreateGraphicsPipeline;
             destroy_graphics_pipeline* DestroyGraphicsPipeline;
+            create_render_pass* CreateRenderPass;
+            destroy_render_pass* DestroyRenderPass;
         } PlatformAPIFuncs;
 
         // Game side
-        #define GAME_UPDATE(name) uint32 name(Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
+        #define GAME_UPDATE(name) uint32 name(Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
         typedef GAME_UPDATE(game_update);
 
         #define GAME_DESTROY(name) void name(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
