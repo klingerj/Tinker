@@ -3,7 +3,7 @@
 #include "../Include/Core/Logging.h"
 
 #include <cstring>
-
+#include <iostream>
 // TODO: move this to be a compile define
 #define ENABLE_VULKAN_VALIDATION_LAYERS
 
@@ -38,6 +38,7 @@ namespace Tinker
                 vulkanContextResources->vulkanPipelineResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanMappedMemPtrPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanFramebufferPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                vulkanContextResources->vulkanRenderPassPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanImageViewPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
 
                 vulkanContextResources->windowWidth = width;
@@ -276,6 +277,12 @@ namespace Tinker
                             nullptr,
                             &numAvailablePhysicalDeviceExtensions,
                             availablePhysicalDeviceExtensions);
+
+                        LogMsg("******** Available Device Extensions: ********", eLogSeverityInfo);
+                        for (uint32 uiAvailExt = 0; uiAvailExt < numAvailablePhysicalDeviceExtensions; ++uiAvailExt)
+                        {
+                            LogMsg(availablePhysicalDeviceExtensions[uiAvailExt].extensionName, eLogSeverityInfo);
+                        }
 
                         for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
                         {
@@ -545,11 +552,11 @@ namespace Tinker
                 swapChainCreateInfo.imageColorSpace = chosenFormat.colorSpace;
                 swapChainCreateInfo.imageExtent = optimalExtent;
                 swapChainCreateInfo.imageArrayLayers = 1;
-                swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
+                swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+                
                 if (vulkanContextResources->graphicsQueueIndex != vulkanContextResources->presentationQueueIndex) {
                     const uint32 numQueueFamilyIndices = 2;
-                    uint32 queueFamilyIndices[numQueueFamilyIndices] =
+                    const uint32 queueFamilyIndices[numQueueFamilyIndices] =
                     {
                         vulkanContextResources->graphicsQueueIndex,
                         vulkanContextResources->presentationQueueIndex
@@ -625,16 +632,18 @@ namespace Tinker
                     }
                 }
 
-                InitRenderPassResources(vulkanContextResources);
+                // Swap chain render pass
+                vulkanContextResources->swapChainRenderPassHandle = VulkanCreateRenderPass(vulkanContextResources);
 
                 // Swap chain framebuffers
                 vulkanContextResources->swapChainFramebufferHandles = new uint32[vulkanContextResources->numSwapChainImages];
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
                 {
                     vulkanContextResources->swapChainFramebufferHandles[uiFramebuffer] =
-                        CreateFramebuffer(vulkanContextResources,
+                        VulkanCreateFramebuffer(vulkanContextResources,
                             &vulkanContextResources->swapChainImageViewHandles[uiFramebuffer], 1,
-                            vulkanContextResources->swapChainExtent.width, vulkanContextResources->swapChainExtent.height);
+                            vulkanContextResources->swapChainExtent.width, vulkanContextResources->swapChainExtent.height,
+                            vulkanContextResources->swapChainRenderPassHandle);
                 }
 
                 vulkanContextResources->isSwapChainValid = true;
@@ -651,10 +660,6 @@ namespace Tinker
                     DestroyFramebuffer(vulkanContextResources, framebufferHandle);
                 }
                 delete vulkanContextResources->swapChainFramebufferHandles;
-
-                vkDestroyPipeline(vulkanContextResources->device, vulkanContextResources->pipeline, nullptr);
-                vkDestroyPipelineLayout(vulkanContextResources->device, vulkanContextResources->pipelineLayout, nullptr);
-                vkDestroyRenderPass(vulkanContextResources->device, vulkanContextResources->renderPass, nullptr);
 
                 for (uint32 uiImageView = 0; uiImageView < vulkanContextResources->numSwapChainImages; ++uiImageView)
                 {
@@ -687,7 +692,7 @@ namespace Tinker
                     void* vertexShaderCode, uint32 numVertexShaderBytes,
                     void* fragmentShaderCode, uint32 numFragmentShaderBytes,
                     uint32 blendState, uint32 depthState,
-                    uint32 viewportWidth, uint32 viewportHeight)
+                    uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle)
             {
                 VkShaderModule vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources);
                 VkShaderModule fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources);
@@ -840,9 +845,8 @@ namespace Tinker
                 pipelineCreateInfo.pDepthStencilState = nullptr;
                 pipelineCreateInfo.pColorBlendState = &colorBlending;
                 pipelineCreateInfo.pDynamicState = nullptr;
-                // TODO: pass in the renderpass
                 pipelineCreateInfo.layout = *pipelineLayout;
-                pipelineCreateInfo.renderPass = vulkanContextResources->renderPass;
+                pipelineCreateInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(renderPassHandle);
                 pipelineCreateInfo.subpass = 0;
                 pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
                 pipelineCreateInfo.basePipelineIndex = -1;
@@ -868,48 +872,7 @@ namespace Tinker
 
             void InitRenderPassResources(VulkanContextResources* vulkanContextResources)
             {
-                VkAttachmentDescription colorAttachment = {};
-                colorAttachment.format = vulkanContextResources->swapChainFormat;
-                colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-                colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-                colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-                VkAttachmentReference colorAttachmentRef = {};
-                colorAttachmentRef.attachment = 0;
-                colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-                VkSubpassDescription subpass = {};
-                subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-                subpass.colorAttachmentCount = 1;
-                subpass.pColorAttachments = &colorAttachmentRef;
-
-                VkSubpassDependency subpassDependency = {};
-                subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-                subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependency.srcAccessMask = 0;
-                subpassDependency.dstSubpass = 0;
-                subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-                VkRenderPassCreateInfo renderPassCreateInfo = {};
-                renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-                renderPassCreateInfo.attachmentCount = 1;
-                renderPassCreateInfo.pAttachments = &colorAttachment;
-                renderPassCreateInfo.subpassCount = 1;
-                renderPassCreateInfo.pSubpasses = &subpass;
-                renderPassCreateInfo.dependencyCount = 1;
-                renderPassCreateInfo.pDependencies = &subpassDependency;
-
-                VkResult result = vkCreateRenderPass(vulkanContextResources->device, &renderPassCreateInfo, nullptr, &vulkanContextResources->renderPass);
-                if (result != VK_SUCCESS)
-                {
-                    LogMsg("Failed to create Vulkan render pass!", eLogSeverityCritical);
-                    TINKER_ASSERT(0);
-                }
+                
             }
 
             void SubmitFrame(VulkanContextResources* vulkanContextResources)
@@ -922,7 +885,7 @@ namespace Tinker
                 submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
                 VkSemaphore waitSemaphores[1] = { vulkanContextResources->swapChainImageAvailableSemaphore };
-                VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT/* | VK_PIPELINE_STAGE_TRANSFER_BIT*/ };
+                VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
                 submitInfo.waitSemaphoreCount = 1;
                 submitInfo.pWaitSemaphores = waitSemaphores;
                 submitInfo.pWaitDstStageMask = waitStages;
@@ -1212,7 +1175,7 @@ namespace Tinker
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
                 uint32 srcImgHandle, uint32 dstImgHandle, uint32 width, uint32 height)
             {
-                VkImage *srcImage = VK_NULL_HANDLE, *dstImage = VK_NULL_HANDLE;
+                /*VkImage *srcImage = VK_NULL_HANDLE, *dstImage = VK_NULL_HANDLE;
                 VkImageMemoryBarrier imageBarrier = {};
                 imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 
@@ -1322,7 +1285,7 @@ namespace Tinker
                 if (srcImgHandle != TINKER_INVALID_HANDLE)
                 {
                     imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = 0;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
                     imageBarrier.srcQueueFamilyIndex = vulkanContextResources->graphicsQueueIndex;
@@ -1333,7 +1296,7 @@ namespace Tinker
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1342,7 +1305,7 @@ namespace Tinker
                 else
                 {
                     imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.dstAccessMask = 0;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
                     imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1353,7 +1316,7 @@ namespace Tinker
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1362,7 +1325,7 @@ namespace Tinker
 
                 if (dstImgHandle != TINKER_INVALID_HANDLE)
                 {
-                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
                     imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -1374,7 +1337,7 @@ namespace Tinker
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
@@ -1382,8 +1345,8 @@ namespace Tinker
                 }
                 else
                 {
-                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-                    imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+                    imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+                    imageBarrier.dstAccessMask = 0;
                     imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                     imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
                     imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1394,16 +1357,16 @@ namespace Tinker
                     vkCmdPipelineBarrier(
                         vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                         VK_PIPELINE_STAGE_TRANSFER_BIT,
-                        VK_PIPELINE_STAGE_TRANSFER_BIT,
+                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                         0,
                         0, nullptr,
                         0, nullptr,
                         1, &imageBarrier);
-                }
+                }*/
             }
 
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-                uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight)
+                uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight)
             {
                 if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
@@ -1412,7 +1375,6 @@ namespace Tinker
 
                 VkRenderPassBeginInfo renderPassBeginInfo = {};
                 renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-                renderPassBeginInfo.renderPass = vulkanContextResources->renderPass;
 
                 if (framebufferHandle == TINKER_INVALID_HANDLE)
                 {
@@ -1422,6 +1384,16 @@ namespace Tinker
                 else
                 {
                     renderPassBeginInfo.framebuffer = *vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(framebufferHandle);
+                }
+
+                if (framebufferHandle == TINKER_INVALID_HANDLE)
+                {
+                    uint32 swapChainRenderPassHandle = vulkanContextResources->swapChainFramebufferHandles[vulkanContextResources->currentSwapChainImage];;
+                    renderPassBeginInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(swapChainRenderPassHandle);
+                }
+                else
+                {
+                    renderPassBeginInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(renderPassHandle);
                 }
 
                 renderPassBeginInfo.renderArea.offset = { 0, 0 };
@@ -1441,8 +1413,6 @@ namespace Tinker
                 vkCmdBeginRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                     &renderPassBeginInfo,
                     VK_SUBPASS_CONTENTS_INLINE);
-
-                
             }
 
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources)
@@ -1455,10 +1425,12 @@ namespace Tinker
                 vkCmdEndRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
             }
 
-            uint32 CreateFramebuffer(VulkanContextResources* vulkanContextResources,
+            uint32 VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
                 uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles,
-                uint32 width, uint32 height)
+                uint32 width, uint32 height, uint32 renderPassHandle)
             {
+                TINKER_ASSERT(renderPassHandle != TINKER_INVALID_HANDLE);
+                
                 uint32 newFramebufferHandle = vulkanContextResources->vulkanFramebufferPool.Alloc();
                 TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
 
@@ -1474,7 +1446,7 @@ namespace Tinker
 
                 VkFramebufferCreateInfo framebufferCreateInfo = {};
                 framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-                framebufferCreateInfo.renderPass = vulkanContextResources->renderPass;
+                framebufferCreateInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(vulkanContextResources->swapChainRenderPassHandle);
                 framebufferCreateInfo.attachmentCount = 1;
                 framebufferCreateInfo.pAttachments = attachments;
                 framebufferCreateInfo.width = width;
@@ -1544,7 +1516,7 @@ namespace Tinker
                 imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
                 imageCreateInfo.format = VK_FORMAT_B8G8R8A8_SRGB;
                 imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-                imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+                imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
                 VkResult result = vkCreateImage(vulkanContextResources->device,
                     &imageCreateInfo,
@@ -1558,6 +1530,67 @@ namespace Tinker
                 vkBindImageMemory(vulkanContextResources->device, newResource->image, newResource->deviceMemory, 0);
 
                 return newResourceHandle;
+            }
+
+            uint32 VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources)
+            {
+                uint32 newRenderPassHandle = vulkanContextResources->vulkanRenderPassPool.Alloc();
+                VkRenderPass* newRenderPass =
+                    vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(newRenderPassHandle);
+
+                VkAttachmentDescription colorAttachment = {};
+                colorAttachment.format = vulkanContextResources->swapChainFormat;
+                colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+                VkAttachmentReference colorAttachmentRef = {};
+                colorAttachmentRef.attachment = 0;
+                colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+                VkSubpassDescription subpass = {};
+                subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                subpass.colorAttachmentCount = 1;
+                subpass.pColorAttachments = &colorAttachmentRef;
+
+                VkSubpassDependency subpassDependency = {};
+                subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+                subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependency.srcAccessMask = 0;
+                subpassDependency.dstSubpass = 0;
+                subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+                VkRenderPassCreateInfo renderPassCreateInfo = {};
+                renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+                renderPassCreateInfo.attachmentCount = 1;
+                renderPassCreateInfo.pAttachments = &colorAttachment;
+                renderPassCreateInfo.subpassCount = 1;
+                renderPassCreateInfo.pSubpasses = &subpass;
+                renderPassCreateInfo.dependencyCount = 1;
+                renderPassCreateInfo.pDependencies = &subpassDependency;
+
+                VkResult result = vkCreateRenderPass(vulkanContextResources->device, &renderPassCreateInfo, nullptr, newRenderPass);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to create Vulkan render pass!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
+                return newRenderPassHandle;
+            }
+
+            void VulkanDestroyRenderPass(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+                VkRenderPass* renderPass = vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(handle);
+
+                vkDestroyRenderPass(vulkanContextResources->device, *renderPass, nullptr);
+                vulkanContextResources->vulkanRenderPassPool.Dealloc(handle);
             }
 
             void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, uint32 handle)

@@ -54,6 +54,7 @@ namespace Tinker
                 uint32* swapChainImageViewHandles = nullptr;
                 uint32* swapChainFramebufferHandles = nullptr;
                 uint32 numSwapChainImages = 0;
+                uint32 swapChainRenderPassHandle = TINKER_INVALID_HANDLE;
                 uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
                 uint32 windowWidth = 0;
                 uint32 windowHeight = 0;
@@ -63,15 +64,13 @@ namespace Tinker
                 Memory::PoolAllocator<VkImageView> vulkanImageViewPool;
                 // TODO: move this stuff elsewhere
                 Memory::PoolAllocator<VkFramebuffer> vulkanFramebufferPool;
+                Memory::PoolAllocator<VkRenderPass> vulkanRenderPassPool;
                 Memory::PoolAllocator<void*> vulkanMappedMemPtrPool;
                 VkFence fence = VK_NULL_HANDLE;
                 VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
                 VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
                 VkCommandBuffer* commandBuffers = nullptr;
                 VkCommandPool commandPool = VK_NULL_HANDLE;
-                VkRenderPass renderPass = VK_NULL_HANDLE;
-                VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-                VkPipeline pipeline = VK_NULL_HANDLE;
             } VulkanContextResources;
 
             typedef struct vertex_position
@@ -93,7 +92,6 @@ namespace Tinker
             void CreateSwapChain(VulkanContextResources* vulkanContextResources);
             void DestroySwapChain(VulkanContextResources* vulkanContextResources);
 
-            void InitRenderPassResources(VulkanContextResources* vulkanContextResources);
             void AllocGPUMemory(VulkanContextResources* vulkanContextResources, VkDeviceMemory* deviceMem,
                 VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags);
 
@@ -111,9 +109,9 @@ namespace Tinker
             void DestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
             void DestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
 
-            uint32 CreateFramebuffer(VulkanContextResources* vulkanContextResources,
+            uint32 VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
                 uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles,
-                uint32 width, uint32 height); // TODO: fb parameters e.g. format, attachments
+                uint32 width, uint32 height, uint32 renderPassHandle); // TODO: fb parameters e.g. format, attachments
             void DestroyFramebuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
 
             uint32 CreateImageViewResource(VulkanContextResources* vulkanContextResources, uint32 imageResourceHandle); // TODO: parameters
@@ -124,8 +122,11 @@ namespace Tinker
 
             uint32 VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
                     uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState,
-                    uint32 depthState, uint32 viewportWidth, uint32 viewportHeight);
+                    uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle);
             void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, uint32 handle);
+
+            uint32 VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources); // TODO: more parameters, e.g. format
+            void VulkanDestroyRenderPass(VulkanContextResources* vulkanContextResources, uint32 handle);
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
@@ -138,7 +139,7 @@ namespace Tinker
                 uint32 srcImgHandle, uint32 dstImgHandle, uint32 width, uint32 height);
 
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-                uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight);
+                uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight);
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources);
         }
     }

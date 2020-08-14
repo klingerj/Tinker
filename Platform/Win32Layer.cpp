@@ -249,7 +249,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        VulkanRecordCommandMemoryTransfer(&vulkanContextResources,
+                        Graphics::VulkanRecordCommandMemoryTransfer(&vulkanContextResources,
                             currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle);
                         break;
                     }
@@ -270,8 +270,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_framebufferHandle,
-                            currentCmd.m_renderWidth, currentCmd.m_renderHeight);
+                        Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_renderPassHandle,
+                            currentCmd.m_framebufferHandle, currentCmd.m_renderWidth, currentCmd.m_renderHeight);
                         break;
                     }
 
@@ -291,7 +291,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        VulkanRecordCommandRenderPassEnd(&vulkanContextResources);
+                        Graphics::VulkanRecordCommandRenderPassEnd(&vulkanContextResources);
                         break;
                     }
 
@@ -307,11 +307,12 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
             case eGraphicsCmdImageCopy:
             {
+                TINKER_ASSERT(0); // Don't use this command rn
                 switch (g_GlobalAppParams.m_graphicsAPI)
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        VulkanRecordCommandImageCopy(&vulkanContextResources,
+                        Graphics::VulkanRecordCommandImageCopy(&vulkanContextResources,
                             currentCmd.m_srcImgHandle, currentCmd.m_dstImgHandle,
                             currentCmd.m_width, currentCmd.m_height);
                         break;
@@ -407,9 +408,9 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
     {
         case eGraphicsAPIVulkan:
         {
-            return Graphics::CreateFramebuffer(&vulkanContextResources,
+            return Graphics::VulkanCreateFramebuffer(&vulkanContextResources,
                 imageViewResourceHandles, numImageViewResourceHandles,
-                width, height);
+                width, height, renderPassHandle);
             break;
         }
 
@@ -469,7 +470,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
                     vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
                     numFragmentShaderBytes, blendState, depthState,
-                    viewportWidth, viewportHeight);
+                    viewportWidth, viewportHeight, renderPassHandle);
             break;
         }
 
@@ -478,6 +479,26 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
             return TINKER_INVALID_HANDLE;
+        }
+    }
+}
+
+CREATE_RENDER_PASS(CreateRenderPass)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            return Graphics::VulkanCreateRenderPass(&vulkanContextResources);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            return TINKER_INVALID_HANDLE;
+            break;
         }
     }
 }
@@ -596,6 +617,25 @@ DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
     }
 }
 
+DESTROY_RENDER_PASS(DestroyRenderPass)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            Graphics::VulkanDestroyRenderPass(&vulkanContextResources, handle);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            break;
+        }
+    }
+}
+
 INIT_NETWORK_CONNECTION(InitNetworkConnection)
 {
     if (Network::InitClient() != 0)
@@ -606,6 +646,20 @@ INIT_NETWORK_CONNECTION(InitNetworkConnection)
     else
     {
         LogMsg("Successfully initialized network client.", eLogSeverityInfo);
+        return 0;
+    }
+}
+
+END_NETWORK_CONNECTION(EndNetworkConnection)
+{
+    if (Network::DisconnectFromServer() != 0)
+    {
+        LogMsg("Failed to cleanup network client!", eLogSeverityCritical);
+        return 1;
+    }
+    else
+    {
+        LogMsg("Successfully cleaned up network client.", eLogSeverityInfo);
         return 0;
     }
 }
@@ -744,6 +798,9 @@ wWinMain(HINSTANCE hInstance,
         return 1;
     }
 
+    RECT windowDims = { 0, 0, (LONG)g_GlobalAppParams.m_windowWidth, (LONG)g_GlobalAppParams.m_windowHeight };
+    AdjustWindowRect(&windowDims, WS_OVERLAPPEDWINDOW | WS_VISIBLE, FALSE);
+
     HWND windowHandle =
         CreateWindowEx(0,
             windowClass.lpszClassName,
@@ -751,12 +808,13 @@ wWinMain(HINSTANCE hInstance,
             WS_OVERLAPPEDWINDOW | WS_VISIBLE,
             CW_USEDEFAULT,
             CW_USEDEFAULT,
-            g_GlobalAppParams.m_windowWidth,
-            g_GlobalAppParams.m_windowHeight,
+            windowDims.right - windowDims.left,
+            windowDims.bottom - windowDims.top,
             0,
             0,
             hInstance,
             0);
+
     if (!windowHandle)
     {
         LogMsg("Failed to create window!", eLogSeverityCritical);
@@ -791,6 +849,7 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.ReadEntireFile = ReadEntireFile;
     g_platformAPIFuncs.GetFileSize = GetFileSize;
     g_platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;
+    g_platformAPIFuncs.EndNetworkConnection = EndNetworkConnection;
     g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
     g_platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
     g_platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
@@ -804,6 +863,8 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.DestroyImageViewResource = DestroyImageViewResource;
     g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
     g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
+    g_platformAPIFuncs.CreateRenderPass = CreateRenderPass;
+    g_platformAPIFuncs.DestroyRenderPass = DestroyRenderPass;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
@@ -846,7 +907,7 @@ wWinMain(HINSTANCE hInstance,
 
         if (shouldRenderFrame)
         {
-            int error = GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream);
+            int error = GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
             if (error != 0)
             {
                 LogMsg("Error occurred in game code! Shutting down application.", eLogSeverityCritical);
@@ -861,8 +922,6 @@ wWinMain(HINSTANCE hInstance,
     }
 
     GameCode.GameDestroy(&g_platformAPIFuncs);
-
-    Network::DisconnectFromServer();
 
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     g_ThreadPool.Shutdown();

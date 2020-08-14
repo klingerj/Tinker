@@ -14,7 +14,9 @@
 }
 */
 
-DefaultGeometry<4, 6> defaultQuad = {
+#define DEFAULT_QUAD_NUM_VERTICES 4
+#define DEFAULT_QUAD_NUM_INDICES 6
+DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {
     TINKER_INVALID_HANDLE,
     TINKER_INVALID_HANDLE,
     TINKER_INVALID_HANDLE,
@@ -23,18 +25,59 @@ DefaultGeometry<4, 6> defaultQuad = {
     v4f(1.0f, -1.0f, 0.0f, 1.0f),
     v4f(-1.0f, 1.0f, 0.0f, 1.0f),
     v4f(1.0f, 1.0f, 0.0f, 1.0f),
-    0, 1, 2, 2, 1, 3
+    //0, 1, 2, 2, 1, 3
+    2, 1, 0, 3, 1, 2
 };
 
 static GameGraphicsData gameGraphicsData = {};
-uint32 gameWidth = 784;
-uint32 gameHeight = 561;
 
 static std::vector<Tinker::Platform::GraphicsCommand> graphicsCommands;
 
 static bool isGameInitted = false;
 static const bool isMultiplayer = false;
 static bool connectedToServer = false;
+
+void LoadAndCreateShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+{
+    // TODO: move this stuff into the core engine
+        // sample usage code for creating shaders
+        //uint32 shaders[eNumBlendStates][eNumDepthStates];
+        // Assume all other shader characteristics are hard-coded rn
+        // Open shader files, get sizes, allocate them, load them
+        // For now shader pipeline layouts will come hardcoded with 3 sets:
+        // everything will go in their own giant arrays
+        // 0. Instance data structs (model matrix, other stuff, etc
+        // 1. Material properties (for now, 8 source textures)
+        // 2. View properties (for now, view mat, proj mat, viewproj mat, eventually shadow maps? light sources?)
+        /*for each blend state, for each depth state
+        {
+            shaderHandles[uiBlendState][uiDepthState] = CreateGraphicsPipelineShader(vertCode, fragCode,
+                numVertBytes, numFragBytes, blendState, depthState, cullMode, windowWidth, windowHeight);
+        }*/
+
+    const char* vertexShaderFileName = "..\\Shaders\\basic_vert.spv";
+    const char* fragmentShaderFileName = "..\\Shaders\\basic_frag.spv";
+
+    // TODO: check for errors in finding the shader files
+    uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
+    uint32 fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
+
+    Tinker::Memory::LinearAllocator linearAllocator;
+    linearAllocator.Init(vertexShaderFileSize + fragmentShaderFileSize, 4);
+
+    uint8* vertexShaderBuffer = linearAllocator.Alloc(vertexShaderFileSize, 1);
+    uint8* fragmentShaderBuffer = linearAllocator.Alloc(fragmentShaderFileSize, 1);
+    void* vertexShaderCode = platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
+    void* fragmentShaderCode = platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
+    gameGraphicsData.m_shaderHandle = platformFuncs->CreateGraphicsPipeline(vertexShaderCode, vertexShaderFileSize, fragmentShaderCode, fragmentShaderFileSize, Tinker::Platform::eBlendStateAlphaBlend, Tinker::Platform::eDepthStateTestOnWriteOn, windowWidth, windowHeight, gameGraphicsData.m_mainRenderPassHandle);
+    // TODO: need to pass the window width and height in to this function
+
+    // sample usage code for creating descriptors
+
+
+
+    // ideas for how/when to bind these
+}
 
 extern "C"
 GAME_UPDATE(GameUpdate)
@@ -116,47 +159,12 @@ GAME_UPDATE(GameUpdate)
         gameGraphicsData.m_stagingBufferHandle4 = stagingBufferHandle4;
         gameGraphicsData.m_stagingBufferMemPtr4 = stagingBufferMemPtr4;
 
-        gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(gameWidth, gameHeight);
+        gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(windowWidth, windowHeight);
         gameGraphicsData.m_imageViewHandle = platformFuncs->CreateImageViewResource(gameGraphicsData.m_imageHandle);
-        gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1, gameWidth, gameHeight);
+        gameGraphicsData.m_mainRenderPassHandle = platformFuncs->CreateRenderPass();
+        gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1, windowWidth, windowHeight, gameGraphicsData.m_mainRenderPassHandle);
 
-        // TODO: move this stuff into the core engine
-        // sample usage code for creating shaders
-        //uint32 shaders[eNumBlendStates][eNumDepthStates];
-        // Assume all other shader characteristics are hard-coded rn
-        // Open shader files, get sizes, allocate them, load them
-        // For now shader pipeline layouts will come hardcoded with 3 sets:
-        // everything will go in their own giant arrays
-        // 0. Instance data structs (model matrix, other stuff, etc
-        // 1. Material properties (for now, 8 source textures)
-        // 2. View properties (for now, view mat, proj mat, viewproj mat, eventually shadow maps? light sources?)
-        /*for each blend state, for each depth state
-        {
-            shaderHandles[uiBlendState][uiDepthState] = CreateGraphicsPipelineShader(vertCode, fragCode,
-                numVertBytes, numFragBytes, blendState, depthState, cullMode, windowWidth, windowHeight);
-        }*/
-        const char* vertexShaderFileName   = "..\\Shaders\\basic_vert.spv";
-        const char* fragmentShaderFileName = "..\\Shaders\\basic_frag.spv";
-
-        // TODO: check for errors in finding the shader files
-        uint32 vertexShaderFileSize   = platformFuncs->GetFileSize(vertexShaderFileName);
-        uint32 fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
-
-        Tinker::Memory::LinearAllocator linearAllocator;
-        linearAllocator.Init(vertexShaderFileSize + fragmentShaderFileSize, 4);
-
-        uint8* vertexShaderBuffer   = linearAllocator.Alloc(vertexShaderFileSize, 1);
-        uint8* fragmentShaderBuffer = linearAllocator.Alloc(fragmentShaderFileSize, 1);
-        void* vertexShaderCode   = platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
-        void* fragmentShaderCode = platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
-        gameGraphicsData.m_shaderHandle = platformFuncs->CreateGraphicsPipeline(vertexShaderCode, vertexShaderFileSize, fragmentShaderCode, fragmentShaderFileSize, Tinker::Platform::eBlendStateAlphaBlend, Tinker::Platform::eDepthStateTestOnWriteOn, gameWidth, gameHeight); // TODO: replace with actual window width and height
-        // TODO: need to pass the window width and height in to this function
-        
-        // sample usage code for creating descriptors
-
-
-
-        // ideas for how/when to bind these
+        LoadAndCreateShaders(platformFuncs, windowWidth, windowHeight);
 
         isGameInitted = true;
     }
@@ -225,18 +233,18 @@ GAME_UPDATE(GameUpdate)
     command.m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle2;
     graphicsCommands.push_back(command);
 
-    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdImageCopy;
+    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdImageCopy;
     command.m_srcImgHandle = gameGraphicsData.m_imageHandle;
     command.m_dstImgHandle = TINKER_INVALID_HANDLE;
-    command.m_width = gameWidth;
-    command.m_height = gameHeight;
-    graphicsCommands.push_back(command);
+    command.m_width = windowWidth;
+    command.m_height = windowHeight;
+    graphicsCommands.push_back(command);*/
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
-    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
+    command.m_renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
     command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
-    command.m_renderWidth = gameWidth;
-    command.m_renderHeight = gameHeight;
+    command.m_renderWidth = windowWidth;
+    command.m_renderHeight = windowHeight;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
@@ -260,33 +268,35 @@ GAME_UPDATE(GameUpdate)
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
-    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     graphicsCommands.push_back(command);
 
+    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdImageCopy;
+    command.m_srcImgHandle = gameGraphicsData.m_imageHandle;
+    command.m_dstImgHandle = TINKER_INVALID_HANDLE;
+    command.m_width = windowWidth;
+    command.m_height = windowHeight;
+    graphicsCommands.push_back(command);*/
+
     // Blit to screen
-    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassBegin;
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     command.m_framebufferHandle = TINKER_INVALID_HANDLE;
     command.m_renderWidth = 0;
     command.m_renderHeight = 0;
-    graphicsCommands.push_back(command);*/
+    graphicsCommands.push_back(command);
 
-    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
-    command.m_numIndices = 3;
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
+    command.m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command.m_numUVs = 0;
-    command.m_numVertices = 3;
+    command.m_numVertices = DEFAULT_QUAD_NUM_VERTICES;
     command.m_vertexBufferHandle = defaultQuad.m_vertexBufferHandle;
-    command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
-    command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
+    command.m_indexBufferHandle = defaultQuad.m_indexBufferHandle;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
-    graphicsCommands.push_back(command);*/
+    graphicsCommands.push_back(command);
 
-    /*command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
-    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
-    graphicsCommands.push_back(command);*/
-
-    
+    command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
+    graphicsCommands.push_back(command);
 
     graphicsCommandStream->m_numCommands = (uint32)graphicsCommands.size();
     Tinker::Platform::GraphicsCommand* graphicsCmdBase = graphicsCommandStream->m_graphicsCommands;
@@ -310,10 +320,18 @@ GAME_UPDATE(GameUpdate)
     return 0;
 }
 
+void DestroyWindowResizeGraphicsResources(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    // Shaders
+    platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandle);
+}
+
 GAME_DESTROY(GameDestroy)
 {
     if (isGameInitted)
     {
+        DestroyWindowResizeGraphicsResources(platformFuncs);
+
         // Default geometry
         platformFuncs->DestroyVertexBuffer(defaultQuad.m_vertexBufferHandle);
         platformFuncs->DestroyVertexBuffer(defaultQuad.m_indexBufferHandle);
@@ -333,5 +351,10 @@ GAME_DESTROY(GameDestroy)
         platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
         platformFuncs->DestroyImageResource(gameGraphicsData.m_imageHandle);
         platformFuncs->DestroyImageViewResource(gameGraphicsData.m_imageViewHandle);
+
+        if (isMultiplayer && connectedToServer)
+        {
+            platformFuncs->EndNetworkConnection();
+        }
     }
 }
