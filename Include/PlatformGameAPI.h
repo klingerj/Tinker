@@ -70,7 +70,17 @@ namespace Tinker
         enum
         {
             eDepthStateTestOnWriteOn = 0,
+            eDepthStateOff,
             eDepthStateMax
+        };
+
+        enum
+        {
+            eImageLayoutUndefined = 0,
+            eImageLayoutShaderRead,
+            eImageLayoutColorAttachment,
+            eImageLayoutSwapChainPresent,
+            eImageLayoutMax
         };
 
         enum
@@ -144,6 +154,38 @@ namespace Tinker
             uint32 m_maxCommands;
         } GraphicsCommandStream;
 
+        #define MAX_DESCRIPTOR_SETS_PER_SHADER 1
+        #define MAX_DESCRIPTORS_PER_SET 1
+
+        enum
+        {
+            eDescriptorTypeBuffer = 0,
+            eDescriptorTypeSampledImage,
+            eDescriptorTypeMax
+        };
+
+        typedef struct descriptor_type
+        {
+            uint32 type;
+            uint32 amount;
+        } DescriptorType;
+
+        typedef struct descriptor_layout
+        {
+            DescriptorType descriptorTypes[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET];
+        } DescriptorLayout;
+
+        inline void InitDescLayout(DescriptorLayout* layout)
+        {
+            for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+            {
+                for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+                {
+                    layout->descriptorTypes[uiDescSet][uiDesc].type = TINKER_INVALID_HANDLE;
+                    layout->descriptorTypes[uiDescSet][uiDesc].amount = 0;
+                }
+            }
+        }
         #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes, Graphics::BufferType bufferType)
         typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
 
@@ -174,13 +216,13 @@ namespace Tinker
         #define DESTROY_IMAGE_VIEW_RESOURCE(name) void name(uint32 handle)
         typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);
 
-        #define CREATE_GRAPHICS_PIPELINE(name) uint32 name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle)
+        #define CREATE_GRAPHICS_PIPELINE(name) uint32 name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle, DescriptorLayout* descLayout)
         typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
         #define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 handle)
         typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
 
-        #define CREATE_RENDER_PASS(name) uint32 name()
+        #define CREATE_RENDER_PASS(name) uint32 name(uint32 startLayout, uint32 endLayout)
         typedef CREATE_RENDER_PASS(create_render_pass);
 
         #define DESTROY_RENDER_PASS(name) void name(uint32 handle)

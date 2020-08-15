@@ -21,6 +21,8 @@ typedef struct game_graphic_data
     uint32 m_framebufferHandle;
 
     uint32 m_shaderHandle;
+    uint32 m_blitShaderHandle;
+    uint32 m_blitRenderPassHandle;
     uint32 m_mainRenderPassHandle;
 } GameGraphicsData;
 
