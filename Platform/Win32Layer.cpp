@@ -470,7 +470,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
                     vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
                     numFragmentShaderBytes, blendState, depthState,
-                    viewportWidth, viewportHeight, renderPassHandle);
+                    viewportWidth, viewportHeight, renderPassHandle, descLayout);
             break;
         }
 
@@ -489,7 +489,7 @@ CREATE_RENDER_PASS(CreateRenderPass)
     {
         case eGraphicsAPIVulkan:
         {
-            return Graphics::VulkanCreateRenderPass(&vulkanContextResources);
+            return Graphics::VulkanCreateRenderPass(&vulkanContextResources, startLayout, endLayout);
             break;
         }
 

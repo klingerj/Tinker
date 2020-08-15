@@ -121,11 +121,12 @@ namespace Tinker
             void DestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle);
 
             uint32 VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
-                    uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState,
-                    uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle);
+                uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState,
+                uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle,
+                DescriptorLayout* descLayout);
             void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, uint32 handle);
 
-            uint32 VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources); // TODO: more parameters, e.g. format
+            uint32 VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 startLayout, uint32 endLayout); // TODO: more parameters
             void VulkanDestroyRenderPass(VulkanContextResources* vulkanContextResources, uint32 handle);
 
             // Graphics command recording

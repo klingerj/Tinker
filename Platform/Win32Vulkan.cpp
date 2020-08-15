@@ -13,8 +13,28 @@ namespace Tinker
     {
         namespace Graphics
         {
-            //NOTE: Must correspond the blend state enum in PlatformGameAPI.h
+            // NOTE: Must correspond the blend state enum in PlatformGameAPI.h
             static VkPipelineColorBlendAttachmentState VulkanBlendStates[eBlendStateMax] = {};
+            static VkImageLayout                       VulkanImageLayouts[eImageLayoutMax] = {};
+            static VkDescriptorType                    VulkanDescriptorTypes[eDescriptorTypeMax] = {};
+
+            const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState)
+            {
+                TINKER_ASSERT(gameBlendState < eBlendStateMax);
+                return VulkanBlendStates[gameBlendState];
+            }
+            
+            const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout)
+            {
+                TINKER_ASSERT(gameImageLayout < eImageLayoutMax);
+                return VulkanImageLayouts[gameImageLayout];
+            }
+
+            const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType)
+            {
+                TINKER_ASSERT(gameDescriptorType < eDescriptorTypeMax);
+                return VulkanDescriptorTypes[gameDescriptorType];
+            }
 
             #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
             static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
@@ -43,6 +63,28 @@ namespace Tinker
 
                 vulkanContextResources->windowWidth = width;
                 vulkanContextResources->windowHeight = height;
+
+                VkPipelineColorBlendAttachmentState blendStateProperties = {};
+                blendStateProperties.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
+                    VK_COLOR_COMPONENT_G_BIT |
+                    VK_COLOR_COMPONENT_B_BIT |
+                    VK_COLOR_COMPONENT_A_BIT;
+                blendStateProperties.blendEnable = VK_TRUE;
+                blendStateProperties.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+                blendStateProperties.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                blendStateProperties.colorBlendOp = VK_BLEND_OP_ADD;
+                blendStateProperties.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+                blendStateProperties.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+                blendStateProperties.alphaBlendOp = VK_BLEND_OP_ADD;
+                VulkanBlendStates[eBlendStateAlphaBlend] = blendStateProperties;
+
+                VulkanImageLayouts[eImageLayoutUndefined] = VK_IMAGE_LAYOUT_UNDEFINED;
+                VulkanImageLayouts[eImageLayoutShaderRead] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                VulkanImageLayouts[eImageLayoutColorAttachment] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                VulkanImageLayouts[eImageLayoutSwapChainPresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+                VulkanDescriptorTypes[eDescriptorTypeBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                VulkanDescriptorTypes[eDescriptorTypeSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
                 VkApplicationInfo applicationInfo = {};
                 applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -444,20 +486,6 @@ namespace Tinker
 
                 vulkanContextResources->isInitted = true;
 
-                VkPipelineColorBlendAttachmentState blendStateProperties = {};
-                blendStateProperties.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                                                      VK_COLOR_COMPONENT_G_BIT |
-                                                      VK_COLOR_COMPONENT_B_BIT |
-                                                      VK_COLOR_COMPONENT_A_BIT;
-                blendStateProperties.blendEnable = VK_TRUE;
-                blendStateProperties.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-                blendStateProperties.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-                blendStateProperties.colorBlendOp = VK_BLEND_OP_ADD;
-                blendStateProperties.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-                blendStateProperties.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-                blendStateProperties.alphaBlendOp = VK_BLEND_OP_ADD;
-                VulkanBlendStates[eBlendStateAlphaBlend] = blendStateProperties;
-
                 return 0;
             }
 
@@ -633,7 +661,7 @@ namespace Tinker
                 }
 
                 // Swap chain render pass
-                vulkanContextResources->swapChainRenderPassHandle = VulkanCreateRenderPass(vulkanContextResources);
+                vulkanContextResources->swapChainRenderPassHandle = VulkanCreateRenderPass(vulkanContextResources, eImageLayoutUndefined, eImageLayoutSwapChainPresent);
 
                 // Swap chain framebuffers
                 vulkanContextResources->swapChainFramebufferHandles = new uint32[vulkanContextResources->numSwapChainImages];
@@ -689,10 +717,11 @@ namespace Tinker
             }
 
             uint32 VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources,
-                    void* vertexShaderCode, uint32 numVertexShaderBytes,
-                    void* fragmentShaderCode, uint32 numFragmentShaderBytes,
-                    uint32 blendState, uint32 depthState,
-                    uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle)
+                void* vertexShaderCode, uint32 numVertexShaderBytes,
+                void* fragmentShaderCode, uint32 numFragmentShaderBytes,
+                uint32 blendState, uint32 depthState,
+                uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle,
+                DescriptorLayout* descLayout)
             {
                 VkShaderModule vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources);
                 VkShaderModule fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources);
@@ -776,18 +805,7 @@ namespace Tinker
                 multisampling.alphaToCoverageEnable = VK_FALSE;
                 multisampling.alphaToOneEnable = VK_FALSE;
 
-                VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-                colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
-                                                      VK_COLOR_COMPONENT_G_BIT |
-                                                      VK_COLOR_COMPONENT_B_BIT |
-                                                      VK_COLOR_COMPONENT_A_BIT;
-                colorBlendAttachment.blendEnable = VK_TRUE;
-                colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-                colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-                colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-                colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-                colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-                colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+                VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
                 VkPipelineColorBlendStateCreateInfo colorBlending = {};
                 colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -813,10 +831,45 @@ namespace Tinker
 
                 uint32 newPipelineHandle = vulkanContextResources->vulkanPipelineResourcePool.Alloc();
 
+                VkDescriptorSetLayoutBinding descLayoutBinding[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET] = {};
+                uint32 descriptorCount = 0;
+
+                for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+                {
+                    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+                    {
+                        if (descLayout->descriptorTypes[uiDescSet][uiDesc].type != TINKER_INVALID_HANDLE)
+                        {
+                            descLayoutBinding[uiDescSet][uiDesc].descriptorType = GetVkDescriptorType(descLayout->descriptorTypes[uiDescSet][uiDesc].type);
+                            descLayoutBinding[uiDescSet][uiDesc].descriptorCount = descLayout->descriptorTypes[uiDescSet][uiDesc].amount;
+                            descLayoutBinding[uiDescSet][uiDesc].binding = uiDesc + uiDescSet * MAX_DESCRIPTORS_PER_SET;
+                            descLayoutBinding[uiDescSet][uiDesc].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+                            descLayoutBinding[uiDescSet][uiDesc].pImmutableSamplers = nullptr;
+                            ++descriptorCount;
+                        }
+                    }
+                }
+
+                VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+                if (descriptorCount)
+                {
+                    VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
+                    descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+                    descLayoutInfo.bindingCount = descriptorCount;
+                    descLayoutInfo.pBindings = &descLayoutBinding[0][0];
+
+                    VkResult result = vkCreateDescriptorSetLayout(vulkanContextResources->device, &descLayoutInfo, nullptr, &descriptorSetLayout);
+                    if (result != VK_SUCCESS)
+                    {
+                        LogMsg("Failed to create Vulkan descriptor set layout!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
+                    }
+                }
+
                 VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
                 pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-                pipelineLayoutInfo.setLayoutCount = 0;
-                pipelineLayoutInfo.pSetLayouts = nullptr;
+                pipelineLayoutInfo.setLayoutCount = descriptorCount ? 1 : 0;
+                pipelineLayoutInfo.pSetLayouts = descriptorCount ? &descriptorSetLayout : nullptr;
                 pipelineLayoutInfo.pushConstantRangeCount = 0;
                 pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
@@ -1386,10 +1439,9 @@ namespace Tinker
                     renderPassBeginInfo.framebuffer = *vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(framebufferHandle);
                 }
 
-                if (framebufferHandle == TINKER_INVALID_HANDLE)
+                if (renderPassHandle == TINKER_INVALID_HANDLE)
                 {
-                    uint32 swapChainRenderPassHandle = vulkanContextResources->swapChainFramebufferHandles[vulkanContextResources->currentSwapChainImage];;
-                    renderPassBeginInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(swapChainRenderPassHandle);
+                    renderPassBeginInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(vulkanContextResources->swapChainRenderPassHandle);
                 }
                 else
                 {
@@ -1532,7 +1584,7 @@ namespace Tinker
                 return newResourceHandle;
             }
 
-            uint32 VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources)
+            uint32 VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 startLayout, uint32 endLayout)
             {
                 uint32 newRenderPassHandle = vulkanContextResources->vulkanRenderPassPool.Alloc();
                 VkRenderPass* newRenderPass =
@@ -1545,12 +1597,12 @@ namespace Tinker
                 colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                colorAttachment.initialLayout = GetVkImageLayout(startLayout);
+                colorAttachment.finalLayout = GetVkImageLayout(endLayout);
 
                 VkAttachmentReference colorAttachmentRef = {};
                 colorAttachmentRef.attachment = 0;
-                colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+                colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // TODO: make a 'during' image layout for the render pass?
 
                 VkSubpassDescription subpass = {};
                 subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
