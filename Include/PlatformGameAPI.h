@@ -61,6 +61,53 @@ namespace Tinker
         typedef SEND_MESSAGE_TO_SERVER(send_message_to_server);
 
         // Graphics
+
+        #define MAX_DESCRIPTOR_SETS_PER_SHADER 1
+        #define MAX_DESCRIPTORS_PER_SET 1
+
+        enum
+        {
+            eDescriptorTypeBuffer = 0,
+            eDescriptorTypeSampledImage,
+            eDescriptorTypeMax
+        };
+
+        typedef struct descriptor_type
+        {
+            uint32 type;
+            uint32 amount;
+        } DescriptorType;
+
+        typedef struct descriptor_layout
+        {
+            DescriptorType descriptorTypes[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET];
+        } DescriptorLayout;
+
+        typedef struct descriptor_set_handles
+        {
+            uint32 handles[MAX_DESCRIPTORS_PER_SET];
+        } DescriptorSetDataHandles;
+
+        inline void InitDescLayout(DescriptorLayout* layout)
+        {
+            for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+            {
+                for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+                {
+                    layout->descriptorTypes[uiDescSet][uiDesc].type = TINKER_INVALID_HANDLE;
+                    layout->descriptorTypes[uiDescSet][uiDesc].amount = 0;
+                }
+            }
+        }
+
+        inline void InitDescSetDataHandles(DescriptorSetDataHandles* descSetDataHandles)
+        {
+            for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+            {
+                descSetDataHandles->handles[uiDesc] = TINKER_INVALID_HANDLE;
+            }
+        }
+
         enum
         {
             eBlendStateAlphaBlend = 0,
@@ -101,7 +148,6 @@ namespace Tinker
                 // Draw call
                 struct
                 {
-                    // TODO: resources/descriptors/uniform buffers
                     uint32 m_numIndices;
                     uint32 m_numVertices;
                     uint32 m_numUVs;
@@ -109,6 +155,7 @@ namespace Tinker
                     uint32 m_vertexBufferHandle;
                     uint32 m_uvBufferHandle;
                     uint32 m_shaderHandle;
+                    DescriptorSetDataHandles m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
                 };
 
                 // Memory transfer
@@ -154,38 +201,6 @@ namespace Tinker
             uint32 m_maxCommands;
         } GraphicsCommandStream;
 
-        #define MAX_DESCRIPTOR_SETS_PER_SHADER 1
-        #define MAX_DESCRIPTORS_PER_SET 1
-
-        enum
-        {
-            eDescriptorTypeBuffer = 0,
-            eDescriptorTypeSampledImage,
-            eDescriptorTypeMax
-        };
-
-        typedef struct descriptor_type
-        {
-            uint32 type;
-            uint32 amount;
-        } DescriptorType;
-
-        typedef struct descriptor_layout
-        {
-            DescriptorType descriptorTypes[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET];
-        } DescriptorLayout;
-
-        inline void InitDescLayout(DescriptorLayout* layout)
-        {
-            for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
-            {
-                for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
-                {
-                    layout->descriptorTypes[uiDescSet][uiDesc].type = TINKER_INVALID_HANDLE;
-                    layout->descriptorTypes[uiDescSet][uiDesc].amount = 0;
-                }
-            }
-        }
         #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes, Graphics::BufferType bufferType)
         typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
 
@@ -237,6 +252,9 @@ namespace Tinker
         #define DESTROY_ALL_DESCRIPTORS(name) void name()
         typedef DESTROY_ALL_DESCRIPTORS(destroy_all_descriptors);
 
+        #define WRITE_DESCRIPTOR(name) void name(DescriptorLayout* descLayout, uint32 descSetHandle, DescriptorSetDataHandles* descSetDataHandles)
+        typedef WRITE_DESCRIPTOR(write_descriptor);
+
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
         {
@@ -264,6 +282,7 @@ namespace Tinker
             create_descriptor* CreateDescriptor;
             destroy_descriptor* DestroyDescriptor;
             destroy_all_descriptors* DestroyAllDescriptors;
+            write_descriptor* WriteDescriptor;
         } PlatformAPIFuncs;
 
         // Game side

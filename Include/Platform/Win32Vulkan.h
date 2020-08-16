@@ -70,6 +70,7 @@ namespace Tinker
                 uint32 windowHeight = 0;
 
                 VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+                VkSampler linearSampler = VK_NULL_HANDLE;
                 Memory::PoolAllocator<VulkanDescriptorResource> vulkanDescriptorResourcePool;
                 Memory::PoolAllocator<VulkanPipelineResource> vulkanPipelineResourcePool;
                 Memory::PoolAllocator<VulkanMemResource> vulkanMemResourcePool;
@@ -143,13 +144,16 @@ namespace Tinker
             uint32 VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout);
             void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, uint32 handle);
             void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources);
+            void VulkanWriteDescriptor(VulkanContextResources*  vulkanContextResources, DescriptorLayout* descLayout, uint32 descSetHandle, DescriptorSetDataHandles* descSetHandles);
             void InitDescriptorPool(VulkanContextResources* vulkanContextResources);
+
+            void CreateSamplers(VulkanContextResources* vulkanContextResources);
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
                 uint32 vertexBufferHandle, uint32 indexBufferHandle, uint32 numIndices, uint32 numVertices);
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-                uint32 shaderHandle);
+                uint32 shaderHandle, const DescriptorSetDataHandles* descSetHandles);
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle);
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
