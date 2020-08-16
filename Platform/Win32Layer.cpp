@@ -346,7 +346,7 @@ static void SubmitFrameToGPU()
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::SubmitFrame(&vulkanContextResources);
+            Graphics::VulkanSubmitFrame(&vulkanContextResources);
             break;
         }
 
@@ -364,7 +364,7 @@ CREATE_VERTEX_BUFFER(CreateVertexBuffer)
     {
         case eGraphicsAPIVulkan:
         {
-            return Graphics::CreateVertexBuffer(&vulkanContextResources, sizeInBytes, bufferType);
+            return Graphics::VulkanCreateVertexBuffer(&vulkanContextResources, sizeInBytes, bufferType);
             break;
         }
 
@@ -384,7 +384,7 @@ CREATE_STAGING_BUFFER(CreateStagingBuffer)
         case eGraphicsAPIVulkan:
         {
             Graphics::VulkanStagingBufferData vulkanData =
-                Graphics::CreateStagingBuffer(&vulkanContextResources, sizeInBytes);
+                Graphics::VulkanCreateStagingBuffer(&vulkanContextResources, sizeInBytes);
 
             Graphics::StagingBufferData data;
             memcpy(&data, &vulkanData, sizeof(Graphics::VulkanStagingBufferData));
@@ -429,7 +429,7 @@ CREATE_IMAGE_RESOURCE(CreateImageResource)
     {
         case eGraphicsAPIVulkan:
         {
-            return Graphics::CreateImageResource(&vulkanContextResources, width, height);
+            return Graphics::VulkanCreateImageResource(&vulkanContextResources, width, height);
             break;
         }
 
@@ -448,7 +448,7 @@ CREATE_IMAGE_VIEW_RESOURCE(CreateImageViewResource)
     {
         case eGraphicsAPIVulkan:
         {
-            return Graphics::CreateImageViewResource(&vulkanContextResources, imageResourceHandle);
+            return Graphics::VulkanCreateImageViewResource(&vulkanContextResources, imageResourceHandle);
             break;
         }
 
@@ -470,7 +470,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
                     vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
                     numFragmentShaderBytes, blendState, depthState,
-                    viewportWidth, viewportHeight, renderPassHandle, descLayout);
+                    viewportWidth, viewportHeight, renderPassHandle, descriptorHandle);
             break;
         }
 
@@ -503,13 +503,33 @@ CREATE_RENDER_PASS(CreateRenderPass)
     }
 }
 
+CREATE_DESCRIPTOR(CreateDescriptor)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            return Graphics::VulkanCreateDescriptor(&vulkanContextResources, descLayout);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            return TINKER_INVALID_HANDLE;
+            break;
+        }
+    }
+}
+
 DESTROY_VERTEX_BUFFER(DestroyVertexBuffer)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::DestroyVertexBuffer(&vulkanContextResources, handle);
+            Graphics::VulkanDestroyVertexBuffer(&vulkanContextResources, handle);
             break;
         }
 
@@ -528,7 +548,7 @@ DESTROY_STAGING_BUFFER(DestroyStagingBuffer)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::DestroyStagingBuffer(&vulkanContextResources, handle);
+            Graphics::VulkanDestroyStagingBuffer(&vulkanContextResources, handle);
             break;
         }
 
@@ -547,7 +567,7 @@ DESTROY_FRAMEBUFFER(DestroyFramebuffer)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::DestroyFramebuffer(&vulkanContextResources, handle);
+            Graphics::VulkanDestroyFramebuffer(&vulkanContextResources, handle);
             break;
         }
 
@@ -566,7 +586,7 @@ DESTROY_IMAGE_RESOURCE(DestroyImageResource)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::DestroyImageResource(&vulkanContextResources, handle);
+            Graphics::VulkanDestroyImageResource(&vulkanContextResources, handle);
             break;
         }
 
@@ -585,7 +605,7 @@ DESTROY_IMAGE_VIEW_RESOURCE(DestroyImageViewResource)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::DestroyImageViewResource(&vulkanContextResources, handle);
+            Graphics::VulkanDestroyImageViewResource(&vulkanContextResources, handle);
             break;
         }
 
@@ -624,6 +644,44 @@ DESTROY_RENDER_PASS(DestroyRenderPass)
         case eGraphicsAPIVulkan:
         {
             Graphics::VulkanDestroyRenderPass(&vulkanContextResources, handle);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            break;
+        }
+    }
+}
+
+DESTROY_DESCRIPTOR(DestroyDescriptor)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            Graphics::VulkanDestroyDescriptor(&vulkanContextResources, handle);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            break;
+        }
+    }
+}
+
+DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            Graphics::VulkanDestroyAllDescriptors(&vulkanContextResources);
             break;
         }
 
@@ -705,8 +763,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                         }
                         else
                         {
-                            DestroySwapChain(&vulkanContextResources);
-                            CreateSwapChain(&vulkanContextResources);
+                            VulkanDestroySwapChain(&vulkanContextResources);
+                            VulkanCreateSwapChain(&vulkanContextResources);
                         }
                     }
                     break;
@@ -865,6 +923,9 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
     g_platformAPIFuncs.CreateRenderPass = CreateRenderPass;
     g_platformAPIFuncs.DestroyRenderPass = DestroyRenderPass;
+    g_platformAPIFuncs.CreateDescriptor = CreateDescriptor;
+    g_platformAPIFuncs.DestroyAllDescriptors = DestroyAllDescriptors;
+    g_platformAPIFuncs.DestroyDescriptor = DestroyDescriptor;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;

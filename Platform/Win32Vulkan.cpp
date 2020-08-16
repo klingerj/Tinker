@@ -56,6 +56,7 @@ namespace Tinker
             {
                 vulkanContextResources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanPipelineResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
+                vulkanContextResources->vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanMappedMemPtrPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanFramebufferPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanRenderPassPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
@@ -419,7 +420,7 @@ namespace Tinker
                     &vulkanContextResources->presentationQueue);
 
                 // Swap chain
-                CreateSwapChain(vulkanContextResources);
+                VulkanCreateSwapChain(vulkanContextResources);
 
                 // Command pool
                 VkCommandPoolCreateInfo commandPoolCreateInfo = {};
@@ -489,7 +490,7 @@ namespace Tinker
                 return 0;
             }
 
-            void CreateSwapChain(VulkanContextResources* vulkanContextResources)
+            void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
             {
                 VkSurfaceCapabilitiesKHR capabilities;
                 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vulkanContextResources->physicalDevice,
@@ -677,7 +678,7 @@ namespace Tinker
                 vulkanContextResources->isSwapChainValid = true;
             }
 
-            void DestroySwapChain(VulkanContextResources* vulkanContextResources)
+            void VulkanDestroySwapChain(VulkanContextResources* vulkanContextResources)
             {
                 vulkanContextResources->isSwapChainValid = false;
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
@@ -685,13 +686,13 @@ namespace Tinker
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
                 {
                     uint32 framebufferHandle = vulkanContextResources->swapChainFramebufferHandles[uiFramebuffer];
-                    DestroyFramebuffer(vulkanContextResources, framebufferHandle);
+                    VulkanDestroyFramebuffer(vulkanContextResources, framebufferHandle);
                 }
                 delete vulkanContextResources->swapChainFramebufferHandles;
 
                 for (uint32 uiImageView = 0; uiImageView < vulkanContextResources->numSwapChainImages; ++uiImageView)
                 {
-                    DestroyImageViewResource(vulkanContextResources, vulkanContextResources->swapChainImageViewHandles[uiImageView]);
+                    VulkanDestroyImageViewResource(vulkanContextResources, vulkanContextResources->swapChainImageViewHandles[uiImageView]);
                 }
                 delete vulkanContextResources->swapChainImageViewHandles;
                 delete vulkanContextResources->swapChainImages;
@@ -721,7 +722,7 @@ namespace Tinker
                 void* fragmentShaderCode, uint32 numFragmentShaderBytes,
                 uint32 blendState, uint32 depthState,
                 uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle,
-                DescriptorLayout* descLayout)
+                uint32 descriptorHandle)
             {
                 VkShaderModule vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources);
                 VkShaderModule fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources);
@@ -831,45 +832,17 @@ namespace Tinker
 
                 uint32 newPipelineHandle = vulkanContextResources->vulkanPipelineResourcePool.Alloc();
 
-                VkDescriptorSetLayoutBinding descLayoutBinding[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET] = {};
-                uint32 descriptorCount = 0;
-
-                for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+                
+                VkDescriptorSetLayout* descriptorSetLayout = VK_NULL_HANDLE;
+                if (descriptorHandle != TINKER_INVALID_HANDLE)
                 {
-                    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
-                    {
-                        if (descLayout->descriptorTypes[uiDescSet][uiDesc].type != TINKER_INVALID_HANDLE)
-                        {
-                            descLayoutBinding[uiDescSet][uiDesc].descriptorType = GetVkDescriptorType(descLayout->descriptorTypes[uiDescSet][uiDesc].type);
-                            descLayoutBinding[uiDescSet][uiDesc].descriptorCount = descLayout->descriptorTypes[uiDescSet][uiDesc].amount;
-                            descLayoutBinding[uiDescSet][uiDesc].binding = uiDesc + uiDescSet * MAX_DESCRIPTORS_PER_SET;
-                            descLayoutBinding[uiDescSet][uiDesc].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-                            descLayoutBinding[uiDescSet][uiDesc].pImmutableSamplers = nullptr;
-                            ++descriptorCount;
-                        }
-                    }
-                }
-
-                VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-                if (descriptorCount)
-                {
-                    VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
-                    descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-                    descLayoutInfo.bindingCount = descriptorCount;
-                    descLayoutInfo.pBindings = &descLayoutBinding[0][0];
-
-                    VkResult result = vkCreateDescriptorSetLayout(vulkanContextResources->device, &descLayoutInfo, nullptr, &descriptorSetLayout);
-                    if (result != VK_SUCCESS)
-                    {
-                        LogMsg("Failed to create Vulkan descriptor set layout!", eLogSeverityCritical);
-                        TINKER_ASSERT(0);
-                    }
+                    descriptorSetLayout = &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(descriptorHandle)->descriptorLayout;
                 }
 
                 VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
                 pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-                pipelineLayoutInfo.setLayoutCount = descriptorCount ? 1 : 0;
-                pipelineLayoutInfo.pSetLayouts = descriptorCount ? &descriptorSetLayout : nullptr;
+                pipelineLayoutInfo.setLayoutCount = descriptorSetLayout == VK_NULL_HANDLE ? 0 : 1;
+                pipelineLayoutInfo.pSetLayouts = descriptorSetLayout;
                 pipelineLayoutInfo.pushConstantRangeCount = 0;
                 pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
@@ -923,12 +896,7 @@ namespace Tinker
                 return newPipelineHandle;
             }
 
-            void InitRenderPassResources(VulkanContextResources* vulkanContextResources)
-            {
-                
-            }
-
-            void SubmitFrame(VulkanContextResources* vulkanContextResources)
+            void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources)
             {
                 vkWaitForFences(vulkanContextResources->device, 1, &vulkanContextResources->fence, VK_TRUE, UINT64_MAX);
                 vkResetFences(vulkanContextResources->device, 1, &vulkanContextResources->fence);
@@ -973,8 +941,8 @@ namespace Tinker
                     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
                     {
                         LogMsg("Recreating swap chain!", eLogSeverityInfo);
-                        DestroySwapChain(vulkanContextResources);
-                        CreateSwapChain(vulkanContextResources);
+                        VulkanDestroySwapChain(vulkanContextResources);
+                        VulkanCreateSwapChain(vulkanContextResources);
                         return; // Don't present on this frame
                     }
                     else
@@ -1046,7 +1014,7 @@ namespace Tinker
                 vkBindBufferMemory(vulkanContextResources->device, buffer, deviceMemory, 0);
             }
 
-            uint32 CreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, BufferType bufferType)
+            uint32 VulkanCreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, BufferType bufferType)
             {
                 uint32 newResourceHandle =
                     vulkanContextResources->vulkanMemResourcePool.Alloc();
@@ -1086,7 +1054,7 @@ namespace Tinker
                 return newResourceHandle;
             }
 
-            VulkanStagingBufferData CreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
+            VulkanStagingBufferData VulkanCreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
             {
                 uint32 newResourceHandle =
                     vulkanContextResources->vulkanMemResourcePool.Alloc();
@@ -1115,6 +1083,113 @@ namespace Tinker
                 return data;
             }
 
+            uint32 VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout)
+            {
+                if (vulkanContextResources->descriptorPool == VK_NULL_HANDLE)
+                {
+                    // Allocate the descriptor pool
+                    InitDescriptorPool(vulkanContextResources);
+                }
+                
+                // Descriptor layout
+                VkDescriptorSetLayoutBinding descLayoutBinding[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET] = {};
+                uint32 descriptorCount = 0;
+
+                for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+                {
+                    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+                    {
+                        if (descLayout->descriptorTypes[uiDescSet][uiDesc].type != TINKER_INVALID_HANDLE)
+                        {
+                            descLayoutBinding[uiDescSet][uiDesc].descriptorType = GetVkDescriptorType(descLayout->descriptorTypes[uiDescSet][uiDesc].type);
+                            descLayoutBinding[uiDescSet][uiDesc].descriptorCount = descLayout->descriptorTypes[uiDescSet][uiDesc].amount;
+                            descLayoutBinding[uiDescSet][uiDesc].binding = uiDesc + uiDescSet * MAX_DESCRIPTORS_PER_SET;
+                            descLayoutBinding[uiDescSet][uiDesc].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+                            descLayoutBinding[uiDescSet][uiDesc].pImmutableSamplers = nullptr;
+                            ++descriptorCount;
+                        }
+                    }
+                }
+
+                uint32 newDescriptorHandle = TINKER_INVALID_HANDLE;
+                VkDescriptorSetLayout* descriptorSetLayout = nullptr;
+
+                VkResult result = VK_ERROR_UNKNOWN;
+                if (descriptorCount)
+                {
+                    newDescriptorHandle = vulkanContextResources->vulkanDescriptorResourcePool.Alloc();
+                    descriptorSetLayout = &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->descriptorLayout;
+                    *descriptorSetLayout = VK_NULL_HANDLE;
+
+                    VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
+                    descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+                    descLayoutInfo.bindingCount = descriptorCount;
+                    descLayoutInfo.pBindings = &descLayoutBinding[0][0];
+
+                    result = vkCreateDescriptorSetLayout(vulkanContextResources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
+                    if (result != VK_SUCCESS)
+                    {
+                        LogMsg("Failed to create Vulkan descriptor set layout!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
+                    }
+                }
+
+                if (descriptorSetLayout != nullptr)
+                {
+                    VkDescriptorSetAllocateInfo descSetAllocInfo = {};
+                    descSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+                    descSetAllocInfo.descriptorPool = vulkanContextResources->descriptorPool;
+                    descSetAllocInfo.descriptorSetCount = 1; // TODO: num swapchain images
+                    descSetAllocInfo.pSetLayouts = descriptorSetLayout;
+
+                    result = vkAllocateDescriptorSets(vulkanContextResources->device, &descSetAllocInfo, &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->descriptorSet);
+                    if (result != VK_SUCCESS)
+                    {
+                        LogMsg("Failed to create Vulkan descriptor set!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
+                    }
+                }
+
+                return newDescriptorHandle;
+            }
+
+            void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, uint32 handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+                VkDescriptorSetLayout* descSetLayout = &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(handle)->descriptorLayout;
+                vkDestroyDescriptorSetLayout(vulkanContextResources->device, *descSetLayout, nullptr);
+                vulkanContextResources->vulkanDescriptorResourcePool.Dealloc(handle);
+            }
+
+            void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources)
+            {
+                vkDestroyDescriptorPool(vulkanContextResources->device, vulkanContextResources->descriptorPool, nullptr);
+                vulkanContextResources->descriptorPool = VK_NULL_HANDLE;
+            }
+
+            void InitDescriptorPool(VulkanContextResources* vulkanContextResources)
+            {
+                // * vulkanContextResources->numSwapChainImages; // TODO: per-swapchain image descriptors
+                VkDescriptorPoolSize descPoolSizes[VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES] = {};
+                descPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                descPoolSizes[0].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS;
+                descPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                descPoolSizes[1].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
+
+                VkDescriptorPoolCreateInfo descPoolCreateInfo = {};
+                descPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+                descPoolCreateInfo.poolSizeCount = VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES;
+                descPoolCreateInfo.pPoolSizes = descPoolSizes;
+                descPoolCreateInfo.maxSets = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS + VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
+
+                VkResult result = vkCreateDescriptorPool(vulkanContextResources->device, &descPoolCreateInfo, nullptr, &vulkanContextResources->descriptorPool);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to create descriptor pool!", eLogSeverityInfo);
+                    return;
+                }
+            }
+
             void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
             {
                 // Acquire
@@ -1133,8 +1208,8 @@ namespace Tinker
                     if (result == VK_ERROR_OUT_OF_DATE_KHR)
                     {
                         LogMsg("Recreating swap chain!", eLogSeverityInfo);
-                        DestroySwapChain(vulkanContextResources);
-                        CreateSwapChain(vulkanContextResources);
+                        VulkanDestroySwapChain(vulkanContextResources);
+                        VulkanCreateSwapChain(vulkanContextResources);
                         return; // Don't present on this frame
                     }
                     else
@@ -1519,7 +1594,7 @@ namespace Tinker
                 return newFramebufferHandle;
             }
             
-            uint32 CreateImageViewResource(VulkanContextResources* vulkanContextResources, uint32 imageResourceHandle)
+            uint32 VulkanCreateImageViewResource(VulkanContextResources* vulkanContextResources, uint32 imageResourceHandle)
             {
                 uint32 newImageViewHandle = vulkanContextResources->vulkanImageViewPool.Alloc();
                 VkImageView* newImageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(newImageViewHandle);
@@ -1551,7 +1626,7 @@ namespace Tinker
                 return newImageViewHandle;
             }
 
-            uint32 CreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height)
+            uint32 VulkanCreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height)
             {
                 uint32 newResourceHandle = vulkanContextResources->vulkanMemResourcePool.Alloc();
                 VulkanMemResource* newResource =
@@ -1655,7 +1730,7 @@ namespace Tinker
                 vulkanContextResources->vulkanPipelineResourcePool.Dealloc(handle);
             }
 
-            void DestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle)
+            void VulkanDestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
@@ -1664,14 +1739,14 @@ namespace Tinker
                 vulkanContextResources->vulkanMemResourcePool.Dealloc(handle);
             }
 
-            void DestroyImageViewResource(VulkanContextResources* vulkanContextResources, uint32 handle)
+            void VulkanDestroyImageViewResource(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 vkDestroyImageView(vulkanContextResources->device, *vulkanContextResources->vulkanImageViewPool.PtrFromHandle(handle), nullptr);
                 vulkanContextResources->vulkanImageViewPool.Dealloc(handle);
             }
 
-            void DestroyFramebuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
+            void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 VkFramebuffer* framebuffer = vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(handle);
@@ -1679,7 +1754,7 @@ namespace Tinker
                 vulkanContextResources->vulkanFramebufferPool.Dealloc(handle);
             }
 
-            void DestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
+            void VulkanDestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
@@ -1688,7 +1763,7 @@ namespace Tinker
                 vulkanContextResources->vulkanMemResourcePool.Dealloc(handle);
             }
 
-            void DestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
+            void VulkanDestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
@@ -1702,7 +1777,7 @@ namespace Tinker
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
 
-                DestroySwapChain(vulkanContextResources);
+                VulkanDestroySwapChain(vulkanContextResources);
 
                 vkDestroyCommandPool(vulkanContextResources->device, vulkanContextResources->commandPool, nullptr);
                 delete vulkanContextResources->commandBuffers;
