@@ -216,7 +216,7 @@ namespace Tinker
         #define DESTROY_IMAGE_VIEW_RESOURCE(name) void name(uint32 handle)
         typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);
 
-        #define CREATE_GRAPHICS_PIPELINE(name) uint32 name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle, DescriptorLayout* descLayout)
+        #define CREATE_GRAPHICS_PIPELINE(name) uint32 name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle, uint32 descriptorHandle)
         typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
         #define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 handle)
@@ -228,6 +228,15 @@ namespace Tinker
         #define DESTROY_RENDER_PASS(name) void name(uint32 handle)
         typedef DESTROY_RENDER_PASS(destroy_render_pass);
         
+        #define CREATE_DESCRIPTOR(name) uint32 name(DescriptorLayout* descLayout)
+        typedef CREATE_DESCRIPTOR(create_descriptor);
+
+        #define DESTROY_DESCRIPTOR(name) void name(uint32 handle)
+        typedef DESTROY_DESCRIPTOR(destroy_descriptor);
+
+        #define DESTROY_ALL_DESCRIPTORS(name) void name()
+        typedef DESTROY_ALL_DESCRIPTORS(destroy_all_descriptors);
+
         // Platform api functions passed from platform layer to game
         typedef struct platform_api_functions
         {
@@ -252,6 +261,9 @@ namespace Tinker
             destroy_graphics_pipeline* DestroyGraphicsPipeline;
             create_render_pass* CreateRenderPass;
             destroy_render_pass* DestroyRenderPass;
+            create_descriptor* CreateDescriptor;
+            destroy_descriptor* DestroyDescriptor;
+            destroy_all_descriptors* DestroyAllDescriptors;
         } PlatformAPIFuncs;
 
         // Game side
