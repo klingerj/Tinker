@@ -36,7 +36,7 @@ namespace Tinker
                 return VulkanDescriptorTypes[gameDescriptorType];
             }
 
-            #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
+            #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
             static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
                 VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                 VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -100,7 +100,7 @@ namespace Tinker
                 instanceCreateInfo.pApplicationInfo = &applicationInfo;
 
                 const uint32 numRequiredExtensions = 
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
                 3
                 #else
                 2
@@ -111,7 +111,7 @@ namespace Tinker
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME
 
                     
-                    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
+                    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
                     , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
                     #endif
                 };
@@ -136,7 +136,7 @@ namespace Tinker
                 delete availableExtensions;
 
                 // Validation layers
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
                 const uint32 numRequiredLayers = 1;
                 const char* requestedLayersStr[numRequiredLayers] = { "VK_LAYER_KHRONOS_validation" };
 
@@ -196,7 +196,7 @@ namespace Tinker
                     TINKER_ASSERT(0);
                 }
 
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
                 // Debug utils callback
                 VkDebugUtilsMessengerCreateInfoEXT dbgUtilsMsgCreateInfo = {};
                 dbgUtilsMsgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -1893,7 +1893,7 @@ namespace Tinker
 
                 vkDestroySampler(vulkanContextResources->device, vulkanContextResources->linearSampler, nullptr);
 
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
                 // Debug utils messenger
                 PFN_vkDestroyDebugUtilsMessengerEXT dbgDestroyFunc =
                     (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(vulkanContextResources->instance,
