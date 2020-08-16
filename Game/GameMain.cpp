@@ -95,6 +95,10 @@ void CreateDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
     blitDescriptorLayout.descriptorTypes[0][0].type = Tinker::Platform::eDescriptorTypeSampledImage;
     blitDescriptorLayout.descriptorTypes[0][0].amount = 1;
     gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(&blitDescriptorLayout);
+    
+    Tinker::Platform::DescriptorSetDataHandles blitHandles = {};
+    blitHandles.handles[0] = gameGraphicsData.m_imageViewHandle;
+    platformFuncs->WriteDescriptor(&blitDescriptorLayout, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 }
 
 extern "C"
@@ -274,6 +278,7 @@ GAME_UPDATE(GameUpdate)
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
+    Tinker::Platform::InitDescSetDataHandles(command.m_descriptors);
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
@@ -284,6 +289,7 @@ GAME_UPDATE(GameUpdate)
     command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
+    Tinker::Platform::InitDescSetDataHandles(command.m_descriptors);
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
@@ -311,7 +317,9 @@ GAME_UPDATE(GameUpdate)
     command.m_vertexBufferHandle = defaultQuad.m_vertexBufferHandle;
     command.m_indexBufferHandle = defaultQuad.m_indexBufferHandle;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
-    command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
+    command.m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
+    Tinker::Platform::InitDescSetDataHandles(command.m_descriptors);
+    command.m_descriptors[0].handles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
@@ -332,7 +340,7 @@ GAME_UPDATE(GameUpdate)
         }
         else
         {
-            // Send message successfully
+            // Sent message successfully
         }
     }
 

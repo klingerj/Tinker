@@ -485,6 +485,8 @@ namespace Tinker
                     LogMsg("Failed to create Vulkan fence!", eLogSeverityCritical);
                 }
 
+                CreateSamplers(vulkanContextResources);
+
                 vulkanContextResources->isInitted = true;
 
                 return 0;
@@ -1167,6 +1169,72 @@ namespace Tinker
                 vulkanContextResources->descriptorPool = VK_NULL_HANDLE;
             }
 
+            void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout, uint32 descSetHandle, DescriptorSetDataHandles* descSetHandles)
+            {
+                // TODO: do this per-swapchain image
+
+                TINKER_ASSERT(descSetHandle != TINKER_INVALID_HANDLE);
+
+                // Descriptor layout
+                VkWriteDescriptorSet descSetWrites[MAX_DESCRIPTORS_PER_SET] = {};
+                uint32 descriptorCount = 0;
+
+                // TODO: not hard-coded descriptor set index
+                const uint32 uiDescSet = 0;
+
+                for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+                {
+                    if (descLayout->descriptorTypes[uiDescSet][uiDesc].type != TINKER_INVALID_HANDLE)
+                    {
+                        switch (descLayout->descriptorTypes[uiDescSet][uiDesc].type)
+                        {
+                            case eDescriptorTypeBuffer:
+                            {
+                                /*
+                                VkDescriptorBufferInfo descBufferInfo = {};
+                                descBufferInfo.buffer = ; // TODO: some buffer
+                                descBufferInfo.offset = 0;
+                                descBufferInfo.range = 0; // TODO: some bytes
+
+                                // ...
+                                descSetWrites[uiDesc].pBufferInfo = nullptr;
+                                */
+                                break;
+                            }
+
+                            case eDescriptorTypeSampledImage:
+                            {
+                                VkImageView* imageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(descSetHandles->handles[uiDesc]);
+
+                                VkDescriptorImageInfo descImageInfo = {};
+                                descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                                descImageInfo.imageView = *imageView;
+                                descImageInfo.sampler = vulkanContextResources->linearSampler;
+
+                                VkDescriptorSet* descriptorSet = &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle)->descriptorSet;
+
+                                descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                                descSetWrites[uiDesc].dstSet = *descriptorSet;
+                                descSetWrites[uiDesc].dstBinding = 0;
+                                descSetWrites[uiDesc].dstArrayElement = 0;
+                                descSetWrites[uiDesc].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                                descSetWrites[uiDesc].descriptorCount = descriptorCount + 1;
+                                descSetWrites[uiDesc].pImageInfo = &descImageInfo;
+                                break;
+                            }
+
+                            default:
+                            {
+                                break;
+                            }
+                        }
+                        ++descriptorCount;
+                    }
+                }
+
+                vkUpdateDescriptorSets(vulkanContextResources->device, descriptorCount, descSetWrites, 0, nullptr);
+            }
+
             void InitDescriptorPool(VulkanContextResources* vulkanContextResources)
             {
                 // * vulkanContextResources->numSwapChainImages; // TODO: per-swapchain image descriptors
@@ -1186,6 +1254,34 @@ namespace Tinker
                 if (result != VK_SUCCESS)
                 {
                     LogMsg("Failed to create descriptor pool!", eLogSeverityInfo);
+                    return;
+                }
+            }
+
+            void CreateSamplers(VulkanContextResources* vulkanContextResources)
+            {
+                VkSamplerCreateInfo samplerCreateInfo = {};
+                samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+                samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+                samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+                samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+                samplerCreateInfo.anisotropyEnable = VK_FALSE; // VK_TRUE;
+                //samplerCreateInfo.maxAnisotropy = 16.0f;
+                samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+                samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+                samplerCreateInfo.compareEnable = VK_FALSE;
+                samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+                samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+                samplerCreateInfo.mipLodBias = 0.0f;
+                samplerCreateInfo.minLod = 0.0f;
+                samplerCreateInfo.maxLod = 0.0f;
+
+                VkResult result = vkCreateSampler(vulkanContextResources->device, &samplerCreateInfo, nullptr, &vulkanContextResources->linearSampler);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to create sampler!", eLogSeverityCritical);
                     return;
                 }
             }
@@ -1270,13 +1366,22 @@ namespace Tinker
             }
 
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-                uint32 shaderHandle)
+                uint32 shaderHandle, const DescriptorSetDataHandles* descSetHandles)
             {
                 TINKER_ASSERT(shaderHandle != TINKER_INVALID_HANDLE);
 
-                VkPipeline* pipeline = &vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle)->graphicsPipeline;
+                VulkanPipelineResource* pipelineResource = vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle);
+
                 vkCmdBindPipeline(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS, *pipeline);
+                    VK_PIPELINE_BIND_POINT_GRAPHICS, *&pipelineResource->graphicsPipeline);
+
+                // TODO: bind multiple descriptor sets
+                if (descSetHandles->handles[0] != TINKER_INVALID_HANDLE)
+                {
+                    VkDescriptorSet* descSet = &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandles->handles[0])->descriptorSet;
+                    vkCmdBindDescriptorSets(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage], VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pipelineResource->pipelineLayout, 0, 1, descSet, 0, nullptr);
+                }
             }
 
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
@@ -1785,6 +1890,8 @@ namespace Tinker
                 vkDestroySemaphore(vulkanContextResources->device, vulkanContextResources->renderCompleteSemaphore, nullptr);
                 vkDestroySemaphore(vulkanContextResources->device, vulkanContextResources->swapChainImageAvailableSemaphore, nullptr);
                 vkDestroyFence(vulkanContextResources->device, vulkanContextResources->fence, nullptr);
+
+                vkDestroySampler(vulkanContextResources->device, vulkanContextResources->linearSampler, nullptr);
 
                 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) && defined(_DEBUG)
                 // Debug utils messenger

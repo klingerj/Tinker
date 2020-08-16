@@ -224,7 +224,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         if (currentShader != currentCmd.m_shaderHandle)
                         {
-                            Graphics::VulkanRecordCommandBindShader(&vulkanContextResources, currentCmd.m_shaderHandle);
+                            Graphics::VulkanRecordCommandBindShader(&vulkanContextResources, currentCmd.m_shaderHandle, &currentCmd.m_descriptors[0]);
                             currentShader = currentCmd.m_shaderHandle;
                         }
                         Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
@@ -694,6 +694,25 @@ DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
     }
 }
 
+WRITE_DESCRIPTOR(WriteDescriptor)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+    case eGraphicsAPIVulkan:
+    {
+        Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayout, descSetHandle, descSetDataHandles);
+        break;
+    }
+
+    default:
+    {
+        LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+        runGame = false;
+        break;
+    }
+    }
+}
+
 INIT_NETWORK_CONNECTION(InitNetworkConnection)
 {
     if (Network::InitClient() != 0)
@@ -926,6 +945,7 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.CreateDescriptor = CreateDescriptor;
     g_platformAPIFuncs.DestroyAllDescriptors = DestroyAllDescriptors;
     g_platformAPIFuncs.DestroyDescriptor = DestroyDescriptor;
+    g_platformAPIFuncs.WriteDescriptor = WriteDescriptor;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
