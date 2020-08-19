@@ -790,11 +790,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                             VulkanDestroySwapChain(&vulkanContextResources);
                             VulkanCreateSwapChain(&vulkanContextResources);
 
-                            RECT windowDims = {};
-                            GetWindowRect(hwnd, &windowDims);
-                            AdjustWindowRect(&windowDims, WS_OVERLAPPEDWINDOW | WS_VISIBLE, FALSE);
-                            g_GlobalAppParams.m_windowWidth = windowDims.right - windowDims.left;
-                            g_GlobalAppParams.m_windowHeight = windowDims.bottom - windowDims.top;
+                            g_GlobalAppParams.m_windowWidth = LOWORD(lParam);
+                            g_GlobalAppParams.m_windowHeight = HIWORD(lParam);
                             g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                         }
                     }
