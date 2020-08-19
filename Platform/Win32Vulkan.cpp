@@ -575,6 +575,10 @@ namespace Tinker
                 }
                 delete availablePresentModes;
 
+                vulkanContextResources->swapChainExtent = optimalExtent;
+                vulkanContextResources->swapChainFormat = chosenFormat.format;
+                vulkanContextResources->numSwapChainImages = numSwapChainImages;
+
                 VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
                 swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
                 swapChainCreateInfo.surface = vulkanContextResources->surface;
@@ -584,31 +588,28 @@ namespace Tinker
                 swapChainCreateInfo.imageExtent = optimalExtent;
                 swapChainCreateInfo.imageArrayLayers = 1;
                 swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-                
-                if (vulkanContextResources->graphicsQueueIndex != vulkanContextResources->presentationQueueIndex) {
-                    const uint32 numQueueFamilyIndices = 2;
-                    const uint32 queueFamilyIndices[numQueueFamilyIndices] =
-                    {
-                        vulkanContextResources->graphicsQueueIndex,
-                        vulkanContextResources->presentationQueueIndex
-                    };
-
-                    swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-                    swapChainCreateInfo.queueFamilyIndexCount = numQueueFamilyIndices;
-                    swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
-                }
-                else {
-                    swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-                    swapChainCreateInfo.queueFamilyIndexCount = 0;
-                    swapChainCreateInfo.pQueueFamilyIndices = nullptr;
-                }
                 swapChainCreateInfo.preTransform = capabilities.currentTransform;
                 swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
                 swapChainCreateInfo.presentMode = chosenPresentMode;
 
-                vulkanContextResources->swapChainExtent = optimalExtent;
-                vulkanContextResources->swapChainFormat = chosenFormat.format;
-                vulkanContextResources->numSwapChainImages = numSwapChainImages;
+                const uint32 numQueueFamilyIndices = 2;
+                const uint32 queueFamilyIndices[numQueueFamilyIndices] =
+                {
+                    vulkanContextResources->graphicsQueueIndex,
+                    vulkanContextResources->presentationQueueIndex
+                };
+
+                if (vulkanContextResources->graphicsQueueIndex != vulkanContextResources->presentationQueueIndex) {
+                    swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+                    swapChainCreateInfo.queueFamilyIndexCount = numQueueFamilyIndices;
+                    swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
+                }
+                else
+                {
+                    swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+                    swapChainCreateInfo.queueFamilyIndexCount = 0;
+                    swapChainCreateInfo.pQueueFamilyIndices = nullptr;
+                }
 
                 VkResult result = vkCreateSwapchainKHR(vulkanContextResources->device,
                     &swapChainCreateInfo,
