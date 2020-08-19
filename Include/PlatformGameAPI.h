@@ -201,6 +201,16 @@ namespace Tinker
             uint32 m_maxCommands;
         } GraphicsCommandStream;
 
+        typedef struct graphics_pipeline_params
+        {
+            uint32 blendState;
+            uint32 depthState;
+            uint32 viewportWidth;
+            uint32 viewportHeight;
+            uint32 renderPassHandle;
+            uint32 descriptorHandle;
+        } GraphicsPipelineParams;
+
         #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes, Graphics::BufferType bufferType)
         typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
 
@@ -291,5 +301,8 @@ namespace Tinker
 
         #define GAME_DESTROY(name) void name(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
         typedef GAME_DESTROY(game_destroy);
+
+        #define GAME_WINDOW_RESIZE(name) void name(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)
+        typedef GAME_WINDOW_RESIZE(game_window_resize);
     }
 }

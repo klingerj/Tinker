@@ -4,12 +4,8 @@
 #include <math.h>
 #include <cmath>
 
-#ifdef _DEBUG
 #include <assert.h>
 #define TINKER_ASSERT(cond) assert((cond))
-#else
-#define TINKER_ASSERT(cond)
-#endif
 
 #define TINKER_INVALID_HANDLE 0xffffffff
 

@@ -31,7 +31,14 @@ namespace Tinker
 
             ~LinearAllocator()
             {
+                Free();
+            }
+
+            void Free()
+            {
                 if (m_ownedMemPtr) Platform::FreeAligned(m_ownedMemPtr);
+                m_nextAllocOffset = 0;
+                m_size = 0;
             }
 
             void Init(size_t size, uint32 alignment)
@@ -43,6 +50,7 @@ namespace Tinker
 
             uint8* Alloc(size_t size, size_t alignment)
             {
+                TINKER_ASSERT((m_size - m_nextAllocOffset) >= size);
                 TINKER_ASSERT(ISPOW2(alignment));
 
                 size_t memPtrAsNum = (size_t)((uint8*)m_ownedMemPtr + m_nextAllocOffset);
