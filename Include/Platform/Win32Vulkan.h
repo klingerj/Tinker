@@ -158,7 +158,6 @@ namespace Tinker
                 uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle);
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
                 uint32 srcImgHandle, uint32 dstImgHandle, uint32 width, uint32 height);
-
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
                 uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight);
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources);
