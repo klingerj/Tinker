@@ -1,5 +1,6 @@
 @echo off
 pushd ..\Shaders
+if NOT EXIST .\spv mkdir .\spv
 
 rem Vulkan
 set VulkanVersion=1.2.141.2
