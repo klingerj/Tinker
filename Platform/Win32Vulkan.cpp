@@ -599,7 +599,8 @@ namespace Tinker
                     vulkanContextResources->presentationQueueIndex
                 };
 
-                if (vulkanContextResources->graphicsQueueIndex != vulkanContextResources->presentationQueueIndex) {
+                if (vulkanContextResources->graphicsQueueIndex != vulkanContextResources->presentationQueueIndex)
+                {
                     swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
                     swapChainCreateInfo.queueFamilyIndexCount = numQueueFamilyIndices;
                     swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -1269,6 +1270,7 @@ namespace Tinker
                 samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
                 samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
                 samplerCreateInfo.anisotropyEnable = VK_FALSE; // VK_TRUE;
+                samplerCreateInfo.maxAnisotropy = 1.0f;
                 //samplerCreateInfo.maxAnisotropy = 16.0f;
                 samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
                 samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
@@ -1790,13 +1792,21 @@ namespace Tinker
                 subpass.colorAttachmentCount = 1;
                 subpass.pColorAttachments = &colorAttachmentRef;
 
-                VkSubpassDependency subpassDependency = {};
-                subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-                subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependency.srcAccessMask = 0;
-                subpassDependency.dstSubpass = 0;
-                subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                const uint32 numSubpassDependencies = 2;
+                VkSubpassDependency subpassDependencies[numSubpassDependencies] = {};
+                subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+                subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[0].srcAccessMask = 0;
+                subpassDependencies[0].dstSubpass = 0;
+                subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+                subpassDependencies[1].srcSubpass = 0;
+                subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+                subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[1].dstAccessMask = 0;
 
                 VkRenderPassCreateInfo renderPassCreateInfo = {};
                 renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -1804,8 +1814,8 @@ namespace Tinker
                 renderPassCreateInfo.pAttachments = &colorAttachment;
                 renderPassCreateInfo.subpassCount = 1;
                 renderPassCreateInfo.pSubpasses = &subpass;
-                renderPassCreateInfo.dependencyCount = 1;
-                renderPassCreateInfo.pDependencies = &subpassDependency;
+                renderPassCreateInfo.dependencyCount = numSubpassDependencies;
+                renderPassCreateInfo.pDependencies = subpassDependencies;
 
                 VkResult result = vkCreateRenderPass(vulkanContextResources->device, &renderPassCreateInfo, nullptr, newRenderPass);
                 if (result != VK_SUCCESS)
