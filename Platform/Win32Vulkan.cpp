@@ -665,7 +665,6 @@ namespace Tinker
                     }
                 }
 
-                // Swap chain render pass
                 vulkanContextResources->swapChainRenderPassHandle = VulkanCreateRenderPass(vulkanContextResources, eImageLayoutUndefined, eImageLayoutSwapChainPresent);
 
                 // Swap chain framebuffers
@@ -686,6 +685,11 @@ namespace Tinker
             {
                 vulkanContextResources->isSwapChainValid = false;
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+
+                if (vulkanContextResources->swapChainRenderPassHandle != TINKER_INVALID_HANDLE)
+                {
+                    VulkanDestroyRenderPass(vulkanContextResources, vulkanContextResources->swapChainRenderPassHandle);
+                }
 
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
                 {
@@ -876,7 +880,16 @@ namespace Tinker
                 pipelineCreateInfo.pColorBlendState = &colorBlending;
                 pipelineCreateInfo.pDynamicState = nullptr;
                 pipelineCreateInfo.layout = *pipelineLayout;
-                pipelineCreateInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(renderPassHandle);
+
+                if (renderPassHandle == TINKER_INVALID_HANDLE)
+                {
+                    pipelineCreateInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(vulkanContextResources->swapChainRenderPassHandle);
+                }
+                else
+                {
+                    pipelineCreateInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(renderPassHandle);
+                }
+
                 pipelineCreateInfo.subpass = 0;
                 pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
                 pipelineCreateInfo.basePipelineIndex = -1;
@@ -944,10 +957,11 @@ namespace Tinker
                     LogMsg("Failed to present swap chain!", eLogSeverityInfo);
                     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
                     {
-                        LogMsg("Recreating swap chain!", eLogSeverityInfo);
+                        TINKER_ASSERT(0);
+                        /*LogMsg("Recreating swap chain!", eLogSeverityInfo);
                         VulkanDestroySwapChain(vulkanContextResources);
                         VulkanCreateSwapChain(vulkanContextResources);
-                        return; // Don't present on this frame
+                        return; // Don't present on this frame*/
                     }
                     else
                     {

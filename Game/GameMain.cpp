@@ -37,68 +37,94 @@ static bool isGameInitted = false;
 static const bool isMultiplayer = false;
 static bool connectedToServer = false;
 
-void LoadAndCreateShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
-{
-    // TODO: move this stuff into the core engine
-    // sample usage code for creating shaders
-    //uint32 shaders[eNumBlendStates][eNumDepthStates];
-    // Assume all other shader characteristics are hard-coded rn
-    // Open shader files, get sizes, allocate them, load them
-    // For now shader pipeline layouts will come hardcoded with 3 sets:
-    // everything will go in their own giant arrays
-    // 0. Instance data structs (model matrix, other stuff, etc
-    // 1. Material properties (for now, 8 source textures)
-    // 2. View properties (for now, view mat, proj mat, viewproj mat, eventually shadow maps? light sources?)
-    /*for each blend state, for each depth state
-    {
-        shaderHandles[uiBlendState][uiDepthState] = CreateGraphicsPipelineShader(vertCode, fragCode,
-            numVertBytes, numFragBytes, blendState, depthState, cullMode, windowWidth, windowHeight);
-    }*/
+Tinker::Memory::LinearAllocator shaderBytecodeAllocator;
+const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
 
-    const char* vertexShaderFileName = "..\\Shaders\\spv\\basic_glsl_vert.spv";
-    const char* fragmentShaderFileName = "..\\Shaders\\spv\\basic_glsl_frag.spv";
+uint32 LoadShader(Tinker::Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Tinker::Platform::GraphicsPipelineParams* params)
+{
     uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
     uint32 fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
     TINKER_ASSERT(vertexShaderFileSize > 0);
     TINKER_ASSERT(fragmentShaderFileSize > 0);
 
-    const char* blitVertexShaderFileName = "..\\Shaders\\spv\\blit_glsl_vert.spv";
-    const char* blitFragmentShaderFileName = "..\\Shaders\\spv\\blit_glsl_frag.spv";
-    uint32 blitVertexShaderFileSize = platformFuncs->GetFileSize(blitVertexShaderFileName);
-    uint32 blitFragmentShaderFileSize = platformFuncs->GetFileSize(blitFragmentShaderFileName);
-    TINKER_ASSERT(blitVertexShaderFileSize > 0);
-    TINKER_ASSERT(blitFragmentShaderFileSize > 0);
-
-    Tinker::Memory::LinearAllocator linearAllocator;
-    linearAllocator.Init(vertexShaderFileSize + fragmentShaderFileSize + blitVertexShaderFileSize + blitFragmentShaderFileSize, 16);
-
-    uint8* vertexShaderBuffer = linearAllocator.Alloc(vertexShaderFileSize, 1);
-    uint8* fragmentShaderBuffer = linearAllocator.Alloc(fragmentShaderFileSize, 1);
+    uint8* vertexShaderBuffer = shaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
+    uint8* fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
     void* vertexShaderCode = platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
     void* fragmentShaderCode = platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
 
-    Tinker::Platform::DescriptorLayout mainDrawDescriptorLayout = {};
-    Tinker::Platform::InitDescLayout(&mainDrawDescriptorLayout);
-    gameGraphicsData.m_shaderHandle = platformFuncs->CreateGraphicsPipeline(vertexShaderCode, vertexShaderFileSize, fragmentShaderCode, fragmentShaderFileSize, Tinker::Platform::eBlendStateAlphaBlend, Tinker::Platform::eDepthStateTestOnWriteOn, windowWidth, windowHeight, gameGraphicsData.m_mainRenderPassHandle, TINKER_INVALID_HANDLE);
-
-    uint8* blitVertexShaderBuffer = linearAllocator.Alloc(blitVertexShaderFileSize, 1);
-    uint8* blitFragmentShaderBuffer = linearAllocator.Alloc(blitFragmentShaderFileSize, 1);
-    void* blitVertexShaderCode = platformFuncs->ReadEntireFile(blitVertexShaderFileName, blitVertexShaderFileSize, blitVertexShaderBuffer);
-    void* blitFragmentShaderCode = platformFuncs->ReadEntireFile(blitFragmentShaderFileName, blitFragmentShaderFileSize, blitFragmentShaderBuffer);
-    gameGraphicsData.m_blitShaderHandle = platformFuncs->CreateGraphicsPipeline(blitVertexShaderCode, blitVertexShaderFileSize, blitFragmentShaderCode, blitFragmentShaderFileSize, Tinker::Platform::eBlendStateAlphaBlend, Tinker::Platform::eDepthStateOff, windowWidth, windowHeight, gameGraphicsData.m_blitRenderPassHandle, gameGraphicsData.m_swapChainBlitDescHandle);
+    return platformFuncs->CreateGraphicsPipeline(vertexShaderCode, vertexShaderFileSize, fragmentShaderCode, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->renderPassHandle, params->descriptorHandle);
 }
 
-void CreateDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void LoadAllShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+{
+    shaderBytecodeAllocator.Free();
+    shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
+
+    Tinker::Platform::DescriptorLayout mainDrawDescriptorLayout = {};
+    Tinker::Platform::InitDescLayout(&mainDrawDescriptorLayout);
+    Tinker::Platform::GraphicsPipelineParams params;
+    params.blendState = Tinker::Platform::eBlendStateAlphaBlend;
+    params.depthState = Tinker::Platform::eDepthStateTestOnWriteOn;
+    params.viewportWidth = windowWidth;
+    params.viewportHeight = windowHeight;
+    params.renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
+    params.descriptorHandle = TINKER_INVALID_HANDLE;
+    gameGraphicsData.m_shaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_glsl_vert.spv", "..\\Shaders\\spv\\basic_glsl_frag.spv", &params);
+
+    params.blendState = Tinker::Platform::eBlendStateAlphaBlend;
+    params.depthState = Tinker::Platform::eDepthStateOff;
+    params.viewportWidth = windowWidth;
+    params.viewportHeight = windowHeight;
+    params.renderPassHandle = TINKER_INVALID_HANDLE;
+    params.descriptorHandle = gameGraphicsData.m_swapChainBlitDescHandle;
+    gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\blit_glsl_vert.spv", "..\\Shaders\\spv\\blit_glsl_frag.spv", &params);
+}
+
+void DestroyShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandle);
+    platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_blitShaderHandle);
+    gameGraphicsData.m_shaderHandle = TINKER_INVALID_HANDLE;
+    gameGraphicsData.m_blitShaderHandle = TINKER_INVALID_HANDLE;
+}
+
+void DestroyDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    platformFuncs->DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
+    gameGraphicsData.m_swapChainBlitDescHandle = TINKER_INVALID_HANDLE;
+
+    platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
+}
+
+void CreateAllDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
     Tinker::Platform::DescriptorLayout blitDescriptorLayout = {};
     Tinker::Platform::InitDescLayout(&blitDescriptorLayout);
     blitDescriptorLayout.descriptorTypes[0][0].type = Tinker::Platform::eDescriptorTypeSampledImage;
     blitDescriptorLayout.descriptorTypes[0][0].amount = 1;
     gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(&blitDescriptorLayout);
-    
+
     Tinker::Platform::DescriptorSetDataHandles blitHandles = {};
     blitHandles.handles[0] = gameGraphicsData.m_imageViewHandle;
     platformFuncs->WriteDescriptor(&blitDescriptorLayout, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+}
+
+void RecreateShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+{
+    DestroyShaders(platformFuncs);
+    
+    DestroyDescriptors(platformFuncs);
+
+    CreateAllDescriptors(platformFuncs);
+    LoadAllShaders(platformFuncs, windowWidth, windowHeight);
+}
+
+void CreateGameRenderingResources(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+{
+    gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(windowWidth, windowHeight);
+    gameGraphicsData.m_imageViewHandle = platformFuncs->CreateImageViewResource(gameGraphicsData.m_imageHandle);
+    gameGraphicsData.m_mainRenderPassHandle = platformFuncs->CreateRenderPass(Tinker::Platform::eImageLayoutUndefined, Tinker::Platform::eImageLayoutShaderRead);
+    gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1, windowWidth, windowHeight, gameGraphicsData.m_mainRenderPassHandle);
 }
 
 extern "C"
@@ -181,16 +207,23 @@ GAME_UPDATE(GameUpdate)
         gameGraphicsData.m_stagingBufferHandle4 = stagingBufferHandle4;
         gameGraphicsData.m_stagingBufferMemPtr4 = stagingBufferMemPtr4;
 
-        gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(windowWidth, windowHeight);
-        gameGraphicsData.m_imageViewHandle = platformFuncs->CreateImageViewResource(gameGraphicsData.m_imageHandle);
-        gameGraphicsData.m_mainRenderPassHandle = platformFuncs->CreateRenderPass(Tinker::Platform::eImageLayoutUndefined, Tinker::Platform::eImageLayoutShaderRead);
-        gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1, windowWidth, windowHeight, gameGraphicsData.m_mainRenderPassHandle);
+        CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
 
-        CreateDescriptors(platformFuncs);
-        LoadAndCreateShaders(platformFuncs, windowWidth, windowHeight);
+        CreateAllDescriptors(platformFuncs);
+        LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
         isGameInitted = true;
     }
+
+    
+    /*static uint32 shaderHotloadCounter = 0;
+    ++shaderHotloadCounter;
+    if (shaderHotloadCounter % 2000 == 100)
+    {
+        Tinker::Platform::PrintDebugString("Hotloading Shaders...\n");
+        RecreateShaders(platformFuncs, windowWidth, windowHeight);
+        Tinker::Platform::PrintDebugString("...Done.\n");
+    }*/
 
     uint32 numVertBytes = sizeof(v4f) * 3;
     uint32 numIdxBytes = sizeof(uint32) * 3;
@@ -347,20 +380,33 @@ GAME_UPDATE(GameUpdate)
     return 0;
 }
 
-void DestroyWindowResizeGraphicsResources(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void DestroyWindowResizeDependentResources(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
-    // Shaders
-    platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandle);
-    platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_blitShaderHandle);
-    platformFuncs->DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
-    platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
+    platformFuncs->DestroyRenderPass(gameGraphicsData.m_mainRenderPassHandle);
+    platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
+    platformFuncs->DestroyImageResource(gameGraphicsData.m_imageHandle);
+    platformFuncs->DestroyImageViewResource(gameGraphicsData.m_imageViewHandle);
+
+    DestroyShaders(platformFuncs);
+    DestroyDescriptors(platformFuncs);
 }
 
+extern "C"
+GAME_WINDOW_RESIZE(GameWindowResize)
+{
+    DestroyWindowResizeDependentResources(platformFuncs);
+
+    CreateGameRenderingResources(platformFuncs, newWindowWidth, newWindowHeight);
+    CreateAllDescriptors(platformFuncs);
+    LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
+}
+
+extern "C"
 GAME_DESTROY(GameDestroy)
 {
     if (isGameInitted)
     {
-        DestroyWindowResizeGraphicsResources(platformFuncs);
+        DestroyWindowResizeDependentResources(platformFuncs);
 
         // Default geometry
         platformFuncs->DestroyVertexBuffer(defaultQuad.m_vertexBufferHandle);
@@ -377,13 +423,6 @@ GAME_DESTROY(GameDestroy)
         platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_indexBufferHandle2);
         platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle3);
         platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle4);
-
-        platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
-        platformFuncs->DestroyImageResource(gameGraphicsData.m_imageHandle);
-        platformFuncs->DestroyImageViewResource(gameGraphicsData.m_imageViewHandle);
-
-        platformFuncs->DestroyRenderPass(gameGraphicsData.m_mainRenderPassHandle);
-        platformFuncs->DestroyRenderPass(gameGraphicsData.m_blitRenderPassHandle);
 
         if (isMultiplayer && connectedToServer)
         {

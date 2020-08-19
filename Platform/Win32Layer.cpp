@@ -18,8 +18,21 @@
 using namespace Tinker;
 using namespace Platform;
 
+static GAME_UPDATE(GameUpdateStub) { return 0; }
+static GAME_DESTROY(GameDestroyStub) {}
+static GAME_WINDOW_RESIZE(GameWindowResizeStub) {}
+typedef struct win32_game_code
+{
+    HMODULE GameDll = 0;
+    FILETIME lastWriteTime = {};
+    game_update* GameUpdate = GameUpdateStub;
+    game_destroy* GameDestroy = GameDestroyStub;
+    game_window_resize* GameWindowResize = GameWindowResizeStub;
+} Win32GameCode;
+
 volatile bool runGame = true;
 PlatformAPIFuncs g_platformAPIFuncs;
+Win32GameCode g_GameCode;
 
 // TODO: implement other graphics APIs
 enum
@@ -35,16 +48,6 @@ typedef struct global_app_params
     uint32 m_windowHeight;
 } GlobalAppParams;
 GlobalAppParams g_GlobalAppParams;
-
-static GAME_UPDATE(GameUpdateStub) { return 0; }
-static GAME_DESTROY(GameDestroyStub) {}
-typedef struct win32_game_code
-{
-    HMODULE GameDll = 0;
-    FILETIME lastWriteTime = {};
-    game_update* GameUpdate = GameUpdateStub;
-    game_destroy* GameDestroy = GameDestroyStub;
-} Win32GameCode;
 
 static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
@@ -62,6 +65,7 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
                 FreeLibrary(GameCode->GameDll);
                 GameCode->GameUpdate = GameUpdateStub;
                 GameCode->GameDestroy = GameDestroyStub;
+                GameCode->GameWindowResize = GameWindowResizeStub;
             }
 
             CopyFile(gameDllSourcePath, TINKER_PLATFORM_HOTLOAD_FILENAME, FALSE);
@@ -70,6 +74,7 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
             {
                 GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
                 GameCode->GameDestroy = (game_destroy*)GetProcAddress(GameCode->GameDll, "GameDestroy");
+                GameCode->GameWindowResize = (game_window_resize*)GetProcAddress(GameCode->GameDll, "GameWindowResize");
                 GameCode->lastWriteTime = findData.ftLastWriteTime;
             }
         }
@@ -784,6 +789,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                         {
                             VulkanDestroySwapChain(&vulkanContextResources);
                             VulkanCreateSwapChain(&vulkanContextResources);
+
+                            RECT windowDims = {};
+                            GetWindowRect(hwnd, &windowDims);
+                            AdjustWindowRect(&windowDims, WS_OVERLAPPEDWINDOW | WS_VISIBLE, FALSE);
+                            g_GlobalAppParams.m_windowWidth = windowDims.right - windowDims.left;
+                            g_GlobalAppParams.m_windowHeight = windowDims.bottom - windowDims.top;
+                            g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                         }
                     }
                     break;
@@ -952,9 +964,9 @@ wWinMain(HINSTANCE hInstance,
     graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
     graphicsCommandStream.m_graphicsCommands = new GraphicsCommand[graphicsCommandStream.m_maxCommands];
 
-    Win32GameCode GameCode = {};
+    g_GameCode = {};
     const char* GameDllStr = "TinkerGame.dll";
-    ReloadGameCode(&GameCode, GameDllStr);
+    ReloadGameCode(&g_GameCode, GameDllStr);
 
     // Start threadpool
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
@@ -988,7 +1000,7 @@ wWinMain(HINSTANCE hInstance,
 
         if (shouldRenderFrame)
         {
-            int error = GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
             if (error != 0)
             {
                 LogMsg("Error occurred in game code! Shutting down application.", eLogSeverityCritical);
@@ -999,10 +1011,10 @@ wWinMain(HINSTANCE hInstance,
             SubmitFrameToGPU();
         }
 
-        ReloadGameCode(&GameCode, GameDllStr);
+        ReloadGameCode(&g_GameCode, GameDllStr);
     }
 
-    GameCode.GameDestroy(&g_platformAPIFuncs);
+    g_GameCode.GameDestroy(&g_platformAPIFuncs);
 
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     g_ThreadPool.Shutdown();

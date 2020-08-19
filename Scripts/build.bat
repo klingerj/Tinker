@@ -87,7 +87,7 @@ if "%BuildConfig%" == "Debug" (
     )
 echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerCore.lib /DLL /export:GameUpdate /export:GameDestroy %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerCore.lib /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
 
 :DoneBuild
 popd
