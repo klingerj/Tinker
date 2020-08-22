@@ -37,10 +37,19 @@ static bool isGameInitted = false;
 static const bool isMultiplayer = false;
 static bool connectedToServer = false;
 
+uint32 currentWindowWidth, currentWindowHeight;
+
 Tinker::Memory::LinearAllocator shaderBytecodeAllocator;
 const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
 
-uint32 LoadShader(Tinker::Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Tinker::Platform::GraphicsPipelineParams* params)
+typedef struct current_input_state
+{
+    Tinker::Platform::KeycodeState keyCodes[Tinker::Platform::eMaxKeycodes];
+} CurrentInputState;
+static CurrentInputState currentInputState = {};
+static CurrentInputState previousInputState = {};
+
+uint32 LoadShader(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Tinker::Platform::GraphicsPipelineParams* params)
 {
     uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
     uint32 fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
@@ -55,7 +64,7 @@ uint32 LoadShader(Tinker::Platform::PlatformAPIFuncs* platformFuncs, const char*
     return platformFuncs->CreateGraphicsPipeline(vertexShaderCode, vertexShaderFileSize, fragmentShaderCode, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->renderPassHandle, params->descriptorHandle);
 }
 
-void LoadAllShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+void LoadAllShaders(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     shaderBytecodeAllocator.Free();
     shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
@@ -80,7 +89,7 @@ void LoadAllShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 wi
     gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\blit_glsl_vert.spv", "..\\Shaders\\spv\\blit_glsl_frag.spv", &params);
 }
 
-void DestroyShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void DestroyShaders(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandle);
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_blitShaderHandle);
@@ -88,7 +97,7 @@ void DestroyShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
     gameGraphicsData.m_blitShaderHandle = TINKER_INVALID_HANDLE;
 }
 
-void DestroyDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void DestroyDescriptors(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
     gameGraphicsData.m_swapChainBlitDescHandle = TINKER_INVALID_HANDLE;
@@ -96,7 +105,7 @@ void DestroyDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
 }
 
-void CreateAllDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void CreateAllDescriptors(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
     Tinker::Platform::DescriptorLayout blitDescriptorLayout = {};
     Tinker::Platform::InitDescLayout(&blitDescriptorLayout);
@@ -109,7 +118,7 @@ void CreateAllDescriptors(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->WriteDescriptor(&blitDescriptorLayout, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 }
 
-void RecreateShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+void RecreateShaders(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     DestroyShaders(platformFuncs);
     
@@ -119,12 +128,56 @@ void RecreateShaders(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 w
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
-void CreateGameRenderingResources(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+void CreateGameRenderingResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     gameGraphicsData.m_imageHandle = platformFuncs->CreateImageResource(windowWidth, windowHeight);
     gameGraphicsData.m_imageViewHandle = platformFuncs->CreateImageViewResource(gameGraphicsData.m_imageHandle);
     gameGraphicsData.m_mainRenderPassHandle = platformFuncs->CreateRenderPass(Tinker::Platform::eImageLayoutUndefined, Tinker::Platform::eImageLayoutShaderRead);
     gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageViewHandle, 1, windowWidth, windowHeight, gameGraphicsData.m_mainRenderPassHandle);
+}
+
+void ProcessInputState(const Tinker::Platform::InputStateDeltas* inputStateDeltas, const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    previousInputState = currentInputState;
+
+    for (uint32 uiKeycode = 0; uiKeycode < Tinker::Platform::eMaxKeycodes; ++uiKeycode)
+    {
+        if (inputStateDeltas->keyCodes[uiKeycode].numStateChanges > 0)
+        {
+            currentInputState.keyCodes[uiKeycode].isDown = inputStateDeltas->keyCodes[uiKeycode].isDown;
+            currentInputState.keyCodes[uiKeycode].numStateChanges += inputStateDeltas->keyCodes[uiKeycode].numStateChanges;
+            // TODO: reset number of state changes at some point, every second or every several frames or something
+        }
+    }
+
+    for (uint32 uiKeycode = 0; uiKeycode < Tinker::Platform::eMaxKeycodes; ++uiKeycode)
+    {
+        switch (uiKeycode)
+        {
+            case Tinker::Platform::eKeyF10:
+            {
+                // Handle the initial downpress once and nothing more
+                if (currentInputState.keyCodes[uiKeycode].isDown && !previousInputState.keyCodes[uiKeycode].isDown)
+                {
+                    Tinker::Platform::PrintDebugString("Hotloading Shaders...\n");
+                    RecreateShaders(platformFuncs, currentWindowWidth, currentWindowHeight);
+                    Tinker::Platform::PrintDebugString("...Done.\n");
+                }
+
+                // Handle as long as the key is down
+                if (currentInputState.keyCodes[uiKeycode].isDown)
+                {
+                }
+                
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+    }
 }
 
 extern "C"
@@ -214,6 +267,11 @@ GAME_UPDATE(GameUpdate)
 
         isGameInitted = true;
     }
+
+    currentWindowWidth = windowWidth;
+    currentWindowHeight = windowHeight;
+
+    ProcessInputState(inputStateDeltas, platformFuncs);
 
     
     /*static uint32 shaderHotloadCounter = 0;
@@ -380,7 +438,7 @@ GAME_UPDATE(GameUpdate)
     return 0;
 }
 
-void DestroyWindowResizeDependentResources(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void DestroyWindowResizeDependentResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
     platformFuncs->DestroyRenderPass(gameGraphicsData.m_mainRenderPassHandle);
     platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
@@ -394,6 +452,8 @@ void DestroyWindowResizeDependentResources(Tinker::Platform::PlatformAPIFuncs* p
 extern "C"
 GAME_WINDOW_RESIZE(GameWindowResize)
 {
+    currentWindowWidth = newWindowWidth;
+    currentWindowHeight = newWindowHeight;
     DestroyWindowResizeDependentResources(platformFuncs);
 
     CreateGameRenderingResources(platformFuncs, newWindowWidth, newWindowHeight);
