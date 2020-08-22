@@ -49,6 +49,27 @@ typedef struct current_input_state
 static CurrentInputState currentInputState = {};
 static CurrentInputState previousInputState = {};
 
+typedef struct descriptor_instance_data
+{
+    alignas(16) m4f modelMatrix;
+} DescriptorInstanceData;
+
+// TODO: remove me
+#include <chrono>
+void UpdateDescriptorState()
+{
+    // TODO: remove this, is just for testing
+    static auto startTime = std::chrono::high_resolution_clock::now();
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    float scale = sinf(time) * 0.5f + 0.5f;
+    DescriptorInstanceData instanceData = {};
+    instanceData.modelMatrix = m4f(scale);
+    instanceData.modelMatrix[3][3] = 1.0f;
+    memcpy(gameGraphicsData.m_modelMatrixBufferMemPtr1, &instanceData, sizeof(instanceData));
+}
+
 uint32 LoadShader(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Tinker::Platform::GraphicsPipelineParams* params)
 {
     uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
@@ -77,7 +98,7 @@ void LoadAllShaders(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, uin
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
     params.renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
-    params.descriptorHandle = TINKER_INVALID_HANDLE;
+    params.descriptorHandle = gameGraphicsData.m_modelMatrixDescHandle1;
     gameGraphicsData.m_shaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_glsl_vert.spv", "..\\Shaders\\spv\\basic_glsl_frag.spv", &params);
 
     params.blendState = Tinker::Platform::eBlendStateAlphaBlend;
@@ -102,11 +123,15 @@ void DestroyDescriptors(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
     gameGraphicsData.m_swapChainBlitDescHandle = TINKER_INVALID_HANDLE;
 
+    platformFuncs->DestroyDescriptor(gameGraphicsData.m_modelMatrixDescHandle1);
+    gameGraphicsData.m_modelMatrixDescHandle1 = TINKER_INVALID_HANDLE;
+
     platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
 }
 
 void CreateAllDescriptors(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
+    // Swap chain blit
     Tinker::Platform::DescriptorLayout blitDescriptorLayout = {};
     Tinker::Platform::InitDescLayout(&blitDescriptorLayout);
     blitDescriptorLayout.descriptorTypes[0][0].type = Tinker::Platform::eDescriptorTypeSampledImage;
@@ -116,6 +141,21 @@ void CreateAllDescriptors(const Tinker::Platform::PlatformAPIFuncs* platformFunc
     Tinker::Platform::DescriptorSetDataHandles blitHandles = {};
     blitHandles.handles[0] = gameGraphicsData.m_imageViewHandle;
     platformFuncs->WriteDescriptor(&blitDescriptorLayout, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+
+    // Model matrix
+    Tinker::Platform::BufferData bufferData = platformFuncs->CreateBuffer(sizeof(DescriptorInstanceData), Tinker::Platform::eBufferUsageUniform);
+    gameGraphicsData.m_modelMatrixBufferHandle1 = bufferData.handle;
+    gameGraphicsData.m_modelMatrixBufferMemPtr1 = bufferData.memory;
+
+    Tinker::Platform::DescriptorLayout instanceDataDescriptorLayout = {};
+    Tinker::Platform::InitDescLayout(&instanceDataDescriptorLayout);
+    instanceDataDescriptorLayout.descriptorTypes[0][0].type = Tinker::Platform::eDescriptorTypeBuffer;
+    instanceDataDescriptorLayout.descriptorTypes[0][0].amount = 1;
+    gameGraphicsData.m_modelMatrixDescHandle1 = platformFuncs->CreateDescriptor(&instanceDataDescriptorLayout);
+
+    Tinker::Platform::DescriptorSetDataHandles modeMatrixHandles = {};
+    modeMatrixHandles.handles[0] = gameGraphicsData.m_modelMatrixBufferHandle1;
+    platformFuncs->WriteDescriptor(&instanceDataDescriptorLayout, gameGraphicsData.m_modelMatrixDescHandle1, &modeMatrixHandles);
 }
 
 void RecreateShaders(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -216,12 +256,12 @@ GAME_UPDATE(GameUpdate)
         graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
 
         // Default geometry
-        defaultQuad.m_vertexBufferHandle = platformFuncs->CreateVertexBuffer(sizeof(defaultQuad.m_points), Tinker::Platform::Graphics::BufferType::eVertexBuffer);
-        defaultQuad.m_indexBufferHandle = platformFuncs->CreateVertexBuffer(sizeof(defaultQuad.m_indices), Tinker::Platform::Graphics::BufferType::eIndexBuffer);
-        Tinker::Platform::Graphics::StagingBufferData stagingBufferData = platformFuncs->CreateStagingBuffer(sizeof(defaultQuad.m_points));
+        defaultQuad.m_vertexBufferHandle = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_points), Tinker::Platform::eBufferUsageVertex).handle;
+        defaultQuad.m_indexBufferHandle = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_indices), Tinker::Platform::eBufferUsageIndex).handle;
+        Tinker::Platform::BufferData stagingBufferData = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_points), Tinker::Platform::eBufferUsageStaging);
         defaultQuad.m_stagingBufferHandle_vert = stagingBufferData.handle;
         memcpy(stagingBufferData.memory, defaultQuad.m_points, sizeof(defaultQuad.m_points));
-        stagingBufferData = platformFuncs->CreateStagingBuffer(sizeof(defaultQuad.m_indices));
+        stagingBufferData = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_indices), Tinker::Platform::eBufferUsageStaging);
         defaultQuad.m_stagingBufferHandle_idx = stagingBufferData.handle;
         memcpy(stagingBufferData.memory, defaultQuad.m_indices, sizeof(defaultQuad.m_points));
 
@@ -239,21 +279,21 @@ GAME_UPDATE(GameUpdate)
         // Game graphics
         uint32 numVertBytes = sizeof(v4f) * 4; // aligned memory size
         uint32 numIdxBytes = sizeof(uint32) * 16; // aligned memory size
-        uint32 vertexBufferHandle = platformFuncs->CreateVertexBuffer(numVertBytes, Tinker::Platform::Graphics::BufferType::eVertexBuffer);
-        Tinker::Platform::Graphics::StagingBufferData data = platformFuncs->CreateStagingBuffer(numVertBytes);
+        uint32 vertexBufferHandle = platformFuncs->CreateBuffer(numVertBytes, Tinker::Platform::eBufferUsageVertex).handle;
+        Tinker::Platform::BufferData data = platformFuncs->CreateBuffer(numVertBytes, Tinker::Platform::eBufferUsageStaging);
         uint32 stagingBufferHandle = data.handle;
         void* stagingBufferMemPtr = data.memory;
-        uint32 indexBufferHandle = platformFuncs->CreateVertexBuffer(numIdxBytes, Tinker::Platform::Graphics::BufferType::eIndexBuffer);
-        data = platformFuncs->CreateStagingBuffer(numIdxBytes);
+        uint32 indexBufferHandle = platformFuncs->CreateBuffer(numIdxBytes, Tinker::Platform::eBufferUsageIndex).handle;
+        data = platformFuncs->CreateBuffer(numIdxBytes, Tinker::Platform::eBufferUsageStaging);
         uint32 stagingBufferHandle3 = data.handle;
         void* stagingBufferMemPtr3 = data.memory;
 
-        uint32 vertexBufferHandle2 = platformFuncs->CreateVertexBuffer(numVertBytes, Tinker::Platform::Graphics::BufferType::eVertexBuffer);
-        data = platformFuncs->CreateStagingBuffer(numVertBytes);
+        uint32 vertexBufferHandle2 = platformFuncs->CreateBuffer(numVertBytes, Tinker::Platform::eBufferUsageVertex).handle;
+        data = platformFuncs->CreateBuffer(numVertBytes, Tinker::Platform::eBufferUsageStaging);
         uint32 stagingBufferHandle2 = data.handle;
         void* stagingBufferMemPtr2 = data.memory;
-        uint32 indexBufferHandle2 = platformFuncs->CreateVertexBuffer(numIdxBytes, Tinker::Platform::Graphics::BufferType::eIndexBuffer);
-        data = platformFuncs->CreateStagingBuffer(numIdxBytes);
+        uint32 indexBufferHandle2 = platformFuncs->CreateBuffer(numIdxBytes, Tinker::Platform::eBufferUsageIndex).handle;
+        data = platformFuncs->CreateBuffer(numIdxBytes, Tinker::Platform::eBufferUsageStaging);
         uint32 stagingBufferHandle4 = data.handle;
         void* stagingBufferMemPtr4 = data.memory;
 
@@ -283,16 +323,7 @@ GAME_UPDATE(GameUpdate)
     currentWindowHeight = windowHeight;
 
     ProcessInputState(inputStateDeltas, platformFuncs);
-
-    
-    /*static uint32 shaderHotloadCounter = 0;
-    ++shaderHotloadCounter;
-    if (shaderHotloadCounter % 2000 == 100)
-    {
-        Tinker::Platform::PrintDebugString("Hotloading Shaders...\n");
-        RecreateShaders(platformFuncs, windowWidth, windowHeight);
-        Tinker::Platform::PrintDebugString("...Done.\n");
-    }*/
+    UpdateDescriptorState();
 
     uint32 numVertBytes = sizeof(v4f) * 3;
     uint32 numIdxBytes = sizeof(uint32) * 3;
@@ -381,6 +412,7 @@ GAME_UPDATE(GameUpdate)
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
     Tinker::Platform::InitDescSetDataHandles(command.m_descriptors);
+    command.m_descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdDrawCall;
@@ -392,6 +424,7 @@ GAME_UPDATE(GameUpdate)
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
     Tinker::Platform::InitDescSetDataHandles(command.m_descriptors);
+    command.m_descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Tinker::Platform::eGraphicsCmdRenderPassEnd;
@@ -456,6 +489,9 @@ void DestroyWindowResizeDependentResources(const Tinker::Platform::PlatformAPIFu
     platformFuncs->DestroyImageResource(gameGraphicsData.m_imageHandle);
     platformFuncs->DestroyImageViewResource(gameGraphicsData.m_imageViewHandle);
 
+    // Instance uniform data
+    platformFuncs->DestroyBuffer(gameGraphicsData.m_modelMatrixBufferHandle1, Tinker::Platform::eBufferUsageUniform);
+
     DestroyShaders(platformFuncs);
     DestroyDescriptors(platformFuncs);
 }
@@ -480,20 +516,20 @@ GAME_DESTROY(GameDestroy)
         DestroyWindowResizeDependentResources(platformFuncs);
 
         // Default geometry
-        platformFuncs->DestroyVertexBuffer(defaultQuad.m_vertexBufferHandle);
-        platformFuncs->DestroyVertexBuffer(defaultQuad.m_indexBufferHandle);
-        platformFuncs->DestroyStagingBuffer(defaultQuad.m_stagingBufferHandle_vert);
-        platformFuncs->DestroyStagingBuffer(defaultQuad.m_stagingBufferHandle_idx);
+        platformFuncs->DestroyBuffer(defaultQuad.m_vertexBufferHandle, Tinker::Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(defaultQuad.m_indexBufferHandle, Tinker::Platform::eBufferUsageIndex);
+        platformFuncs->DestroyBuffer(defaultQuad.m_stagingBufferHandle_vert, Tinker::Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(defaultQuad.m_stagingBufferHandle_idx, Tinker::Platform::eBufferUsageStaging);
 
         // Game graphics
-        platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_vertexBufferHandle);
-        platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_vertexBufferHandle2);
-        platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle);
-        platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle2);
-        platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_indexBufferHandle);
-        platformFuncs->DestroyVertexBuffer(gameGraphicsData.m_indexBufferHandle2);
-        platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle3);
-        platformFuncs->DestroyStagingBuffer(gameGraphicsData.m_stagingBufferHandle4);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_vertexBufferHandle, Tinker::Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_vertexBufferHandle2, Tinker::Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle, Tinker::Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle2, Tinker::Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_indexBufferHandle, Tinker::Platform::eBufferUsageIndex);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_indexBufferHandle2, Tinker::Platform::eBufferUsageIndex);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle3, Tinker::Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle4, Tinker::Platform::eBufferUsageStaging);
 
         if (isMultiplayer && connectedToServer)
         {

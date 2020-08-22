@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/CoreDefines.h"
-#include "Platform/GraphicsTypes.h"
 
 namespace Tinker
 {
@@ -133,6 +132,14 @@ namespace Tinker
         } InputStateDeltas;
 
         // Graphics
+
+        enum
+        {
+            eBufferUsageVertex = 0,
+            eBufferUsageIndex,
+            eBufferUsageStaging,
+            eBufferUsageUniform
+        };
 
         #define MAX_DESCRIPTOR_SETS_PER_SHADER 1
         #define MAX_DESCRIPTORS_PER_SET 1
@@ -283,17 +290,17 @@ namespace Tinker
             uint32 descriptorHandle;
         } GraphicsPipelineParams;
 
-        #define CREATE_VERTEX_BUFFER(name) uint32 name(uint32 sizeInBytes, Graphics::BufferType bufferType)
-        typedef CREATE_VERTEX_BUFFER(create_vertex_buffer);
+        typedef struct buffer_data
+        {
+            uint32 handle;
+            void* memory;
+        } BufferData;
 
-        #define DESTROY_VERTEX_BUFFER(name) void name(uint32 handle)
-        typedef DESTROY_VERTEX_BUFFER(destroy_vertex_buffer);
+        #define CREATE_BUFFER(name) Tinker::Platform::BufferData name(uint32 sizeInBytes, uint32 bufferUsage)
+        typedef CREATE_BUFFER(create_buffer);
 
-        #define CREATE_STAGING_BUFFER(name) Graphics::StagingBufferData name(uint32 sizeInBytes)
-        typedef CREATE_STAGING_BUFFER(create_staging_buffer);
-
-        #define DESTROY_STAGING_BUFFER(name) void name(uint32 handle)
-        typedef DESTROY_STAGING_BUFFER(destroy_staging_buffer);
+        #define DESTROY_BUFFER(name) void name(uint32 handle, uint32 bufferUsage)
+        typedef DESTROY_BUFFER(destroy_buffer);
 
         #define CREATE_FRAMEBUFFER(name) uint32 name(uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles, uint32 width, uint32 height, uint32 renderPassHandle)
         typedef CREATE_FRAMEBUFFER(create_framebuffer);
@@ -348,10 +355,8 @@ namespace Tinker
             end_network_connection* EndNetworkConnection;
             send_message_to_server* SendMessageToServer;
             system_command* SystemCommand;
-            create_vertex_buffer* CreateVertexBuffer;
-            create_staging_buffer* CreateStagingBuffer;
-            destroy_vertex_buffer* DestroyVertexBuffer;
-            destroy_staging_buffer* DestroyStagingBuffer;
+            create_buffer* CreateBuffer;
+            destroy_buffer* DestroyBuffer;
             create_framebuffer* CreateFramebuffer;
             destroy_framebuffer* DestroyFramebuffer;
             create_image_resource* CreateImageResource;

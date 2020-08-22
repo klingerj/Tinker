@@ -1032,7 +1032,7 @@ namespace Tinker
                 vkBindBufferMemory(vulkanContextResources->device, buffer, deviceMemory, 0);
             }
 
-            uint32 VulkanCreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, BufferType bufferType)
+            VulkanBufferData VulkanCreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, uint32 bufferUsage)
             {
                 uint32 newResourceHandle =
                     vulkanContextResources->vulkanMemResourcePool.Alloc();
@@ -1042,63 +1042,74 @@ namespace Tinker
                     vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
 
                 VkBufferUsageFlags usageFlags = {};
-                switch (bufferType)
+                VkMemoryPropertyFlagBits propertyFlags = {};
+
+                switch (bufferUsage)
                 {
-                    case eVertexBuffer:
+                    case eBufferUsageVertex:
                     {
-                        usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                        usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                        propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
                         break;
                     }
 
-                    case eIndexBuffer:
+                    case eBufferUsageIndex:
                     {
-                        usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                        usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                        propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+                        break;
+                    }
+
+                    case eBufferUsageStaging:
+                    {
+                        usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+                        propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                        break;
+                    }
+
+                    case eBufferUsageUniform:
+                    {
+                        usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+                        propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
                         break;
                     }
 
                     default:
                     {
+                        LogMsg("Invalid buffer usage specified!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
                         break;
                     }
                 }
-                usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-                CreateBuffer(vulkanContextResources, sizeInBytes,
+                CreateBuffer(vulkanContextResources,
+                    sizeInBytes,
                     usageFlags,
-                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                    newResource->buffer,
-                    newResource->deviceMemory);
-                
-                return newResourceHandle;
-            }
-
-            VulkanStagingBufferData VulkanCreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes)
-            {
-                uint32 newResourceHandle =
-                    vulkanContextResources->vulkanMemResourcePool.Alloc();
-                TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
-
-                VulkanMemResource* newResource =
-                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
-
-                CreateBuffer(vulkanContextResources, sizeInBytes,
-                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                    propertyFlags,
                     newResource->buffer,
                     newResource->deviceMemory);
 
-                uint32 newMappedMemHandle =
-                    vulkanContextResources->vulkanMappedMemPtrPool.Alloc();
-                void** newMappedMem =
-                    vulkanContextResources->vulkanMappedMemPtrPool.PtrFromHandle(newMappedMemHandle);
+                VulkanBufferData vulkanBufferData = {};
 
-                vkMapMemory(vulkanContextResources->device, newResource->deviceMemory, 0, sizeInBytes, 0, newMappedMem);
+                if (bufferUsage == eBufferUsageStaging || bufferUsage == eBufferUsageUniform)
+                {
+                    uint32 newMappedMemHandle =
+                        vulkanContextResources->vulkanMappedMemPtrPool.Alloc();
+                    void** newMappedMem =
+                        vulkanContextResources->vulkanMappedMemPtrPool.PtrFromHandle(newMappedMemHandle);
 
-                VulkanStagingBufferData data;
-                data.handle = newResourceHandle;
-                data.mappedMemory = *newMappedMem;
+                    vkMapMemory(vulkanContextResources->device, newResource->deviceMemory, 0, sizeInBytes, 0, newMappedMem);
 
-                return data;
+                    vulkanBufferData.hostBufferHandle = newResourceHandle;
+                    vulkanBufferData.mappedMemory = *newMappedMem;
+                }
+                else
+                {
+                    vulkanBufferData.gpuBufferHandle = newResourceHandle;
+                    vulkanBufferData.mappedMemory = nullptr;
+                }
+
+                return vulkanBufferData;
             }
 
             uint32 VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout)
@@ -1197,24 +1208,34 @@ namespace Tinker
 
                 // TODO: not hard-coded descriptor set index
                 const uint32 uiDescSet = 0;
+                VkDescriptorSet* descriptorSet = &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle)->descriptorSet;
+
+                // Desc set info data
+                VkDescriptorBufferInfo descBufferInfo = {};
+                VkDescriptorImageInfo descImageInfo = {};
 
                 for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
                 {
+                    descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
                     if (descLayout->descriptorTypes[uiDescSet][uiDesc].type != TINKER_INVALID_HANDLE)
                     {
                         switch (descLayout->descriptorTypes[uiDescSet][uiDesc].type)
                         {
                             case eDescriptorTypeBuffer:
                             {
-                                /*
-                                VkDescriptorBufferInfo descBufferInfo = {};
-                                descBufferInfo.buffer = ; // TODO: some buffer
-                                descBufferInfo.offset = 0;
-                                descBufferInfo.range = 0; // TODO: some bytes
+                                VkBuffer* buffer = &vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(descSetHandles->handles[uiDesc])->buffer;
 
-                                // ...
-                                descSetWrites[uiDesc].pBufferInfo = nullptr;
-                                */
+                                descBufferInfo.buffer = *buffer;
+                                descBufferInfo.offset = 0;
+                                descBufferInfo.range = VK_WHOLE_SIZE;
+
+                                descSetWrites[uiDesc].dstSet = *descriptorSet;
+                                descSetWrites[uiDesc].dstBinding = 0;
+                                descSetWrites[uiDesc].dstArrayElement = 0;
+                                descSetWrites[uiDesc].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                                descSetWrites[uiDesc].descriptorCount = descriptorCount + 1;
+                                descSetWrites[uiDesc].pBufferInfo = &descBufferInfo;
                                 break;
                             }
 
@@ -1222,14 +1243,10 @@ namespace Tinker
                             {
                                 VkImageView* imageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(descSetHandles->handles[uiDesc]);
 
-                                VkDescriptorImageInfo descImageInfo = {};
                                 descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                                 descImageInfo.imageView = *imageView;
                                 descImageInfo.sampler = vulkanContextResources->linearSampler;
 
-                                VkDescriptorSet* descriptorSet = &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle)->descriptorSet;
-
-                                descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
                                 descSetWrites[uiDesc].dstSet = *descriptorSet;
                                 descSetWrites[uiDesc].dstBinding = 0;
                                 descSetWrites[uiDesc].dstArrayElement = 0;
@@ -1884,21 +1901,17 @@ namespace Tinker
                 vulkanContextResources->vulkanFramebufferPool.Dealloc(handle);
             }
 
-            void VulkanDestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
+            void VulkanDestroyBuffer(VulkanContextResources* vulkanContextResources, uint32 handle, uint32 bufferUsage)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
-                vkDestroyBuffer(vulkanContextResources->device, resource->buffer, nullptr);
-                vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
-                vulkanContextResources->vulkanMemResourcePool.Dealloc(handle);
-            }
 
-            void VulkanDestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle)
-            {
-                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
-                VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle);
+                if (bufferUsage == eBufferUsageStaging || bufferUsage == eBufferUsageUniform)
+                {
+                    vkUnmapMemory(vulkanContextResources->device, resource->deviceMemory);
+                }
+
                 vkDestroyBuffer(vulkanContextResources->device, resource->buffer, nullptr);
-                vkUnmapMemory(vulkanContextResources->device, resource->deviceMemory);
                 vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
                 vulkanContextResources->vulkanMemResourcePool.Dealloc(handle);
             }
