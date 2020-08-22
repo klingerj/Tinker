@@ -364,13 +364,27 @@ static void SubmitFrameToGPU()
     }
 }
 
-CREATE_VERTEX_BUFFER(CreateVertexBuffer)
+CREATE_BUFFER(CreateBuffer)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
-            return Graphics::VulkanCreateVertexBuffer(&vulkanContextResources, sizeInBytes, bufferType);
+            Graphics::VulkanBufferData vulkanBufferData = Graphics::VulkanCreateBuffer(&vulkanContextResources, sizeInBytes, bufferUsage);
+
+            BufferData bufferData = {};
+
+            if (bufferUsage == eBufferUsageStaging || bufferUsage == eBufferUsageUniform)
+            {
+                bufferData.handle = vulkanBufferData.hostBufferHandle;
+                bufferData.memory = vulkanBufferData.mappedMemory;
+            }
+            else
+            {
+                bufferData.handle = vulkanBufferData.gpuBufferHandle;
+            }
+            
+            return bufferData;
             break;
         }
 
@@ -378,32 +392,11 @@ CREATE_VERTEX_BUFFER(CreateVertexBuffer)
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return TINKER_INVALID_HANDLE;
-        }
-    }
-}
 
-CREATE_STAGING_BUFFER(CreateStagingBuffer)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            Graphics::VulkanStagingBufferData vulkanData =
-                Graphics::VulkanCreateStagingBuffer(&vulkanContextResources, sizeInBytes);
-
-            Graphics::StagingBufferData data;
-            memcpy(&data, &vulkanData, sizeof(Graphics::VulkanStagingBufferData));
-            return data;
-            break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            Graphics::StagingBufferData data = {};
-            return data;
+            BufferData bufferDataInvalid = {};
+            bufferDataInvalid.handle = TINKER_INVALID_HANDLE;
+            bufferDataInvalid.memory = nullptr;
+            return bufferDataInvalid;
         }
     }
 }
@@ -529,32 +522,13 @@ CREATE_DESCRIPTOR(CreateDescriptor)
     }
 }
 
-DESTROY_VERTEX_BUFFER(DestroyVertexBuffer)
+DESTROY_BUFFER(DestroyBuffer)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::VulkanDestroyVertexBuffer(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-DESTROY_STAGING_BUFFER(DestroyStagingBuffer)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            Graphics::VulkanDestroyStagingBuffer(&vulkanContextResources, handle);
+            Graphics::VulkanDestroyBuffer(&vulkanContextResources, handle, bufferUsage);
             break;
         }
 
@@ -1034,10 +1008,8 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.EndNetworkConnection = EndNetworkConnection;
     g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
     g_platformAPIFuncs.SystemCommand = SystemCommand;
-    g_platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
-    g_platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
-    g_platformAPIFuncs.DestroyVertexBuffer = DestroyVertexBuffer;
-    g_platformAPIFuncs.DestroyStagingBuffer = DestroyStagingBuffer;
+    g_platformAPIFuncs.CreateBuffer = CreateBuffer;
+    g_platformAPIFuncs.DestroyBuffer = DestroyBuffer;
     g_platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
     g_platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
     g_platformAPIFuncs.CreateImageResource = CreateImageResource;

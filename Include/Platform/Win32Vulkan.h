@@ -3,7 +3,6 @@
 #include "../Core/CoreDefines.h"
 #include "../Core/Math/VectorTypes.h"
 #include "../Core/Allocators.h"
-#include "GraphicsTypes.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
@@ -13,8 +12,8 @@
 #define VULKAN_RESOURCE_POOL_MAX 256
 
 #define VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES 2
-#define VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS 1
-#define VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES 1
+#define VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS 16
+#define VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES 16
 
 namespace Tinker
 {
@@ -91,11 +90,18 @@ namespace Tinker
                 v4f position;
             } VulkanVertexPosition;
 
-            typedef struct vulkan_staging_buffer_data
+            typedef union vulkan_buffer_data
             {
-                uint32 handle;
-                void* mappedMemory;
-            } VulkanStagingBufferData;
+                // Host-visible buffer with mapped memory
+                struct
+                {
+                    uint32 hostBufferHandle;
+                    void* mappedMemory;
+                };
+
+                // Buffer with no mapped memory
+                uint32 gpuBufferHandle;
+            } VulkanBufferData;
 
             int InitVulkan(VulkanContextResources* vulkanContextResources,
                 HINSTANCE hInstance, HWND windowHandle,
@@ -116,10 +122,8 @@ namespace Tinker
             void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
                 VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
                 VkBuffer& buffer, VkDeviceMemory& deviceMemory);
-            uint32 VulkanCreateVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, BufferType bufferType);
-            VulkanStagingBufferData VulkanCreateStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes);
-            void VulkanDestroyVertexBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
-            void VulkanDestroyStagingBuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
+            VulkanBufferData VulkanCreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, uint32 bufferUsage);
+            void VulkanDestroyBuffer(VulkanContextResources* vulkanContextResources, uint32 handle, uint32 bufferUsage);
 
             uint32 VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
                 uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles,
