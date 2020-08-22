@@ -33,6 +33,7 @@ typedef struct win32_game_code
 volatile bool runGame = true;
 PlatformAPIFuncs g_platformAPIFuncs;
 Win32GameCode g_GameCode;
+InputStateDeltas g_inputStateDeltas;
 
 // TODO: implement other graphics APIs
 enum
@@ -835,16 +836,93 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     return result;
 }
 
+static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
+{
+    uint8 wasDown = (win32Flags & (1 << 30)) == 1;
+    uint8 isDown = (win32Flags & (1 << 31)) == 0;
+
+    uint8 gameKeyCode = eMaxKeycodes;
+
+    switch (win32Keycode)
+    {
+        case 'W':
+        {
+            gameKeyCode = eKeyW;
+            break;
+        }
+
+        case 'A':
+        {
+            gameKeyCode = eKeyA;
+            break;
+        }
+
+        case 'S':
+        {
+            gameKeyCode = eKeyS;
+            break;
+        }
+
+        case 'D':
+        {
+            gameKeyCode = eKeyD;
+            break;
+        }
+
+        case VK_F10:
+        {
+            gameKeyCode = eKeyF10;
+            break;
+        }
+
+        case VK_F11:
+        {
+            gameKeyCode = eKeyF11;
+            break;
+        }
+
+        default:
+        {
+            //TINKER_ASSERT(0);
+            return;
+            break;
+        }
+    }
+ 
+    g_inputStateDeltas.keyCodes[gameKeyCode].isDown = isDown;
+    ++g_inputStateDeltas.keyCodes[gameKeyCode].numStateChanges;
+}
+
 static void ProcessWindowMessages()
 {
+
+    g_inputStateDeltas = {};
+
     MSG msg = {};
     while (1)
     {
         BOOL Result = PeekMessage(&msg, 0, 0, 0, PM_REMOVE);
+
         if (Result)
         {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            switch (msg.message)
+            {
+                case WM_SYSKEYUP:
+                case WM_SYSKEYDOWN:
+                case WM_KEYUP:
+                case WM_KEYDOWN:
+                {
+                    HandleKeypressInput((uint32)msg.wParam, (uint64)msg.lParam);
+                    break;
+                }
+
+                default:
+                {
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+                    break;
+                }
+            }
         }
         else
         {
@@ -852,7 +930,6 @@ static void ProcessWindowMessages()
             break;
         }
     }
-
 }
 
 int WINAPI
@@ -964,6 +1041,8 @@ wWinMain(HINSTANCE hInstance,
     g_GameCode = {};
     const char* GameDllStr = "TinkerGame.dll";
     ReloadGameCode(&g_GameCode, GameDllStr);
+    
+    g_inputStateDeltas = {};
 
     // Start threadpool
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
@@ -997,7 +1076,7 @@ wWinMain(HINSTANCE hInstance,
 
         if (shouldRenderFrame)
         {
-            int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
             if (error != 0)
             {
                 LogMsg("Error occurred in game code! Shutting down application.", eLogSeverityCritical);

@@ -60,6 +60,75 @@ namespace Tinker
         #define SEND_MESSAGE_TO_SERVER(name) int name()
         typedef SEND_MESSAGE_TO_SERVER(send_message_to_server);
 
+        // Input
+
+        enum
+        {
+            eKeyA = 0,
+            eKeyB,
+            eKeyC,
+            eKeyD,
+            eKeyE,
+            eKeyF,
+            eKeyG,
+            eKeyH,
+            eKeyI,
+            eKeyJ,
+            eKeyK,
+            eKeyL,
+            eKeyM,
+            eKeyN,
+            eKeyO,
+            eKeyP,
+            eKeyQ,
+            eKeyR,
+            eKeyS,
+            eKeyT,
+            eKeyU,
+            eKeyV,
+            eKeyW,
+            eKeyX,
+            eKeyY,
+            eKeyZ,
+            eKey0,
+            eKey1,
+            eKey2,
+            eKey3,
+            eKey4,
+            eKey5,
+            eKey6,
+            eKey7,
+            eKey8,
+            eKey9,
+            eKeyF1,
+            eKeyF2,
+            eKeyF3,
+            eKeyF4,
+            eKeyF5,
+            eKeyF6,
+            eKeyF7,
+            eKeyF8,
+            eKeyF9,
+            eKeyF10,
+            eKeyF11,
+            eKeyF12,
+            eMaxKeycodes
+        };
+
+        typedef struct keycode_state
+        {
+            uint8 isDown; // is the key currently down
+            uint8 numStateChanges; // number of times the key went up/down
+        } KeycodeState;
+
+        typedef struct input_state_delta
+        {
+            // TODO: gamepad input
+
+            // Keyboard input
+            KeycodeState keyCodes[eMaxKeycodes];
+        } InputStateDeltas;
+
         // Graphics
 
         #define MAX_DESCRIPTOR_SETS_PER_SHADER 1
@@ -296,7 +365,7 @@ namespace Tinker
         } PlatformAPIFuncs;
 
         // Game side
-        #define GAME_UPDATE(name) uint32 name(Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
+        #define GAME_UPDATE(name) uint32 name(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tinker::Platform::InputStateDeltas* inputStateDeltas)
         typedef GAME_UPDATE(game_update);
 
         #define GAME_DESTROY(name) void name(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
