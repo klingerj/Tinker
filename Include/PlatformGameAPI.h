@@ -59,6 +59,9 @@ namespace Tinker
 
         #define SEND_MESSAGE_TO_SERVER(name) int name()
         typedef SEND_MESSAGE_TO_SERVER(send_message_to_server);
+        
+        #define SYSTEM_COMMAND(name) int name(const char* command)
+        typedef SYSTEM_COMMAND(system_command);
 
         // Input
 
@@ -344,6 +347,7 @@ namespace Tinker
             init_network_connection* InitNetworkConnection;
             end_network_connection* EndNetworkConnection;
             send_message_to_server* SendMessageToServer;
+            system_command* SystemCommand;
             create_vertex_buffer* CreateVertexBuffer;
             create_staging_buffer* CreateStagingBuffer;
             destroy_vertex_buffer* DestroyVertexBuffer;

@@ -760,6 +760,25 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
     }
 }
 
+SYSTEM_COMMAND(SystemCommand)
+{
+    STARTUPINFO startupInfo = {};
+    PROCESS_INFORMATION processInfo = {};
+
+    if (!CreateProcess(NULL, (LPSTR)command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInfo))
+    {
+        LogMsg("Failed to create new process to execute system command:", eLogSeverityCritical);
+        LogMsg(command, eLogSeverityCritical);
+        return 1;
+    }
+
+    WaitForSingleObject(processInfo.hProcess, INFINITE);
+    CloseHandle(processInfo.hProcess);
+    CloseHandle(processInfo.hThread);
+
+    return 0;
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd,
     UINT uMsg,
     WPARAM wParam,
@@ -1014,6 +1033,7 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;
     g_platformAPIFuncs.EndNetworkConnection = EndNetworkConnection;
     g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
+    g_platformAPIFuncs.SystemCommand = SystemCommand;
     g_platformAPIFuncs.CreateVertexBuffer = CreateVertexBuffer;
     g_platformAPIFuncs.CreateStagingBuffer = CreateStagingBuffer;
     g_platformAPIFuncs.DestroyVertexBuffer = DestroyVertexBuffer;
