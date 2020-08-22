@@ -159,9 +159,20 @@ void ProcessInputState(const Tinker::Platform::InputStateDeltas* inputStateDelta
                 // Handle the initial downpress once and nothing more
                 if (currentInputState.keyCodes[uiKeycode].isDown && !previousInputState.keyCodes[uiKeycode].isDown)
                 {
-                    Tinker::Platform::PrintDebugString("Hotloading Shaders...\n");
-                    RecreateShaders(platformFuncs, currentWindowWidth, currentWindowHeight);
-                    Tinker::Platform::PrintDebugString("...Done.\n");
+                    Tinker::Platform::PrintDebugString("Attempting to hotload shaders...\n");
+
+                    // Recompile shaders via script
+                    const char* shaderCompileCommand = "..\\Scripts\\compile_shaders_glsl2spv.bat";
+                    if (platformFuncs->SystemCommand(shaderCompileCommand) != 0)
+                    {
+                        Tinker::Platform::PrintDebugString("Failed to create shader compile process! Shaders will not be compiled.\n");
+                    }
+                    else
+                    {
+                        // Recreate gpu resources
+                        RecreateShaders(platformFuncs, currentWindowWidth, currentWindowHeight);
+                        Tinker::Platform::PrintDebugString("...Done.\n");
+                    }
                 }
 
                 // Handle as long as the key is down
