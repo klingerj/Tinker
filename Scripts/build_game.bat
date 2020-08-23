@@ -20,11 +20,11 @@ set CommonLinkFlags=/incremental:no /opt:ref
 
 if "%BuildConfig%" == "Debug" (
     echo Debug mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd
+    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd /fp:fast
     set CommonLinkFlags=%CommonLinkFlags% /debug:full
     ) else (
     echo Release mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
+    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT /fp:fast
     )
 
 rem *********************************************************************************************************
