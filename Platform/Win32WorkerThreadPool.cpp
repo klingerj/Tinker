@@ -38,7 +38,7 @@ namespace Tinker
                     buffer[17] = '\n';
                     buffer[18] = '\0';
                     PrintDebugString(buffer);*/
-            
+
             /* old:
             while (!info->terminate)
             {
@@ -100,7 +100,7 @@ namespace Tinker
                     m_threads[i].didTerminate = false;
                     m_threads[i].threadId = i;
                     m_threads[i].semaphoreHandle = CreateSemaphoreEx(0, 0, NUM_JOBS_PER_WORKER, 0, 0, SEMAPHORE_ALL_ACCESS);
-                    _beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, m_threads + i);
+                    _beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, &m_threads[i]);
                 }
             }
 
