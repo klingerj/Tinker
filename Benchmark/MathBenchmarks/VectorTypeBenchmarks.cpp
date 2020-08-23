@@ -5,7 +5,7 @@
 using namespace Tinker;
 using namespace Platform;
 
-const uint32 threadCount = 1;
+const uint32 threadCount = 15;
 WorkerThreadPool g_threadpool;
 
 const uint32 numJobs = threadCount * 1;
@@ -15,7 +15,7 @@ v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
 const uint32 jobSize = (sizeof(v4f)) * (2 << 12);
 const uint32 numVectors = numJobs * jobSize;
-const uint32 numIters = 50;
+const uint32 numIters = 5;
 
 void BM_v2_Startup()
 {
