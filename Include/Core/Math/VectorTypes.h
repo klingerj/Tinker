@@ -663,23 +663,23 @@ namespace VectorOps
         return *(v2ui*)(&sum);
     }
 
-    static inline void Mul_SIMD(const v4f& v, const m4f& m, v4f& out)
+    static inline void Mul_SIMD(const v4f* RESTRICT v, const m4f* m, v4f* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
-        TINKER_ASSERT(!(((size_t)&v) & 15));
-        TINKER_ASSERT(!(((size_t)&m) & 15));
-        TINKER_ASSERT(!(((size_t)&out) & 15));
+        TINKER_ASSERT(!(((size_t)v) & 15));
+        TINKER_ASSERT(!(((size_t)m) & 15));
+        TINKER_ASSERT(!(((size_t)out) & 15));
 
-        __m128 vec = _mm_load_ps(v.m_data);
+        __m128 vec = _mm_load_ps((v->m_data));
         __m128 vx = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(0, 0, 0, 0));
         __m128 vy = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(1, 1, 1, 1));
         __m128 vz = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(2, 2, 2, 2));
         __m128 vw = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(3, 3, 3, 3));
 
-        __m128 mcol1 = _mm_load_ps(m[0].m_data);
-        __m128 mcol2 = _mm_load_ps(m[1].m_data);
-        __m128 mcol3 = _mm_load_ps(m[2].m_data);
-        __m128 mcol4 = _mm_load_ps(m[3].m_data);
+        __m128 mcol1 = _mm_load_ps(&(*m[0].m_data));
+        __m128 mcol2 = _mm_load_ps(&(*m[1].m_data));
+        __m128 mcol3 = _mm_load_ps(&(*m[2].m_data));
+        __m128 mcol4 = _mm_load_ps(&(*m[3].m_data));
 
         __m128 xProd = _mm_mul_ps(mcol1, vx);
         __m128 yProd = _mm_mul_ps(mcol2, vy);
@@ -690,26 +690,26 @@ namespace VectorOps
         __m128 sum2 = _mm_add_ps(zProd, wProd);
         __m128 sum  = _mm_add_ps(sum1, sum2);
 
-        _mm_stream_ps((float*)&out, sum);
+        _mm_stream_ps((float*)out, sum);
     }
 
-    static inline void Mul_SIMD(const v4i& v, const m4i& m, v4i& out)
+    static inline void Mul_SIMD(const v4i* RESTRICT v, const m4i* m, v4i* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
-        TINKER_ASSERT(!(((size_t)&v) & 15));
-        TINKER_ASSERT(!(((size_t)&m) & 15));
-        TINKER_ASSERT(!(((size_t)&out) & 15));
+        TINKER_ASSERT(!(((size_t)v) & 15));
+        TINKER_ASSERT(!(((size_t)m) & 15));
+        TINKER_ASSERT(!(((size_t)out) & 15));
      
-    __m128i vec = *(__m128i*)(&v.m_data);
+        __m128i vec = *(__m128i*)((v->m_data));
         __m128i vx = _mm_shuffle_epi32(vec, _MM_SHUFFLE(0, 0, 0, 0));
         __m128i vy = _mm_shuffle_epi32(vec, _MM_SHUFFLE(1, 1, 1, 1));
         __m128i vz = _mm_shuffle_epi32(vec, _MM_SHUFFLE(2, 2, 2, 2));
         __m128i vw = _mm_shuffle_epi32(vec, _MM_SHUFFLE(3, 3, 3, 3));
 
-        __m128i mcol1 = *(__m128i*)(&m[0].m_data);
-        __m128i mcol2 = *(__m128i*)(&m[1].m_data);
-        __m128i mcol3 = *(__m128i*)(&m[2].m_data);
-        __m128i mcol4 = *(__m128i*)(&m[3].m_data);
+        __m128i mcol1 = *(__m128i*)(&(*m[0].m_data));
+        __m128i mcol2 = *(__m128i*)(&(*m[1].m_data));
+        __m128i mcol3 = *(__m128i*)(&(*m[2].m_data));
+        __m128i mcol4 = *(__m128i*)(&(*m[3].m_data));
 
         __m128i xProd = _mm_mullo_epi32(mcol1, vx);
         __m128i yProd = _mm_mullo_epi32(mcol2, vy);
@@ -720,21 +720,26 @@ namespace VectorOps
         __m128i sum2 = _mm_add_epi32(zProd, wProd);
         __m128i sum  = _mm_add_epi32(sum1, sum2);
 
-        _mm_stream_si128((__m128i*)&out, sum);
+        _mm_stream_si128((__m128i*)out, sum);
     }
 
-    static inline void Mul_SIMD(const v4ui& v, const m4ui& m, v4ui& out)
+    static inline void Mul_SIMD(const v4ui* RESTRICT v, const m4ui* m, v4ui* RESTRICT out)
     {
-    __m128i vec = *(__m128i*)(&v.m_data);
+        // All parameters must be 16-byte aligned
+        TINKER_ASSERT(!(((size_t)v) & 15));
+        TINKER_ASSERT(!(((size_t)m) & 15));
+        TINKER_ASSERT(!(((size_t)out) & 15));
+
+        __m128i vec = *(__m128i*)((v->m_data));
         __m128i vx = _mm_shuffle_epi32(vec, _MM_SHUFFLE(0, 0, 0, 0));
         __m128i vy = _mm_shuffle_epi32(vec, _MM_SHUFFLE(1, 1, 1, 1));
         __m128i vz = _mm_shuffle_epi32(vec, _MM_SHUFFLE(2, 2, 2, 2));
         __m128i vw = _mm_shuffle_epi32(vec, _MM_SHUFFLE(3, 3, 3, 3));
 
-        __m128i mcol1 = *(__m128i*)(&m[0].m_data);
-        __m128i mcol2 = *(__m128i*)(&m[1].m_data);
-        __m128i mcol3 = *(__m128i*)(&m[2].m_data);
-        __m128i mcol4 = *(__m128i*)(&m[3].m_data);
+        __m128i mcol1 = *(__m128i*)(&*(m[0].m_data));
+        __m128i mcol2 = *(__m128i*)(&*(m[1].m_data));
+        __m128i mcol3 = *(__m128i*)(&*(m[2].m_data));
+        __m128i mcol4 = *(__m128i*)(&*(m[3].m_data));
 
         __m128i xProd = _mm_mullo_epi32(mcol1, vx);
         __m128i yProd = _mm_mullo_epi32(mcol2, vy);
@@ -745,7 +750,7 @@ namespace VectorOps
         __m128i sum2 = _mm_add_epi32(zProd, wProd);
         __m128i sum  = _mm_add_epi32(sum1, sum2);
 
-        _mm_stream_si128((__m128i*)&out, sum);
+        _mm_stream_si128((__m128i*)out, sum);
     }
 }
 

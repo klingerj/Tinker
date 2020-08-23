@@ -5,6 +5,8 @@
 #include <windows.h>
 //#include <string.h>
 
+#include <emmintrin.h>
+
 #define NUM_JOBS_PER_WORKER 64
 #define WORKER_THREAD_STACK_SIZE SIZE_2MB
 
@@ -30,6 +32,14 @@ namespace Tinker
         {
             ThreadInfo* info = (ThreadInfo*)(arg);
 
+            /*char buffer[50] = {};
+                    strcpy_s(buffer, "From thread Id: ");
+                    _itoa_s(info->threadId, buffer + 16, 10, 10);
+                    buffer[17] = '\n';
+                    buffer[18] = '\0';
+                    PrintDebugString(buffer);*/
+            
+            /* old:
             while (!info->terminate)
             {
                 if (info->jobs.Size() > 0)
@@ -37,20 +47,40 @@ namespace Tinker
                     WorkerJob* job;
                     info->jobs.Dequeue(&job);
                     (*job)();
-                    /*char buffer[50] = {};
-                    strcpy_s(buffer, "From thread Id: ");
-                    _itoa_s(info->threadId, buffer + 16, 10, 10);
-                    buffer[17] = '\n';
-                    buffer[18] = '\0';
-                    PrintDebugString(buffer);*/
+                    
                     job->m_done = true;
+                }
+
+                WaitForSingleObjectEx(info->semaphoreHandle, INFINITE, FALSE);
+            }
+            */
+
+        outer_loop:
+            while (!info->terminate)
+            {
+                const uint32 limit = 4096;
+                uint32 count = 0;
+
+                while (count++ < limit)
+                {
+                    uint32 head = info->jobs.m_head.load(std::memory_order_acquire);
+                    uint32 tail = info->jobs.m_tail.load(std::memory_order_acquire);
+
+                    if (head - tail > 0)
+                    {
+                        WorkerJob* job;
+                        info->jobs.Dequeue(&job);
+                        (*job)();
+                        job->m_done = true;
+                        goto outer_loop; // reset counter until sema
+                    }
+                    _mm_pause();
                 }
 
                 WaitForSingleObjectEx(info->semaphoreHandle, INFINITE, FALSE);
             }
 
             info->didTerminate = true;
-            _endthread();
         }
 
         class WorkerThreadPool
