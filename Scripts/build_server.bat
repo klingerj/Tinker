@@ -14,8 +14,8 @@ if "%BuildConfig%" NEQ "Debug" (
     )
 
 rem *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm-
-set CommonLinkFlags=/incremental:no /opt:ref
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /FAs /Zi
+set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
     echo Debug mode specified.

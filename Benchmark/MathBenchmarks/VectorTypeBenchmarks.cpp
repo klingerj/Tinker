@@ -8,13 +8,13 @@ using namespace Platform;
 const uint32 threadCount = 15;
 WorkerThreadPool g_threadpool;
 
-const uint32 numJobs = threadCount * 1;
+const uint32 numJobs = threadCount;
 WorkerJob* jobs[numJobs];
 
 v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
 v4f* g_v4s_dst = nullptr;
-const uint32 jobSize = (sizeof(v4f)) * (2 << 12);
+const uint32 jobSize = (2 << 12);
 const uint32 numVectors = numJobs * jobSize;
 const uint32 numIters = 20;
 

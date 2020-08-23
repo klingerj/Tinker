@@ -4,7 +4,7 @@
 #include <math.h>
 #include <cmath>
 
-//#define TINKER_ASSERTS_ON
+#define TINKER_ASSERTS_ON
 
 #ifdef TINKER_ASSERTS_ON
 #include <assert.h>
