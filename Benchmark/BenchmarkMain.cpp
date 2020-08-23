@@ -2,9 +2,11 @@
 
 #include "MathBenchmarks/VectorTypeBenchmarks.h"
 
+#include <timeapi.h>
 
 int main()
 {
+    timeBeginPeriod(1);
     TINKER_BENCHMARK_HEADER;
     
     // Vector benchmarks

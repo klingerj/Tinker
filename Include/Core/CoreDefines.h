@@ -4,8 +4,17 @@
 #include <math.h>
 #include <cmath>
 
+//#define TINKER_ASSERTS_ON
+
+#ifdef TINKER_ASSERTS_ON
 #include <assert.h>
 #define TINKER_ASSERT(cond) assert((cond))
+#else
+#define TINKER_ASSERT(cond)
+#endif
+
+// C++ only!
+#define RESTRICT __restrict
 
 #define TINKER_INVALID_HANDLE 0xffffffff
 
