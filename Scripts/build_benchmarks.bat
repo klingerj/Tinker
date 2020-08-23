@@ -23,7 +23,7 @@ if "%BuildConfig%" == "Debug" (
     set CommonLinkFlags=%CommonLinkFlags% /debug:full
     ) else (
     echo Release mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
+    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT /fp:fast
     )
 
 rem *********************************************************************************************************
