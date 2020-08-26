@@ -4,6 +4,8 @@
 
 using namespace Tinker;
 using namespace Platform;
+using namespace Core;
+using namespace Math;
 
 const uint32 threadCount = 15;
 WorkerThreadPool g_threadpool;

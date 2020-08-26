@@ -1,6 +1,10 @@
 #include "../Include/Core/Math/VectorTypes.h"
 #include "../TinkerTest.h"
 
+using namespace Tinker;
+using namespace Core;
+using namespace Math;
+
 // V2
 void Test_v2ConstructorDefault()
 {
@@ -683,24 +687,27 @@ void Test_m2OpMulV2()
 
 void Test_m2V2MulSIMD()
 {
-    m2f mf = m2f(1.0f, 2.0f, 3.0f, 4.0f);
-    v2f vf = v2f(5.0f, 6.0f);
+    alignas(16) m2f mf = m2f(1.0f, 2.0f, 3.0f, 4.0f);
+    alignas(16) v2f vf = v2f(5.0f, 6.0f);
     v2f resultf1 = mf * vf;
-    v2f resultf2 = VectorOps::Mul_SIMD(vf, mf);
+    alignas(16) v2f resultf2;
+    VectorOps::Mul_SIMD(&vf, &mf, &resultf2);
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultf1[0], resultf2[0]));
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultf1[1], resultf2[1]));
 
-    m2i mi = m2i(1, 2, 3, 4);
-    v2i vi = v2i(5, 6);
+    alignas(16) m2i mi = m2i(1, 2, 3, 4);
+    alignas(16) v2i vi = v2i(5, 6);
     v2i resulti1 = mi * vi;
-    v2i resulti2 = VectorOps::Mul_SIMD(vi, mi);
+    alignas(16) v2i resulti2;
+    VectorOps::Mul_SIMD(&vi, &mi, &resulti2);
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resulti1[0], resulti2[0]));
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resulti1[1], resulti2[1]));
 
-    m2ui mui = m2ui(1, 2, 3, 4);
-    v2ui vui = v2ui(5, 6);
+    alignas(16) m2ui mui = m2ui(1, 2, 3, 4);
+    alignas(16) v2ui vui = v2ui(5, 6);
     v2ui resultui1 = mui * vui;
-    v2ui resultui2 = VectorOps::Mul_SIMD(vui, mui);
+    alignas(16) v2ui resultui2;
+    VectorOps::Mul_SIMD(&vui, &mui, &resultui2);
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultui1[0], resultui2[0]));
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultui1[1], resultui2[1]));
 }
@@ -872,46 +879,44 @@ void Test_m2NEq()
 
 void Test_m4V4MulSIMD()
 {
-    m4f mf = m4f(1.0f, 2.0f, 3.0f, 4.0f,
+    alignas(16) m4f mf = m4f(1.0f, 2.0f, 3.0f, 4.0f,
 		 5.0f, 6.0f, 7.0f, 8.0f,
 		 9.0f, 10.0f, 11.0f, 12.0f,
 		 13.0f, 14.0f, 15.0f, 16.0f);
-    v4f vf = v4f(5.0f, 6.0f, 7.0f, 8.0f);
+    alignas(16) v4f vf = v4f(5.0f, 6.0f, 7.0f, 8.0f);
     v4f resultf1 = mf * vf;
-    v4f resultf2;
-    VectorOps::Mul_SIMD(vf, mf, resultf2);
+    alignas(16) v4f resultf2;
+    VectorOps::Mul_SIMD(&vf, &mf, &resultf2);
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultf1[0], resultf2[0]));
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultf1[1], resultf2[1]));
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultf1[2], resultf2[2]));
     TINKER_TEST_ASSERT(FLOAT_EQUAL(resultf1[3], resultf2[3]));
 
 
-    m4i mi = m4i(1, 2, 3, 4,
+    alignas(16) m4i mi = m4i(1, 2, 3, 4,
 		 5, 6, 7, 8,
 		 9, 10, 11, 12,
 		 13, 14, 15, 16);
-    v4i vi = v4i(5, 6, 7, 8);
+    alignas(16) v4i vi = v4i(5, 6, 7, 8);
     v4i resulti1 = mi * vi;
-    v4i resulti2;
-    VectorOps::Mul_SIMD(vi, mi, resulti2);
+    alignas(16) v4i resulti2;
+    VectorOps::Mul_SIMD(&vi, &mi, &resulti2);
     TINKER_TEST_ASSERT(resulti1[0] == resulti2[0]);
     TINKER_TEST_ASSERT(resulti1[1] == resulti2[1]);
     TINKER_TEST_ASSERT(resulti1[2] == resulti2[2]);
     TINKER_TEST_ASSERT(resulti1[3] == resulti2[3]);
 
-    m4ui mui = m4ui(1, 2, 3, 4,
+    alignas(16) m4ui mui = m4ui(1, 2, 3, 4,
 		 5, 6, 7, 8,
 		 9, 10, 11, 12,
 		 13, 14, 15, 16);
-    v4ui vui = v4ui(5, 6, 7, 8);
+    alignas(16) v4ui vui = v4ui(5, 6, 7, 8);
     v4ui resultui1 = mui * vui;
-    v4ui resultui2;
-    VectorOps::Mul_SIMD(vui, mui, resultui2);
+    alignas(16) v4ui resultui2;
+    VectorOps::Mul_SIMD(&vui, &mui, &resultui2);
     TINKER_TEST_ASSERT(resultui1[0] == resultui2[0]);
     TINKER_TEST_ASSERT(resultui1[1] == resultui2[1]);
     TINKER_TEST_ASSERT(resultui1[2] == resultui2[2]);
     TINKER_TEST_ASSERT(resultui1[3] == resultui2[3]);
 }
-
-
 

@@ -50,8 +50,13 @@ namespace Tinker
 
             uint8* Alloc(size_t size, size_t alignment)
             {
-                TINKER_ASSERT((m_size - m_nextAllocOffset) >= size);
                 TINKER_ASSERT(ISPOW2(alignment));
+
+                if (!((m_size - m_nextAllocOffset) >= size))
+                {
+                    // Not enough space - allocation fails, but don't assert
+                    return nullptr;
+                }
 
                 size_t memPtrAsNum = (size_t)((uint8*)m_ownedMemPtr + m_nextAllocOffset);
 
