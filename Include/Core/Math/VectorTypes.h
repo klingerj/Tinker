@@ -90,6 +90,11 @@ namespace Tinker
                     return *this - vec2<T>(other);
                 }
 
+                vec2<T> operator-() const
+                {
+                    return { -this->x, -this->y };
+                }
+
                 vec2<T> operator*(const vec2<T>& other) const
                 {
                     return { x * other.x, y * other.y };
@@ -397,6 +402,11 @@ namespace Tinker
                 vec3<T> operator-(const T& other) const
                 {
                     return *this - vec3<T>(other);
+                }
+
+                vec3<T> operator-() const
+                {
+                    return { -this->x, -this->y, -this->z };
                 }
 
                 vec3<T> operator*(const vec3<T>& other) const
@@ -740,6 +750,11 @@ namespace Tinker
                     return *this - vec4<T>(other);
                 }
 
+                vec4<T> operator-() const
+                {
+                    return { -this->x, -this->y, -this->z, -this->w };
+                }
+
                 vec4<T> operator*(const vec4<T>& other) const
                 {
                     return { x * other.x, y * other.y, z * other.z, w * other.w };
@@ -920,12 +935,24 @@ namespace Tinker
 
                 mat4<T> operator*(const mat4<T>& other) const
                 {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
+                    mat4<T> newMat;
+
+                    for (uint8 dstCol = 0; dstCol < numCols; ++dstCol)
                     {
-                        newData[i] = m_data[i] * other.m_data[i];
+                        for (uint8 dstRow = 0; dstRow < numCols; ++dstRow)
+                        {
+                            T dotProdSum = {};
+
+                            for (uint8 n = 0; n < numCols; ++n)
+                            {
+                                dotProdSum += (*this)[n][dstRow] * other[dstCol][n];
+                            }
+
+                            newMat[dstCol][dstRow] = dotProdSum;
+                        }
                     }
-                    return { newData };
+
+                    return newMat;
                 }
 
                 mat4<T> operator/(const mat4<T>& other) const
@@ -1019,10 +1046,23 @@ namespace Tinker
             static inline void Normalize(v3f& v)
             {
                 float denom = 0.0f;
-                denom += v[0];
-                denom += v[1];
-                denom += v[2];
+                denom += v.x * v.x;
+                denom += v.y * v.y;
+                denom += v.z * v.z;
+                // TODO: custom sqrt impl
+                denom = sqrtf(denom);
                 v /= denom;
+            }
+
+            static inline v3f Cross(const v3f& a, const v3f& b)
+            {
+                return v3f(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+            }
+
+            template <typename T>
+            static inline T Dot(const vec3<T>& a, const vec3<T>& b)
+            {
+                return a.x * b.x + a.y * b.y + a.z * b.z;
             }
 
             // Vector Ops
