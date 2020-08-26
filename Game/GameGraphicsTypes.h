@@ -1,5 +1,9 @@
 #pragma once
 
+#include "../Include/Core/CoreDefines.h"
+
+using namespace Tinker;
+
 typedef struct game_graphic_data
 {
     uint32 m_vertexBufferHandle;
@@ -36,7 +40,7 @@ struct default_geometry
     uint32 m_indexBufferHandle;
     uint32 m_stagingBufferHandle_vert;
     uint32 m_stagingBufferHandle_idx;
-    v4f m_points[numPoints];
+    Core::Math::v4f m_points[numPoints];
     uint32 m_indices[numIndices];
 };
 

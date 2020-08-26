@@ -87,7 +87,7 @@ namespace Tinker
 
             typedef struct vertex_position
             {
-                v4f position;
+                Core::Math::v4f position;
             } VulkanVertexPosition;
 
             typedef union vulkan_buffer_data

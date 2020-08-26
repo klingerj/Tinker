@@ -3,6 +3,7 @@
 layout(set = 0, binding = 0) uniform DescriptorInstanceData
 {
     mat4 modelMatrix;
+    mat4 viewProjMatrix;
 } InstanceData;
 
 layout(location = 0) in vec4 vertPosition;
