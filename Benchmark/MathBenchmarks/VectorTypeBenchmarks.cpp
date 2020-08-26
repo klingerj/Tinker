@@ -64,11 +64,11 @@ void BM_m2MulV2_iScalar()
 
 void BM_m2MulV2_iVectorized()
 {
-    v2i v = { 4, 5 };
+    alignas(16) v2i v = { 4, 5 };
     for (uint32 i = 0; i < 10000000; ++i)
     {
         m2i m = { (int32)i, (int32)i + 1, (int32)i + 2, (int32)i + 3 };
-        v = VectorOps::Mul_SIMD(v, m);
+        VectorOps::Mul_SIMD(&v, &m, &v);
     }
 }
 
@@ -144,7 +144,8 @@ void BM_m2MulV2_fVectorized()
 
     for (uint32 i = 0; i < numVectors; ++i)
     {
-        vectors[i] = VectorOps::Mul_SIMD(vectors[i], m);
+        // NOTE: bad, shouldn't write to the original matrix with simd
+        //VectorOps::Mul_SIMD(&vectors[i], &m, &vectors[i]);
     }
 }
 
