@@ -376,6 +376,9 @@ GAME_UPDATE(GameUpdate)
         isGameInitted = true;
     }
 
+    // TODO: move this
+    // TODO: pass time data into this function
+    // Animate camera
     static auto startTime = std::chrono::high_resolution_clock::now();
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
@@ -389,6 +392,7 @@ GAME_UPDATE(GameUpdate)
 
     uint32 numVertBytes = sizeof(v4f) * 3;
     uint32 numIdxBytes = sizeof(uint32) * 3;
+    // Animated vertices
     v4f positions[] = { v4f(0.0f, -0.5f, sinf(time) * 0.2f, 1.0f), v4f(0.5f, 0.5f, sinf(time) * 0.2f, 1.0f), v4f(-0.5f, 0.5f, sinf(time) * 0.2f, 1.0f) };
     uint32 indices[] = { 0, 2, 1 };
     memcpy(gameGraphicsData.m_stagingBufferMemPtr, positions, numVertBytes);
