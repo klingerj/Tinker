@@ -8,6 +8,8 @@ namespace Tinker
     {
         namespace Math
         {
+            // Vector classes
+
             template <typename T>
             class vec2
             {
@@ -148,172 +150,6 @@ namespace Tinker
 
             template <typename T>
             bool operator!=(const vec2<T>& lhs, const vec2<T>& rhs)
-            {
-                return !(lhs == rhs);
-            }
-
-            template <typename T>
-            class mat2
-            {
-                enum
-                {
-                    numEles = 4,
-                    numCols = 2,
-                    numEleBytes = numEles * sizeof(T)
-                };
-
-            public:
-                union
-                {
-                    T m_data[numEles];
-                    struct
-                    {
-                        vec2<T> m_cols[numCols];
-                    };
-                };
-
-                mat2()
-                {
-                    for (uint8 i = 0; i < numEles; ++i) m_data[i] = {};
-                }
-
-                mat2(const mat2<T>& other)
-                {
-                    memcpy(m_data, other.m_data, numEleBytes);
-                }
-
-                mat2(const T* data)
-                {
-                    memcpy(m_data, data, numEleBytes);
-                }
-
-                mat2(const T& x)
-                {
-                    // Initialize diagonal
-                    m_data[0] = x;
-                    m_data[1] = {};
-                    m_data[2] = {};
-                    m_data[3] = x;
-                }
-
-                mat2(const vec2<T>& a, const vec2<T>& b)
-                {
-                    // Column-major
-                    m_data[0] = a.x; m_data[2] = b.x;
-                    m_data[1] = a.y; m_data[3] = b.y;
-                }
-
-                mat2(const T& x00, const T& x01, const T& x10, const T& x11)
-                {
-                    // Column-major
-                    m_data[0] = x00; m_data[2] = x10;
-                    m_data[1] = x01; m_data[3] = x11;
-                }
-
-                const vec2<T>& operator[](size_t index) const
-                {
-                    TINKER_ASSERT(index < numCols);
-                    return m_cols[index];
-                }
-
-                vec2<T>& operator[](size_t index)
-                {
-                    TINKER_ASSERT(index < numCols);
-                    return m_cols[index];
-                }
-
-                mat2<T> operator+(const mat2<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] + other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                mat2<T> operator-(const mat2<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] - other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                mat2<T> operator*(const mat2<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] * other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                mat2<T> operator/(const mat2<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] / other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                void operator+=(const mat2<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] += other.m_data[i];
-                    }
-                }
-
-                void operator-=(const mat2<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] -= other.m_data[i];
-                    }
-                }
-
-                void operator*=(const mat2<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] *= other.m_data[i];
-                    }
-                }
-
-                void operator/=(const mat2<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] /= other.m_data[i];
-                    }
-                }
-            };
-
-            template <typename T>
-            vec2<T> operator*(const mat2<T>& m, const vec2<T>& v)
-            {
-                return { m[0][0] * v.x + m[1][0] * v.y, m[0][1] * v.x + m[1][1] * v.y };
-            }
-
-            template <typename T>
-            bool operator==(const mat2<T>& lhs, const mat2<T>& rhs)
-            {
-                bool equal = true;
-                for (uint8 i = 0; i < 4; ++i)
-                {
-                    equal &= lhs.m_data[i] == rhs.m_data[i];
-                }
-                return equal;
-            }
-
-            template <typename T>
-            bool operator!=(const mat2<T>& lhs, const mat2<T>& rhs)
             {
                 return !(lhs == rhs);
             }
@@ -466,187 +302,6 @@ namespace Tinker
 
             template <typename T>
             bool operator!=(const vec3<T>& lhs, const vec3<T>& rhs)
-            {
-                return !(lhs == rhs);
-            }
-
-            template <typename T>
-            class mat3
-            {
-                enum
-                {
-                    numEles = 9,
-                    numCols = 3,
-                    numEleBytes = numEles * sizeof(T)
-                };
-
-            public:
-                union
-                {
-                    T m_data[numEles];
-                    struct
-                    {
-                        vec3<T> m_cols[numCols];
-                    };
-                };
-
-                mat3()
-                {
-                    for (uint8 i = 0; i < numEles; ++i) m_data[i] = {};
-                }
-
-                mat3(const mat3<T>& other)
-                {
-                    memcpy(m_data, other.m_data, numEleBytes);
-                }
-
-                mat3(const T* data)
-                {
-                    memcpy(m_data, data, numEleBytes);
-                }
-
-                mat3(const T& x)
-                {
-                    // Initialize diagonal
-                    m_data[0] = x;
-                    m_data[1] = {};
-                    m_data[2] = {};
-
-                    m_data[3] = {};
-                    m_data[4] = x;
-                    m_data[5] = {};
-
-                    m_data[6] = {};
-                    m_data[7] = {};
-                    m_data[8] = x;
-                }
-
-                mat3(const vec3<T>& a, const vec3<T>& b, const vec3<T>& c)
-                {
-                    // Column-major
-                    m_data[0] = a.x; m_data[3] = b.x; m_data[6] = c.x;
-                    m_data[1] = a.y; m_data[4] = b.y; m_data[7] = c.y;
-                    m_data[2] = a.z; m_data[5] = b.z; m_data[8] = c.z;
-                }
-
-                mat3(const T& x00, const T& x01, const T& x02,
-                    const T& x10, const T& x11, const T& x12,
-                    const T& x20, const T& x21, const T& x22)
-                {
-                    // Column-major
-                    m_data[0] = x00; m_data[3] = x10; m_data[6] = x20;
-                    m_data[1] = x01; m_data[4] = x11; m_data[7] = x21;
-                    m_data[2] = x02; m_data[5] = x12; m_data[8] = x22;
-                }
-
-                const vec3<T>& operator[](size_t index) const
-                {
-                    TINKER_ASSERT(index < numCols);
-                    return m_cols[index];
-                }
-
-                vec3<T>& operator[](size_t index)
-                {
-                    TINKER_ASSERT(index < numCols);
-                    return m_cols[index];
-                }
-
-                mat3<T> operator+(const mat3<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] + other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                mat3<T> operator-(const mat3<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] - other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                mat3<T> operator*(const mat3<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] * other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                mat3<T> operator/(const mat3<T>& other) const
-                {
-                    T newData[numEles];
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        newData[i] = m_data[i] / other.m_data[i];
-                    }
-                    return { newData };
-                }
-
-                void operator+=(const mat3<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] += other.m_data[i];
-                    }
-                }
-
-                void operator-=(const mat3<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] -= other.m_data[i];
-                    }
-                }
-
-                void operator*=(const mat3<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] *= other.m_data[i];
-                    }
-                }
-
-                void operator/=(const mat3<T>& other)
-                {
-                    for (uint8 i = 0; i < numEles; ++i)
-                    {
-                        m_data[i] /= other.m_data[i];
-                    }
-                }
-            };
-
-            template <typename T>
-            vec3<T> operator*(const mat3<T>& m, const vec3<T>& v)
-            {
-                return {
-                    m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z,
-                    m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z,
-                    m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z
-                };
-            }
-
-            template <typename T>
-            bool operator==(const mat3<T>& lhs, const mat3<T>& rhs)
-            {
-                bool equal = true;
-                for (uint8 i = 0; i < 9; ++i)
-                {
-                    equal &= lhs.m_data[i] == rhs.m_data[i];
-                }
-                return equal;
-            }
-
-            template <typename T>
-            bool operator!=(const mat3<T>& lhs, const mat3<T>& rhs)
             {
                 return !(lhs == rhs);
             }
@@ -821,6 +476,393 @@ namespace Tinker
             }
 
             template <typename T>
+            static inline vec3<T> Cross(const vec3<T>& a, const vec3<T>& b)
+            {
+                return vec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+            }
+
+            template <typename T>
+            static inline T Dot(const vec2<T>& a, const vec2<T>& b)
+            {
+                return a.x * b.x + a.y * b.y;
+            }
+
+            template <typename T>
+            static inline T Dot(const vec3<T>& a, const vec3<T>& b)
+            {
+                return a.x * b.x + a.y * b.y + a.z * b.z;
+            }
+
+            template <typename T>
+            static inline T Dot(const vec4<T>& a, const vec4<T>& b)
+            {
+                return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+            }
+
+            // Matrix classes
+
+            template <typename T>
+            class mat2
+            {
+                enum
+                {
+                    numEles = 4,
+                    numCols = 2,
+                    numEleBytes = numEles * sizeof(T)
+                };
+
+            public:
+                union
+                {
+                    T m_data[numEles];
+                    struct
+                    {
+                        vec2<T> m_cols[numCols];
+                    };
+                };
+
+                mat2()
+                {
+                    for (uint8 i = 0; i < numEles; ++i) m_data[i] = {};
+                }
+
+                mat2(const mat2<T>& other)
+                {
+                    memcpy(m_data, other.m_data, numEleBytes);
+                }
+
+                mat2(const T* data)
+                {
+                    memcpy(m_data, data, numEleBytes);
+                }
+
+                mat2(const T& x)
+                {
+                    // Initialize diagonal
+                    m_data[0] = x;
+                    m_data[1] = {};
+                    m_data[2] = {};
+                    m_data[3] = x;
+                }
+
+                mat2(const vec2<T>& a, const vec2<T>& b)
+                {
+                    // Column-major
+                    m_data[0] = a.x; m_data[2] = b.x;
+                    m_data[1] = a.y; m_data[3] = b.y;
+                }
+
+                mat2(const T& x00, const T& x01, const T& x10, const T& x11)
+                {
+                    // Column-major
+                    m_data[0] = x00; m_data[2] = x10;
+                    m_data[1] = x01; m_data[3] = x11;
+                }
+
+                const vec2<T>& operator[](size_t index) const
+                {
+                    TINKER_ASSERT(index < numCols);
+                    return m_cols[index];
+                }
+
+                vec2<T>& operator[](size_t index)
+                {
+                    TINKER_ASSERT(index < numCols);
+                    return m_cols[index];
+                }
+
+                mat2<T> operator+(const mat2<T>& other) const
+                {
+                    T newData[numEles];
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        newData[i] = m_data[i] + other.m_data[i];
+                    }
+                    return { newData };
+                }
+
+                mat2<T> operator-(const mat2<T>& other) const
+                {
+                    T newData[numEles];
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        newData[i] = m_data[i] - other.m_data[i];
+                    }
+                    return { newData };
+                }
+
+                mat2<T> operator*(const mat2<T>& other) const
+                {
+                    mat2<T> newMat;
+
+                    for (uint8 dstCol = 0; dstCol < numCols; ++dstCol)
+                    {
+                        for (uint8 dstRow = 0; dstRow < numCols; ++dstRow)
+                        {
+                            const vec2<T> row = vec2<T>((*this)[0][dstRow], (*this)[1][dstRow]);
+                            const vec2<T>& col = other[dstCol];
+                            newMat[dstCol][dstRow] = Dot(row, col);
+                        }
+                    }
+
+                    return newMat;
+                }
+
+                mat2<T> operator/(const mat2<T>& other) const
+                {
+                    T newData[numEles];
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        newData[i] = m_data[i] / other.m_data[i];
+                    }
+                    return { newData };
+                }
+
+                void operator+=(const mat2<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] += other.m_data[i];
+                    }
+                }
+
+                void operator-=(const mat2<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] -= other.m_data[i];
+                    }
+                }
+
+                void operator*=(const mat2<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] *= other.m_data[i];
+                    }
+                }
+
+                void operator/=(const mat2<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] /= other.m_data[i];
+                    }
+                }
+            };
+
+            template <typename T>
+            vec2<T> operator*(const mat2<T>& m, const vec2<T>& v)
+            {
+                return { m[0][0] * v.x + m[1][0] * v.y, m[0][1] * v.x + m[1][1] * v.y };
+            }
+
+            template <typename T>
+            bool operator==(const mat2<T>& lhs, const mat2<T>& rhs)
+            {
+                bool equal = true;
+                for (uint8 i = 0; i < 4; ++i)
+                {
+                    equal &= lhs.m_data[i] == rhs.m_data[i];
+                }
+                return equal;
+            }
+
+            template <typename T>
+            bool operator!=(const mat2<T>& lhs, const mat2<T>& rhs)
+            {
+                return !(lhs == rhs);
+            }
+
+            template <typename T>
+            class mat3
+            {
+                enum
+                {
+                    numEles = 9,
+                    numCols = 3,
+                    numEleBytes = numEles * sizeof(T)
+                };
+
+            public:
+                union
+                {
+                    T m_data[numEles];
+                    struct
+                    {
+                        vec3<T> m_cols[numCols];
+                    };
+                };
+
+                mat3()
+                {
+                    for (uint8 i = 0; i < numEles; ++i) m_data[i] = {};
+                }
+
+                mat3(const mat3<T>& other)
+                {
+                    memcpy(m_data, other.m_data, numEleBytes);
+                }
+
+                mat3(const T* data)
+                {
+                    memcpy(m_data, data, numEleBytes);
+                }
+
+                mat3(const T& x)
+                {
+                    // Initialize diagonal
+                    m_data[0] = x;
+                    m_data[1] = {};
+                    m_data[2] = {};
+
+                    m_data[3] = {};
+                    m_data[4] = x;
+                    m_data[5] = {};
+
+                    m_data[6] = {};
+                    m_data[7] = {};
+                    m_data[8] = x;
+                }
+
+                mat3(const vec3<T>& a, const vec3<T>& b, const vec3<T>& c)
+                {
+                    // Column-major
+                    m_data[0] = a.x; m_data[3] = b.x; m_data[6] = c.x;
+                    m_data[1] = a.y; m_data[4] = b.y; m_data[7] = c.y;
+                    m_data[2] = a.z; m_data[5] = b.z; m_data[8] = c.z;
+                }
+
+                mat3(const T& x00, const T& x01, const T& x02,
+                    const T& x10, const T& x11, const T& x12,
+                    const T& x20, const T& x21, const T& x22)
+                {
+                    // Column-major
+                    m_data[0] = x00; m_data[3] = x10; m_data[6] = x20;
+                    m_data[1] = x01; m_data[4] = x11; m_data[7] = x21;
+                    m_data[2] = x02; m_data[5] = x12; m_data[8] = x22;
+                }
+
+                const vec3<T>& operator[](size_t index) const
+                {
+                    TINKER_ASSERT(index < numCols);
+                    return m_cols[index];
+                }
+
+                vec3<T>& operator[](size_t index)
+                {
+                    TINKER_ASSERT(index < numCols);
+                    return m_cols[index];
+                }
+
+                mat3<T> operator+(const mat3<T>& other) const
+                {
+                    T newData[numEles];
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        newData[i] = m_data[i] + other.m_data[i];
+                    }
+                    return { newData };
+                }
+
+                mat3<T> operator-(const mat3<T>& other) const
+                {
+                    T newData[numEles];
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        newData[i] = m_data[i] - other.m_data[i];
+                    }
+                    return { newData };
+                }
+
+                mat3<T> operator*(const mat3<T>& other) const
+                {
+                    mat3<T> newMat;
+
+                    for (uint8 dstCol = 0; dstCol < numCols; ++dstCol)
+                    {
+                        for (uint8 dstRow = 0; dstRow < numCols; ++dstRow)
+                        {
+                            const vec3<T> row = vec3<T>((*this)[0][dstRow], (*this)[1][dstRow], (*this)[2][dstRow]);
+                            const vec3<T>& col = other[dstCol];
+                            newMat[dstCol][dstRow] = Dot(row, col);
+                        }
+                    }
+
+                    return newMat;
+                }
+
+                mat3<T> operator/(const mat3<T>& other) const
+                {
+                    T newData[numEles];
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        newData[i] = m_data[i] / other.m_data[i];
+                    }
+                    return { newData };
+                }
+
+                void operator+=(const mat3<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] += other.m_data[i];
+                    }
+                }
+
+                void operator-=(const mat3<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] -= other.m_data[i];
+                    }
+                }
+
+                void operator*=(const mat3<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] *= other.m_data[i];
+                    }
+                }
+
+                void operator/=(const mat3<T>& other)
+                {
+                    for (uint8 i = 0; i < numEles; ++i)
+                    {
+                        m_data[i] /= other.m_data[i];
+                    }
+                }
+            };
+
+            template <typename T>
+            vec3<T> operator*(const mat3<T>& m, const vec3<T>& v)
+            {
+                return {
+                    m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z,
+                    m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z,
+                    m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z
+                };
+            }
+
+            template <typename T>
+            bool operator==(const mat3<T>& lhs, const mat3<T>& rhs)
+            {
+                bool equal = true;
+                for (uint8 i = 0; i < 9; ++i)
+                {
+                    equal &= lhs.m_data[i] == rhs.m_data[i];
+                }
+                return equal;
+            }
+
+            template <typename T>
+            bool operator!=(const mat3<T>& lhs, const mat3<T>& rhs)
+            {
+                return !(lhs == rhs);
+            }
+
+            template <typename T>
             class mat4
             {
 
@@ -941,14 +983,9 @@ namespace Tinker
                     {
                         for (uint8 dstRow = 0; dstRow < numCols; ++dstRow)
                         {
-                            T dotProdSum = {};
-
-                            for (uint8 n = 0; n < numCols; ++n)
-                            {
-                                dotProdSum += (*this)[n][dstRow] * other[dstCol][n];
-                            }
-
-                            newMat[dstCol][dstRow] = dotProdSum;
+                            const vec4<T> row = vec4<T>((*this)[0][dstRow], (*this)[1][dstRow], (*this)[2][dstRow], (*this)[3][dstRow]);
+                            const vec4<T>& col = other[dstCol];
+                            newMat[dstCol][dstRow] = Dot(row, col);
                         }
                     }
 
@@ -1037,10 +1074,13 @@ namespace Tinker
             typedef vec4<float>  v4f;
 
             typedef mat2<uint32> m2ui;
+            typedef mat3<uint32> m3ui;
             typedef mat4<uint32> m4ui;
             typedef mat2<int32>  m2i;
+            typedef mat3<int32>  m3i;
             typedef mat4<int32>  m4i;
             typedef mat2<float>  m2f;
+            typedef mat3<float>  m3f;
             typedef mat4<float>  m4f;
 
             static inline void Normalize(v3f& v)
@@ -1052,17 +1092,6 @@ namespace Tinker
                 // TODO: custom sqrt impl
                 denom = sqrtf(denom);
                 v /= denom;
-            }
-
-            static inline v3f Cross(const v3f& a, const v3f& b)
-            {
-                return v3f(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
-            }
-
-            template <typename T>
-            static inline T Dot(const vec3<T>& a, const vec3<T>& b)
-            {
-                return a.x * b.x + a.y * b.y + a.z * b.z;
             }
 
             // Vector Ops
@@ -1094,7 +1123,7 @@ namespace Tinker
                     __m128 sum = _mm_add_ps(xProd, yProd);
 
                     _mm_stream_pi((__m64*)out, *(__m64*)&sum);*/
-                    * out = *m * *v;
+                    *out = *m * *v;
                 }
 
                 static inline void Mul_SIMD(const v2i* RESTRICT v, const m2i* RESTRICT m, v2i* RESTRICT out)
@@ -1114,7 +1143,7 @@ namespace Tinker
                     __m128i sum = _mm_add_epi32(xProd, yProd);
 
                     _mm_stream_pi((__m64*)out, *(__m64*)&sum);*/
-                    * out = *m * *v;
+                    *out = *m * *v;
                 }
 
                 static inline void Mul_SIMD(const v2ui* RESTRICT v, const m2ui* RESTRICT m, v2ui* RESTRICT out)
@@ -1134,7 +1163,7 @@ namespace Tinker
                     __m128i sum = _mm_add_epi32(xProd, yProd);
 
                     _mm_stream_pi((__m64*)out, *(__m64*)&sum);*/
-                    * out = *m * *v;
+                    *out = *m * *v;
                 }
 
                 static inline void Mul_SIMD(const v4f* RESTRICT v, const m4f* m, v4f* RESTRICT out)
