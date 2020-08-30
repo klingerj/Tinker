@@ -82,10 +82,10 @@ m4f CameraViewMatrix(const VirtualCamera* camera)
     Normalize(up);
 
     m4f view;
-    view[0] = v4f(right.x, forward.x, up.x, 0.0f);
-    view[1] = v4f(right.y, forward.y, up.y, 0.0f);
-    view[2] = v4f(right.z, forward.z, up.z, 0.0f);
-    view[3] = v4f(-Dot(camera->m_eye, right), -Dot(camera->m_eye, forward), -Dot(camera->m_eye, up), 1.0f);
+    view[0] = v4f(right.x, up.x, forward.x, 0.0f);
+    view[1] = v4f(right.y, up.y, forward.y, 0.0f);
+    view[2] = v4f(right.z, up.z, forward.z, 0.0f);
+    view[3] = v4f(-Dot(camera->m_eye, right), -Dot(camera->m_eye, up), -Dot(camera->m_eye, forward), 1.0f);
     return view;
 }
 
@@ -96,10 +96,10 @@ m4f PerspectiveProjectionMatrix()
     const float aspect = (float)currentWindowWidth / currentWindowHeight;
     const float tanFov = tanf(fovy * 0.5f);
 
-    proj[0][0] = 1.0f / (aspect * tanFov); proj[1][0] = 0.0f;                                             proj[2][0] = 0.0f;          proj[3][0] = 0.0f; // transform x to ndc
-    proj[0][1] = 0.0f;                     proj[1][1] = 0.0f;                                             proj[2][1] = 1.0f / tanFov; proj[3][1] = 0.0f; // Z-up so y-coord gets normalized as depth
-    proj[0][2] = 0.0f;                     proj[1][2] = (-nearPlane - farPlane) / (nearPlane - farPlane); proj[2][2] = 0.0f;          proj[3][2] = (2.0f * farPlane * nearPlane) / (nearPlane - farPlane); // Z-up, so y-coord means depth
-    proj[0][3] = 0.0f;                     proj[1][3] = 1.0f;                                             proj[2][3] = 0.0f;          proj[3][3] = 0.0f; // Z-up, so eye-space y-coord is used for perspective divide
+    proj[0][0] = 1.0f / (aspect * tanFov); proj[1][0] = 0.0f;          proj[2][0] = 0.0f;                                             proj[3][0] = 0.0f; // transform x to ndc
+    proj[0][1] = 0.0f;                     proj[1][1] = 1.0f / tanFov; proj[2][1] = 0.0f;                                             proj[3][1] = 0.0f; // Z-up so y-coord gets normalized as depth
+    proj[0][2] = 0.0f;                     proj[1][2] = 0.0f;          proj[2][2] = (-nearPlane - farPlane) / (nearPlane - farPlane); proj[3][2] = (2.0f * farPlane * nearPlane) / (nearPlane - farPlane); // Z-up, so y-coord means depth
+    proj[0][3] = 0.0f;                     proj[1][3] = 0.0f;          proj[2][3] = 1.0f;                                             proj[3][3] = 0.0f; // Z-up, so eye-space y-coord is used for perspective divide
 
     return proj;
 }
