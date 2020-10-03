@@ -4,22 +4,41 @@
 
 using namespace Tinker;
 
+// Buffer that has no persistent staging buffer
+// Meant to updated once with a staging buffer which should
+// then be destroyed.
+typedef struct static_buffer_data
+{
+    uint32 gpuBufferHandle;
+} StaticBuffer;
+
+// Buffer that has a constantly mapped staging buffer
+// Likely is updated frame-to-frame
+typedef struct dynamic_buffer_data
+{
+    uint32 gpuBufferHandle;
+    uint32 stagingBufferHandle;
+    void* stagingBufferMemPtr;
+} DynamicBuffer;
+
+typedef struct static_mesh_data
+{
+    StaticBuffer m_vertexBuffer;
+    StaticBuffer m_indexBuffer;
+} StaticMeshData;
+
+typedef struct dynamic_mesh_data
+{
+    DynamicBuffer m_vertexBuffer;
+    DynamicBuffer m_indexBuffer;
+} DynamicMeshData;
+
+// TODO: make a function that automatically records graphics commands for a mesh
+// UpdateBufferCmd(), DrawCmd()
+// Take a GraphicsCommandStream* as a parameter
+
 typedef struct game_graphic_data
 {
-    uint32 m_vertexBufferHandle;
-    uint32 m_stagingBufferHandle;
-    void* m_stagingBufferMemPtr;
-    uint32 m_indexBufferHandle;
-    uint32 m_stagingBufferHandle3;
-    void* m_stagingBufferMemPtr3;
-
-    uint32 m_vertexBufferHandle2;
-    uint32 m_stagingBufferHandle2;
-    void* m_stagingBufferMemPtr2;
-    uint32 m_indexBufferHandle2;
-    uint32 m_stagingBufferHandle4;
-    void* m_stagingBufferMemPtr4;
-
     uint32 m_imageHandle;
     uint32 m_imageViewHandle;
     uint32 m_framebufferHandle;
