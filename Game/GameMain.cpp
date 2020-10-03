@@ -3,6 +3,7 @@
 #include "../Include/Core/Math/VectorTypes.h"
 #include "../Include/Core/Containers/RingBuffer.h"
 #include "GameGraphicsTypes.h"
+#include "Camera.h"
 
 #include <cstring>
 #include <string.h>
@@ -43,6 +44,11 @@ static bool connectedToServer = false;
 
 uint32 currentWindowWidth, currentWindowHeight;
 
+// Game mesh data
+DynamicMeshData bigTriangle;
+DynamicMeshData smallTriangle;
+
+
 Memory::LinearAllocator shaderBytecodeAllocator;
 const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
 
@@ -59,50 +65,7 @@ typedef struct descriptor_instance_data
     alignas(16) m4f viewProj;
 } DescriptorInstanceData;
 
-static const v3f WORLD_UP = v3f(0, 0, 1);
-typedef struct virtual_camera_data
-{
-    v3f m_eye;
-    v3f m_ref;
-} VirtualCamera;
 static VirtualCamera g_gameCamera = {};
-static float fovy = 0.785398f;
-static const float nearPlane = 0.1f;
-static const float farPlane = 1000.0f;
-static m4f g_projMat = m4f(1.0f);
-
-m4f CameraViewMatrix(const VirtualCamera* camera)
-{
-    v3f forward = camera->m_ref - camera->m_eye;
-    Normalize(forward);
-
-    v3f right = Cross(forward, WORLD_UP);
-    Normalize(right);
-    v3f up = Cross(right, forward);
-    Normalize(up);
-
-    m4f view;
-    view[0] = v4f(right.x, up.x, forward.x, 0.0f);
-    view[1] = v4f(right.y, up.y, forward.y, 0.0f);
-    view[2] = v4f(right.z, up.z, forward.z, 0.0f);
-    view[3] = v4f(-Dot(camera->m_eye, right), -Dot(camera->m_eye, up), -Dot(camera->m_eye, forward), 1.0f);
-    return view;
-}
-
-m4f PerspectiveProjectionMatrix()
-{
-    m4f proj;
-
-    const float aspect = (float)currentWindowWidth / currentWindowHeight;
-    const float tanFov = tanf(fovy * 0.5f);
-
-    proj[0][0] = 1.0f / (aspect * tanFov); proj[1][0] = 0.0f;          proj[2][0] = 0.0f;                                             proj[3][0] = 0.0f; // transform x to ndc
-    proj[0][1] = 0.0f;                     proj[1][1] = 1.0f / tanFov; proj[2][1] = 0.0f;                                             proj[3][1] = 0.0f; // Z-up so y-coord gets normalized as depth
-    proj[0][2] = 0.0f;                     proj[1][2] = 0.0f;          proj[2][2] = (-nearPlane - farPlane) / (nearPlane - farPlane); proj[3][2] = (2.0f * farPlane * nearPlane) / (nearPlane - farPlane); // Z-up, so y-coord means depth
-    proj[0][3] = 0.0f;                     proj[1][3] = 0.0f;          proj[2][3] = 1.0f;                                             proj[3][3] = 0.0f; // Z-up, so eye-space y-coord is used for perspective divide
-
-    return proj;
-}
 
 // TODO: remove me
 #include <chrono>
@@ -289,11 +252,10 @@ GAME_UPDATE(GameUpdate)
 
     if (!isGameInitted)
     {
-        //g_gameCamera.m_eye = v3f(3.0f, 3.0f, 3.0f);
         g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
         currentWindowWidth = windowWidth;
         currentWindowHeight = windowHeight;
-        g_projMat = PerspectiveProjectionMatrix();
+        g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
         // Init network connection if multiplayer
         if (isMultiplayer)
@@ -335,38 +297,26 @@ GAME_UPDATE(GameUpdate)
 
         // Game graphics
         uint32 numVertBytes = sizeof(v4f) * 4; // aligned memory size
-        uint32 numIdxBytes = sizeof(uint32) * 16; // aligned memory size
-        uint32 vertexBufferHandle = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageVertex).handle;
+        bigTriangle.m_vertexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageVertex).handle;
         Platform::BufferData data = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageStaging);
-        uint32 stagingBufferHandle = data.handle;
-        void* stagingBufferMemPtr = data.memory;
-        uint32 indexBufferHandle = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageIndex).handle;
-        data = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageStaging);
-        uint32 stagingBufferHandle3 = data.handle;
-        void* stagingBufferMemPtr3 = data.memory;
+        bigTriangle.m_vertexBuffer.stagingBufferHandle = data.handle;
+        bigTriangle.m_vertexBuffer.stagingBufferMemPtr = data.memory;
 
-        uint32 vertexBufferHandle2 = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageVertex).handle;
+        uint32 numIdxBytes = sizeof(uint32) * 16; // aligned memory size
+        bigTriangle.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageIndex).handle;
+        data = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageStaging);
+        bigTriangle.m_indexBuffer.stagingBufferHandle = data.handle;
+        bigTriangle.m_indexBuffer.stagingBufferMemPtr = data.memory;
+
+        smallTriangle.m_vertexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageVertex).handle;
         data = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageStaging);
-        uint32 stagingBufferHandle2 = data.handle;
-        void* stagingBufferMemPtr2 = data.memory;
-        uint32 indexBufferHandle2 = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageIndex).handle;
+        smallTriangle.m_vertexBuffer.stagingBufferHandle = data.handle;
+        smallTriangle.m_vertexBuffer.stagingBufferMemPtr = data.memory;
+
+        smallTriangle.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageIndex).handle;
         data = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageStaging);
-        uint32 stagingBufferHandle4 = data.handle;
-        void* stagingBufferMemPtr4 = data.memory;
-
-        gameGraphicsData.m_vertexBufferHandle = vertexBufferHandle;
-        gameGraphicsData.m_stagingBufferHandle = stagingBufferHandle;
-        gameGraphicsData.m_stagingBufferMemPtr = stagingBufferMemPtr;
-        gameGraphicsData.m_indexBufferHandle = indexBufferHandle;
-        gameGraphicsData.m_stagingBufferHandle3 = stagingBufferHandle3;
-        gameGraphicsData.m_stagingBufferMemPtr3 = stagingBufferMemPtr3;
-
-        gameGraphicsData.m_vertexBufferHandle2 = vertexBufferHandle2;
-        gameGraphicsData.m_stagingBufferHandle2 = stagingBufferHandle2;
-        gameGraphicsData.m_stagingBufferMemPtr2 = stagingBufferMemPtr2;
-        gameGraphicsData.m_indexBufferHandle2 = indexBufferHandle2;
-        gameGraphicsData.m_stagingBufferHandle4 = stagingBufferHandle4;
-        gameGraphicsData.m_stagingBufferMemPtr4 = stagingBufferMemPtr4;
+        smallTriangle.m_indexBuffer.stagingBufferHandle = data.handle;
+        smallTriangle.m_indexBuffer.stagingBufferMemPtr = data.memory;
 
         CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
 
@@ -393,15 +343,15 @@ GAME_UPDATE(GameUpdate)
     uint32 numVertBytes = sizeof(v4f) * 3;
     uint32 numIdxBytes = sizeof(uint32) * 3;
     // Animated vertices
-    v4f positions[] = { v4f(0.0f, -0.5f, sinf(time) * 0.2f, 1.0f), v4f(0.5f, 0.5f, sinf(time) * 0.2f, 1.0f), v4f(-0.5f, 0.5f, sinf(time) * 0.2f, 1.0f) };
+    v4f positions[] = { v4f(0.0f, -0.5f, sinf(time) * 0.5f, 1.0f), v4f(0.5f, 0.5f, sinf(time) * 0.5f, 1.0f), v4f(-0.5f, 0.5f, sinf(time) * 0.5f, 1.0f) };
     uint32 indices[] = { 0, 2, 1 };
-    memcpy(gameGraphicsData.m_stagingBufferMemPtr, positions, numVertBytes);
-    memcpy(gameGraphicsData.m_stagingBufferMemPtr3, indices, numIdxBytes);
+    memcpy(bigTriangle.m_vertexBuffer.stagingBufferMemPtr, positions, numVertBytes);
+    memcpy(bigTriangle.m_indexBuffer.stagingBufferMemPtr, indices, numIdxBytes);
 
-    v4f positions2[] = { v4f(0.45f, -0.5f, 0.0f, 1.0f), v4f(0.75f, 0.25f, 0.0f, 1.0f), v4f(0.15f, 0.25f, 0.0f, 1.0f) };
+    v4f positions2[] = { v4f(0.0f, -0.25f, 0.0f, 1.0f), v4f(0.25f, 0.25f, 0.0f, 1.0f), v4f(-0.25f, 0.25f, 0.0f, 1.0f) };
     uint32 indices2[] = { 0, 2, 1 };
-    memcpy(gameGraphicsData.m_stagingBufferMemPtr2, positions2, numVertBytes);
-    memcpy(gameGraphicsData.m_stagingBufferMemPtr4, indices2, numIdxBytes);
+    memcpy(smallTriangle.m_vertexBuffer.stagingBufferMemPtr, positions2, numVertBytes);
+    memcpy(smallTriangle.m_indexBuffer.stagingBufferMemPtr, indices2, numIdxBytes);
 
     //Platform::PrintDebugString("Joe\n");
 
@@ -433,26 +383,26 @@ GAME_UPDATE(GameUpdate)
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
     command.m_sizeInBytes = numVertBytes;
-    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle;
-    command.m_dstBufferHandle = gameGraphicsData.m_vertexBufferHandle;
+    command.m_srcBufferHandle = bigTriangle.m_vertexBuffer.stagingBufferHandle;
+    command.m_dstBufferHandle = bigTriangle.m_vertexBuffer.gpuBufferHandle;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
     command.m_sizeInBytes = numVertBytes;
-    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle2;
-    command.m_dstBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
+    command.m_srcBufferHandle = smallTriangle.m_vertexBuffer.stagingBufferHandle;
+    command.m_dstBufferHandle = smallTriangle.m_vertexBuffer.gpuBufferHandle;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
     command.m_sizeInBytes = numIdxBytes;
-    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle3;
-    command.m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle;
+    command.m_srcBufferHandle = bigTriangle.m_indexBuffer.stagingBufferHandle;
+    command.m_dstBufferHandle = bigTriangle.m_indexBuffer.gpuBufferHandle;
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
     command.m_sizeInBytes = numIdxBytes;
-    command.m_srcBufferHandle = gameGraphicsData.m_stagingBufferHandle4;
-    command.m_dstBufferHandle = gameGraphicsData.m_indexBufferHandle2;
+    command.m_srcBufferHandle = smallTriangle.m_indexBuffer.stagingBufferHandle;
+    command.m_dstBufferHandle = smallTriangle.m_indexBuffer.gpuBufferHandle;
     graphicsCommands.push_back(command);
 
     /*command.m_commandType = (uint32)Platform::eGraphicsCmdImageCopy;
@@ -473,8 +423,8 @@ GAME_UPDATE(GameUpdate)
     command.m_numIndices = 3;
     command.m_numUVs = 0;
     command.m_numVertices = 3;
-    command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle;
-    command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle;
+    command.m_indexBufferHandle = bigTriangle.m_indexBuffer.gpuBufferHandle;
+    command.m_vertexBufferHandle = bigTriangle.m_vertexBuffer.gpuBufferHandle;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
     Platform::InitDescSetDataHandles(command.m_descriptors);
@@ -485,8 +435,8 @@ GAME_UPDATE(GameUpdate)
     command.m_numIndices = 3;
     command.m_numUVs = 0;
     command.m_numVertices = 3;
-    command.m_indexBufferHandle = gameGraphicsData.m_indexBufferHandle2;
-    command.m_vertexBufferHandle = gameGraphicsData.m_vertexBufferHandle2;
+    command.m_indexBufferHandle = smallTriangle.m_indexBuffer.gpuBufferHandle;
+    command.m_vertexBufferHandle = smallTriangle.m_vertexBuffer.gpuBufferHandle;
     command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_shaderHandle;
     Platform::InitDescSetDataHandles(command.m_descriptors);
@@ -570,7 +520,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
     DestroyWindowResizeDependentResources(platformFuncs);
 
     // Gameplay stuff
-    g_projMat = PerspectiveProjectionMatrix();
+    g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
     CreateGameRenderingResources(platformFuncs, newWindowWidth, newWindowHeight);
     CreateAllDescriptors(platformFuncs);
@@ -591,14 +541,14 @@ GAME_DESTROY(GameDestroy)
         platformFuncs->DestroyBuffer(defaultQuad.m_stagingBufferHandle_idx, Platform::eBufferUsageStaging);
 
         // Game graphics
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_vertexBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_vertexBufferHandle2, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle, Platform::eBufferUsageStaging);
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle2, Platform::eBufferUsageStaging);
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_indexBufferHandle, Platform::eBufferUsageIndex);
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_indexBufferHandle2, Platform::eBufferUsageIndex);
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle3, Platform::eBufferUsageStaging);
-        platformFuncs->DestroyBuffer(gameGraphicsData.m_stagingBufferHandle4, Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(bigTriangle.m_vertexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(bigTriangle.m_vertexBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(bigTriangle.m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(bigTriangle.m_indexBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(smallTriangle.m_vertexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(smallTriangle.m_vertexBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(smallTriangle.m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(smallTriangle.m_indexBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
 
         if (isMultiplayer && connectedToServer)
         {
