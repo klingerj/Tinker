@@ -228,11 +228,10 @@ namespace Tinker
                 struct
                 {
                     uint32 m_numIndices;
-                    uint32 m_numVertices;
-                    uint32 m_numUVs;
                     uint32 m_indexBufferHandle;
-                    uint32 m_vertexBufferHandle;
-                    uint32 m_uvBufferHandle;
+                    uint32 m_positionBufferHandle;
+                    uint32 m_normalBufferHandle;
+                    //uint32 m_uvBufferHandle;
                     uint32 m_shaderHandle;
                     DescriptorSetDataHandles m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
                 };

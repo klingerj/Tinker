@@ -85,10 +85,15 @@ namespace Tinker
                 VkCommandPool commandPool = VK_NULL_HANDLE;
             } VulkanContextResources;
 
-            typedef struct vertex_position
+            typedef struct vulkan_vertex_position
             {
                 Core::Math::v4f position;
             } VulkanVertexPosition;
+
+            typedef struct vertex_normal
+            {
+                Core::Math::v3f normal;
+            } VulkanVertexNormal;
 
             typedef union vulkan_buffer_data
             {
@@ -155,7 +160,8 @@ namespace Tinker
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
-                uint32 vertexBufferHandle, uint32 indexBufferHandle, uint32 numIndices, uint32 numVertices);
+                uint32 positionBufferHandle, uint32 normalBufferHandle,
+                uint32 indexBufferHandle, uint32 numIndices);
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
                 uint32 shaderHandle, const DescriptorSetDataHandles* descSetHandles);
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,

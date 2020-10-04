@@ -1,6 +1,7 @@
 #version 450
 
 layout(location = 0) in vec4 vertPosition;
+layout(location = 1) in vec3 vertNormal; // not used, TODO: remove
 layout(location = 0) out vec2 texCoord;
 
 void main() {
