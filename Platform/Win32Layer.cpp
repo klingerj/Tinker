@@ -108,7 +108,7 @@ GET_FILE_SIZE(GetFileSize)
     }
     else
     {
-        LogMsg("Unable to create file handle!", eLogSeverityWarning);
+        LogMsg("Unable to create file handle!", eLogSeverityCritical);
         return 0;
     }
 }
@@ -148,7 +148,7 @@ READ_ENTIRE_FILE(ReadEntireFile)
     }
     else
     {
-        LogMsg("Unable to create file handle!", eLogSeverityWarning);
+        LogMsg("Unable to create file handle!", eLogSeverityCritical);
         return nullptr;
     }
 
@@ -234,8 +234,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                             currentShader = currentCmd.m_shaderHandle;
                         }
                         Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
-                            currentCmd.m_vertexBufferHandle, currentCmd.m_indexBufferHandle,
-                            currentCmd.m_numIndices, currentCmd.m_numVertices);
+                            currentCmd.m_positionBufferHandle, currentCmd.m_normalBufferHandle,
+                            currentCmd.m_indexBufferHandle, currentCmd.m_numIndices);
                         break;
                     }
 

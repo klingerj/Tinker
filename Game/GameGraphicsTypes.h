@@ -1,6 +1,9 @@
 #pragma once
 
 #include "../Include/Core/CoreDefines.h"
+#include "../Include/PlatformGameAPI.h"
+
+#include <vector> // TODO: remove me
 
 using namespace Tinker;
 
@@ -23,19 +26,45 @@ typedef struct dynamic_buffer_data
 
 typedef struct static_mesh_data
 {
-    StaticBuffer m_vertexBuffer;
+    StaticBuffer m_positionBuffer;
+    StaticBuffer m_normalBuffer;
     StaticBuffer m_indexBuffer;
 } StaticMeshData;
 
 typedef struct dynamic_mesh_data
 {
-    DynamicBuffer m_vertexBuffer;
+    DynamicBuffer m_positionBuffer;
+    DynamicBuffer m_normalBuffer;
     DynamicBuffer m_indexBuffer;
 } DynamicMeshData;
 
-// TODO: make a function that automatically records graphics commands for a mesh
-// UpdateBufferCmd(), DrawCmd()
-// Take a GraphicsCommandStream* as a parameter
+void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes)
+{
+    Platform::GraphicsCommand command;
+    command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+
+    command.m_sizeInBytes = bufferSizeInBytes;
+    command.m_srcBufferHandle = dynamicBuffer->stagingBufferHandle;
+    command.m_dstBufferHandle = dynamicBuffer->gpuBufferHandle;
+    graphicsCommands.push_back(command);
+}
+
+void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
+        uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 normalBufferHandle,
+        uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors)
+{
+    Platform::GraphicsCommand command;
+    command.m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
+
+    command.m_numIndices = numIndices;
+    command.m_indexBufferHandle = indexBufferHandle;
+    command.m_positionBufferHandle = positionBufferHandle;
+    command.m_normalBufferHandle = normalBufferHandle;
+    //command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
+    command.m_shaderHandle = shaderHandle;
+    memcpy(command.m_descriptors, descriptors, sizeof(command.m_descriptors));
+    graphicsCommands.push_back(command);
+}
 
 typedef struct game_graphic_data
 {
@@ -55,11 +84,11 @@ typedef struct game_graphic_data
 template <uint32 numPoints, uint32 numIndices>
 struct default_geometry
 {
-    uint32 m_vertexBufferHandle;
-    uint32 m_indexBufferHandle;
-    uint32 m_stagingBufferHandle_vert;
-    uint32 m_stagingBufferHandle_idx;
+    DynamicBuffer m_positionBuffer;
+    DynamicBuffer m_normalBuffer;
+    DynamicBuffer m_indexBuffer;
     Core::Math::v4f m_points[numPoints];
+    Core::Math::v3f m_normals[numPoints];
     uint32 m_indices[numIndices];
 };
 
