@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Include/Core/Math/VectorTypes.h"
+#include "../Math/VectorTypes.h"
 
 namespace Tinker
 {
