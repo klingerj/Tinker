@@ -8,22 +8,16 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
-if "%2" == "true" (
-    rem Run core engine build script
-    call build_core_engine_lib.bat %BuildConfig%
-    )
-
-echo.
-echo ***** Building Tinker Tests *****
+echo ***** Building Tinker Core Engine *****
 
 pushd ..
 if NOT EXIST .\Build mkdir .\Build
 pushd .\Build
-del TinkerTest.pdb > NUL 2> NUL
+del TinkerCore.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm- /GS- /fp:fast /Zi
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -36,23 +30,24 @@ if "%BuildConfig%" == "Debug" (
     )
 
 rem *********************************************************************************************************
-rem TinkerTest - unit testing
-set SourceListTest=../Platform/Win32PlatformGameAPI.cpp ../Test/TestMain.cpp
+rem TinkerCore - static library
+set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp
+
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsTest=/FdTinkerTest.pdb
-    set DebugLinkFlagsTest=/pdb:TinkerTest.pdb
+    set DebugCompileFlagsCore=/FdTinkerCore.pdb
     ) else (
-    set DebugCompileFlagsTest=
-    set DebugLinkFlagsTest=
+    set DebugCompileFlagsCore=
     )
 
-set OBJDir=%cd%\obj_test\
+set OBJDir=%cd%\obj_core_engine\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
+set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj
 
 echo.
-echo Building TinkerTest.exe...
-cl %CommonCompileFlags% %DebugCompileFlagsTest% %SourceListTest% /link %CommonLinkFlags% TinkerCore.lib %DebugLinkFlagsTest% /out:TinkerTest.exe
+echo Building TinkerCore.lib...
+cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore%
+lib /machine:x64 /Wx /out:TinkerCore.lib /nologo %OBJListCore%
 
 :DoneBuild
 popd
