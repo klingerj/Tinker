@@ -115,11 +115,10 @@ GET_FILE_SIZE(GetFileSize)
 
 READ_ENTIRE_FILE(ReadEntireFile)
 {
-    // User must specify a file size and the dest buffer, or neither.
-    TINKER_ASSERT((!fileSizeInBytes && !buffer) || (fileSizeInBytes && buffer));
+    // User must specify a file size and the dest buffer.
+    TINKER_ASSERT(fileSizeInBytes && buffer);
 
     HANDLE fileHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-    uint8* fileDataBuffer = nullptr;
 
     if (fileHandle != INVALID_HANDLE_VALUE)
     {
@@ -133,26 +132,15 @@ READ_ENTIRE_FILE(ReadEntireFile)
             fileSize = GetFileSize(filename);
         }
 
-        fileDataBuffer = buffer ? buffer : new uint8[fileSize];
-        if (fileDataBuffer)
-        {
-            DWORD numBytesRead = {};
-            ReadFile(fileHandle, fileDataBuffer, fileSize, &numBytesRead, 0);
-            TINKER_ASSERT(numBytesRead == fileSize);
-        }
-        else
-        {
-            LogMsg("Unable to allocate buffer for reading file!", eLogSeverityCritical);
-        }
+        DWORD numBytesRead = {};
+        ReadFile(fileHandle, buffer, fileSize, &numBytesRead, 0);
+        TINKER_ASSERT(numBytesRead == fileSize);
         CloseHandle(fileHandle);
     }
     else
     {
         LogMsg("Unable to create file handle!", eLogSeverityCritical);
-        return nullptr;
     }
-
-    return fileDataBuffer;
 }
 
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD

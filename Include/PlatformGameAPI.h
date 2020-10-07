@@ -44,7 +44,7 @@ namespace Tinker
         #define ENQUEUE_WORKER_THREAD_JOB(name) void name(WorkerJob* newJob)
         typedef ENQUEUE_WORKER_THREAD_JOB(enqueue_worker_thread_job);
 
-        #define READ_ENTIRE_FILE(name) uint8* name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
+        #define READ_ENTIRE_FILE(name) void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
         typedef READ_ENTIRE_FILE(read_entire_file);
 
         #define GET_FILE_SIZE(name) uint32 name(const char* filename)

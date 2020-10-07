@@ -105,10 +105,10 @@ uint32 LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* v
     uint8* fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
     
     // get file size, load entire file
-    void* vertexShaderCode = platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
-    void* fragmentShaderCode = platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
+    platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
+    platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
 
-    return platformFuncs->CreateGraphicsPipeline(vertexShaderCode, vertexShaderFileSize, fragmentShaderCode, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->renderPassHandle, params->descriptorHandle);
+    return platformFuncs->CreateGraphicsPipeline(vertexShaderBuffer, vertexShaderFileSize, fragmentShaderBuffer, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->renderPassHandle, params->descriptorHandle);
 }
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -288,8 +288,10 @@ GAME_UPDATE(GameUpdate)
 
         // Load mesh files
         // For now: OBJs
-        /*const char* objFilePath = "";
-        void* objFileData = platformFuncs->ReadEntireFile(objFilePath, 0, nullptr); // automatically allocates the whole file
+        const char* objFilePath = "..\\Assets\\UnitCube\\cube.obj";
+        uint32 objFileSize = platformFuncs->GetFileSize(objFilePath);
+        uint8* objFileData = new uint8[objFileSize];
+        platformFuncs->ReadEntireFile(objFilePath, objFileSize, objFileData);
         uint32 numOBJVerts = FileLoading::GetOBJVertCount(objFileData);
         TINKER_ASSERT(numOBJVerts > 0);
         bigTriangleMeshData.m_numVertices = numOBJVerts;
@@ -304,7 +306,8 @@ GAME_UPDATE(GameUpdate)
         v2f* uvBuffer = (v2f*)((uint8*)normalBuffer + numNormalBytes);
         uint32* indexBuffer = (uint32*)((uint8*)uvBuffer + numUVBytes);
         FileLoading::ParseOBJ(positionBuffer, normalBuffer, nullptr, indexBuffer, objFileData);
-        delete objFileData;*/
+        delete bigTriangleMeshData.m_vertexBufferData; // TODO actually use this
+        delete objFileData;
 
         graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
 
