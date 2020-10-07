@@ -290,9 +290,10 @@ GAME_UPDATE(GameUpdate)
         // For now: OBJs
         const char* objFilePath = "..\\Assets\\UnitCube\\cube.obj";
         uint32 objFileSize = platformFuncs->GetFileSize(objFilePath);
-        uint8* objFileData = new uint8[objFileSize];
+        uint8* objFileData = new uint8[objFileSize + 1];
+        objFileData[objFileSize] = '\0'; // Mark EOF
         platformFuncs->ReadEntireFile(objFilePath, objFileSize, objFileData);
-        uint32 numOBJVerts = FileLoading::GetOBJVertCount(objFileData);
+        uint32 numOBJVerts = FileLoading::GetOBJVertCount(objFileData, objFileSize);
         TINKER_ASSERT(numOBJVerts > 0);
         bigTriangleMeshData.m_numVertices = numOBJVerts;
         uint32 numPositionBytes = numOBJVerts * sizeof(v4f);
