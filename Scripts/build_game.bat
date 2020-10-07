@@ -1,21 +1,28 @@
 @echo off
 
-pushd ..
-if NOT EXIST .\Build mkdir .\Build
-pushd .\Build
-del TinkerCore.pdb > NUL 2> NUL
-del TinkerGame*.pdb > NUL 2> NUL
-
 set BuildConfig=%1
 if "%BuildConfig%" NEQ "Debug" (
     if "%BuildConfig%" NEQ "Release" (
-        echo Invalid build config specified.
+        echo Invalid build config specified. Must specify 'Release' or 'Debug'
+        pause
         goto DoneBuild
         )
     )
 
+rem Run core engine build script
+call build_core_engine_lib.bat %BuildConfig%
+echo.
+
+echo ***** Building Tinker Game *****
+
+pushd ..
+if NOT EXIST .\Build mkdir .\Build
+pushd .\Build
+del TinkerGame*.pdb > NUL 2> NUL
+
 rem *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /FAs /Zi
+rem /FAs for .asm file output
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -26,20 +33,6 @@ if "%BuildConfig%" == "Debug" (
     echo Release mode specified.
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT /fp:fast
     )
-
-rem *********************************************************************************************************
-rem TinkerCore - static library
-set SourceListCore=../Core/Math/VectorTypes.cpp
-
-if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsCore=/FdTinkerCore.pdb /MTd
-    ) else (
-    set DebugCompileFlagsCore=
-    )
-echo.
-echo Building TinkerCore.lib...
-cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore% /Fo:TinkerCore.obj
-lib /verbose /machine:x64 /Wx /out:TinkerCore.lib /nologo TinkerCore.obj
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
@@ -58,9 +51,21 @@ if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsGame=
     set DebugLinkFlagsGame=
     )
+
+set OBJDir=%cd%\obj_game\
+if NOT EXIST %OBJDir% mkdir %OBJDir%
+set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
+
 echo.
 echo Building TinkerGame.dll...
 cl %CommonCompileFlags% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerCore.lib /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+
+rem Delete unnecessary files
+echo.
+echo Deleting TinkerGame.lib (not needed)
+del TinkerGame.lib
+echo Deleting TinkerGame.exp (not needed)
+del TinkerGame.exp
 
 :DoneBuild
 popd

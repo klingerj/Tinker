@@ -14,7 +14,8 @@ if "%BuildConfig%" NEQ "Debug" (
     )
 
 rem *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /FAs /Zi
+rem /FAs for .asm file output
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -44,7 +45,10 @@ echo Building TinkerServer.exe...
 rem set CompileIncludePaths=""
 set LibsToLink=user32.lib ws2_32.lib
 
-echo %SourceListServer%
+set OBJDir=%cd%\obj_server\
+if NOT EXIST %OBJDir% mkdir %OBJDir%
+set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
+
 rem /I %CompileIncludePaths%
 cl %CommonCompileFlags% %DebugCompileFlagsServer% %SourceListServer% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsServer% /out:TinkerServer.exe 
 

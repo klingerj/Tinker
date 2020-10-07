@@ -2,6 +2,7 @@
 #include "../Include/Core/Allocators.h"
 #include "../Include/Core/Math/VectorTypes.h"
 #include "../Include/Core/Containers/RingBuffer.h"
+#include "../Core/FileIO/FileLoading.h"
 #include "GameGraphicsTypes.h"
 #include "Camera.h"
 
@@ -51,6 +52,12 @@ uint32 currentWindowWidth, currentWindowHeight;
 DynamicMeshData bigTriangle;
 DynamicMeshData smallTriangle;
 
+typedef struct meshTriangles
+{
+    uint32 m_numVertices;
+    void* m_vertexBufferData; // positions, normals, indices
+} MeshTriangles;
+MeshTriangles bigTriangleMeshData;
 
 Memory::LinearAllocator shaderBytecodeAllocator;
 const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
@@ -96,6 +103,8 @@ uint32 LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* v
 
     uint8* vertexShaderBuffer = shaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
     uint8* fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
+    
+    // get file size, load entire file
     void* vertexShaderCode = platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
     void* fragmentShaderCode = platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
 
@@ -276,6 +285,26 @@ GAME_UPDATE(GameUpdate)
                 connectedToServer = true;
             }
         }
+
+        // Load mesh files
+        // For now: OBJs
+        /*const char* objFilePath = "";
+        void* objFileData = platformFuncs->ReadEntireFile(objFilePath, 0, nullptr); // automatically allocates the whole file
+        uint32 numOBJVerts = FileLoading::GetOBJVertCount(objFileData);
+        TINKER_ASSERT(numOBJVerts > 0);
+        bigTriangleMeshData.m_numVertices = numOBJVerts;
+        uint32 numPositionBytes = numOBJVerts * sizeof(v4f);
+        uint32 numNormalBytes = numOBJVerts * sizeof(v3f);
+        // TODO: implement UV buffers
+        uint32 numUVBytes = 0;// numOBJVerts * sizeof(v2f);
+        uint32 numIndexBytes = numOBJVerts * sizeof(uint32);
+        bigTriangleMeshData.m_vertexBufferData = malloc(numPositionBytes + numNormalBytes + numUVBytes + numIndexBytes);
+        v4f* positionBuffer = (v4f*)bigTriangleMeshData.m_vertexBufferData;
+        v3f* normalBuffer = (v3f*)((uint8*)positionBuffer + numPositionBytes);
+        v2f* uvBuffer = (v2f*)((uint8*)normalBuffer + numNormalBytes);
+        uint32* indexBuffer = (uint32*)((uint8*)uvBuffer + numUVBytes);
+        FileLoading::ParseOBJ(positionBuffer, normalBuffer, nullptr, indexBuffer, objFileData);
+        delete objFileData;*/
 
         graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
 

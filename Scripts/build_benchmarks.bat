@@ -1,10 +1,5 @@
 @echo off
 
-pushd ..
-if NOT EXIST .\Build mkdir .\Build
-pushd .\Build
-del TinkerBenchmark.pdb > NUL 2> NUL
-
 set BuildConfig=%1
 if "%BuildConfig%" NEQ "Debug" (
     if "%BuildConfig%" NEQ "Release" (
@@ -13,8 +8,22 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
+if "%2" == "true" (
+    rem Run core engine build script
+    call build_core_engine_lib.bat %BuildConfig%
+    )
+
+echo.
+echo ***** Building Tinker Benchmarks *****
+
+pushd ..
+if NOT EXIST .\Build mkdir .\Build
+pushd .\Build
+del TinkerBenchmark.pdb > NUL 2> NUL
+
 rem *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm- /GS- /fp:fast /FAs /Zi
+rem /FAs for .asm file output
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm- /GS- /fp:fast /Zi
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -27,22 +36,8 @@ if "%BuildConfig%" == "Debug" (
     )
 
 rem *********************************************************************************************************
-rem TinkerCore - static library
-set SourceListCore=..\Core\Math\VectorTypes.cpp
-
-if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsCore=/FdTinkerCore.pdb
-    ) else (
-    set DebugCompileFlagsCore=
-    )
-echo.
-echo Building TinkerCore.lib...
-cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore% /Fo:TinkerCore.obj
-lib /verbose /machine:x64 /Wx /out:TinkerCore.lib /nologo TinkerCore.obj
-
-rem *********************************************************************************************************
 rem TinkerBenchmark - benchmarking
-set SourceListBenchmark=../Platform/Win32PlatformGameAPI.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp ../Core/Math/VectorTypes.cpp
+set SourceListBenchmark=../Platform/Win32PlatformGameAPI.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb
     set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb
@@ -50,6 +45,11 @@ if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsBenchmark=
     set DebugLinkFlagsBenchmark=
     )
+
+set OBJDir=%cd%\obj_benchmark\
+if NOT EXIST %OBJDir% mkdir %OBJDir%
+set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
+
 echo.
 echo Building TinkerBenchmark.exe...
 cl %CommonCompileFlags% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerCore.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
