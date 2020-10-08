@@ -20,7 +20,8 @@ namespace Tinker
             uint32 GetOBJVertCount(uint8* entireFileBuffer, uint32 bufferSizeInBytes);
 
             // Parse the OBJ file and populate existing vertex attribute buffers
-            void ParseOBJ(v4f* dstPositionBuffer, v3f* dstNormalBuffer, v2f* dstUVBuffer, uint32* dstIndexBuffer, uint8* entireFileBuffer);
+            void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, uint32* dstIndexBuffer,
+                uint8* entireFileBuffer, uint32 bufferSizeInBytes);
         }
     }
 }

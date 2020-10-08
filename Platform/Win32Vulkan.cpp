@@ -7,6 +7,11 @@
 // TODO: move this to be a compile define
 #define ENABLE_VULKAN_VALIDATION_LAYERS
 
+// NOTE: The convention in this project to is flip the viewport upside down since a left-handed projection
+// matrix is often used. However, doing this flip causes the application to not render properly when run
+// in RenderDoc for some reason. To debug with RenderDoc, you should turn on this #define.
+//#define WORK_WITH_RENDERDOC
+
 namespace Tinker
 {
     namespace Platform
@@ -786,10 +791,17 @@ namespace Tinker
                 inputAssembly.primitiveRestartEnable = VK_FALSE;
 
                 VkViewport viewport = {};
-                viewport.x = 0.0f;
+
+                #ifdef WORK_WITH_RENDERDOC
                 viewport.y = 0.0f;
-                viewport.width = (float)vulkanContextResources->swapChainExtent.width;
                 viewport.height = (float)vulkanContextResources->swapChainExtent.height;
+                #else
+                viewport.y = (float)vulkanContextResources->swapChainExtent.height;
+                viewport.height = -(float)vulkanContextResources->swapChainExtent.height;
+                #endif
+
+                viewport.x = 0.0f;
+                viewport.width = (float)vulkanContextResources->swapChainExtent.width;
                 viewport.minDepth = 0.0f;
                 viewport.maxDepth = 1.0f;
 
@@ -811,7 +823,11 @@ namespace Tinker
                 rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
                 rasterizer.lineWidth = 1.0f;
                 rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+                #ifdef WORK_WITH_RENDERDOC
+                rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+                #else
                 rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+                #endif
                 rasterizer.depthBiasEnable = VK_FALSE;
                 rasterizer.depthBiasConstantFactor = 0.0f;
                 rasterizer.depthBiasClamp = 0.0f;

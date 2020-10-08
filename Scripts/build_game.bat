@@ -44,13 +44,8 @@ if "%TIME:~0,1%" == " " (
         set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__%TIME:~0,2%_%TIME:~3,2%_%TIME:~6,2%
         )
 set GameDllPdbName=TinkerGame_%BuildTimestamp%.pdb
-if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsGame=/Fd%GameDllPdbName%
-    set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
-    ) else (
-    set DebugCompileFlagsGame=
-    set DebugLinkFlagsGame=
-    )
+set DebugCompileFlagsGame=/Fd%GameDllPdbName%
+set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
 
 set OBJDir=%cd%\obj_game\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
@@ -62,10 +57,14 @@ cl %CommonCompileFlags% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLi
 
 rem Delete unnecessary files
 echo.
-echo Deleting TinkerGame.lib (not needed)
-del TinkerGame.lib
-echo Deleting TinkerGame.exp (not needed)
-del TinkerGame.exp
+if EXIST TinkerGame.lib (
+    echo Deleting unnecessary file TinkerGame.lib
+    del TinkerGame.lib
+    )
+if EXIST TinkerGame.exp (
+    echo Deleting unnecessary file TinkerGame.exp
+    del TinkerGame.exp
+    )
 
 :DoneBuild
 popd
