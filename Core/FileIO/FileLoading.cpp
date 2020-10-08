@@ -49,7 +49,6 @@ namespace Tinker
                         break;
                     }
 
-                    
                     if (LineStartsWith(entireFileBuffer, currentIndex, twoCharPrefix))
                     {
                         ++numLines;
@@ -66,8 +65,8 @@ namespace Tinker
 
             void scanWord(uint8* buffer, uint32* currentIndex)
             {
-                while (buffer[*currentIndex] != ' ' &&
-                       buffer[*currentIndex] != '/' &&
+                while (buffer[*currentIndex] != ' '  &&
+                       buffer[*currentIndex] != '/'  &&
                        buffer[*currentIndex] != '\n' &&
                        buffer[*currentIndex] != '\r')
                 {
@@ -141,7 +140,7 @@ namespace Tinker
                 // Counter gets advanced as we scan lines of the files
                 uint32 currentIndex = 0;
 
-                // Scan until he hit the null terminator which is used here to mark EOF
+                // Scan until we hit the null terminator which is used here to mark EOF
                 while (entireFileBuffer[currentIndex] != '\0')
                 {
                     if (entireFileBuffer[currentIndex] == 'v' && entireFileBuffer[currentIndex + 1] == ' ')
@@ -158,7 +157,6 @@ namespace Tinker
                             char nextWord[32];
                             scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
                             newVertPos[uiWord] = (float)atof(nextWord);
-                            //newVertPos[uiWord] = scanAndParseNextFloat(entireFileBuffer, &currentIndex);
                         }
 
                         posReadBuffer[posBufCtr++] = newVertPos;
@@ -177,7 +175,6 @@ namespace Tinker
                             char nextWord[32];
                             scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
                             newVertUV[uiWord] = (float)atof(nextWord);
-                            //newVertUV[uiWord] = scanAndParseNextFloat(entireFileBuffer, &currentIndex);
                         }
 
                         uvReadBuffer[uvBufCtr++] = newVertUV;
