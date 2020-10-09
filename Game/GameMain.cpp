@@ -4,6 +4,7 @@
 #include "../Include/Core/Containers/RingBuffer.h"
 #include "../Include/Core/FileIO/FileLoading.h"
 #include "GameGraphicsTypes.h"
+#include "AssetManager.h"
 #include "Camera.h"
 
 #include <cstring>
@@ -47,17 +48,6 @@ static const bool isMultiplayer = false;
 static bool connectedToServer = false;
 
 uint32 currentWindowWidth, currentWindowHeight;
-
-// Game mesh data
-DynamicMeshData bigTriangle;
-DynamicMeshData smallTriangle;
-
-typedef struct meshTriangles
-{
-    uint32 m_numVertices;
-    uint8* m_vertexBufferData; // positions, uvs, normals, indices
-} MeshTriangles;
-MeshTriangles bigTriangleMeshData;
 
 Memory::LinearAllocator shaderBytecodeAllocator;
 const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
@@ -288,26 +278,8 @@ GAME_UPDATE(GameUpdate)
         }
 
         // Load mesh files
-        // For now: OBJs
-        const char* objFilePath = "..\\Assets\\UnitSphere\\sphere.obj";
-        uint32 objFileSize = platformFuncs->GetFileSize(objFilePath);
-        uint8* objFileData = new uint8[objFileSize + 1];
-        objFileData[objFileSize] = '\0'; // Mark EOF
-        platformFuncs->ReadEntireFile(objFilePath, objFileSize, objFileData);
-        uint32 numOBJVerts = FileLoading::GetOBJVertCount(objFileData, objFileSize);
-        TINKER_ASSERT(numOBJVerts > 0);
-        bigTriangleMeshData.m_numVertices = numOBJVerts;
-        uint32 numPositionBytes = numOBJVerts * sizeof(v4f);
-        uint32 numNormalBytes = numOBJVerts * sizeof(v3f);
-        uint32 numUVBytes = numOBJVerts * sizeof(v2f);
-        uint32 numIndexBytes = numOBJVerts * sizeof(uint32);
-        bigTriangleMeshData.m_vertexBufferData = new uint8[numPositionBytes + numNormalBytes + numUVBytes + numIndexBytes];
-        v4f* positionBuffer = (v4f*)bigTriangleMeshData.m_vertexBufferData;
-        v3f* normalBuffer = (v3f*)((uint8*)positionBuffer + numPositionBytes);
-        v2f* uvBuffer = (v2f*)((uint8*)normalBuffer + numNormalBytes);
-        uint32* indexBuffer = (uint32*)((uint8*)uvBuffer + numUVBytes);
-        FileLoading::ParseOBJ(positionBuffer, uvBuffer, normalBuffer, indexBuffer, objFileData, objFileSize);
-        delete objFileData;
+        g_AssetManager.LoadAllAssets(platformFuncs);
+        g_AssetManager.InitAssetGraphicsResources(platformFuncs);
 
         graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
 
@@ -345,39 +317,6 @@ GAME_UPDATE(GameUpdate)
         command.m_srcBufferHandle = defaultQuad.m_normalBuffer.stagingBufferHandle;
         graphicsCommands.push_back(command);
 
-        // Game graphics
-        bigTriangle.m_positionBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(bigTriangleMeshData.m_numVertices * sizeof(v4f), Platform::eBufferUsageVertex).handle;
-        Platform::BufferData data = platformFuncs->CreateBuffer(bigTriangleMeshData.m_numVertices * sizeof(v4f), Platform::eBufferUsageStaging);
-        bigTriangle.m_positionBuffer.stagingBufferHandle = data.handle;
-        bigTriangle.m_positionBuffer.stagingBufferMemPtr = data.memory;
-
-        bigTriangle.m_normalBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(bigTriangleMeshData.m_numVertices * sizeof(v3f), Platform::eBufferUsageVertex).handle;
-        data = platformFuncs->CreateBuffer(bigTriangleMeshData.m_numVertices * sizeof(v3f), Platform::eBufferUsageStaging);
-        bigTriangle.m_normalBuffer.stagingBufferHandle = data.handle;
-        bigTriangle.m_normalBuffer.stagingBufferMemPtr = data.memory;
-
-        bigTriangle.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(bigTriangleMeshData.m_numVertices * sizeof(uint32), Platform::eBufferUsageIndex).handle;
-        data = platformFuncs->CreateBuffer(bigTriangleMeshData.m_numVertices * sizeof(uint32), Platform::eBufferUsageStaging);
-        bigTriangle.m_indexBuffer.stagingBufferHandle = data.handle;
-        bigTriangle.m_indexBuffer.stagingBufferMemPtr = data.memory;
-
-        uint32 numVertBytes = sizeof(v4f) * 4; // aligned memory size
-        smallTriangle.m_positionBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageVertex).handle;
-        data = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageStaging);
-        smallTriangle.m_positionBuffer.stagingBufferHandle = data.handle;
-        smallTriangle.m_positionBuffer.stagingBufferMemPtr = data.memory;
-
-        smallTriangle.m_normalBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageVertex).handle;
-        data = platformFuncs->CreateBuffer(numVertBytes, Platform::eBufferUsageStaging);
-        smallTriangle.m_normalBuffer.stagingBufferHandle = data.handle;
-        smallTriangle.m_normalBuffer.stagingBufferMemPtr = data.memory;
-
-        uint32 numIdxBytes = sizeof(uint32) * 16; // aligned memory size
-        smallTriangle.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageIndex).handle;
-        data = platformFuncs->CreateBuffer(numIdxBytes, Platform::eBufferUsageStaging);
-        smallTriangle.m_indexBuffer.stagingBufferHandle = data.handle;
-        smallTriangle.m_indexBuffer.stagingBufferMemPtr = data.memory;
-
         CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
 
         CreateAllDescriptors(platformFuncs);
@@ -399,26 +338,6 @@ GAME_UPDATE(GameUpdate)
 
     ProcessInputState(inputStateDeltas, platformFuncs);
     UpdateDescriptorState();
-
-    v4f* positionBuffer = (v4f*)bigTriangleMeshData.m_vertexBufferData;
-    v3f* normalBuffer = (v3f*)((uint8*)positionBuffer + bigTriangleMeshData.m_numVertices * sizeof(v4f));
-    v2f* uvBuffer = (v2f*)((uint8*)normalBuffer + bigTriangleMeshData.m_numVertices * sizeof(v3f));
-    uint32* indexBuffer = (uint32*)((uint8*)uvBuffer + bigTriangleMeshData.m_numVertices * sizeof(v2f));
-    memcpy(bigTriangle.m_positionBuffer.stagingBufferMemPtr, positionBuffer, bigTriangleMeshData.m_numVertices * sizeof(v4f));
-    memcpy(bigTriangle.m_normalBuffer.stagingBufferMemPtr, normalBuffer, bigTriangleMeshData.m_numVertices * sizeof(v3f));
-    memcpy(bigTriangle.m_indexBuffer.stagingBufferMemPtr, indexBuffer, bigTriangleMeshData.m_numVertices * sizeof(uint32));
-
-    uint32 numVertBytes = sizeof(v4f) * 3;
-    uint32 numNormalBytes = sizeof(v3f) * 3;
-    uint32 numIdxBytes = sizeof(uint32) * 3;
-    v3f normals[] = { v3f(0.0f, 0.0f, 1.0f), v3f(0.0f, 0.0f, 1.0f), v3f(0.0f, 0.0f, 1.0f) };
-    v4f positions2[] = { v4f(0.0f, -0.25f, 0.0f, 1.0f), v4f(0.25f, 0.25f, 0.0f, 1.0f), v4f(-0.25f, 0.25f, 0.0f, 1.0f) };
-    uint32 indices2[] = { 0, 1, 2 };
-    memcpy(smallTriangle.m_positionBuffer.stagingBufferMemPtr, positions2, numVertBytes);
-    memcpy(smallTriangle.m_normalBuffer.stagingBufferMemPtr, normals, numVertBytes);
-    memcpy(smallTriangle.m_indexBuffer.stagingBufferMemPtr, indices2, numIdxBytes);
-
-    //Platform::PrintDebugString("Joe\n");
 
     // Test a thread job
     /*Platform::WorkerJob* jobs[32] = {};
@@ -447,12 +366,14 @@ GAME_UPDATE(GameUpdate)
     Platform::GraphicsCommand command;
 
     // Record buffer update commands
-    UpdateDynamicBufferCommand(graphicsCommands, &bigTriangle.m_positionBuffer, bigTriangleMeshData.m_numVertices * sizeof(v4f));
-    UpdateDynamicBufferCommand(graphicsCommands, &bigTriangle.m_normalBuffer, bigTriangleMeshData.m_numVertices * sizeof(v3f));
-    UpdateDynamicBufferCommand(graphicsCommands, &bigTriangle.m_indexBuffer, bigTriangleMeshData.m_numVertices * sizeof(uint32));
-    UpdateDynamicBufferCommand(graphicsCommands, &smallTriangle.m_positionBuffer, numVertBytes);
-    UpdateDynamicBufferCommand(graphicsCommands, &smallTriangle.m_normalBuffer, numNormalBytes);
-    UpdateDynamicBufferCommand(graphicsCommands, &smallTriangle.m_indexBuffer, numIdxBytes);
+    for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
+    {
+        DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
+
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_positionBuffer, meshData->m_numIndices * sizeof(v4f));
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f));
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32));
+    }
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
     command.m_renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
@@ -465,21 +386,18 @@ GAME_UPDATE(GameUpdate)
     Platform::DescriptorSetDataHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
     descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
 
-    DrawMeshDataCommand(graphicsCommands,
-            bigTriangleMeshData.m_numVertices,
-            bigTriangle.m_indexBuffer.gpuBufferHandle,
-            bigTriangle.m_positionBuffer.gpuBufferHandle,
-            bigTriangle.m_normalBuffer.gpuBufferHandle,
-            gameGraphicsData.m_shaderHandle,
-            descriptors);
+    for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
+    {
+        DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
 
-    DrawMeshDataCommand(graphicsCommands,
-            3,
-            smallTriangle.m_indexBuffer.gpuBufferHandle,
-            smallTriangle.m_positionBuffer.gpuBufferHandle,
-            smallTriangle.m_normalBuffer.gpuBufferHandle,
+        DrawMeshDataCommand(graphicsCommands,
+            meshData->m_numIndices,
+            meshData->m_indexBuffer.gpuBufferHandle,
+            meshData->m_positionBuffer.gpuBufferHandle,
+            meshData->m_normalBuffer.gpuBufferHandle,
             gameGraphicsData.m_shaderHandle,
             descriptors);
+    }
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassEnd;
     graphicsCommands.push_back(command);
@@ -577,18 +495,17 @@ GAME_DESTROY(GameDestroy)
         platformFuncs->DestroyBuffer(defaultQuad.m_indexBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
 
         // Game graphics
-        platformFuncs->DestroyBuffer(bigTriangle.m_positionBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(bigTriangle.m_positionBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(bigTriangle.m_normalBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(bigTriangle.m_normalBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(bigTriangle.m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(bigTriangle.m_indexBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(smallTriangle.m_positionBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(smallTriangle.m_positionBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(smallTriangle.m_normalBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(smallTriangle.m_normalBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(smallTriangle.m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(smallTriangle.m_indexBuffer.stagingBufferHandle, Platform::eBufferUsageVertex);
+        for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
+        {
+            DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
+
+            platformFuncs->DestroyBuffer(meshData->m_positionBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+            platformFuncs->DestroyBuffer(meshData->m_positionBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
+            platformFuncs->DestroyBuffer(meshData->m_normalBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+            platformFuncs->DestroyBuffer(meshData->m_normalBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
+            platformFuncs->DestroyBuffer(meshData->m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+            platformFuncs->DestroyBuffer(meshData->m_indexBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
+        }
 
         if (isMultiplayer && connectedToServer)
         {

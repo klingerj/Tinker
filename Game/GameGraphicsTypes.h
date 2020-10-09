@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Include/Core/CoreDefines.h"
+#include "../Include/Core/Math/VectorTypes.h"
 #include "../Include/PlatformGameAPI.h"
 
 #include <vector> // TODO: remove me
@@ -36,35 +37,20 @@ typedef struct dynamic_mesh_data
     DynamicBuffer m_positionBuffer;
     DynamicBuffer m_normalBuffer;
     DynamicBuffer m_indexBuffer;
+    uint32 m_numIndices;
 } DynamicMeshData;
 
-void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes)
-{
-    Platform::GraphicsCommand command;
-    command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
-
-    command.m_sizeInBytes = bufferSizeInBytes;
-    command.m_srcBufferHandle = dynamicBuffer->stagingBufferHandle;
-    command.m_dstBufferHandle = dynamicBuffer->gpuBufferHandle;
-    graphicsCommands.push_back(command);
-}
+void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes);
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
-        uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 normalBufferHandle,
-        uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors)
-{
-    Platform::GraphicsCommand command;
-    command.m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
+    uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 normalBufferHandle,
+    uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors);
 
-    command.m_numIndices = numIndices;
-    command.m_indexBufferHandle = indexBufferHandle;
-    command.m_positionBufferHandle = positionBufferHandle;
-    command.m_normalBufferHandle = normalBufferHandle;
-    //command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
-    command.m_shaderHandle = shaderHandle;
-    memcpy(command.m_descriptors, descriptors, sizeof(command.m_descriptors));
-    graphicsCommands.push_back(command);
-}
+typedef struct meshTriangles
+{
+    uint32 m_numVertices;
+    uint8* m_vertexBufferData; // positions, uvs, normals, indices
+} MeshAttributeData;
 
 typedef struct game_graphic_data
 {
@@ -96,4 +82,3 @@ template <uint32 numPoints, uint32 numIndices>
 using DefaultGeometry = struct default_geometry<numPoints, numIndices>;
 
 extern DefaultGeometry<4, 6> defaultQuad;
-

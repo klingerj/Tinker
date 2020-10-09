@@ -36,7 +36,7 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
-set SourceListGame=../Game/GameMain.cpp ../Platform/Win32PlatformGameAPI.cpp
+set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Game/GameMain.cpp ../Game/GameGraphicsTypes.cpp ../Game/AssetManager.cpp
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%
