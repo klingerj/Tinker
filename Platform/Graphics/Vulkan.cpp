@@ -56,7 +56,7 @@ namespace Tinker
             #endif
 
             int InitVulkan(VulkanContextResources* vulkanContextResources,
-                HINSTANCE hInstance, HWND windowHandle,
+                const PlatformWindowHandles* platformWindowHandles,
                 uint32 width, uint32 height)
             {
                 vulkanContextResources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
@@ -239,8 +239,8 @@ namespace Tinker
                 #if defined(_WIN32)
                 VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo = {};
                 win32SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-                win32SurfaceCreateInfo.hinstance = hInstance;
-                win32SurfaceCreateInfo.hwnd = windowHandle;
+                win32SurfaceCreateInfo.hinstance = platformWindowHandles->instance;
+                win32SurfaceCreateInfo.hwnd = platformWindowHandles->windowHandle;
 
                 result = vkCreateWin32SurfaceKHR(vulkanContextResources->instance,
                     &win32SurfaceCreateInfo,

@@ -979,12 +979,16 @@ wWinMain(HINSTANCE hInstance,
         return 1;
     }
 
+    Graphics::PlatformWindowHandles platformWindowHandles = {};
+    platformWindowHandles.instance = hInstance;
+    platformWindowHandles.windowHandle = windowHandle;
+
     switch(g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
             vulkanContextResources = {};
-            int result = InitVulkan(&vulkanContextResources, hInstance, windowHandle, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            int result = InitVulkan(&vulkanContextResources, &platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
             if (result)
             {
                 LogMsg("Failed to init graphics backend!", eLogSeverityCritical);
