@@ -1,4 +1,4 @@
-#include "../../Include/Platform/Win32Vulkan.h"
+#include "../../Include/Platform/Graphics/Vulkan.h"
 #include "../../Include/PlatformGameAPI.h"
 #include "../../Include/Core/Logging.h"
 
@@ -105,7 +105,7 @@ namespace Tinker
                 instanceCreateInfo.pApplicationInfo = &applicationInfo;
 
                 const uint32 numRequiredExtensions = 
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
                 3
                 #else
                 2
@@ -113,10 +113,15 @@ namespace Tinker
                 ;
                 const char* requiredExtensionNames[numRequiredExtensions] = {
                     VK_KHR_SURFACE_EXTENSION_NAME,
+
+                    #if defined(_WIN32)
                     VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+                    #else
+                    // TODO: different platform surface extension
+                    #endif
 
                     
-                    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
+                    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
                     , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
                     #endif
                 };
@@ -141,7 +146,7 @@ namespace Tinker
                 delete availableExtensions;
 
                 // Validation layers
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
                 const uint32 numRequiredLayers = 1;
                 const char* requestedLayersStr[numRequiredLayers] = { "VK_LAYER_KHRONOS_validation" };
 
@@ -201,7 +206,7 @@ namespace Tinker
                     TINKER_ASSERT(0);
                 }
 
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
                 // Debug utils callback
                 VkDebugUtilsMessengerCreateInfoEXT dbgUtilsMsgCreateInfo = {};
                 dbgUtilsMsgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -231,6 +236,7 @@ namespace Tinker
                 #endif
 
                 // Surface
+                #if defined(_WIN32)
                 VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo = {};
                 win32SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
                 win32SurfaceCreateInfo.hinstance = hInstance;
@@ -245,6 +251,10 @@ namespace Tinker
                     LogMsg("Failed to create Win32SurfaceKHR!", eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
+                #else
+                // TODO: implement other platform surface types
+                TINKER_ASSERT(0);
+                #endif
 
                 // Physical device
                 uint32 numPhysicalDevices = 0;

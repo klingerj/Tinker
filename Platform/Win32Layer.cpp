@@ -1,5 +1,5 @@
 #include "../Include/PlatformGameAPI.h"
-#include "../Include/Platform/Win32Vulkan.h"
+#include "../Include/Platform/Graphics/Vulkan.h"
 #include "../Include/Core/Logging.h"
 #include "../Include/Platform/Win32Client.h"
 #include "Win32WorkerThreadPool.cpp"

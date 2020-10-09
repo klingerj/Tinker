@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../Core/CoreDefines.h"
-#include "../Core/Math/VectorTypes.h"
-#include "../Core/Allocators.h"
+#include "../../Core/CoreDefines.h"
+#include "../../Core/Math/VectorTypes.h"
+#include "../../Core/Allocators.h"
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>

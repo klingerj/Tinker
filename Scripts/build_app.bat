@@ -35,7 +35,7 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe
-set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Vulkan.cpp ../Platform/Win32Logging.cpp ../Platform/Win32Client.cpp
+set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Graphics/Vulkan.cpp ../Platform/Win32Logging.cpp ../Platform/Win32Client.cpp
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
