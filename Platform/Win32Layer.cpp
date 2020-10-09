@@ -666,18 +666,18 @@ WRITE_DESCRIPTOR(WriteDescriptor)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
-    case eGraphicsAPIVulkan:
-    {
-        Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayout, descSetHandle, descSetDataHandles);
-        break;
-    }
+        case eGraphicsAPIVulkan:
+        {
+            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayout, descSetHandle, descSetDataHandles);
+            break;
+        }
 
-    default:
-    {
-        LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-        runGame = false;
-        break;
-    }
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            break;
+        }
     }
 }
 

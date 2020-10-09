@@ -1971,7 +1971,7 @@ namespace Tinker
 
                 vkDestroySampler(vulkanContextResources->device, vulkanContextResources->linearSampler, nullptr);
 
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
                 // Debug utils messenger
                 PFN_vkDestroyDebugUtilsMessengerEXT dbgDestroyFunc =
                     (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(vulkanContextResources->instance,
