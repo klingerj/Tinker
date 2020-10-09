@@ -752,7 +752,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     {
         case WM_CREATE:
         {
-            //OutputDebugString("create\n");
             break;
         }
         case WM_SIZE:
@@ -792,19 +791,34 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         }
         case WM_DESTROY:
         {
-            //OutputDebugString("destroy\n");
             break;
         }
         case WM_CLOSE:
         {
-            //OutputDebugString("close\n");
             PostQuitMessage(0);
             runGame = false;
             break;
         }
         case WM_ACTIVATEAPP:
         {
-            //OutputDebugString("activateapp\n");
+            DWORD procPrior = NORMAL_PRIORITY_CLASS;
+            if (wParam) procPrior = ABOVE_NORMAL_PRIORITY_CLASS;
+            if (!SetPriorityClass(GetCurrentProcess(), procPrior))
+            {
+                LogMsg("Failed to change process priority when changing window focus!", eLogSeverityCritical);
+            }
+            else
+            {
+                LogMsg("Changing process priority!", eLogSeverityInfo);
+                if (wParam)
+                {
+                    LogMsg("ABOVE_NORMAL", eLogSeverityInfo);
+                }
+                else
+                {
+                    LogMsg("NORMAL", eLogSeverityInfo);
+                }
+            }
             break;
         }
         default:
