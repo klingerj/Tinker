@@ -4,10 +4,13 @@
 #include "../../Core/Math/VectorTypes.h"
 #include "../../Core/Allocators.h"
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-
+#ifdef _WIN32
 #include <windows.h>
+#define VK_USE_PLATFORM_WIN32_KHR
+#else
+// TODO: include other platform headers
+#endif
+#include <vulkan/vulkan.h>
 
 #define VULKAN_RESOURCE_POOL_MAX 256
 
@@ -108,9 +111,17 @@ namespace Tinker
                 uint32 gpuBufferHandle;
             } VulkanBufferData;
 
-            int InitVulkan(VulkanContextResources* vulkanContextResources,
-                HINSTANCE hInstance, HWND windowHandle,
-                uint32 width, uint32 height);
+            typedef struct platform_window_handles
+            {
+                #ifdef _WIN32
+                HINSTANCE instance;
+                HWND windowHandle;
+                #else
+                // TODO: other platform window handles/pointers
+                #endif
+            } PlatformWindowHandles;
+
+            int InitVulkan(VulkanContextResources* vulkanContextResources, const PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height);
             void DestroyVulkan(VulkanContextResources* vulkanContextResources);
 
             void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources);
