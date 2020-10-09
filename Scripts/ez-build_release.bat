@@ -8,14 +8,12 @@ rem Run vcvars since this isn't executing from the shell - this won't hurt, thou
 call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
 echo.
 
-rem Assume release mode
-set BuildConfig=Release
-
 rem Run other build scripts
-call build_app.bat %BuildConfig%
-call build_server.bat 
-call build_benchmarks.bat %BuildConfig%
-call build_tests.bat %BuildConfig%
+call build_app.bat Release
+call build_server.bat Release
+call build_benchmarks.bat Release
+call build_tests.bat Release
+call compile_shaders_glsl2spv.bat
 
 echo.
 echo Build finished.
