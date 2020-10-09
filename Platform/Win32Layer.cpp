@@ -34,6 +34,7 @@ volatile bool runGame = true;
 PlatformAPIFuncs g_platformAPIFuncs;
 Win32GameCode g_GameCode;
 InputStateDeltas g_inputStateDeltas;
+Graphics::VulkanContextResources vulkanContextResources;
 
 // TODO: implement other graphics APIs
 enum
@@ -156,8 +157,6 @@ ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
     newJob->m_done = true;
 }
 #endif
-
-Graphics::VulkanContextResources vulkanContextResources;
 
 void BeginFrameRecording()
 {
