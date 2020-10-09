@@ -62,7 +62,6 @@ namespace Tinker
                 vulkanContextResources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanPipelineResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
-                vulkanContextResources->vulkanMappedMemPtrPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanFramebufferPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanRenderPassPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanImageViewPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
@@ -1131,15 +1130,12 @@ namespace Tinker
 
                 if (bufferUsage == eBufferUsageStaging || bufferUsage == eBufferUsageUniform)
                 {
-                    uint32 newMappedMemHandle =
-                        vulkanContextResources->vulkanMappedMemPtrPool.Alloc();
-                    void** newMappedMem =
-                        vulkanContextResources->vulkanMappedMemPtrPool.PtrFromHandle(newMappedMemHandle);
+                    void* newMappedMem;
 
-                    vkMapMemory(vulkanContextResources->device, newResource->deviceMemory, 0, sizeInBytes, 0, newMappedMem);
+                    vkMapMemory(vulkanContextResources->device, newResource->deviceMemory, 0, sizeInBytes, 0, &newMappedMem);
 
                     vulkanBufferData.hostBufferHandle = newResourceHandle;
-                    vulkanBufferData.mappedMemory = *newMappedMem;
+                    vulkanBufferData.mappedMemory = newMappedMem;
                 }
                 else
                 {

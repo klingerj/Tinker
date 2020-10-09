@@ -80,7 +80,6 @@ namespace Tinker
                 // TODO: move this stuff elsewhere
                 Memory::PoolAllocator<VkFramebuffer> vulkanFramebufferPool;
                 Memory::PoolAllocator<VkRenderPass> vulkanRenderPassPool;
-                Memory::PoolAllocator<void*> vulkanMappedMemPtrPool;
                 VkFence fence = VK_NULL_HANDLE;
                 VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
                 VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
