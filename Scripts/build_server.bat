@@ -13,6 +13,9 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
+echo.
+echo ***** Building Tinker Server *****
+
 rem *********************************************************************************************************
 rem /FAs for .asm file output
 set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi
