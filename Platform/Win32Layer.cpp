@@ -53,38 +53,53 @@ GlobalAppParams g_GlobalAppParams;
 
 static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
-    WIN32_FIND_DATA findData;
-    HANDLE findHandle = FindFirstFile(gameDllSourcePath, &findData);
-    if (findHandle != INVALID_HANDLE_VALUE)
-    {
-        FindClose(findHandle);
-        if (CompareFileTime(&findData.ftLastWriteTime, &GameCode->lastWriteTime))
-        {
-            // Unload old code
-            if (GameCode->GameDll)
-            {
-                GameCode->GameDestroy(&g_platformAPIFuncs);
-                FreeLibrary(GameCode->GameDll);
-                GameCode->GameUpdate = GameUpdateStub;
-                GameCode->GameDestroy = GameDestroyStub;
-                GameCode->GameWindowResize = GameWindowResizeStub;
-            }
+    HANDLE gameDllFileHandle = CreateFile(gameDllSourcePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
-            CopyFile(gameDllSourcePath, TINKER_PLATFORM_HOTLOAD_FILENAME, FALSE);
-            GameCode->GameDll = LoadLibrary(TINKER_PLATFORM_HOTLOAD_FILENAME);
-            if (GameCode->GameDll)
-            {
-                GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
-                GameCode->GameDestroy = (game_destroy*)GetProcAddress(GameCode->GameDll, "GameDestroy");
-                GameCode->GameWindowResize = (game_window_resize*)GetProcAddress(GameCode->GameDll, "GameWindowResize");
-                GameCode->lastWriteTime = findData.ftLastWriteTime;
-            }
-        }
-    }
-    else
+    if (gameDllFileHandle == INVALID_HANDLE_VALUE)
     {
-        // Game code does not get reloaded
-        LogMsg("Failed to find game dll to reload!", eLogSeverityCritical);
+        DWORD errorCode = GetLastError();
+        if (errorCode == 32)
+        {
+            // game dll currently being used by another process - not a big deal, probably being written to during build. Don't log an error
+        }
+        else
+        {
+            // some other error, log a failure
+            LogMsg("Failed to get handle to game dll to reload!", eLogSeverityCritical);
+        }
+
+        // Regardless of error code, don't continue with the hotload attempt
+        return;
+    }
+
+    // Check the game dll's last write time, and reload it if it has been updated
+    FILETIME gameDllLastWriteTime;
+    GetFileTime(gameDllFileHandle, 0, 0, &gameDllLastWriteTime);
+
+    CloseHandle(gameDllFileHandle);
+    if (CompareFileTime(&gameDllLastWriteTime, &GameCode->lastWriteTime))
+    {
+        LogMsg("Loading game dll!", eLogSeverityInfo);
+
+        // Unload old code
+        if (GameCode->GameDll)
+        {
+            GameCode->GameDestroy(&g_platformAPIFuncs);
+            FreeLibrary(GameCode->GameDll);
+            GameCode->GameUpdate = GameUpdateStub;
+            GameCode->GameDestroy = GameDestroyStub;
+            GameCode->GameWindowResize = GameWindowResizeStub;
+        }
+
+        CopyFile(gameDllSourcePath, TINKER_PLATFORM_HOTLOAD_FILENAME, FALSE);
+        GameCode->GameDll = LoadLibrary(TINKER_PLATFORM_HOTLOAD_FILENAME);
+        if (GameCode->GameDll)
+        {
+            GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
+            GameCode->GameDestroy = (game_destroy*)GetProcAddress(GameCode->GameDll, "GameDestroy");
+            GameCode->GameWindowResize = (game_window_resize*)GetProcAddress(GameCode->GameDll, "GameWindowResize");
+            GameCode->lastWriteTime = gameDllLastWriteTime;
+        }
     }
 }
 
