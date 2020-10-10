@@ -36,7 +36,6 @@ DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad
     v3f(0.0f, 0.0f, 1.0f),
     v3f(0.0f, 0.0f, 1.0f),
     0, 1, 2, 2, 1, 3
-    //2, 1, 0, 3, 1, 2
 };
 
 static GameGraphicsData gameGraphicsData = {};
@@ -370,12 +369,13 @@ GAME_UPDATE(GameUpdate)
     {
         DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
 
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_positionBuffer, meshData->m_numIndices * sizeof(v4f));
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f));
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32));
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_positionBuffer, meshData->m_numIndices * sizeof(v4f), "Update Asset Vtx Pos Buf");
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f), "Update Asset Vtx Pos Buf");
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Pos Buf");
     }
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
+    command.debugLabel = "Main Draw Pass";
     command.m_renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
     command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
     command.m_renderWidth = windowWidth;
@@ -396,7 +396,8 @@ GAME_UPDATE(GameUpdate)
             meshData->m_positionBuffer.gpuBufferHandle,
             meshData->m_normalBuffer.gpuBufferHandle,
             gameGraphicsData.m_shaderHandle,
-            descriptors);
+            descriptors,
+            "Draw asset");
     }
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassEnd;
@@ -411,6 +412,7 @@ GAME_UPDATE(GameUpdate)
 
     // Blit to screen
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
+    command.debugLabel = "Blit to screen";
     command.m_renderPassHandle = TINKER_INVALID_HANDLE;
     command.m_framebufferHandle = TINKER_INVALID_HANDLE;
     command.m_renderWidth = 0;
@@ -418,6 +420,7 @@ GAME_UPDATE(GameUpdate)
     graphicsCommands.push_back(command);
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
+    command.debugLabel = "Draw default quad";
     command.m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command.m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
     command.m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;

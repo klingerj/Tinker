@@ -51,7 +51,10 @@ namespace Tinker
                 bool isInitted = false;
                 bool isSwapChainValid = false;
                 VkInstance instance = VK_NULL_HANDLE;
-                VkDebugUtilsMessengerEXT debugMessenger;
+                VkDebugUtilsMessengerEXT debugMessenger = NULL;
+                PFN_vkCmdBeginDebugUtilsLabelEXT pfnCmdBeginDebugUtilsLabelEXT = NULL;
+                PFN_vkCmdEndDebugUtilsLabelEXT pfnCmdEndDebugUtilsLabelEXT = NULL;
+                PFN_vkCmdInsertDebugUtilsLabelEXT pfnCmdInsertDebugUtilsLabelEXT = NULL;
                 VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
                 uint32 graphicsQueueIndex = TINKER_INVALID_HANDLE;
                 uint32 presentationQueueIndex = TINKER_INVALID_HANDLE;
@@ -171,15 +174,18 @@ namespace Tinker
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
                 uint32 positionBufferHandle, uint32 normalBufferHandle,
-                uint32 indexBufferHandle, uint32 numIndices);
+                uint32 indexBufferHandle, uint32 numIndices,
+                const char* debugLabel);
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
                 uint32 shaderHandle, const DescriptorSetDataHandles* descSetHandles);
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
-                uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle);
+                uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle,
+                const char* debugLabel);
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
                 uint32 srcImgHandle, uint32 dstImgHandle, uint32 width, uint32 height);
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-                uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight);
+                uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight,
+                const char* debugLabel);
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources);
         }
     }

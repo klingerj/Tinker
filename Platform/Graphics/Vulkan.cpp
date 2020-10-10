@@ -5,12 +5,13 @@
 #include <cstring>
 #include <iostream>
 // TODO: move this to be a compile define
-#define ENABLE_VULKAN_VALIDATION_LAYERS
+#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+#define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 // NOTE: The convention in this project to is flip the viewport upside down since a left-handed projection
 // matrix is often used. However, doing this flip causes the application to not render properly when run
 // in RenderDoc for some reason. To debug with RenderDoc, you should turn on this #define.
-//#define WORK_WITH_RENDERDOC
+#define WORK_WITH_RENDERDOC
 
 namespace Tinker
 {
@@ -104,7 +105,7 @@ namespace Tinker
                 instanceCreateInfo.pApplicationInfo = &applicationInfo;
 
                 const uint32 numRequiredExtensions = 
-                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
+                #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) || defined(ENABLE_VULKAN_DEBUG_LABELS)
                 3
                 #else
                 2
@@ -120,7 +121,7 @@ namespace Tinker
                     #endif
 
                     
-                    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
+                    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) || defined(ENABLE_VULKAN_DEBUG_LABELS)
                     , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
                     #endif
                 };
@@ -146,8 +147,11 @@ namespace Tinker
 
                 // Validation layers
                 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
-                const uint32 numRequiredLayers = 1;
-                const char* requestedLayersStr[numRequiredLayers] = { "VK_LAYER_KHRONOS_validation" };
+                const uint32 numRequestedLayers = 1;
+                const char* requestedLayersStr[numRequestedLayers] =
+                {
+                    "VK_LAYER_KHRONOS_validation"
+                };
 
                 uint32 numAvailableLayers = 0;
                 vkEnumerateInstanceLayerProperties(&numAvailableLayers, nullptr);
@@ -167,8 +171,8 @@ namespace Tinker
                     LogMsg(availableLayers[uiAvailLayer].layerName, eLogSeverityInfo);
                 }
 
-                bool layersSupported[numRequiredLayers] = { false };
-                for (uint32 uiReqLayer = 0; uiReqLayer < numRequiredLayers; ++uiReqLayer)
+                bool layersSupported[numRequestedLayers] = { false };
+                for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
                 {
                     for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
                     {
@@ -182,7 +186,7 @@ namespace Tinker
 
                 delete availableLayers;
 
-                for (uint32 uiReqLayer = 0; uiReqLayer < numRequiredLayers; ++uiReqLayer)
+                for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
                 {
                     if (!layersSupported[uiReqLayer])
                     {
@@ -192,7 +196,7 @@ namespace Tinker
                     }
                 }
 
-                instanceCreateInfo.enabledLayerCount = numRequiredLayers;
+                instanceCreateInfo.enabledLayerCount = numRequestedLayers;
                 instanceCreateInfo.ppEnabledLayerNames = requestedLayersStr;
                 #endif
 
@@ -422,6 +426,22 @@ namespace Tinker
                     LogMsg("Failed to create Vulkan device!", eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
+
+                // Debug labels
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                /*vulkanContextResources->pfnSetDebugUtilsObjectNameEXT =
+                    (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(vulkanContextResources->device,
+                                                                          "vkSetDebugUtilsObjectNameEXT")*/;
+                vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT =
+                    (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(vulkanContextResources->device,
+                                                                           "vkCmdBeginDebugUtilsLabelEXT");
+                vulkanContextResources->pfnCmdEndDebugUtilsLabelEXT =
+                    (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(vulkanContextResources->device,
+                                                                           "vkCmdEndDebugUtilsLabelEXT");
+                vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT =
+                    (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(vulkanContextResources->device,
+                                                                           "vkCmdInsertDebugUtilsLabelEXT");
+                #endif
 
                 // Queues
                 vkGetDeviceQueue(vulkanContextResources->device,
@@ -1413,26 +1433,36 @@ namespace Tinker
 
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
                 uint32 positionBufferHandle, uint32 normalBufferHandle,
-                uint32 indexBufferHandle, uint32 numIndices)
+                uint32 indexBufferHandle, uint32 numIndices,
+                const char* debugLabel)
             {
                 if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
                     TINKER_ASSERT(0);
                 }
 
+                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+
                 const uint32 numVertexBufferBindings = 2;
                 VkBuffer vertexBuffers[numVertexBufferBindings] = { positionBufferHandle == TINKER_INVALID_HANDLE ? VK_NULL_HANDLE : vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(positionBufferHandle)->buffer,
                                              normalBufferHandle   == TINKER_INVALID_HANDLE ? VK_NULL_HANDLE : vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(normalBufferHandle)->buffer};
                 VkDeviceSize offsets[] = { 0, 0 };
-                vkCmdBindVertexBuffers(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    0, numVertexBufferBindings, vertexBuffers, offsets);
+                vkCmdBindVertexBuffers(commandBuffer, 0, numVertexBufferBindings, vertexBuffers, offsets);
 
                 VkBuffer& indexBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(indexBufferHandle)->buffer;
-                vkCmdBindIndexBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-                vkCmdDrawIndexed(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    numIndices, 1, 0, 0, 0);
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                VkDebugUtilsLabelEXT label =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    NULL,
+                    debugLabel,
+                    { 0.0f, 0.0f, 0.0f, 0.0f },
+                };
+                vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+                #endif
+                vkCmdDrawIndexed(commandBuffer, numIndices, 1, 0, 0, 0);
             }
 
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
@@ -1455,7 +1485,8 @@ namespace Tinker
             }
 
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
-                uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle)
+                uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle,
+                const char* debugLabel)
             {
                 if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
@@ -1464,15 +1495,26 @@ namespace Tinker
 
                 VkBuffer& dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle)->buffer;
                 VkBuffer& srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle)->buffer;
-                VkBufferCopy bufferCopy = {};
 
+                VkBufferCopy bufferCopy = {};
                 bufferCopy.srcOffset = 0;
                 bufferCopy.dstOffset = 0;
                 bufferCopy.size = sizeInBytes;
-                vkCmdCopyBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    srcBuffer,
-                    dstBuffer,
-                    1, &bufferCopy);
+
+                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                VkDebugUtilsLabelEXT label =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    NULL,
+                    debugLabel,
+                    { 0.0f, 0.0f, 0.0f, 0.0f },
+                };
+                vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+                #endif
+
+                vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
             }
 
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
@@ -1669,7 +1711,8 @@ namespace Tinker
             }
 
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-                uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight)
+                uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight,
+                const char* debugLabel)
             {
                 if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
                 {
@@ -1712,7 +1755,20 @@ namespace Tinker
                 renderPassBeginInfo.clearValueCount = 1;
                 renderPassBeginInfo.pClearValues = &clearColor;
 
-                vkCmdBeginRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
+                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                VkDebugUtilsLabelEXT label =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    NULL,
+                    debugLabel,
+                    { 0.0f, 0.0f, 0.0f, 0.0f },
+                };
+                vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
+                #endif
+
+                vkCmdBeginRenderPass(commandBuffer,
                     &renderPassBeginInfo,
                     VK_SUBPASS_CONTENTS_INLINE);
             }
@@ -1724,7 +1780,13 @@ namespace Tinker
                     TINKER_ASSERT(0);
                 }
 
-                vkCmdEndRenderPass(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
+                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+
+                vkCmdEndRenderPass(commandBuffer);
+
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                vulkanContextResources->pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
+                #endif
             }
 
             uint32 VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
@@ -1890,6 +1952,18 @@ namespace Tinker
                     LogMsg("Failed to create Vulkan render pass!", eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
+
+                /*#if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                const VkDebugUtilsObjectNameInfoEXT debugNameInfo =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                    NULL,
+                    VK_OBJECT_TYPE_RENDER_PASS,
+                    (uint64_t)*newRenderPass,
+                    "Joe's Render Pass!!!",
+                };
+                vulkanContextResources->pfnSetDebugUtilsObjectNameEXT(vulkanContextResources->device, &debugNameInfo);
+                #endif*/
 
                 return newRenderPassHandle;
             }

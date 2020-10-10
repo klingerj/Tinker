@@ -40,11 +40,14 @@ typedef struct dynamic_mesh_data
     uint32 m_numIndices;
 } DynamicMeshData;
 
-void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes);
+void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
+    DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes,
+    const char* debugLabel);
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
     uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 normalBufferHandle,
-    uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors);
+    uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors,
+    const char* debugLabel);
 
 typedef struct meshTriangles
 {

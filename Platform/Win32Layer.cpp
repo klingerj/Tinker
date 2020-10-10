@@ -237,7 +237,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                         }
                         Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
                             currentCmd.m_positionBufferHandle, currentCmd.m_normalBufferHandle,
-                            currentCmd.m_indexBufferHandle, currentCmd.m_numIndices);
+                            currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
+                            currentCmd.debugLabel);
                         break;
                     }
 
@@ -258,7 +259,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     case eGraphicsAPIVulkan:
                     {
                         Graphics::VulkanRecordCommandMemoryTransfer(&vulkanContextResources,
-                            currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle);
+                            currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
+                            currentCmd.debugLabel);
                         break;
                     }
 
@@ -279,7 +281,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     case eGraphicsAPIVulkan:
                     {
                         Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_renderPassHandle,
-                            currentCmd.m_framebufferHandle, currentCmd.m_renderWidth, currentCmd.m_renderHeight);
+                            currentCmd.m_framebufferHandle, currentCmd.m_renderWidth, currentCmd.m_renderHeight,
+                            currentCmd.debugLabel);
                         break;
                     }
 
