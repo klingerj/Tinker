@@ -621,26 +621,26 @@ void Test_m2OpMulM2()
     m2f af = m2f(1.0f, 2.0f, 3.0f, 4.0f);
     m2f bf = m2f(5.0f, 6.0f, 7.0f, 8.0f);
     m2f cf = af * bf;
-    TINKER_TEST_ASSERT(cf.m_data[0] == 5.0f);
-    TINKER_TEST_ASSERT(cf.m_data[1] == 12.0f);
-    TINKER_TEST_ASSERT(cf.m_data[2] == 21.0f);
-    TINKER_TEST_ASSERT(cf.m_data[3] == 32.0f);
+    TINKER_TEST_ASSERT(cf.m_data[0] == 23.0f);
+    TINKER_TEST_ASSERT(cf.m_data[1] == 34.0f);
+    TINKER_TEST_ASSERT(cf.m_data[2] == 31.0f);
+    TINKER_TEST_ASSERT(cf.m_data[3] == 46.0f);
 
     m2i ai = m2i(1, 2, 3, 4);
     m2i bi = m2i(5, 6, 7, 8);
     m2i ci = ai * bi;
-    TINKER_TEST_ASSERT(ci.m_data[0] == 5);
-    TINKER_TEST_ASSERT(ci.m_data[1] == 12);
-    TINKER_TEST_ASSERT(ci.m_data[2] == 21);
-    TINKER_TEST_ASSERT(ci.m_data[3] == 32);
+    TINKER_TEST_ASSERT(ci.m_data[0] == 23);
+    TINKER_TEST_ASSERT(ci.m_data[1] == 34);
+    TINKER_TEST_ASSERT(ci.m_data[2] == 31);
+    TINKER_TEST_ASSERT(ci.m_data[3] == 46);
 
     m2ui aui = m2ui(1, 2, 3, 4);
     m2ui bui = m2ui(5, 6, 7, 8);
     m2ui cui = aui * bui;
-    TINKER_TEST_ASSERT(cui.m_data[0] == 5);
-    TINKER_TEST_ASSERT(cui.m_data[1] == 12);
-    TINKER_TEST_ASSERT(cui.m_data[2] == 21);
-    TINKER_TEST_ASSERT(cui.m_data[3] == 32);
+    TINKER_TEST_ASSERT(cui.m_data[0] == 23);
+    TINKER_TEST_ASSERT(cui.m_data[1] == 34);
+    TINKER_TEST_ASSERT(cui.m_data[2] == 31);
+    TINKER_TEST_ASSERT(cui.m_data[3] == 46);
 }
 
 void Test_m2OpMulV2()
