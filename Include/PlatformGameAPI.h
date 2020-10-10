@@ -222,6 +222,7 @@ namespace Tinker
         typedef struct graphics_command
         {
             uint32 m_commandType;
+            const char* debugLabel = "Default Label";
             union
             {
                 // Draw call
