@@ -3,7 +3,7 @@
 layout(location = 0) in vec3 normal;
 layout(location = 0) out vec4 outColor;
 
-#define LIGHT_DIR normalize(vec3(1, 1, 1))
+#define LIGHT_DIR normalize(vec3(-1, -1, 1))
 #define AMBIENT 0.05
 #define BASE_COLOR vec3(0.7, 0.7, 0.7)
 
