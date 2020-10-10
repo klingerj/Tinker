@@ -24,17 +24,27 @@ using namespace Math;
 #define DEFAULT_QUAD_NUM_VERTICES 4
 #define DEFAULT_QUAD_NUM_INDICES 6
 DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {
+    // buffer handles
     { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
     { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
     { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
+    { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
+    // positions
     v4f(-1.0f, -1.0f, 0.0f, 1.0f),
     v4f(1.0f, -1.0f, 0.0f, 1.0f),
     v4f(-1.0f, 1.0f, 0.0f, 1.0f),
     v4f(1.0f, 1.0f, 0.0f, 1.0f),
+    //uvs
+    v2f(0.0f, 0.0f),
+    v2f(0.0f, 1.0f),
+    v2f(0.0f, 1.0f),
+    v2f(1.0f, 1.0f),
+    // normals
     v3f(0.0f, 0.0f, 1.0f),
     v3f(0.0f, 0.0f, 1.0f),
     v3f(0.0f, 0.0f, 1.0f),
     v3f(0.0f, 0.0f, 1.0f),
+    // indices
     0, 1, 2, 2, 1, 3
 };
 
@@ -86,6 +96,7 @@ void UpdateDescriptorState()
 
 uint32 LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Platform::GraphicsPipelineParams* params)
 {
+    // get file size, load entire file
     uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
     uint32 fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
     TINKER_ASSERT(vertexShaderFileSize > 0);
@@ -94,7 +105,6 @@ uint32 LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* v
     uint8* vertexShaderBuffer = shaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
     uint8* fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
     
-    // get file size, load entire file
     platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
     platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
 
@@ -289,17 +299,23 @@ GAME_UPDATE(GameUpdate)
         defaultQuad.m_positionBuffer.stagingBufferMemPtr = stagingBufferData.memory;
         memcpy(defaultQuad.m_positionBuffer.stagingBufferMemPtr, defaultQuad.m_points, sizeof(defaultQuad.m_points));
 
+        defaultQuad.m_uvBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_uvs), Platform::eBufferUsageVertex).handle;
+        stagingBufferData = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_uvs), Platform::eBufferUsageStaging);
+        defaultQuad.m_uvBuffer.stagingBufferHandle = stagingBufferData.handle;
+        defaultQuad.m_uvBuffer.stagingBufferMemPtr = stagingBufferData.memory;
+        memcpy(defaultQuad.m_uvBuffer.stagingBufferMemPtr, defaultQuad.m_uvs, sizeof(defaultQuad.m_uvs));
+
         defaultQuad.m_normalBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_normals), Platform::eBufferUsageVertex).handle;
         stagingBufferData = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_normals), Platform::eBufferUsageStaging);
         defaultQuad.m_normalBuffer.stagingBufferHandle = stagingBufferData.handle;
         defaultQuad.m_normalBuffer.stagingBufferMemPtr = stagingBufferData.memory;
-        memcpy(defaultQuad.m_normalBuffer.stagingBufferMemPtr, defaultQuad.m_normals, sizeof(defaultQuad.m_points));
+        memcpy(defaultQuad.m_normalBuffer.stagingBufferMemPtr, defaultQuad.m_normals, sizeof(defaultQuad.m_normals));
 
         defaultQuad.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_indices), Platform::eBufferUsageIndex).handle;
         stagingBufferData = platformFuncs->CreateBuffer(sizeof(defaultQuad.m_indices), Platform::eBufferUsageStaging);
         defaultQuad.m_indexBuffer.stagingBufferHandle = stagingBufferData.handle;
         defaultQuad.m_indexBuffer.stagingBufferMemPtr = stagingBufferData.memory;
-        memcpy(defaultQuad.m_indexBuffer.stagingBufferMemPtr, defaultQuad.m_indices, sizeof(defaultQuad.m_points));
+        memcpy(defaultQuad.m_indexBuffer.stagingBufferMemPtr, defaultQuad.m_indices, sizeof(defaultQuad.m_indices));
 
         Platform::GraphicsCommand command;
         command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
@@ -370,8 +386,9 @@ GAME_UPDATE(GameUpdate)
         DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
 
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_positionBuffer, meshData->m_numIndices * sizeof(v4f), "Update Asset Vtx Pos Buf");
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f), "Update Asset Vtx Pos Buf");
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Pos Buf");
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_uvBuffer, meshData->m_numIndices * sizeof(v2f), "Update Asset Vtx Uv Buf");
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f), "Update Asset Vtx Norm Buf");
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idk Buf");
     }
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
@@ -394,6 +411,7 @@ GAME_UPDATE(GameUpdate)
             meshData->m_numIndices,
             meshData->m_indexBuffer.gpuBufferHandle,
             meshData->m_positionBuffer.gpuBufferHandle,
+            meshData->m_uvBuffer.gpuBufferHandle,
             meshData->m_normalBuffer.gpuBufferHandle,
             gameGraphicsData.m_shaderHandle,
             descriptors,
@@ -423,9 +441,9 @@ GAME_UPDATE(GameUpdate)
     command.debugLabel = "Draw default quad";
     command.m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command.m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
+    command.m_uvBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
     command.m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
     command.m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
-    //command.m_uvBufferHandle = TINKER_INVALID_HANDLE;
     command.m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
     Platform::InitDescSetDataHandles(command.m_descriptors);
     command.m_descriptors[0].handles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
@@ -491,10 +509,12 @@ GAME_DESTROY(GameDestroy)
 
         // Default geometry
         platformFuncs->DestroyBuffer(defaultQuad.m_positionBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
-        platformFuncs->DestroyBuffer(defaultQuad.m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageIndex);
-        platformFuncs->DestroyBuffer(defaultQuad.m_normalBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
         platformFuncs->DestroyBuffer(defaultQuad.m_positionBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(defaultQuad.m_uvBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+        platformFuncs->DestroyBuffer(defaultQuad.m_uvBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(defaultQuad.m_normalBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
         platformFuncs->DestroyBuffer(defaultQuad.m_normalBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
+        platformFuncs->DestroyBuffer(defaultQuad.m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageIndex);
         platformFuncs->DestroyBuffer(defaultQuad.m_indexBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
 
         // Game graphics
@@ -504,6 +524,8 @@ GAME_DESTROY(GameDestroy)
 
             platformFuncs->DestroyBuffer(meshData->m_positionBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
             platformFuncs->DestroyBuffer(meshData->m_positionBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
+            platformFuncs->DestroyBuffer(meshData->m_uvBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
+            platformFuncs->DestroyBuffer(meshData->m_uvBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
             platformFuncs->DestroyBuffer(meshData->m_normalBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);
             platformFuncs->DestroyBuffer(meshData->m_normalBuffer.stagingBufferHandle, Platform::eBufferUsageStaging);
             platformFuncs->DestroyBuffer(meshData->m_indexBuffer.gpuBufferHandle, Platform::eBufferUsageVertex);

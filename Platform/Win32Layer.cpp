@@ -236,7 +236,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                             currentShader = currentCmd.m_shaderHandle;
                         }
                         Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
-                            currentCmd.m_positionBufferHandle, currentCmd.m_normalBufferHandle,
+                            currentCmd.m_positionBufferHandle, currentCmd.m_uvBufferHandle, currentCmd.m_normalBufferHandle,
                             currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
                             currentCmd.debugLabel);
                         break;

@@ -96,6 +96,11 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferHandle = data.handle;
         m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferMemPtr = data.memory;
 
+        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), Platform::eBufferUsageVertex).handle;
+        data = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), Platform::eBufferUsageStaging);
+        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferHandle = data.handle;
+        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr = data.memory;
+
         m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), Platform::eBufferUsageVertex).handle;
         data = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), Platform::eBufferUsageStaging);
         m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferHandle = data.handle;
@@ -110,8 +115,8 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
 
         // Memcpy data into staging buffer
         uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
-        uint32 numNormalBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
         uint32 numUVBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
+        uint32 numNormalBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
         uint32 numIndexBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
 
         v4f* positionBuffer = (v4f*)m_allMeshData[uiAsset].m_vertexBufferData;
@@ -119,6 +124,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         v3f* normalBuffer   = (v3f*)((uint8*)uvBuffer + numUVBytes);
         uint32* indexBuffer = (uint32*)((uint8*)normalBuffer + numNormalBytes);
         memcpy(m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferMemPtr, positionBuffer, numPositionBytes);
+        memcpy(m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr, uvBuffer, numNormalBytes);
         memcpy(m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferMemPtr, normalBuffer, numNormalBytes);
         memcpy(m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferMemPtr, indexBuffer, numIndexBytes);
     }

@@ -35,6 +35,7 @@ typedef struct static_mesh_data
 typedef struct dynamic_mesh_data
 {
     DynamicBuffer m_positionBuffer;
+    DynamicBuffer m_uvBuffer;
     DynamicBuffer m_normalBuffer;
     DynamicBuffer m_indexBuffer;
     uint32 m_numIndices;
@@ -45,7 +46,7 @@ void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphics
     const char* debugLabel);
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
-    uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 normalBufferHandle,
+    uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 uvBufferHandle, uint32 normalBufferHandle,
     uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors,
     const char* debugLabel);
 
@@ -74,9 +75,11 @@ template <uint32 numPoints, uint32 numIndices>
 struct default_geometry
 {
     DynamicBuffer m_positionBuffer;
+    DynamicBuffer m_uvBuffer;
     DynamicBuffer m_normalBuffer;
     DynamicBuffer m_indexBuffer;
     Core::Math::v4f m_points[numPoints];
+    Core::Math::v2f m_uvs[numPoints];
     Core::Math::v3f m_normals[numPoints];
     uint32 m_indices[numIndices];
 };
