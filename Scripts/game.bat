@@ -6,7 +6,7 @@ if NOT EXIST .\Build (
     goto Done
     )
 pushd .\Build
-echo %cd%
+
 TinkerPlatform.exe
 
 popd
