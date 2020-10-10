@@ -75,10 +75,10 @@ void UpdateDescriptorState()
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
-    float scale = 0.5f;
+    float scale = 1.0f;
     DescriptorInstanceData instanceData = {};
     instanceData.modelMatrix = m4f(scale);
-    instanceData.modelMatrix[1][1] = 1.5f;
+    //instanceData.modelMatrix[1][1] = 1.0f;
     instanceData.modelMatrix[3][3] = 1.0f;
     instanceData.viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
     memcpy(gameGraphicsData.m_modelMatrixBufferMemPtr1, &instanceData, sizeof(instanceData));
@@ -330,7 +330,7 @@ GAME_UPDATE(GameUpdate)
     static auto startTime = std::chrono::high_resolution_clock::now();
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-    g_gameCamera.m_eye = v3f(cosf(time) * 3.0f, sinf(time) * 3.0f, 3.0f);
+    g_gameCamera.m_eye = v3f(cosf(time) * 27.0f, sinf(time) * 27.0f, 27.0f);
 
     currentWindowWidth = windowWidth;
     currentWindowHeight = windowHeight;

@@ -5,15 +5,17 @@ AssetManager g_AssetManager;
 
 void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
-    const uint32 numMeshAssets = 2;
+    const uint32 numMeshAssets = 1;
     TINKER_ASSERT(numMeshAssets <= TINKER_MAX_ASSETS);
 
     m_numMeshAssets = numMeshAssets;
 
     const char* meshFilePaths[numMeshAssets] =
     {
-        "..\\Assets\\UnitSphere\\sphere.obj",
-        "..\\Assets\\UnitCube\\cube.obj"
+        //"..\\Assets\\UnitSphere\\sphere.obj",
+        //"..\\Assets\\UnitCube\\cube.obj",
+        "..\\Assets\\FireElemental\\fire_elemental.obj"
+        //"..\\Assets\\RTX3090\\rtx3090.obj"
     };
 
     uint32 totalMeshFileBytes = 0;
