@@ -815,30 +815,40 @@ namespace Tinker
                 shaderStages[1].pName = "main";
 
                 // Fixed function
-                const uint32 numBindings = 2;
+                const uint32 numBindings = 3;
                 const uint32 vertPositionBinding = 0;
-                const uint32 vertNormalBinding = 1;
-                uint32 locationCounter = 0;
+                const uint32 vertUVBinding = 1;
+                const uint32 vertNormalBinding = 2;
                 VkVertexInputBindingDescription vertexInputBindDescs[numBindings] = {};
                 vertexInputBindDescs[0].binding = vertPositionBinding;
                 vertexInputBindDescs[0].stride = sizeof(VulkanVertexPosition);
                 vertexInputBindDescs[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-                vertexInputBindDescs[1].binding = vertNormalBinding;
-                vertexInputBindDescs[1].stride = sizeof(VulkanVertexNormal);
+                vertexInputBindDescs[1].binding = vertUVBinding;
+                vertexInputBindDescs[1].stride = sizeof(VulkanVertexUV);
                 vertexInputBindDescs[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-                const uint32 numAttributes = 2;
+                vertexInputBindDescs[2].binding = vertNormalBinding;
+                vertexInputBindDescs[2].stride = sizeof(VulkanVertexNormal);
+                vertexInputBindDescs[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+                const uint32 numAttributes = 3;
+                uint32 locationCounter = 0;
                 VkVertexInputAttributeDescription vertexInputAttrDescs[numAttributes] = {};
                 vertexInputAttrDescs[0].binding = vertPositionBinding;
                 vertexInputAttrDescs[0].location = locationCounter++;
                 vertexInputAttrDescs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
                 vertexInputAttrDescs[0].offset = 0;
 
-                vertexInputAttrDescs[1].binding = vertNormalBinding;
+                vertexInputAttrDescs[1].binding = vertUVBinding;
                 vertexInputAttrDescs[1].location = locationCounter++;
-                vertexInputAttrDescs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+                vertexInputAttrDescs[1].format = VK_FORMAT_R32G32_SFLOAT;
                 vertexInputAttrDescs[1].offset = 0;
+
+                vertexInputAttrDescs[2].binding = vertNormalBinding;
+                vertexInputAttrDescs[2].location = locationCounter++;
+                vertexInputAttrDescs[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+                vertexInputAttrDescs[2].offset = 0;
 
                 VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
                 vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1465,7 +1475,7 @@ namespace Tinker
             }
 
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
-                uint32 positionBufferHandle, uint32 normalBufferHandle,
+                uint32 positionBufferHandle, uint32 uvBufferHandle, uint32 normalBufferHandle,
                 uint32 indexBufferHandle, uint32 numIndices,
                 const char* debugLabel)
             {
@@ -1476,10 +1486,18 @@ namespace Tinker
 
                 VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
 
-                const uint32 numVertexBufferBindings = 2;
-                VkBuffer vertexBuffers[numVertexBufferBindings] = { positionBufferHandle == TINKER_INVALID_HANDLE ? VK_NULL_HANDLE : vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(positionBufferHandle)->buffer,
-                                             normalBufferHandle   == TINKER_INVALID_HANDLE ? VK_NULL_HANDLE : vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(normalBufferHandle)->buffer};
-                VkDeviceSize offsets[] = { 0, 0 };
+                TINKER_ASSERT(positionBufferHandle != TINKER_INVALID_HANDLE);
+                TINKER_ASSERT(uvBufferHandle != TINKER_INVALID_HANDLE);
+                TINKER_ASSERT(normalBufferHandle != TINKER_INVALID_HANDLE);
+
+                const uint32 numVertexBufferBindings = 3;
+                VkBuffer vertexBuffers[numVertexBufferBindings] =
+                {
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(positionBufferHandle)->buffer,
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(uvBufferHandle)->buffer,
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(normalBufferHandle)->buffer
+                };
+                VkDeviceSize offsets[numVertexBufferBindings] = { 0, 0, 0 };
                 vkCmdBindVertexBuffers(commandBuffer, 0, numVertexBufferBindings, vertexBuffers, offsets);
 
                 VkBuffer& indexBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(indexBufferHandle)->buffer;

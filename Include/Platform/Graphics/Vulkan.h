@@ -95,7 +95,12 @@ namespace Tinker
                 Core::Math::v4f position;
             } VulkanVertexPosition;
 
-            typedef struct vertex_normal
+            typedef struct vulkan_vertex_uv
+            {
+                Core::Math::v2f uv;
+            } VulkanVertexUV;
+
+            typedef struct vulkan_vertex_normal
             {
                 Core::Math::v3f normal;
             } VulkanVertexNormal;
@@ -173,7 +178,7 @@ namespace Tinker
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
-                uint32 positionBufferHandle, uint32 normalBufferHandle,
+                uint32 positionBufferHandle, uint32 uvBufferHandle, uint32 normalBufferHandle,
                 uint32 indexBufferHandle, uint32 numIndices,
                 const char* debugLabel);
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
