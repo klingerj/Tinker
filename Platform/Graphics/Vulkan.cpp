@@ -104,14 +104,14 @@ namespace Tinker
                 instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
                 instanceCreateInfo.pApplicationInfo = &applicationInfo;
 
-                const uint32 numRequiredExtensions = 
+                const uint32 numRequestedExtensions = 
                 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) || defined(ENABLE_VULKAN_DEBUG_LABELS)
                 3
                 #else
                 2
                 #endif
                 ;
-                const char* requiredExtensionNames[numRequiredExtensions] = {
+                const char* requestedExtensionNames[numRequestedExtensions] = {
                     VK_KHR_SURFACE_EXTENSION_NAME,
 
                     #if defined(_WIN32)
@@ -125,9 +125,14 @@ namespace Tinker
                     , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
                     #endif
                 };
+                LogMsg("******** Requested Instance Extensions: ********", eLogSeverityInfo);
+                for (uint32 uiReqExt = 0; uiReqExt < numRequestedExtensions; ++uiReqExt)
+                {
+                    LogMsg(requestedExtensionNames[uiReqExt], eLogSeverityInfo);
+                }
                 
-                instanceCreateInfo.enabledExtensionCount = numRequiredExtensions;
-                instanceCreateInfo.ppEnabledExtensionNames = requiredExtensionNames;
+                instanceCreateInfo.enabledExtensionCount = numRequestedExtensions;
+                instanceCreateInfo.ppEnabledExtensionNames = requestedExtensionNames;
 
                 instanceCreateInfo.enabledLayerCount = 0;
                 instanceCreateInfo.ppEnabledLayerNames = nullptr;
@@ -152,6 +157,11 @@ namespace Tinker
                 {
                     "VK_LAYER_KHRONOS_validation"
                 };
+                LogMsg("******** Requested Instance Layers: ********", eLogSeverityInfo);
+                for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
+                {
+                    LogMsg(requestedLayersStr[uiReqLayer], eLogSeverityInfo);
+                }
 
                 uint32 numAvailableLayers = 0;
                 vkEnumerateInstanceLayerProperties(&numAvailableLayers, nullptr);
@@ -235,6 +245,7 @@ namespace Tinker
                 else
                 {
                     LogMsg("Failed to get create debug utils messenger proc addr!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
                 #endif
 
@@ -277,6 +288,11 @@ namespace Tinker
                 {
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME
                 };
+                LogMsg("******** Requested Device Extensions: ********", eLogSeverityInfo);
+                for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
+                {
+                    LogMsg(requiredPhysicalDeviceExtensions[uiReqExt], eLogSeverityInfo);
+                }
 
                 for (uint32 uiPhysicalDevice = 0; uiPhysicalDevice < numPhysicalDevices; ++uiPhysicalDevice)
                 {
@@ -435,12 +451,29 @@ namespace Tinker
                 vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT =
                     (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(vulkanContextResources->device,
                                                                            "vkCmdBeginDebugUtilsLabelEXT");
+                if (!vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT)
+                {
+                    LogMsg("Failed to get create debug utils begin label proc addr!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
                 vulkanContextResources->pfnCmdEndDebugUtilsLabelEXT =
                     (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(vulkanContextResources->device,
                                                                            "vkCmdEndDebugUtilsLabelEXT");
+                if (!vulkanContextResources->pfnCmdEndDebugUtilsLabelEXT)
+                {
+                    LogMsg("Failed to get create debug utils end label proc addr!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
                 vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT =
                     (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(vulkanContextResources->device,
                                                                            "vkCmdInsertDebugUtilsLabelEXT");
+                if (!vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT)
+                {
+                    LogMsg("Failed to get create debug utils insert label proc addr!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
                 #endif
 
                 // Queues
