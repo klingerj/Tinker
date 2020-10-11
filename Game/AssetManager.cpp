@@ -124,7 +124,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         v3f* normalBuffer   = (v3f*)((uint8*)uvBuffer + numUVBytes);
         uint32* indexBuffer = (uint32*)((uint8*)normalBuffer + numNormalBytes);
         memcpy(m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferMemPtr, positionBuffer, numPositionBytes);
-        memcpy(m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr, uvBuffer, numNormalBytes);
+        memcpy(m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr, uvBuffer, numUVBytes);
         memcpy(m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferMemPtr, normalBuffer, numNormalBytes);
         memcpy(m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferMemPtr, indexBuffer, numIndexBytes);
     }
