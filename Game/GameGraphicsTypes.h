@@ -47,7 +47,7 @@ void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphics
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
     ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
-    ResourceHandle normalBufferHandle, ResourceHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
+    ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
     const char* debugLabel);
 
 typedef struct meshTriangles
@@ -61,8 +61,8 @@ typedef struct game_graphic_data
     ResourceHandle m_imageHandle;
     ResourceHandle m_framebufferHandle;
 
-    ResourceHandle m_shaderHandle;
-    ResourceHandle m_blitShaderHandle;
+    ShaderHandle m_shaderHandle;
+    ShaderHandle m_blitShaderHandle;
     DescriptorHandle m_swapChainBlitDescHandle;
     DescriptorHandle m_modelMatrixDescHandle1;
     ResourceHandle m_modelMatrixBufferHandle1;

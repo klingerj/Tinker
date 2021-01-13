@@ -15,7 +15,7 @@ void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphics
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
     ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
-    ResourceHandle normalBufferHandle, ResourceHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
+    ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
     const char* debugLabel)
 {
     Platform::GraphicsCommand command = {};

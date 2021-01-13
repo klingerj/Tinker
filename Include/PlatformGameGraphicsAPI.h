@@ -34,6 +34,33 @@ namespace Tinker
         };
         #define DefaultResHandle_Invalid ResourceHandle()
 
+        struct ShaderHandle
+        {
+            uint32 m_hShader;
+
+            ShaderHandle()
+            {
+                m_hShader = TINKER_INVALID_HANDLE;
+            }
+
+            // Warning: probably don't pass around handles as uint32 willy-nilly
+            explicit ShaderHandle(uint32 h)
+            {
+                m_hShader = h;
+            }
+
+            inline bool operator==(const ShaderHandle& other) const
+            {
+                return m_hShader == other.m_hShader;
+            }
+
+            inline bool operator!=(const ShaderHandle& other) const
+            {
+                return m_hShader != other.m_hShader;
+            }
+        };
+        #define DefaultShaderHandle_Invalid ShaderHandle()
+
         struct DescriptorHandle
         {
             uint32 m_hDesc;
@@ -168,7 +195,7 @@ namespace Tinker
                     ResourceHandle m_positionBufferHandle;
                     ResourceHandle m_uvBufferHandle;
                     ResourceHandle m_normalBufferHandle;
-                    ResourceHandle m_shaderHandle;
+                    ShaderHandle m_shaderHandle;
                     DescriptorSetDescHandles m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
                 };
 
@@ -267,10 +294,10 @@ namespace Tinker
         #define DESTROY_FRAMEBUFFER(name) void name(ResourceHandle handle)
         typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
 
-        #define CREATE_GRAPHICS_PIPELINE(name) ResourceHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, ResourceHandle renderPassHandle, DescriptorHandle descriptorHandle)
+        #define CREATE_GRAPHICS_PIPELINE(name) ShaderHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, ResourceHandle renderPassHandle, DescriptorHandle descriptorHandle)
         typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
-        #define DESTROY_GRAPHICS_PIPELINE(name) void name(ResourceHandle handle)
+        #define DESTROY_GRAPHICS_PIPELINE(name) void name(ShaderHandle handle)
         typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
 
         #define CREATE_RENDER_PASS(name) ResourceHandle name(uint32 startLayout, uint32 endLayout)

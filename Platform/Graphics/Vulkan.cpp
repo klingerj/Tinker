@@ -878,7 +878,7 @@ namespace Tinker
                 return shaderModule;
             }
 
-            ResourceHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources,
+            ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources,
                 void* vertexShaderCode, uint32 numVertexShaderBytes,
                 void* fragmentShaderCode, uint32 numFragmentShaderBytes,
                 uint32 blendState, uint32 depthState,
@@ -1026,7 +1026,6 @@ namespace Tinker
 
                 uint32 newPipelineHandle = vulkanContextResources->vulkanPipelineResourcePool.Alloc();
 
-                
                 VkDescriptorSetLayout* descriptorSetLayout = VK_NULL_HANDLE;
                 if (descriptorHandle != DefaultDescHandle_Invalid)
                 {
@@ -1096,7 +1095,7 @@ namespace Tinker
                 vkDestroyShaderModule(vulkanContextResources->device, vertexShaderModule, nullptr);
                 vkDestroyShaderModule(vulkanContextResources->device, fragmentShaderModule, nullptr);
 
-                return ResourceHandle(newPipelineHandle);
+                return ShaderHandle(newPipelineHandle);
             }
 
             void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources)
@@ -1612,11 +1611,11 @@ namespace Tinker
             }
 
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-                ResourceHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles)
+                ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles)
             {
-                TINKER_ASSERT(shaderHandle != DefaultResHandle_Invalid);
+                TINKER_ASSERT(shaderHandle != DefaultShaderHandle_Invalid);
 
-                VulkanPipelineResource* pipelineResource = vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle.m_hRes);
+                VulkanPipelineResource* pipelineResource = vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle.m_hShader);
 
                 vkCmdBindPipeline(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
                     VK_PIPELINE_BIND_POINT_GRAPHICS, *&pipelineResource->graphicsPipeline);
@@ -2073,14 +2072,14 @@ namespace Tinker
                 vulkanContextResources->vulkanRenderPassPool.Dealloc(handle.m_hRes);
             }
 
-            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
+            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ShaderHandle handle)
             {
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
-                VulkanPipelineResource* pipelineResource = vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(handle.m_hRes);
+                VulkanPipelineResource* pipelineResource = vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(handle.m_hShader);
 
                 vkDestroyPipeline(vulkanContextResources->device, pipelineResource->graphicsPipeline, nullptr);
                 vkDestroyPipelineLayout(vulkanContextResources->device, pipelineResource->pipelineLayout, nullptr);
-                vulkanContextResources->vulkanPipelineResourcePool.Dealloc(handle.m_hRes);
+                vulkanContextResources->vulkanPipelineResourcePool.Dealloc(handle.m_hShader);
             }
 
             void VulkanDestroyImageResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
