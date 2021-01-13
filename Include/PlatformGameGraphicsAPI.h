@@ -261,32 +261,11 @@ namespace Tinker
         #define UNMAP_RESOURCE(name) void name(ResourceHandle handle)
         typedef UNMAP_RESOURCE(unmap_resource);
 
-        // TODO: create a MapResource (and UnmapResource) function so the game can control when a resource is mapped, then the create resource function can 
-        // simply return a ResourceHandle
-
-        /*#define CREATE_BUFFER(name) Tinker::Platform::BufferData name(uint32 sizeInBytes, uint32 bufferUsage)
-        typedef CREATE_BUFFER(create_buffer);
-
-        #define DESTROY_BUFFER(name) void name(ResourceHandle handle, uint32 bufferUsage)
-        typedef DESTROY_BUFFER(destroy_buffer);*/
-
         #define CREATE_FRAMEBUFFER(name) ResourceHandle name(ResourceHandle* imageViewResourceHandles, uint32 numImageViewResourceHandles, uint32 width, uint32 height, ResourceHandle renderPassHandle)
         typedef CREATE_FRAMEBUFFER(create_framebuffer);
 
         #define DESTROY_FRAMEBUFFER(name) void name(ResourceHandle handle)
         typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
-
-        /*#define CREATE_IMAGE_RESOURCE(name) ResourceHandle name(uint32 width, uint32 height)
-        typedef CREATE_IMAGE_RESOURCE(create_image_resource);
-
-        #define DESTROY_IMAGE_RESOURCE(name) void name(ResourceHandle handle)
-        typedef DESTROY_IMAGE_RESOURCE(destroy_image_resource);
-
-        #define CREATE_IMAGE_VIEW_RESOURCE(name) ResourceHandle name(ResourceHandle imageResourceHandle)
-        typedef CREATE_IMAGE_VIEW_RESOURCE(create_image_view_resource);
-
-        #define DESTROY_IMAGE_VIEW_RESOURCE(name) void name(ResourceHandle handle)
-        typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);*/
 
         #define CREATE_GRAPHICS_PIPELINE(name) ResourceHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, ResourceHandle renderPassHandle, DescriptorHandle descriptorHandle)
         typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
