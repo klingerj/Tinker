@@ -1,10 +1,9 @@
 #include "GameGraphicsTypes.h"
 
 void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
-    DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes,
-    const char* debugLabel)
+    DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes, const char* debugLabel)
 {
-    Platform::GraphicsCommand command;
+    Platform::GraphicsCommand command = {};
     command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
     command.debugLabel = debugLabel;
 
@@ -15,11 +14,11 @@ void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphics
 }
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
-    uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 uvBufferHandle, uint32 normalBufferHandle,
-    uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors,
+    ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
+    ResourceHandle normalBufferHandle, ResourceHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
     const char* debugLabel)
 {
-    Platform::GraphicsCommand command;
+    Platform::GraphicsCommand command = {};
     command.m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
     command.debugLabel = debugLabel;
 
