@@ -94,7 +94,7 @@ void UpdateDescriptorState()
     memcpy(gameGraphicsData.m_modelMatrixBufferMemPtr1, &instanceData, sizeof(instanceData));
 }
 
-Platform::ResourceHandle LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Platform::GraphicsPipelineParams* params)
+Platform::ShaderHandle LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Platform::GraphicsPipelineParams* params)
 {
     // get file size, load entire file
     uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
@@ -140,8 +140,8 @@ void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandle);
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_blitShaderHandle);
-    gameGraphicsData.m_shaderHandle = DefaultResHandle_Invalid;
-    gameGraphicsData.m_blitShaderHandle = DefaultResHandle_Invalid;
+    gameGraphicsData.m_shaderHandle = DefaultShaderHandle_Invalid;
+    gameGraphicsData.m_blitShaderHandle = DefaultShaderHandle_Invalid;
 }
 
 void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)

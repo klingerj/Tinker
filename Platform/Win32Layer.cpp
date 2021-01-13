@@ -220,7 +220,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
 
         const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
-        ResourceHandle currentShader = DefaultResHandle_Invalid;
+        ShaderHandle currentShader = DefaultShaderHandle_Invalid;
 
         switch (currentCmd.m_commandType)
         {
@@ -427,7 +427,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return DefaultResHandle_Invalid;
+            return DefaultShaderHandle_Invalid;
         }
     }
 }

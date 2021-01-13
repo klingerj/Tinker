@@ -156,11 +156,11 @@ namespace Tinker
                 uint32 width, uint32 height, ResourceHandle renderPassHandle); // TODO: fb parameters e.g. format, attachments
             void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
-            ResourceHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
+            ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
                 uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState,
                 uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, ResourceHandle renderPassHandle,
                 DescriptorHandle descriptorHandle);
-            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
+            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ShaderHandle handle);
 
             ResourceHandle VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 startLayout, uint32 endLayout); // TODO: more parameters
             void VulkanDestroyRenderPass(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
@@ -183,7 +183,7 @@ namespace Tinker
                 ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
                 const char* debugLabel);
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-                ResourceHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles);
+                ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles);
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
                 const char* debugLabel);
