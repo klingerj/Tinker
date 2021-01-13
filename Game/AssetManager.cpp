@@ -91,25 +91,45 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
     {
         // Create buffer handles
-        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), Platform::eBufferUsageVertex).handle;
-        Platform::BufferData data = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), Platform::eBufferUsageStaging);
-        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferHandle = data.handle;
-        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferMemPtr = data.memory;
+        ResourceDesc desc;
+        desc.resourceType = Platform::eResourceTypeBuffer1D;
 
-        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), Platform::eBufferUsageVertex).handle;
-        data = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), Platform::eBufferUsageStaging);
-        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferHandle = data.handle;
-        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr = data.memory;
+        // Positions
+        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageVertex;
+        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+        
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
+        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferHandle);
 
-        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), Platform::eBufferUsageVertex).handle;
-        data = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), Platform::eBufferUsageStaging);
-        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferHandle = data.handle;
-        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferMemPtr = data.memory;
+        // UVs
+        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageVertex;
+        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+        
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
+        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferHandle);
 
-        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), Platform::eBufferUsageIndex).handle;
-        data = platformFuncs->CreateBuffer(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), Platform::eBufferUsageStaging);
-        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferHandle = data.handle;
-        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferMemPtr = data.memory;
+        // Normals
+        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageVertex;
+        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+        
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
+        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferHandle);
+
+        // Indices
+        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageIndex;
+        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+        
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
+        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferHandle);
+
 
         m_allMeshGraphicsHandles[uiAsset].m_numIndices = m_allMeshData[uiAsset].m_numVertices;
 

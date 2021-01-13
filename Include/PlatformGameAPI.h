@@ -47,14 +47,12 @@ namespace Tinker
             end_network_connection* EndNetworkConnection;
             send_message_to_server* SendMessageToServer;
             system_command* SystemCommand;
-            create_buffer* CreateBuffer;
-            destroy_buffer* DestroyBuffer;
+            create_resource* CreateResource;
+            destroy_resource* DestroyResource;
+            map_resource* MapResource;
+            unmap_resource* UnmapResource;
             create_framebuffer* CreateFramebuffer;
             destroy_framebuffer* DestroyFramebuffer;
-            create_image_resource* CreateImageResource;
-            destroy_image_resource* DestroyImageResource;
-            create_image_view_resource* CreateImageViewResource;
-            destroy_image_view_resource* DestroyImageViewResource;
             create_graphics_pipeline* CreateGraphicsPipeline;
             destroy_graphics_pipeline* DestroyGraphicsPipeline;
             create_render_pass* CreateRenderPass;

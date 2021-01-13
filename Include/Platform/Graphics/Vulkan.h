@@ -26,11 +26,19 @@ namespace Tinker
         {
             typedef struct vulkan_mem_resource
             {
+                ResourceDesc resDesc;
                 VkDeviceMemory deviceMemory;
+
                 union
                 {
                     VkBuffer buffer;
-                    VkImage image;
+
+                    // Group images with an image view
+                    struct
+                    {
+                        VkImage image;
+                        VkImageView imageView;
+                    };
                 };
             } VulkanMemResource;
 
@@ -66,10 +74,10 @@ namespace Tinker
                 VkExtent2D swapChainExtent = { 0, 0 };
                 VkFormat swapChainFormat = VK_FORMAT_UNDEFINED;
                 VkImage* swapChainImages = nullptr;
-                ResourceHandle* swapChainImageViewHandles = nullptr;
-                ResourceHandle* swapChainFramebufferHandles = nullptr;
+                VkImageView* swapChainImageViews = nullptr;
+                VkFramebuffer* swapChainFramebuffers = nullptr;
                 uint32 numSwapChainImages = 0;
-                ResourceHandle swapChainRenderPassHandle = DefaultResHandle_Invalid;
+                VkRenderPass swapChainRenderPass = VK_NULL_HANDLE;
                 uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
                 uint32 windowWidth = 0;
                 uint32 windowHeight = 0;
@@ -79,7 +87,7 @@ namespace Tinker
                 Memory::PoolAllocator<VulkanDescriptorResource> vulkanDescriptorResourcePool;
                 Memory::PoolAllocator<VulkanPipelineResource> vulkanPipelineResourcePool;
                 Memory::PoolAllocator<VulkanMemResource> vulkanMemResourcePool;
-                Memory::PoolAllocator<VkImageView> vulkanImageViewPool;
+                //Memory::PoolAllocator<VkImageView> vulkanImageViewPool;
                 // TODO: move this stuff elsewhere
                 Memory::PoolAllocator<VkFramebuffer> vulkanFramebufferPool;
                 Memory::PoolAllocator<VkRenderPass> vulkanRenderPassPool;
@@ -105,19 +113,6 @@ namespace Tinker
                 Core::Math::v3f normal;
             } VulkanVertexNormal;
 
-            typedef union vulkan_buffer_data
-            {
-                // Host-visible buffer with mapped memory
-                struct
-                {
-                    ResourceHandle hostBufferHandle;
-                    void* mappedMemory;
-                };
-
-                // Buffer with no mapped memory
-                ResourceHandle gpuBufferHandle;
-            } VulkanBufferData;
-
             typedef struct platform_window_handles
             {
                 #ifdef _WIN32
@@ -128,36 +123,38 @@ namespace Tinker
                 #endif
             } PlatformWindowHandles;
 
+            // Init/destroy - called one time
             int InitVulkan(VulkanContextResources* vulkanContextResources, const PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height);
             void DestroyVulkan(VulkanContextResources* vulkanContextResources);
 
             void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources);
             void VulkanDestroySwapChain(VulkanContextResources* vulkanContextResources);
 
+            // Helpers - TODO, could remove these declarations
             void AllocGPUMemory(VulkanContextResources* vulkanContextResources, VkDeviceMemory* deviceMem,
                 VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags);
-
-            void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources);
-
-            void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
-            void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
-
             void CreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes,
                 VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
                 VkBuffer& buffer, VkDeviceMemory& deviceMemory);
-            VulkanBufferData VulkanCreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, uint32 bufferUsage);
-            void VulkanDestroyBuffer(VulkanContextResources* vulkanContextResources, ResourceHandle handle, uint32 bufferUsage);
+            void CreateImageView(VulkanContextResources* vulkanContextResources, VkImage image, VkImageView* imageView);
+            void CreateFramebuffer(VulkanContextResources* vulkanContextResources, VkImageView* imageViews, uint32 numImageViews,
+                uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* frameBuffer);
+            void CreateRenderPass(VulkanContextResources* vulkanContextResources, VkImageLayout startLayout, VkImageLayout endLayout, VkRenderPass* renderPass);
+
+            // Frame command recording
+            void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources);
+            
+            void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
+            void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
+
+            // Main Graphics API - GPU resource create/destroy functions
+            ResourceHandle VulkanCreateResource(VulkanContextResources* vulkanContextResources, const ResourceDesc& resDesc);
+            void VulkanDestroyResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
             ResourceHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
                 ResourceHandle* imageViewResourceHandles, uint32 numImageViewResourceHandles,
                 uint32 width, uint32 height, ResourceHandle renderPassHandle); // TODO: fb parameters e.g. format, attachments
             void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
-
-            ResourceHandle VulkanCreateImageViewResource(VulkanContextResources* vulkanContextResources, ResourceHandle imageResourceHandle); // TODO: parameters
-            void VulkanDestroyImageViewResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
-
-            ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height); // TODO: parameters
-            void VulkanDestroyImageResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
             ResourceHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
                 uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState,
@@ -175,6 +172,10 @@ namespace Tinker
             void InitDescriptorPool(VulkanContextResources* vulkanContextResources);
 
             void CreateSamplers(VulkanContextResources* vulkanContextResources);
+
+            // Memory mapping - probably just for staging buffers
+            void* VulkanMapResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
+            void VulkanUnmapResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,

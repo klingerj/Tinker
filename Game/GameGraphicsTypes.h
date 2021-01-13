@@ -59,7 +59,6 @@ typedef struct meshTriangles
 typedef struct game_graphic_data
 {
     ResourceHandle m_imageHandle;
-    ResourceHandle m_imageViewHandle;
     ResourceHandle m_framebufferHandle;
 
     ResourceHandle m_shaderHandle;
