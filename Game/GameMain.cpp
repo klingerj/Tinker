@@ -25,10 +25,10 @@ using namespace Math;
 #define DEFAULT_QUAD_NUM_INDICES 6
 DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {
     // buffer handles
-    { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
-    { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
-    { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
-    { TINKER_INVALID_HANDLE, TINKER_INVALID_HANDLE, nullptr },
+    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
+    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
+    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
+    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
     // positions
     v4f(-1.0f, -1.0f, 0.0f, 1.0f),
     v4f(1.0f, -1.0f, 0.0f, 1.0f),
@@ -94,7 +94,7 @@ void UpdateDescriptorState()
     memcpy(gameGraphicsData.m_modelMatrixBufferMemPtr1, &instanceData, sizeof(instanceData));
 }
 
-uint32 LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Platform::GraphicsPipelineParams* params)
+Platform::ResourceHandle LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Platform::GraphicsPipelineParams* params)
 {
     // get file size, load entire file
     uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
@@ -131,7 +131,7 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.depthState = Platform::eDepthStateOff;
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
-    params.renderPassHandle = TINKER_INVALID_HANDLE;
+    params.renderPassHandle = DefaultResHandle_Invalid;
     params.descriptorHandle = gameGraphicsData.m_swapChainBlitDescHandle;
     gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\blit_vert_glsl.spv", "..\\Shaders\\spv\\blit_frag_glsl.spv", &params);
 }
@@ -140,19 +140,19 @@ void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandle);
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_blitShaderHandle);
-    gameGraphicsData.m_shaderHandle = TINKER_INVALID_HANDLE;
-    gameGraphicsData.m_blitShaderHandle = TINKER_INVALID_HANDLE;
+    gameGraphicsData.m_shaderHandle = DefaultResHandle_Invalid;
+    gameGraphicsData.m_blitShaderHandle = DefaultResHandle_Invalid;
 }
 
 void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
-    gameGraphicsData.m_swapChainBlitDescHandle = TINKER_INVALID_HANDLE;
+    gameGraphicsData.m_swapChainBlitDescHandle = DefaultDescHandle_Invalid;
 
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_modelMatrixDescHandle1);
-    gameGraphicsData.m_modelMatrixDescHandle1 = TINKER_INVALID_HANDLE;
+    gameGraphicsData.m_modelMatrixDescHandle1 = DefaultDescHandle_Invalid;
     platformFuncs->DestroyBuffer(gameGraphicsData.m_modelMatrixBufferHandle1, Platform::eBufferUsageUniform);
-    gameGraphicsData.m_modelMatrixBufferHandle1 = TINKER_INVALID_HANDLE;
+    gameGraphicsData.m_modelMatrixBufferHandle1 = DefaultResHandle_Invalid;
 
     platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
 }
@@ -317,7 +317,7 @@ GAME_UPDATE(GameUpdate)
         defaultQuad.m_indexBuffer.stagingBufferMemPtr = stagingBufferData.memory;
         memcpy(defaultQuad.m_indexBuffer.stagingBufferMemPtr, defaultQuad.m_indices, sizeof(defaultQuad.m_indices));
 
-        Platform::GraphicsCommand command;
+        Platform::GraphicsCommand command = {};
         command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
         command.m_sizeInBytes = sizeof(defaultQuad.m_points);
         command.m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
@@ -378,7 +378,7 @@ GAME_UPDATE(GameUpdate)
     }*/
     
     // Issue graphics commands
-    Platform::GraphicsCommand command;
+    Platform::GraphicsCommand command = {};
 
     // Record buffer update commands
     for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
@@ -388,7 +388,7 @@ GAME_UPDATE(GameUpdate)
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_positionBuffer, meshData->m_numIndices * sizeof(v4f), "Update Asset Vtx Pos Buf");
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_uvBuffer, meshData->m_numIndices * sizeof(v2f), "Update Asset Vtx Uv Buf");
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f), "Update Asset Vtx Norm Buf");
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idk Buf");
+        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idx Buf");
     }
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
@@ -400,7 +400,8 @@ GAME_UPDATE(GameUpdate)
     graphicsCommands.push_back(command);
 
     // Draw calls
-    Platform::DescriptorSetDataHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+    Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+    InitDescSetDescHandles(descriptors);
     descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
 
     for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
@@ -423,7 +424,7 @@ GAME_UPDATE(GameUpdate)
 
     /*command.m_commandType = (uint32)Platform::eGraphicsCmdImageCopy;
     command.m_srcImgHandle = gameGraphicsData.m_imageHandle;
-    command.m_dstImgHandle = TINKER_INVALID_HANDLE;
+    command.m_dstImgHandle = DefaultResHandle_Invalid;
     command.m_width = windowWidth;
     command.m_height = windowHeight;
     graphicsCommands.push_back(command);*/
@@ -431,8 +432,8 @@ GAME_UPDATE(GameUpdate)
     // Blit to screen
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
     command.debugLabel = "Blit to screen";
-    command.m_renderPassHandle = TINKER_INVALID_HANDLE;
-    command.m_framebufferHandle = TINKER_INVALID_HANDLE;
+    command.m_renderPassHandle = DefaultResHandle_Invalid;
+    command.m_framebufferHandle = DefaultResHandle_Invalid;
     command.m_renderWidth = 0;
     command.m_renderHeight = 0;
     graphicsCommands.push_back(command);
@@ -445,7 +446,7 @@ GAME_UPDATE(GameUpdate)
     command.m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
     command.m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command.m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
-    Platform::InitDescSetDataHandles(command.m_descriptors);
+    Platform::InitDescSetDescHandles(command.m_descriptors);
     command.m_descriptors[0].handles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
     graphicsCommands.push_back(command);
 

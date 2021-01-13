@@ -66,10 +66,10 @@ namespace Tinker
                 VkExtent2D swapChainExtent = { 0, 0 };
                 VkFormat swapChainFormat = VK_FORMAT_UNDEFINED;
                 VkImage* swapChainImages = nullptr;
-                uint32* swapChainImageViewHandles = nullptr;
-                uint32* swapChainFramebufferHandles = nullptr;
+                ResourceHandle* swapChainImageViewHandles = nullptr;
+                ResourceHandle* swapChainFramebufferHandles = nullptr;
                 uint32 numSwapChainImages = 0;
-                uint32 swapChainRenderPassHandle = TINKER_INVALID_HANDLE;
+                ResourceHandle swapChainRenderPassHandle = DefaultResHandle_Invalid;
                 uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
                 uint32 windowWidth = 0;
                 uint32 windowHeight = 0;
@@ -110,12 +110,12 @@ namespace Tinker
                 // Host-visible buffer with mapped memory
                 struct
                 {
-                    uint32 hostBufferHandle;
+                    ResourceHandle hostBufferHandle;
                     void* mappedMemory;
                 };
 
                 // Buffer with no mapped memory
-                uint32 gpuBufferHandle;
+                ResourceHandle gpuBufferHandle;
             } VulkanBufferData;
 
             typedef struct platform_window_handles
@@ -146,50 +146,50 @@ namespace Tinker
                 VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
                 VkBuffer& buffer, VkDeviceMemory& deviceMemory);
             VulkanBufferData VulkanCreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, uint32 bufferUsage);
-            void VulkanDestroyBuffer(VulkanContextResources* vulkanContextResources, uint32 handle, uint32 bufferUsage);
+            void VulkanDestroyBuffer(VulkanContextResources* vulkanContextResources, ResourceHandle handle, uint32 bufferUsage);
 
-            uint32 VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
-                uint32* imageViewResourceHandles, uint32 numImageViewResourceHandles,
-                uint32 width, uint32 height, uint32 renderPassHandle); // TODO: fb parameters e.g. format, attachments
-            void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, uint32 handle);
+            ResourceHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
+                ResourceHandle* imageViewResourceHandles, uint32 numImageViewResourceHandles,
+                uint32 width, uint32 height, ResourceHandle renderPassHandle); // TODO: fb parameters e.g. format, attachments
+            void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
-            uint32 VulkanCreateImageViewResource(VulkanContextResources* vulkanContextResources, uint32 imageResourceHandle); // TODO: parameters
-            void VulkanDestroyImageViewResource(VulkanContextResources* vulkanContextResources, uint32 handle);
+            ResourceHandle VulkanCreateImageViewResource(VulkanContextResources* vulkanContextResources, ResourceHandle imageResourceHandle); // TODO: parameters
+            void VulkanDestroyImageViewResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
-            uint32 VulkanCreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height); // TODO: parameters
-            void VulkanDestroyImageResource(VulkanContextResources* vulkanContextResources, uint32 handle);
+            ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height); // TODO: parameters
+            void VulkanDestroyImageResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
-            uint32 VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
+            ResourceHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
                 uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState,
-                uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassHandle,
-                uint32 descriptorHandle);
-            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, uint32 handle);
+                uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, ResourceHandle renderPassHandle,
+                DescriptorHandle descriptorHandle);
+            void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
-            uint32 VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 startLayout, uint32 endLayout); // TODO: more parameters
-            void VulkanDestroyRenderPass(VulkanContextResources* vulkanContextResources, uint32 handle);
+            ResourceHandle VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 startLayout, uint32 endLayout); // TODO: more parameters
+            void VulkanDestroyRenderPass(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
-            uint32 VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout);
-            void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, uint32 handle);
+            DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout);
+            void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, DescriptorHandle handle);
             void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources);
-            void VulkanWriteDescriptor(VulkanContextResources*  vulkanContextResources, DescriptorLayout* descLayout, uint32 descSetHandle, DescriptorSetDataHandles* descSetHandles);
+            void VulkanWriteDescriptor(VulkanContextResources*  vulkanContextResources, DescriptorLayout* descLayout, DescriptorHandle descSetHandle, DescriptorSetDataHandles* descSetHandles);
             void InitDescriptorPool(VulkanContextResources* vulkanContextResources);
 
             void CreateSamplers(VulkanContextResources* vulkanContextResources);
 
             // Graphics command recording
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
-                uint32 positionBufferHandle, uint32 uvBufferHandle, uint32 normalBufferHandle,
-                uint32 indexBufferHandle, uint32 numIndices,
+                ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
+                ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
                 const char* debugLabel);
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-                uint32 shaderHandle, const DescriptorSetDataHandles* descSetHandles);
+                ResourceHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles);
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
-                uint32 sizeInBytes, uint32 srcBufferHandle, uint32 dstBufferHandle,
+                uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
                 const char* debugLabel);
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
-                uint32 srcImgHandle, uint32 dstImgHandle, uint32 width, uint32 height);
+                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height);
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-                uint32 renderPassHandle, uint32 framebufferHandle, uint32 renderWidth, uint32 renderHeight,
+                ResourceHandle renderPassHandle, ResourceHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
                 const char* debugLabel);
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources);
         }

@@ -220,7 +220,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < eGraphicsCmdMax);
 
         const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
-        uint32 currentShader = TINKER_INVALID_HANDLE;
+        ResourceHandle currentShader = DefaultResHandle_Invalid;
 
         switch (currentCmd.m_commandType)
         {
@@ -236,8 +236,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                             currentShader = currentCmd.m_shaderHandle;
                         }
                         Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
-                            currentCmd.m_positionBufferHandle, currentCmd.m_uvBufferHandle, currentCmd.m_normalBufferHandle,
-                            currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
+                            currentCmd.m_positionBufferHandle, currentCmd.m_uvBufferHandle,
+                            currentCmd.m_normalBufferHandle, currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
                             currentCmd.debugLabel);
                         break;
                     }
@@ -390,7 +390,7 @@ CREATE_BUFFER(CreateBuffer)
             }
             
             return bufferData;
-            break;
+            //break;
         }
 
         default:
@@ -399,7 +399,7 @@ CREATE_BUFFER(CreateBuffer)
             runGame = false;
 
             BufferData bufferDataInvalid = {};
-            bufferDataInvalid.handle = TINKER_INVALID_HANDLE;
+            bufferDataInvalid.handle = DefaultResHandle_Invalid;
             bufferDataInvalid.memory = nullptr;
             return bufferDataInvalid;
         }
@@ -415,14 +415,14 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
             return Graphics::VulkanCreateFramebuffer(&vulkanContextResources,
                 imageViewResourceHandles, numImageViewResourceHandles,
                 width, height, renderPassHandle);
-            break;
+            //break;
         }
 
         default:
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return TINKER_INVALID_HANDLE;
+            return DefaultResHandle_Invalid;
         }
     }
 }
@@ -434,14 +434,14 @@ CREATE_IMAGE_RESOURCE(CreateImageResource)
         case eGraphicsAPIVulkan:
         {
             return Graphics::VulkanCreateImageResource(&vulkanContextResources, width, height);
-            break;
+            //break;
         }
 
         default:
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return TINKER_INVALID_HANDLE;
+            return DefaultResHandle_Invalid;
         }
     }
 }
@@ -453,14 +453,14 @@ CREATE_IMAGE_VIEW_RESOURCE(CreateImageViewResource)
         case eGraphicsAPIVulkan:
         {
             return Graphics::VulkanCreateImageViewResource(&vulkanContextResources, imageResourceHandle);
-            break;
+            //break;
         }
 
         default:
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return TINKER_INVALID_HANDLE;
+            return DefaultResHandle_Invalid;
         }
     }
 }
@@ -475,14 +475,14 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
                     vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
                     numFragmentShaderBytes, blendState, depthState,
                     viewportWidth, viewportHeight, renderPassHandle, descriptorHandle);
-            break;
+            //break;
         }
 
         default:
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return TINKER_INVALID_HANDLE;
+            return DefaultResHandle_Invalid;
         }
     }
 }
@@ -494,15 +494,15 @@ CREATE_RENDER_PASS(CreateRenderPass)
         case eGraphicsAPIVulkan:
         {
             return Graphics::VulkanCreateRenderPass(&vulkanContextResources, startLayout, endLayout);
-            break;
+            //break;
         }
 
         default:
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return TINKER_INVALID_HANDLE;
-            break;
+            return DefaultResHandle_Invalid;
+            //break;
         }
     }
 }
@@ -514,15 +514,15 @@ CREATE_DESCRIPTOR(CreateDescriptor)
         case eGraphicsAPIVulkan:
         {
             return Graphics::VulkanCreateDescriptor(&vulkanContextResources, descLayout);
-            break;
+            //break;
         }
 
         default:
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return TINKER_INVALID_HANDLE;
-            break;
+            return DefaultDescHandle_Invalid;
+            //break;
         }
     }
 }
@@ -897,7 +897,7 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
         {
             //TINKER_ASSERT(0);
             return;
-            break;
+            //break;
         }
     }
  
@@ -1051,7 +1051,7 @@ wWinMain(HINSTANCE hInstance,
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
     graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-    graphicsCommandStream.m_graphicsCommands = new GraphicsCommand[graphicsCommandStream.m_maxCommands];
+    graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)malloc(graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand));
 
     g_GameCode = {};
     const char* GameDllStr = "TinkerGame.dll";

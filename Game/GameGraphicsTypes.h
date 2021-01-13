@@ -7,21 +7,22 @@
 #include <vector> // TODO: remove me
 
 using namespace Tinker;
+using namespace Platform;
 
 // Buffer that has no persistent staging buffer
 // Meant to updated once with a staging buffer which should
 // then be destroyed.
 typedef struct static_buffer_data
 {
-    uint32 gpuBufferHandle;
+    ResourceHandle gpuBufferHandle;
 } StaticBuffer;
 
 // Buffer that has a constantly mapped staging buffer
 // Likely is updated frame-to-frame
 typedef struct dynamic_buffer_data
 {
-    uint32 gpuBufferHandle;
-    uint32 stagingBufferHandle;
+    ResourceHandle gpuBufferHandle;
+    ResourceHandle stagingBufferHandle;
     void* stagingBufferMemPtr;
 } DynamicBuffer;
 
@@ -42,12 +43,11 @@ typedef struct dynamic_mesh_data
 } DynamicMeshData;
 
 void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
-    DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes,
-    const char* debugLabel);
+    DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes, const char* debugLabel);
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
-    uint32 indexBufferHandle, uint32 positionBufferHandle, uint32 uvBufferHandle, uint32 normalBufferHandle,
-    uint32 shaderHandle, Platform::DescriptorSetDataHandles* descriptors,
+    ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
+    ResourceHandle normalBufferHandle, ResourceHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
     const char* debugLabel);
 
 typedef struct meshTriangles
@@ -58,17 +58,17 @@ typedef struct meshTriangles
 
 typedef struct game_graphic_data
 {
-    uint32 m_imageHandle;
-    uint32 m_imageViewHandle;
-    uint32 m_framebufferHandle;
+    ResourceHandle m_imageHandle;
+    ResourceHandle m_imageViewHandle;
+    ResourceHandle m_framebufferHandle;
 
-    uint32 m_shaderHandle;
-    uint32 m_blitShaderHandle;
-    uint32 m_swapChainBlitDescHandle;
-    uint32 m_modelMatrixDescHandle1;
-    uint32 m_modelMatrixBufferHandle1;
+    ResourceHandle m_shaderHandle;
+    ResourceHandle m_blitShaderHandle;
+    DescriptorHandle m_swapChainBlitDescHandle;
+    DescriptorHandle m_modelMatrixDescHandle1;
+    ResourceHandle m_modelMatrixBufferHandle1;
     void* m_modelMatrixBufferMemPtr1;
-    uint32 m_mainRenderPassHandle;
+    ResourceHandle m_mainRenderPassHandle;
 } GameGraphicsData;
 
 template <uint32 numPoints, uint32 numIndices>
