@@ -1,3 +1,5 @@
+#include "Core/Math/VectorTypes.h"
+
 namespace Tinker
 {
     namespace Platform
@@ -223,17 +225,50 @@ namespace Tinker
             DescriptorHandle descriptorHandle;
         } GraphicsPipelineParams;
 
-        typedef struct buffer_data
+        enum : uint32
         {
-            ResourceHandle handle;
-            void* memory;
-        } BufferData;
+            eResourceTypeBuffer1D = 0,
+            eResourceTypeImage2D,
+            eResourceTypeMax
+        };
 
-        #define CREATE_BUFFER(name) Tinker::Platform::BufferData name(uint32 sizeInBytes, uint32 bufferUsage)
+        typedef struct graphics_resource_description
+        {
+            uint32 resourceType;
+            Core::Math::v3ui dims;
+
+            union
+            {
+                uint32 bufferUsage;
+
+                /*struct
+                {
+                    uint32 ;
+                };*/ // TODO: image params, e.g. format
+            };
+
+        } ResourceDesc;
+
+        #define CREATE_RESOURCE(name) ResourceHandle name(const ResourceDesc& resDesc)
+        typedef CREATE_RESOURCE(create_resource);
+
+        #define DESTROY_RESOURCE(name) void name(ResourceHandle handle)
+        typedef DESTROY_RESOURCE(destroy_resource);
+        
+        #define MAP_RESOURCE(name) void* name(ResourceHandle handle)
+        typedef MAP_RESOURCE(map_resource);
+
+        #define UNMAP_RESOURCE(name) void name(ResourceHandle handle)
+        typedef UNMAP_RESOURCE(unmap_resource);
+
+        // TODO: create a MapResource (and UnmapResource) function so the game can control when a resource is mapped, then the create resource function can 
+        // simply return a ResourceHandle
+
+        /*#define CREATE_BUFFER(name) Tinker::Platform::BufferData name(uint32 sizeInBytes, uint32 bufferUsage)
         typedef CREATE_BUFFER(create_buffer);
 
         #define DESTROY_BUFFER(name) void name(ResourceHandle handle, uint32 bufferUsage)
-        typedef DESTROY_BUFFER(destroy_buffer);
+        typedef DESTROY_BUFFER(destroy_buffer);*/
 
         #define CREATE_FRAMEBUFFER(name) ResourceHandle name(ResourceHandle* imageViewResourceHandles, uint32 numImageViewResourceHandles, uint32 width, uint32 height, ResourceHandle renderPassHandle)
         typedef CREATE_FRAMEBUFFER(create_framebuffer);
@@ -241,7 +276,7 @@ namespace Tinker
         #define DESTROY_FRAMEBUFFER(name) void name(ResourceHandle handle)
         typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
 
-        #define CREATE_IMAGE_RESOURCE(name) ResourceHandle name(uint32 width, uint32 height)
+        /*#define CREATE_IMAGE_RESOURCE(name) ResourceHandle name(uint32 width, uint32 height)
         typedef CREATE_IMAGE_RESOURCE(create_image_resource);
 
         #define DESTROY_IMAGE_RESOURCE(name) void name(ResourceHandle handle)
@@ -251,7 +286,7 @@ namespace Tinker
         typedef CREATE_IMAGE_VIEW_RESOURCE(create_image_view_resource);
 
         #define DESTROY_IMAGE_VIEW_RESOURCE(name) void name(ResourceHandle handle)
-        typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);
+        typedef DESTROY_IMAGE_VIEW_RESOURCE(destroy_image_view_resource);*/
 
         #define CREATE_GRAPHICS_PIPELINE(name) ResourceHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, ResourceHandle renderPassHandle, DescriptorHandle descriptorHandle)
         typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);

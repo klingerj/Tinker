@@ -65,7 +65,6 @@ namespace Tinker
                 vulkanContextResources->vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanFramebufferPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanRenderPassPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
-                vulkanContextResources->vulkanImageViewPool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
 
                 vulkanContextResources->windowWidth = width;
                 vulkanContextResources->windowHeight = height;
@@ -699,50 +698,24 @@ namespace Tinker
                     &numSwapChainImages,
                     vulkanContextResources->swapChainImages);
 
-                vulkanContextResources->swapChainImageViewHandles = new ResourceHandle[numSwapChainImages];
+                vulkanContextResources->swapChainImageViews = new VkImageView[numSwapChainImages];
                 for (uint32 uiImageView = 0; uiImageView < numSwapChainImages; ++uiImageView)
                 {
-                    VkImageViewCreateInfo imageViewCreateInfo = {};
-                    imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-                    imageViewCreateInfo.image = vulkanContextResources->swapChainImages[uiImageView];
-                    imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-                    imageViewCreateInfo.format = vulkanContextResources->swapChainFormat;
-                    imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-                    imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-                    imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-                    imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-                    imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                    imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-                    imageViewCreateInfo.subresourceRange.levelCount = 1;
-                    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-                    imageViewCreateInfo.subresourceRange.layerCount = 1;
-
-                    uint32 newImageViewHandle = vulkanContextResources->vulkanImageViewPool.Alloc();
-                    vulkanContextResources->swapChainImageViewHandles[uiImageView] = ResourceHandle(newImageViewHandle);
-                    VkImageView* newImageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(newImageViewHandle);
-
-                    result = vkCreateImageView(vulkanContextResources->device,
-                        &imageViewCreateInfo,
-                        nullptr,
-                        newImageView);
-                    if (result != VK_SUCCESS)
-                    {
-                        LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
-                        TINKER_ASSERT(0);
-                    }
+                    CreateImageView(vulkanContextResources,
+                                    vulkanContextResources->swapChainImages[uiImageView],
+                                    &vulkanContextResources->swapChainImageViews[uiImageView]);
                 }
 
-                vulkanContextResources->swapChainRenderPassHandle = VulkanCreateRenderPass(vulkanContextResources, eImageLayoutUndefined, eImageLayoutSwapChainPresent);
+                //vulkanContextResources->swapChainRenderPass = VulkanCreateRenderPass(vulkanContextResources, eImageLayoutUndefined, eImageLayoutSwapChainPresent);
+                CreateRenderPass(vulkanContextResources, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &vulkanContextResources->swapChainRenderPass);
 
                 // Swap chain framebuffers
-                vulkanContextResources->swapChainFramebufferHandles = new ResourceHandle[vulkanContextResources->numSwapChainImages];
+                vulkanContextResources->swapChainFramebuffers = new VkFramebuffer[vulkanContextResources->numSwapChainImages];
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
                 {
-                    vulkanContextResources->swapChainFramebufferHandles[uiFramebuffer] =
-                        VulkanCreateFramebuffer(vulkanContextResources,
-                            &vulkanContextResources->swapChainImageViewHandles[uiFramebuffer], 1,
-                            vulkanContextResources->swapChainExtent.width, vulkanContextResources->swapChainExtent.height,
-                            vulkanContextResources->swapChainRenderPassHandle);
+                    CreateFramebuffer(vulkanContextResources, &vulkanContextResources->swapChainImageViews[uiFramebuffer], 1,
+                        vulkanContextResources->swapChainExtent.width, vulkanContextResources->swapChainExtent.height,
+                        vulkanContextResources->swapChainRenderPass, &vulkanContextResources->swapChainFramebuffers[uiFramebuffer]);
                 }
 
                 vulkanContextResources->isSwapChainValid = true;
@@ -753,26 +726,139 @@ namespace Tinker
                 vulkanContextResources->isSwapChainValid = false;
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
 
-                if (vulkanContextResources->swapChainRenderPassHandle != DefaultResHandle_Invalid)
-                {
-                    VulkanDestroyRenderPass(vulkanContextResources, vulkanContextResources->swapChainRenderPassHandle);
-                }
+                vkDestroyRenderPass(vulkanContextResources->device, vulkanContextResources->swapChainRenderPass, nullptr);
 
                 for (uint32 uiFramebuffer = 0; uiFramebuffer < vulkanContextResources->numSwapChainImages; ++uiFramebuffer)
                 {
-                    ResourceHandle framebufferHandle = vulkanContextResources->swapChainFramebufferHandles[uiFramebuffer];
-                    VulkanDestroyFramebuffer(vulkanContextResources, framebufferHandle);
+                    vkDestroyFramebuffer(vulkanContextResources->device, vulkanContextResources->swapChainFramebuffers[uiFramebuffer], nullptr);
                 }
-                delete vulkanContextResources->swapChainFramebufferHandles;
+                delete vulkanContextResources->swapChainFramebuffers;
 
                 for (uint32 uiImageView = 0; uiImageView < vulkanContextResources->numSwapChainImages; ++uiImageView)
                 {
-                    VulkanDestroyImageViewResource(vulkanContextResources, vulkanContextResources->swapChainImageViewHandles[uiImageView]);
+                    vkDestroyImageView(vulkanContextResources->device, vulkanContextResources->swapChainImageViews[uiImageView], nullptr);
                 }
-                delete vulkanContextResources->swapChainImageViewHandles;
+                delete vulkanContextResources->swapChainImageViews;
                 delete vulkanContextResources->swapChainImages;
                 
                 vkDestroySwapchainKHR(vulkanContextResources->device, vulkanContextResources->swapChain, nullptr);
+            }
+
+            void CreateImageView(VulkanContextResources* vulkanContextResources, VkImage image, VkImageView* imageView)
+            {
+                VkImageViewCreateInfo imageViewCreateInfo = {};
+                imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+                imageViewCreateInfo.image = image;
+                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                imageViewCreateInfo.format = vulkanContextResources->swapChainFormat;
+                imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+                imageViewCreateInfo.subresourceRange.levelCount = 1;
+                imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+                imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+                VkResult result = vkCreateImageView(vulkanContextResources->device,
+                    &imageViewCreateInfo,
+                    nullptr,
+                    imageView);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+            }
+
+            void CreateFramebuffer(VulkanContextResources* vulkanContextResources, VkImageView* imageViews, uint32 numImageViews,
+                uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* framebuffer)
+            {
+                VkFramebufferCreateInfo framebufferCreateInfo = {};
+                framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+                framebufferCreateInfo.renderPass = renderPass;
+                framebufferCreateInfo.attachmentCount = 1;
+                framebufferCreateInfo.pAttachments = imageViews;
+                framebufferCreateInfo.width = width;
+                framebufferCreateInfo.height = height;
+                framebufferCreateInfo.layers = 1;
+
+                VkResult result = vkCreateFramebuffer(vulkanContextResources->device,
+                    &framebufferCreateInfo,
+                    nullptr,
+                    framebuffer);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to create Vulkan framebuffer!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+            }
+
+            void CreateRenderPass(VulkanContextResources* vulkanContextResources, VkImageLayout startLayout, VkImageLayout endLayout, VkRenderPass* renderPass)
+            {
+                VkAttachmentDescription colorAttachment = {};
+                colorAttachment.format = vulkanContextResources->swapChainFormat;
+                colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+                colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+                colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+                colorAttachment.initialLayout = startLayout;
+                colorAttachment.finalLayout = endLayout;
+
+                VkAttachmentReference colorAttachmentRef = {};
+                colorAttachmentRef.attachment = 0;
+                colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // TODO: make a 'during' image layout for the render pass?
+
+                VkSubpassDescription subpass = {};
+                subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+                subpass.colorAttachmentCount = 1;
+                subpass.pColorAttachments = &colorAttachmentRef;
+
+                const uint32 numSubpassDependencies = 2;
+                VkSubpassDependency subpassDependencies[numSubpassDependencies] = {};
+                subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+                subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[0].srcAccessMask = 0;
+                subpassDependencies[0].dstSubpass = 0;
+                subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+                subpassDependencies[1].srcSubpass = 0;
+                subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+                subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                subpassDependencies[1].dstAccessMask = 0;
+
+                VkRenderPassCreateInfo renderPassCreateInfo = {};
+                renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+                renderPassCreateInfo.attachmentCount = 1;
+                renderPassCreateInfo.pAttachments = &colorAttachment;
+                renderPassCreateInfo.subpassCount = 1;
+                renderPassCreateInfo.pSubpasses = &subpass;
+                renderPassCreateInfo.dependencyCount = numSubpassDependencies;
+                renderPassCreateInfo.pDependencies = subpassDependencies;
+
+                VkResult result = vkCreateRenderPass(vulkanContextResources->device, &renderPassCreateInfo, nullptr, renderPass);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to create Vulkan render pass!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
+                /*#if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                const VkDebugUtilsObjectNameInfoEXT debugNameInfo =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                    NULL,
+                    VK_OBJECT_TYPE_RENDER_PASS,
+                    (uint64_t)*newRenderPass,
+                    "Joe's Render Pass!!!",
+                };
+                vulkanContextResources->pfnSetDebugUtilsObjectNameEXT(vulkanContextResources->device, &debugNameInfo);
+                #endif*/
             }
 
             VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VulkanContextResources* vulkanContextResources)
@@ -983,7 +1069,7 @@ namespace Tinker
 
                 if (renderPassHandle == DefaultResHandle_Invalid)
                 {
-                    pipelineCreateInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(vulkanContextResources->swapChainRenderPassHandle.m_hRes);
+                    pipelineCreateInfo.renderPass = vulkanContextResources->swapChainRenderPass;
                 }
                 else
                 {
@@ -1073,6 +1159,32 @@ namespace Tinker
                 vkQueueWaitIdle(vulkanContextResources->presentationQueue);
             }
 
+            void* VulkanMapResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
+            {
+                VulkanMemResource* resource =
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
+
+                void* newMappedMem;
+                VkResult result = vkMapMemory(vulkanContextResources->device, resource->deviceMemory, 0, VK_WHOLE_SIZE, 0, &newMappedMem);
+
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to map gpu memory!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                    return nullptr;
+                }
+
+                return newMappedMem;
+            }
+
+            void VulkanUnmapResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
+            {
+                VulkanMemResource* resource =
+                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
+
+                vkUnmapMemory(vulkanContextResources->device, resource->deviceMemory);
+            }
+
             void AllocGPUMemory(VulkanContextResources* vulkanContextResources, VkDeviceMemory* deviceMemory,
                 VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags)
             {
@@ -1132,7 +1244,7 @@ namespace Tinker
                 vkBindBufferMemory(vulkanContextResources->device, buffer, deviceMemory, 0);
             }
 
-            VulkanBufferData VulkanCreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, uint32 bufferUsage)
+            ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources, uint32 sizeInBytes, uint32 bufferUsage)
             {
                 uint32 newResourceHandle =
                     vulkanContextResources->vulkanMemResourcePool.Alloc();
@@ -1189,24 +1301,7 @@ namespace Tinker
                     newResource->buffer,
                     newResource->deviceMemory);
 
-                VulkanBufferData vulkanBufferData = {};
-
-                if (bufferUsage == eBufferUsageStaging || bufferUsage == eBufferUsageUniform)
-                {
-                    void* newMappedMem;
-
-                    vkMapMemory(vulkanContextResources->device, newResource->deviceMemory, 0, sizeInBytes, 0, &newMappedMem);
-
-                    vulkanBufferData.hostBufferHandle = ResourceHandle(newResourceHandle);
-                    vulkanBufferData.mappedMemory = newMappedMem;
-                }
-                else
-                {
-                    vulkanBufferData.gpuBufferHandle = ResourceHandle(newResourceHandle);
-                    vulkanBufferData.mappedMemory = nullptr;
-                }
-
-                return vulkanBufferData;
+                return ResourceHandle(newResourceHandle);
             }
 
             DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout)
@@ -1338,10 +1433,10 @@ namespace Tinker
 
                             case eDescriptorTypeSampledImage:
                             {
-                                VkImageView* imageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(descSetHandles->handles[uiDesc].m_hRes);
+                                VkImageView imageView = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(descSetHandles->handles[uiDesc].m_hRes)->imageView;
 
                                 descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                                descImageInfo.imageView = *imageView;
+                                descImageInfo.imageView = imageView;
                                 descImageInfo.sampler = vulkanContextResources->linearSampler;
 
                                 descSetWrites[uiDesc].dstSet = *descriptorSet;
@@ -1775,8 +1870,7 @@ namespace Tinker
 
                 if (framebufferHandle == DefaultResHandle_Invalid)
                 {
-                    ResourceHandle swapChainFramebufferHandle = vulkanContextResources->swapChainFramebufferHandles[vulkanContextResources->currentSwapChainImage];
-                    renderPassBeginInfo.framebuffer = *vulkanContextResources->vulkanFramebufferPool.PtrFromHandle(swapChainFramebufferHandle.m_hRes);
+                    renderPassBeginInfo.framebuffer = vulkanContextResources->swapChainFramebuffers[vulkanContextResources->currentSwapChainImage];
                 }
                 else
                 {
@@ -1785,7 +1879,7 @@ namespace Tinker
 
                 if (renderPassHandle == DefaultResHandle_Invalid)
                 {
-                    renderPassBeginInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(vulkanContextResources->swapChainRenderPassHandle.m_hRes);
+                    renderPassBeginInfo.renderPass = vulkanContextResources->swapChainRenderPass;
                 }
                 else
                 {
@@ -1845,6 +1939,7 @@ namespace Tinker
                 uint32 width, uint32 height, ResourceHandle renderPassHandle)
             {
                 TINKER_ASSERT(renderPassHandle != DefaultResHandle_Invalid);
+                VkRenderPass renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(renderPassHandle.m_hRes);
                 
                 uint32 newFramebufferHandle = vulkanContextResources->vulkanFramebufferPool.Alloc();
                 TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
@@ -1856,70 +1951,23 @@ namespace Tinker
                 for (uint32 uiImageView = 0; uiImageView < numImageViewResourceHandles; ++uiImageView)
                 {
                     attachments[uiImageView] =
-                        *vulkanContextResources->vulkanImageViewPool.PtrFromHandle(imageViewResourceHandles[uiImageView].m_hRes);
+                        vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageViewResourceHandles[uiImageView].m_hRes)->imageView;
                 }
 
-                VkFramebufferCreateInfo framebufferCreateInfo = {};
-                framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-                framebufferCreateInfo.renderPass = *vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(vulkanContextResources->swapChainRenderPassHandle.m_hRes);
-                framebufferCreateInfo.attachmentCount = 1;
-                framebufferCreateInfo.pAttachments = attachments;
-                framebufferCreateInfo.width = width;
-                framebufferCreateInfo.height = height;
-                framebufferCreateInfo.layers = 1;
+                CreateFramebuffer(vulkanContextResources, attachments, numImageViewResourceHandles, width, height, renderPass, newFramebuffer);
 
-                VkResult result = vkCreateFramebuffer(vulkanContextResources->device,
-                    &framebufferCreateInfo,
-                    nullptr,
-                    newFramebuffer);
-                if (result != VK_SUCCESS)
-                {
-                    LogMsg("Failed to create Vulkan framebuffer!", eLogSeverityCritical);
-                    TINKER_ASSERT(0);
-                }
                 delete attachments;
 
                 return ResourceHandle(newFramebufferHandle);
             }
             
-            ResourceHandle VulkanCreateImageViewResource(VulkanContextResources* vulkanContextResources, ResourceHandle imageResourceHandle)
-            {
-                uint32 newImageViewHandle = vulkanContextResources->vulkanImageViewPool.Alloc();
-                VkImageView* newImageView = vulkanContextResources->vulkanImageViewPool.PtrFromHandle(newImageViewHandle);
-
-                VkImageViewCreateInfo imageViewCreateInfo = {};
-                imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-                imageViewCreateInfo.image = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageResourceHandle.m_hRes)->image;
-                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-                imageViewCreateInfo.format = vulkanContextResources->swapChainFormat;
-                imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-                imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-                imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-                imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-                imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-                imageViewCreateInfo.subresourceRange.levelCount = 1;
-                imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-                imageViewCreateInfo.subresourceRange.layerCount = 1;
-
-                VkResult result = vkCreateImageView(vulkanContextResources->device,
-                    &imageViewCreateInfo,
-                    nullptr,
-                    newImageView);
-                if (result != VK_SUCCESS)
-                {
-                    LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
-                    TINKER_ASSERT(0);
-                }
-                return ResourceHandle(newImageViewHandle);
-            }
-
             ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextResources, uint32 width, uint32 height)
             {
                 uint32 newResourceHandle = vulkanContextResources->vulkanMemResourcePool.Alloc();
                 VulkanMemResource* newResource =
                     vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
 
+                // Create image
                 VkImageCreateInfo imageCreateInfo = {};
                 imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
                 imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -1944,6 +1992,32 @@ namespace Tinker
 
                 vkBindImageMemory(vulkanContextResources->device, newResource->image, newResource->deviceMemory, 0);
 
+                // Create image view
+                VkImageViewCreateInfo imageViewCreateInfo = {};
+                imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+                imageViewCreateInfo.image = newResource->image;
+                imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                imageViewCreateInfo.format = vulkanContextResources->swapChainFormat;
+                imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+                imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+                imageViewCreateInfo.subresourceRange.levelCount = 1;
+                imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+                imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+                result = vkCreateImageView(vulkanContextResources->device,
+                    &imageViewCreateInfo,
+                    nullptr,
+                    &newResource->imageView);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
                 return ResourceHandle(newResourceHandle);
             }
 
@@ -1953,70 +2027,41 @@ namespace Tinker
                 VkRenderPass* newRenderPass =
                     vulkanContextResources->vulkanRenderPassPool.PtrFromHandle(newRenderPassHandle);
 
-                VkAttachmentDescription colorAttachment = {};
-                colorAttachment.format = vulkanContextResources->swapChainFormat;
-                colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-                colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-                colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-                colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-                colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                colorAttachment.initialLayout = GetVkImageLayout(startLayout);
-                colorAttachment.finalLayout = GetVkImageLayout(endLayout);
-
-                VkAttachmentReference colorAttachmentRef = {};
-                colorAttachmentRef.attachment = 0;
-                colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // TODO: make a 'during' image layout for the render pass?
-
-                VkSubpassDescription subpass = {};
-                subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-                subpass.colorAttachmentCount = 1;
-                subpass.pColorAttachments = &colorAttachmentRef;
-
-                const uint32 numSubpassDependencies = 2;
-                VkSubpassDependency subpassDependencies[numSubpassDependencies] = {};
-                subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-                subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependencies[0].srcAccessMask = 0;
-                subpassDependencies[0].dstSubpass = 0;
-                subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-                subpassDependencies[1].srcSubpass = 0;
-                subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-                subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-                subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                subpassDependencies[1].dstAccessMask = 0;
-
-                VkRenderPassCreateInfo renderPassCreateInfo = {};
-                renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-                renderPassCreateInfo.attachmentCount = 1;
-                renderPassCreateInfo.pAttachments = &colorAttachment;
-                renderPassCreateInfo.subpassCount = 1;
-                renderPassCreateInfo.pSubpasses = &subpass;
-                renderPassCreateInfo.dependencyCount = numSubpassDependencies;
-                renderPassCreateInfo.pDependencies = subpassDependencies;
-
-                VkResult result = vkCreateRenderPass(vulkanContextResources->device, &renderPassCreateInfo, nullptr, newRenderPass);
-                if (result != VK_SUCCESS)
-                {
-                    LogMsg("Failed to create Vulkan render pass!", eLogSeverityCritical);
-                    TINKER_ASSERT(0);
-                }
-
-                /*#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-                const VkDebugUtilsObjectNameInfoEXT debugNameInfo =
-                {
-                    VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-                    NULL,
-                    VK_OBJECT_TYPE_RENDER_PASS,
-                    (uint64_t)*newRenderPass,
-                    "Joe's Render Pass!!!",
-                };
-                vulkanContextResources->pfnSetDebugUtilsObjectNameEXT(vulkanContextResources->device, &debugNameInfo);
-                #endif*/
+                CreateRenderPass(vulkanContextResources, GetVkImageLayout(startLayout), GetVkImageLayout(endLayout), newRenderPass);
 
                 return ResourceHandle(newRenderPassHandle);
+            }
+
+            ResourceHandle VulkanCreateResource(VulkanContextResources* vulkanContextResources, const ResourceDesc& resDesc)
+            {
+                ResourceHandle newHandle = DefaultResHandle_Invalid;
+
+                switch (resDesc.resourceType)
+                {
+                    case eResourceTypeBuffer1D:
+                    {
+                        newHandle = VulkanCreateBuffer(vulkanContextResources, resDesc.dims.x, resDesc.bufferUsage);
+                        break;
+                    }
+
+                    case eResourceTypeImage2D:
+                    {
+                        newHandle = VulkanCreateImageResource(vulkanContextResources, resDesc.dims.x, resDesc.dims.y);
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid resource description type!", eLogSeverityCritical);
+                        return newHandle;
+                    }
+                }
+
+                // Set the internal resdesc to the one provided
+                VulkanMemResource* newResource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newHandle.m_hRes);
+                newResource->resDesc = resDesc;
+                
+                return newHandle;
             }
 
             void VulkanDestroyRenderPass(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
@@ -2044,14 +2089,8 @@ namespace Tinker
                 VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
                 vkDestroyImage(vulkanContextResources->device, resource->image, nullptr);
                 vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
+                vkDestroyImageView(vulkanContextResources->device, resource->imageView, nullptr);
                 vulkanContextResources->vulkanMemResourcePool.Dealloc(handle.m_hRes);
-            }
-
-            void VulkanDestroyImageViewResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
-            {
-                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
-                vkDestroyImageView(vulkanContextResources->device, *vulkanContextResources->vulkanImageViewPool.PtrFromHandle(handle.m_hRes), nullptr);
-                vulkanContextResources->vulkanImageViewPool.Dealloc(handle.m_hRes);
             }
 
             void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
@@ -2067,14 +2106,31 @@ namespace Tinker
                 vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
                 VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
 
-                if (bufferUsage == eBufferUsageStaging || bufferUsage == eBufferUsageUniform)
-                {
-                    vkUnmapMemory(vulkanContextResources->device, resource->deviceMemory);
-                }
-
                 vkDestroyBuffer(vulkanContextResources->device, resource->buffer, nullptr);
                 vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
                 vulkanContextResources->vulkanMemResourcePool.Dealloc(handle.m_hRes);
+            }
+
+            void VulkanDestroyResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
+            {
+                vkDeviceWaitIdle(vulkanContextResources->device); // TODO: move this?
+
+                VulkanMemResource* resource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
+
+                switch (resource->resDesc.resourceType)
+                {
+                    case eResourceTypeBuffer1D:
+                    {
+                        VulkanDestroyBuffer(vulkanContextResources, handle, resource->resDesc.bufferUsage);
+                        break;
+                    }
+
+                    case eResourceTypeImage2D:
+                    {
+                        VulkanDestroyImageResource(vulkanContextResources, handle);
+                        break;
+                    }
+                }
             }
 
             void DestroyVulkan(VulkanContextResources* vulkanContextResources)

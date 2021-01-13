@@ -369,27 +369,13 @@ static void SubmitFrameToGPU()
     }
 }
 
-CREATE_BUFFER(CreateBuffer)
+CREATE_RESOURCE(CreateResource)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::VulkanBufferData vulkanBufferData = Graphics::VulkanCreateBuffer(&vulkanContextResources, sizeInBytes, bufferUsage);
-
-            BufferData bufferData = {};
-
-            if (bufferUsage == eBufferUsageStaging || bufferUsage == eBufferUsageUniform)
-            {
-                bufferData.handle = vulkanBufferData.hostBufferHandle;
-                bufferData.memory = vulkanBufferData.mappedMemory;
-            }
-            else
-            {
-                bufferData.handle = vulkanBufferData.gpuBufferHandle;
-            }
-            
-            return bufferData;
+            return Graphics::VulkanCreateResource(&vulkanContextResources, resDesc);
             //break;
         }
 
@@ -398,10 +384,7 @@ CREATE_BUFFER(CreateBuffer)
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
 
-            BufferData bufferDataInvalid = {};
-            bufferDataInvalid.handle = DefaultResHandle_Invalid;
-            bufferDataInvalid.memory = nullptr;
-            return bufferDataInvalid;
+            return DefaultResHandle_Invalid;
         }
     }
 }
@@ -415,44 +398,6 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
             return Graphics::VulkanCreateFramebuffer(&vulkanContextResources,
                 imageViewResourceHandles, numImageViewResourceHandles,
                 width, height, renderPassHandle);
-            //break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            return DefaultResHandle_Invalid;
-        }
-    }
-}
-
-CREATE_IMAGE_RESOURCE(CreateImageResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            return Graphics::VulkanCreateImageResource(&vulkanContextResources, width, height);
-            //break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            return DefaultResHandle_Invalid;
-        }
-    }
-}
-
-CREATE_IMAGE_VIEW_RESOURCE(CreateImageViewResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            return Graphics::VulkanCreateImageViewResource(&vulkanContextResources, imageResourceHandle);
             //break;
         }
 
@@ -527,13 +472,13 @@ CREATE_DESCRIPTOR(CreateDescriptor)
     }
 }
 
-DESTROY_BUFFER(DestroyBuffer)
+DESTROY_RESOURCE(DestroyResource)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
-            Graphics::VulkanDestroyBuffer(&vulkanContextResources, handle, bufferUsage);
+            Graphics::VulkanDestroyResource(&vulkanContextResources, handle);
             break;
         }
 
@@ -553,44 +498,6 @@ DESTROY_FRAMEBUFFER(DestroyFramebuffer)
         case eGraphicsAPIVulkan:
         {
             Graphics::VulkanDestroyFramebuffer(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-DESTROY_IMAGE_RESOURCE(DestroyImageResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            Graphics::VulkanDestroyImageResource(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-DESTROY_IMAGE_VIEW_RESOURCE(DestroyImageViewResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            Graphics::VulkanDestroyImageViewResource(&vulkanContextResources, handle);
             break;
         }
 
@@ -686,6 +593,45 @@ WRITE_DESCRIPTOR(WriteDescriptor)
         case eGraphicsAPIVulkan:
         {
             Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayout, descSetHandle, descSetDataHandles);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            break;
+        }
+    }
+}
+
+MAP_RESOURCE(MapResource)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            return Graphics::VulkanMapResource(&vulkanContextResources, handle);
+            //break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+            return nullptr;
+            //break;
+        }
+    }
+}
+
+UNMAP_RESOURCE(UnmapResource)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            Graphics::VulkanUnmapResource(&vulkanContextResources, handle);
             break;
         }
 
@@ -1031,14 +977,12 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.EndNetworkConnection = EndNetworkConnection;
     g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
     g_platformAPIFuncs.SystemCommand = SystemCommand;
-    g_platformAPIFuncs.CreateBuffer = CreateBuffer;
-    g_platformAPIFuncs.DestroyBuffer = DestroyBuffer;
+    g_platformAPIFuncs.MapResource = MapResource;
+    g_platformAPIFuncs.UnmapResource = UnmapResource;
+    g_platformAPIFuncs.CreateResource = CreateResource;
+    g_platformAPIFuncs.DestroyResource = DestroyResource;
     g_platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
     g_platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
-    g_platformAPIFuncs.CreateImageResource = CreateImageResource;
-    g_platformAPIFuncs.DestroyImageResource = DestroyImageResource;
-    g_platformAPIFuncs.CreateImageViewResource = CreateImageViewResource;
-    g_platformAPIFuncs.DestroyImageViewResource = DestroyImageViewResource;
     g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
     g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
     g_platformAPIFuncs.CreateRenderPass = CreateRenderPass;
