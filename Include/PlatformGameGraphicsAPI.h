@@ -317,5 +317,8 @@ namespace Tinker
 
         #define WRITE_DESCRIPTOR(name) void name(DescriptorLayout* descLayout, DescriptorHandle descSetHandle, DescriptorSetDataHandles* descSetDataHandles)
         typedef WRITE_DESCRIPTOR(write_descriptor);
+
+        #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
+        typedef SUBMIT_CMDS_IMMEDIATE(submit_cmds_immediate);
     }
 }

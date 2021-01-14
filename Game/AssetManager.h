@@ -18,7 +18,7 @@ private:
     MeshAttributeData m_allMeshData[TINKER_MAX_ASSETS];
 
     // Mesh graphics resources
-    DynamicMeshData m_allMeshGraphicsHandles[TINKER_MAX_ASSETS];
+    StaticMeshData m_allStaticMeshGraphicsHandles[TINKER_MAX_ASSETS];
 
 public:
     uint32 m_numMeshAssets = 0;
@@ -27,9 +27,10 @@ public:
     ~AssetManager() {}
 
     void LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platformFuncs);
-    void InitAssetGraphicsResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs);
+    void InitAssetGraphicsResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs,
+        Tinker::Platform::GraphicsCommandStream* graphicsCommandStream);
     // TODO: declare a mapping of ID to each asset file
-    DynamicMeshData* GetMeshGraphicsDataByID(uint32 meshID);
+    StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
 };
 
 extern AssetManager g_AssetManager;
