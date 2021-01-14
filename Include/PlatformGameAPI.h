@@ -61,6 +61,7 @@ namespace Tinker
             destroy_descriptor* DestroyDescriptor;
             destroy_all_descriptors* DestroyAllDescriptors;
             write_descriptor* WriteDescriptor;
+            submit_cmds_immediate* SubmitCmdsImmediate;
         } PlatformAPIFuncs;
 
         // Game side

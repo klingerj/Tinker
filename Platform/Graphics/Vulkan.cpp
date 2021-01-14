@@ -11,7 +11,7 @@
 // NOTE: The convention in this project to is flip the viewport upside down since a left-handed projection
 // matrix is often used. However, doing this flip causes the application to not render properly when run
 // in RenderDoc for some reason. To debug with RenderDoc, you should turn on this #define.
-//#define WORK_WITH_RENDERDOC
+#define WORK_WITH_RENDERDOC
 
 namespace Tinker
 {
@@ -502,8 +502,10 @@ namespace Tinker
                 if (result != VK_SUCCESS)
                 {
                     LogMsg("Failed to create Vulkan command pool!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
+                // Command buffers for per-frame submission
                 vulkanContextResources->commandBuffers = new VkCommandBuffer[vulkanContextResources->numSwapChainImages];
 
                 VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
@@ -518,6 +520,20 @@ namespace Tinker
                 if (result != VK_SUCCESS)
                 {
                     LogMsg("Failed to allocate Vulkan command buffers!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
+                // Command buffer for immediate submission
+                VkCommandBufferAllocateInfo allocInfo = {};
+                allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                allocInfo.commandPool = vulkanContextResources->commandPool;
+                allocInfo.commandBufferCount = 1;
+                result = vkAllocateCommandBuffers(vulkanContextResources->device, &allocInfo, &vulkanContextResources->commandBuffer_Immediate);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to allocate Vulkan command buffers (immediate)!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
                 }
 
                 // Semaphores
@@ -1568,21 +1584,66 @@ namespace Tinker
                 }
             }
 
-            void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
-                ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
-                ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
-                const char* debugLabel)
+            void BeginVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextResources)
             {
-                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                VkCommandBufferBeginInfo commandBufferBeginInfo = {};
+                commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+                VkResult result = vkBeginCommandBuffer(vulkanContextResources->commandBuffer_Immediate, &commandBufferBeginInfo);
+                if (result != VK_SUCCESS)
                 {
+                    LogMsg("Failed to begin Vulkan command buffer (immediate)!", eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+            }
+
+            void EndVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextResources)
+            {
+                VkResult result = vkEndCommandBuffer(vulkanContextResources->commandBuffer_Immediate);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to end Vulkan command buffer (immediate)!", eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
-                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+                VkSubmitInfo submitInfo = {};
+                submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submitInfo.commandBufferCount = 1;
+                submitInfo.pCommandBuffers = &vulkanContextResources->commandBuffer_Immediate;
 
+                result = vkQueueSubmit(vulkanContextResources->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+                if (result != VK_SUCCESS)
+                {
+                    LogMsg("Failed to submit command buffer to queue!", eLogSeverityCritical);
+                }
+                vkQueueWaitIdle(vulkanContextResources->graphicsQueue);
+            }
+
+            void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
+                ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
+                ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
+                const char* debugLabel, bool immediateSubmit)
+            {
                 TINKER_ASSERT(positionBufferHandle != DefaultResHandle_Invalid);
                 TINKER_ASSERT(uvBufferHandle != DefaultResHandle_Invalid);
                 TINKER_ASSERT(normalBufferHandle != DefaultResHandle_Invalid);
+
+                VkCommandBuffer commandBuffer;
+
+                if (immediateSubmit)
+                {
+                    commandBuffer = vulkanContextResources->commandBuffer_Immediate;
+                }
+                else
+                {
+                    if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                    {
+                        TINKER_ASSERT(0);
+                    }
+
+                    commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+                }
 
                 const uint32 numVertexBufferBindings = 3;
                 VkBuffer vertexBuffers[numVertexBufferBindings] =
@@ -1611,14 +1672,29 @@ namespace Tinker
             }
 
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-                ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles)
+                ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles, bool immediateSubmit)
             {
                 TINKER_ASSERT(shaderHandle != DefaultShaderHandle_Invalid);
 
+                VkCommandBuffer commandBuffer;
+
+                if (immediateSubmit)
+                {
+                    commandBuffer = vulkanContextResources->commandBuffer_Immediate;
+                }
+                else
+                {
+                    if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                    {
+                        TINKER_ASSERT(0);
+                    }
+
+                    commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+                }
+
                 VulkanPipelineResource* pipelineResource = vulkanContextResources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle.m_hShader);
 
-                vkCmdBindPipeline(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS, *&pipelineResource->graphicsPipeline);
+                vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *&pipelineResource->graphicsPipeline);
 
                 // TODO: bind multiple descriptor sets
                 if (descSetHandles->handles[0] != DefaultDescHandle_Invalid)
@@ -1631,11 +1707,22 @@ namespace Tinker
 
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
-                const char* debugLabel)
+                const char* debugLabel, bool immediateSubmit)
             {
-                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                VkCommandBuffer commandBuffer;
+
+                if (immediateSubmit)
                 {
-                    TINKER_ASSERT(0);
+                    commandBuffer = vulkanContextResources->commandBuffer_Immediate;
+                }
+                else
+                {
+                    if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                    {
+                        TINKER_ASSERT(0);
+                    }
+
+                    commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
                 }
 
                 VkBuffer& dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->buffer;
@@ -1645,8 +1732,6 @@ namespace Tinker
                 bufferCopy.srcOffset = 0;
                 bufferCopy.dstOffset = 0;
                 bufferCopy.size = sizeInBytes;
-
-                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
 
                 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
                 VkDebugUtilsLabelEXT label =
@@ -1663,9 +1748,27 @@ namespace Tinker
             }
 
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
-                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height)
+                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height,
+                bool immediateSubmit)
             {
-                /*VkImage *srcImage = VK_NULL_HANDLE, *dstImage = VK_NULL_HANDLE;
+                /*
+                VkCommandBuffer commandBuffer;
+
+                if (immediateSubmit)
+                {
+                    commandBuffer = vulkanContextResources->commandBuffer_Immediate;
+                }
+                else
+                {
+                    if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                    {
+                        TINKER_ASSERT(0);
+                    }
+
+                    commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+                }
+
+                VkImage *srcImage = VK_NULL_HANDLE, *dstImage = VK_NULL_HANDLE;
                 VkImageMemoryBarrier imageBarrier = {};
                 imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 
@@ -1857,11 +1960,22 @@ namespace Tinker
 
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
                 ResourceHandle renderPassHandle, ResourceHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
-                const char* debugLabel)
+                const char* debugLabel, bool immediateSubmit)
             {
-                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                VkCommandBuffer commandBuffer;
+
+                if (immediateSubmit)
                 {
-                    TINKER_ASSERT(0);
+                    commandBuffer = vulkanContextResources->commandBuffer_Immediate;
+                }
+                else
+                {
+                    if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                    {
+                        TINKER_ASSERT(0);
+                    }
+
+                    commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
                 }
 
                 VkRenderPassBeginInfo renderPassBeginInfo = {};
@@ -1899,8 +2013,6 @@ namespace Tinker
                 renderPassBeginInfo.clearValueCount = 1;
                 renderPassBeginInfo.pClearValues = &clearColor;
 
-                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
-
                 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
                 VkDebugUtilsLabelEXT label =
                 {
@@ -1912,19 +2024,26 @@ namespace Tinker
                 vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
                 #endif
 
-                vkCmdBeginRenderPass(commandBuffer,
-                    &renderPassBeginInfo,
-                    VK_SUBPASS_CONTENTS_INLINE);
+                vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
             }
 
-            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources)
+            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources, bool immediateSubmit)
             {
-                if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
-                {
-                    TINKER_ASSERT(0);
-                }
+                VkCommandBuffer commandBuffer;
 
-                VkCommandBuffer commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+                if (immediateSubmit)
+                {
+                    commandBuffer = vulkanContextResources->commandBuffer_Immediate;
+                }
+                else
+                {
+                    if (vulkanContextResources->currentSwapChainImage == TINKER_INVALID_HANDLE)
+                    {
+                        TINKER_ASSERT(0);
+                    }
+
+                    commandBuffer = vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage];
+                }
 
                 vkCmdEndRenderPass(commandBuffer);
 

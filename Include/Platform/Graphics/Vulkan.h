@@ -87,7 +87,6 @@ namespace Tinker
                 Memory::PoolAllocator<VulkanDescriptorResource> vulkanDescriptorResourcePool;
                 Memory::PoolAllocator<VulkanPipelineResource> vulkanPipelineResourcePool;
                 Memory::PoolAllocator<VulkanMemResource> vulkanMemResourcePool;
-                //Memory::PoolAllocator<VkImageView> vulkanImageViewPool;
                 // TODO: move this stuff elsewhere
                 Memory::PoolAllocator<VkFramebuffer> vulkanFramebufferPool;
                 Memory::PoolAllocator<VkRenderPass> vulkanRenderPassPool;
@@ -96,6 +95,7 @@ namespace Tinker
                 VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
                 VkCommandBuffer* commandBuffers = nullptr;
                 VkCommandPool commandPool = VK_NULL_HANDLE;
+                VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;
             } VulkanContextResources;
 
             typedef struct vulkan_vertex_position
@@ -146,6 +146,8 @@ namespace Tinker
             
             void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
             void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
+            void BeginVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextResources);
+            void EndVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextResources);
 
             // Main Graphics API - GPU resource create/destroy functions
             ResourceHandle VulkanCreateResource(VulkanContextResources* vulkanContextResources, const ResourceDesc& resDesc);
@@ -181,18 +183,20 @@ namespace Tinker
             void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
                 ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
                 ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
-                const char* debugLabel);
+                const char* debugLabel, bool immediateSubmit);
             void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-                ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles);
+                ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles,
+                bool immediateSubmit);
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
-                const char* debugLabel);
+                const char* debugLabel, bool immediateSubmit);
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
-                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height);
+                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height,
+                bool immediateSubmit);
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
                 ResourceHandle renderPassHandle, ResourceHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
-                const char* debugLabel);
-            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources);
+                const char* debugLabel, bool immediateSubmit);
+            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources, bool immediateSubmit);
         }
     }
 }

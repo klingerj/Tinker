@@ -29,8 +29,10 @@ typedef struct dynamic_buffer_data
 typedef struct static_mesh_data
 {
     StaticBuffer m_positionBuffer;
+    StaticBuffer m_uvBuffer;
     StaticBuffer m_normalBuffer;
     StaticBuffer m_indexBuffer;
+    uint32 m_numIndices;
 } StaticMeshData;
 
 typedef struct dynamic_mesh_data
@@ -42,8 +44,9 @@ typedef struct dynamic_mesh_data
     uint32 m_numIndices;
 } DynamicMeshData;
 
-void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
-    DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes, const char* debugLabel);
+void CopyStagingBufferToGPUBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
+    ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
+    const char* debugLabel);
 
 void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
     ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
@@ -60,23 +63,24 @@ typedef struct game_graphic_data
 {
     ResourceHandle m_imageHandle;
     ResourceHandle m_framebufferHandle;
+    ResourceHandle m_mainRenderPassHandle;
 
     ShaderHandle m_shaderHandle;
-    ShaderHandle m_blitShaderHandle;
-    DescriptorHandle m_swapChainBlitDescHandle;
     DescriptorHandle m_modelMatrixDescHandle1;
     ResourceHandle m_modelMatrixBufferHandle1;
     void* m_modelMatrixBufferMemPtr1;
-    ResourceHandle m_mainRenderPassHandle;
+
+    ShaderHandle m_blitShaderHandle;
+    DescriptorHandle m_swapChainBlitDescHandle;
 } GameGraphicsData;
 
 template <uint32 numPoints, uint32 numIndices>
 struct default_geometry
 {
-    DynamicBuffer m_positionBuffer;
-    DynamicBuffer m_uvBuffer;
-    DynamicBuffer m_normalBuffer;
-    DynamicBuffer m_indexBuffer;
+    StaticBuffer m_positionBuffer;
+    StaticBuffer m_uvBuffer;
+    StaticBuffer m_normalBuffer;
+    StaticBuffer m_indexBuffer;
     Core::Math::v4f m_points[numPoints];
     Core::Math::v2f m_uvs[numPoints];
     Core::Math::v3f m_normals[numPoints];

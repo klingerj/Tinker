@@ -1,15 +1,16 @@
 #include "GameGraphicsTypes.h"
 
-void UpdateDynamicBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
-    DynamicBuffer* dynamicBuffer, uint32 bufferSizeInBytes, const char* debugLabel)
+void CopyStagingBufferToGPUBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
+    ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
+    const char* debugLabel)
 {
     Platform::GraphicsCommand command = {};
     command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
     command.debugLabel = debugLabel;
 
     command.m_sizeInBytes = bufferSizeInBytes;
-    command.m_srcBufferHandle = dynamicBuffer->stagingBufferHandle;
-    command.m_dstBufferHandle = dynamicBuffer->gpuBufferHandle;
+    command.m_srcBufferHandle = stagingBufferHandle;
+    command.m_dstBufferHandle = gpuBufferHandle;
     graphicsCommands.push_back(command);
 }
 

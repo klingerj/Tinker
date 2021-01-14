@@ -86,7 +86,8 @@ void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platf
     delete objFileDataBuffer;
 }
 
-void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs,
+    Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
 {
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
     {
@@ -94,44 +95,47 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         ResourceDesc desc;
         desc.resourceType = Platform::eResourceTypeBuffer1D;
 
+        ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
+        void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
+
         // Positions
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
         desc.bufferUsage = Platform::eBufferUsageVertex;
-        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-        
+        m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+
         desc.bufferUsage = Platform::eBufferUsageStaging;
-        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferHandle);
+        stagingBufferHandle_Pos = platformFuncs->CreateResource(desc);
+        stagingBufferMemPtr_Pos = platformFuncs->MapResource(stagingBufferHandle_Pos);
 
         // UVs
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), 0, 0);
         desc.bufferUsage = Platform::eBufferUsageVertex;
-        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+        m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
         desc.bufferUsage = Platform::eBufferUsageStaging;
-        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferHandle);
+        stagingBufferHandle_UV = platformFuncs->CreateResource(desc);
+        stagingBufferMemPtr_UV = platformFuncs->MapResource(stagingBufferHandle_UV);
 
         // Normals
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), 0, 0);
         desc.bufferUsage = Platform::eBufferUsageVertex;
-        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+        m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
         desc.bufferUsage = Platform::eBufferUsageStaging;
-        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferHandle);
+        stagingBufferHandle_Norm = platformFuncs->CreateResource(desc);
+        stagingBufferMemPtr_Norm = platformFuncs->MapResource(stagingBufferHandle_Norm);
 
         // Indices
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), 0, 0);
         desc.bufferUsage = Platform::eBufferUsageIndex;
-        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+        m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
         desc.bufferUsage = Platform::eBufferUsageStaging;
-        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferMemPtr = platformFuncs->MapResource(m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferHandle);
+        stagingBufferHandle_Idx = platformFuncs->CreateResource(desc);
+        stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
 
-
-        m_allMeshGraphicsHandles[uiAsset].m_numIndices = m_allMeshData[uiAsset].m_numVertices;
+        m_allStaticMeshGraphicsHandles[uiAsset].m_numIndices = m_allMeshData[uiAsset].m_numVertices;
+        //-----
 
         // Memcpy data into staging buffer
         uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
@@ -143,17 +147,76 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         v2f* uvBuffer       = (v2f*)((uint8*)positionBuffer + numPositionBytes);
         v3f* normalBuffer   = (v3f*)((uint8*)uvBuffer + numUVBytes);
         uint32* indexBuffer = (uint32*)((uint8*)normalBuffer + numNormalBytes);
-        memcpy(m_allMeshGraphicsHandles[uiAsset].m_positionBuffer.stagingBufferMemPtr, positionBuffer, numPositionBytes);
-        memcpy(m_allMeshGraphicsHandles[uiAsset].m_uvBuffer.stagingBufferMemPtr, uvBuffer, numUVBytes);
-        memcpy(m_allMeshGraphicsHandles[uiAsset].m_normalBuffer.stagingBufferMemPtr, normalBuffer, numNormalBytes);
-        memcpy(m_allMeshGraphicsHandles[uiAsset].m_indexBuffer.stagingBufferMemPtr, indexBuffer, numIndexBytes);
+        memcpy(stagingBufferMemPtr_Pos, positionBuffer, numPositionBytes);
+        memcpy(stagingBufferMemPtr_UV, uvBuffer, numUVBytes);
+        memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
+        memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
+        //-----
+
+        // Create, submit, and execute the buffer copy commands
+        {
+            // Graphics command to copy from staging buffer to gpu local buffer
+            Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
+            // Position buffer copy
+            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->debugLabel = "Update Asset Vtx Pos Buf";
+            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
+            command->m_srcBufferHandle = stagingBufferHandle_Pos;
+            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle;
+            ++graphicsCommandStream->m_numCommands;
+            ++command;
+
+            // UV buffer copy
+            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->debugLabel = "Update Asset Vtx UV Buf";
+            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
+            command->m_srcBufferHandle = stagingBufferHandle_UV;
+            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle;
+            ++graphicsCommandStream->m_numCommands;
+            ++command;
+
+            // Normal buffer copy
+            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->debugLabel = "Update Asset Vtx Norm Buf";
+            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
+            command->m_srcBufferHandle = stagingBufferHandle_Norm;
+            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle;
+            ++graphicsCommandStream->m_numCommands;
+            ++command;
+
+            // Index buffer copy
+            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->debugLabel = "Update Asset Vtx Idx Buf";
+            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
+            command->m_srcBufferHandle = stagingBufferHandle_Idx;
+            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle;
+            ++graphicsCommandStream->m_numCommands;
+            ++command;
+
+            // Perform the copies
+            platformFuncs->SubmitCmdsImmediate(graphicsCommandStream);
+            graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+        }
+
+        // Unmap the buffer resource
+        platformFuncs->UnmapResource(stagingBufferHandle_Pos);
+        platformFuncs->UnmapResource(stagingBufferHandle_UV);
+        platformFuncs->UnmapResource(stagingBufferHandle_Norm);
+        platformFuncs->UnmapResource(stagingBufferHandle_Idx);
+
+        // Destroy the staging buffer resources
+        platformFuncs->DestroyResource(stagingBufferHandle_Pos);
+        platformFuncs->DestroyResource(stagingBufferHandle_UV);
+        platformFuncs->DestroyResource(stagingBufferHandle_Norm);
+        platformFuncs->DestroyResource(stagingBufferHandle_Idx);
     }
 }
 
-DynamicMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)
+StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)
 {
     TINKER_ASSERT(meshID != TINKER_INVALID_HANDLE);
     TINKER_ASSERT(meshID < TINKER_MAX_ASSETS);
     TINKER_ASSERT(meshID >= 0);
-    return &m_allMeshGraphicsHandles[meshID];
+    return &m_allStaticMeshGraphicsHandles[meshID];
 }

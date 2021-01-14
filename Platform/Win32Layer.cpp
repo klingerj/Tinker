@@ -173,47 +173,9 @@ ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
 }
 #endif
 
-void BeginFrameRecording()
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            BeginVulkanCommandRecording(&vulkanContextResources);
-            break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-        }
-    }
-}
-
-void EndFrameRecording()
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            EndVulkanCommandRecording(&vulkanContextResources);
-            break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-        }
-    }
-}
-
-static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandStream)
+static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit)
 {
     TINKER_ASSERT(graphicsCommandStream->m_numCommands <= graphicsCommandStream->m_maxCommands);
-
-    BeginFrameRecording();
 
     for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
     {
@@ -232,13 +194,14 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         if (currentShader != currentCmd.m_shaderHandle)
                         {
-                            Graphics::VulkanRecordCommandBindShader(&vulkanContextResources, currentCmd.m_shaderHandle, &currentCmd.m_descriptors[0]);
+                            Graphics::VulkanRecordCommandBindShader(&vulkanContextResources,
+                                currentCmd.m_shaderHandle, &currentCmd.m_descriptors[0], immediateSubmit);
                             currentShader = currentCmd.m_shaderHandle;
                         }
                         Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
                             currentCmd.m_positionBufferHandle, currentCmd.m_uvBufferHandle,
                             currentCmd.m_normalBufferHandle, currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
-                            currentCmd.debugLabel);
+                            currentCmd.debugLabel, immediateSubmit);
                         break;
                     }
 
@@ -260,7 +223,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         Graphics::VulkanRecordCommandMemoryTransfer(&vulkanContextResources,
                             currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
-                            currentCmd.debugLabel);
+                            currentCmd.debugLabel, immediateSubmit);
                         break;
                     }
 
@@ -282,7 +245,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_renderPassHandle,
                             currentCmd.m_framebufferHandle, currentCmd.m_renderWidth, currentCmd.m_renderHeight,
-                            currentCmd.debugLabel);
+                            currentCmd.debugLabel, immediateSubmit);
                         break;
                     }
 
@@ -302,7 +265,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        Graphics::VulkanRecordCommandRenderPassEnd(&vulkanContextResources);
+                        Graphics::VulkanRecordCommandRenderPassEnd(&vulkanContextResources, immediateSubmit);
                         break;
                     }
 
@@ -325,7 +288,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         Graphics::VulkanRecordCommandImageCopy(&vulkanContextResources,
                             currentCmd.m_srcImgHandle, currentCmd.m_dstImgHandle,
-                            currentCmd.m_width, currentCmd.m_height);
+                            currentCmd.m_width, currentCmd.m_height, immediateSubmit);
                         break;
                     }
 
@@ -347,8 +310,49 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
             }
         }
     }
+}
 
-    EndFrameRecording();
+SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
+{
+    Graphics::BeginVulkanCommandRecordingImmediate(&vulkanContextResources);
+    ProcessGraphicsCommandStream(graphicsCommandStream, true);
+    Graphics::EndVulkanCommandRecordingImmediate(&vulkanContextResources);
+}
+
+static void BeginFrameRecording()
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            BeginVulkanCommandRecording(&vulkanContextResources);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+        }
+    }
+}
+
+static void EndFrameRecording()
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case eGraphicsAPIVulkan:
+        {
+            EndVulkanCommandRecording(&vulkanContextResources);
+            break;
+        }
+
+        default:
+        {
+            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+            runGame = false;
+        }
+    }
 }
 
 static void SubmitFrameToGPU()
@@ -991,6 +995,7 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.DestroyAllDescriptors = DestroyAllDescriptors;
     g_platformAPIFuncs.DestroyDescriptor = DestroyDescriptor;
     g_platformAPIFuncs.WriteDescriptor = WriteDescriptor;
+    g_platformAPIFuncs.SubmitCmdsImmediate = SubmitCmdsImmediate;
 
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
@@ -1035,6 +1040,7 @@ wWinMain(HINSTANCE hInstance,
 
         if (shouldRenderFrame)
         {
+            // Call game update and populate graphics command stream
             int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
             if (error != 0)
             {
@@ -1042,7 +1048,11 @@ wWinMain(HINSTANCE hInstance,
                 runGame = false;
                 break;
             }
-            ProcessGraphicsCommandStream(&graphicsCommandStream);
+
+            // Process command stream
+            BeginFrameRecording();
+            ProcessGraphicsCommandStream(&graphicsCommandStream, false);
+            EndFrameRecording();
             SubmitFrameToGPU();
         }
 

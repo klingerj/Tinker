@@ -25,10 +25,10 @@ using namespace Math;
 #define DEFAULT_QUAD_NUM_INDICES 6
 DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {
     // buffer handles
-    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
-    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
-    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
-    { DefaultResHandle_Invalid, DefaultResHandle_Invalid, nullptr },
+    { DefaultResHandle_Invalid },
+    { DefaultResHandle_Invalid },
+    { DefaultResHandle_Invalid },
+    { DefaultResHandle_Invalid },
     // positions
     v4f(-1.0f, -1.0f, 0.0f, 1.0f),
     v4f(1.0f, -1.0f, 0.0f, 1.0f),
@@ -200,6 +200,114 @@ void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 win
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
+void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Platform::GraphicsCommandStream* graphicsCommandStream)
+{
+    // Default Quad
+    {
+        ResourceDesc desc;
+        desc.resourceType = Platform::eResourceTypeBuffer1D;
+
+        // Positions
+        desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageVertex;
+        defaultQuad.m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        ResourceHandle stagingBufferHandle_Pos = platformFuncs->CreateResource(desc);
+        void* stagingBufferMemPtr_Pos = platformFuncs->MapResource(stagingBufferHandle_Pos);
+
+        // UVs
+        desc.dims = v3ui(sizeof(defaultQuad.m_uvs), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageVertex;
+        defaultQuad.m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        ResourceHandle stagingBufferHandle_UV = platformFuncs->CreateResource(desc);
+        void* stagingBufferMemPtr_UV = platformFuncs->MapResource(stagingBufferHandle_UV);
+
+        // Normals
+        desc.dims = v3ui(sizeof(defaultQuad.m_normals), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageVertex;
+        defaultQuad.m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        ResourceHandle stagingBufferHandle_Norm = platformFuncs->CreateResource(desc);
+        void* stagingBufferMemPtr_Norm = platformFuncs->MapResource(stagingBufferHandle_Norm);
+
+        // Indices
+        desc.dims = v3ui(sizeof(defaultQuad.m_indices), 0, 0);
+        desc.bufferUsage = Platform::eBufferUsageIndex;
+        defaultQuad.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
+
+        desc.bufferUsage = Platform::eBufferUsageStaging;
+        ResourceHandle stagingBufferHandle_Idx = platformFuncs->CreateResource(desc);
+        void* stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
+
+        // Memcpy into staging buffers
+        memcpy(stagingBufferMemPtr_Pos, defaultQuad.m_points, sizeof(defaultQuad.m_points));
+        memcpy(stagingBufferMemPtr_UV, defaultQuad.m_uvs, sizeof(defaultQuad.m_uvs));
+        memcpy(stagingBufferMemPtr_Norm, defaultQuad.m_normals, sizeof(defaultQuad.m_normals));
+        memcpy(stagingBufferMemPtr_Idx, defaultQuad.m_indices, sizeof(defaultQuad.m_indices));
+
+        // Do GPU buffer copies
+        Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->debugLabel = "Update Default Quad Vtx Pos Buf";
+        command->m_sizeInBytes = sizeof(defaultQuad.m_points);
+        command->m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
+        command->m_srcBufferHandle = stagingBufferHandle_Pos;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->debugLabel = "Update Default Quad Vtx UV Buf";
+        command->m_sizeInBytes = sizeof(defaultQuad.m_uvs);
+        command->m_dstBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
+        command->m_srcBufferHandle = stagingBufferHandle_UV;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->debugLabel = "Update Default Quad Vtx Norm Buf";
+        command->m_sizeInBytes = sizeof(defaultQuad.m_normals);
+        command->m_dstBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
+        command->m_srcBufferHandle = stagingBufferHandle_Norm;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->debugLabel = "Update Default Quad Vtx Idx Buf";
+        command->m_sizeInBytes = sizeof(defaultQuad.m_indices);
+        command->m_dstBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
+        command->m_srcBufferHandle = stagingBufferHandle_Idx;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        platformFuncs->SubmitCmdsImmediate(graphicsCommandStream);
+        graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+
+        // Unmap + destroy resources
+        platformFuncs->UnmapResource(stagingBufferHandle_Pos);
+        platformFuncs->UnmapResource(stagingBufferHandle_UV);
+        platformFuncs->UnmapResource(stagingBufferHandle_Norm);
+        platformFuncs->UnmapResource(stagingBufferHandle_Idx);
+
+        platformFuncs->DestroyResource(stagingBufferHandle_Pos);
+        platformFuncs->DestroyResource(stagingBufferHandle_UV);
+        platformFuncs->DestroyResource(stagingBufferHandle_Norm);
+        platformFuncs->DestroyResource(stagingBufferHandle_Idx);
+    }
+}
+
+void DestroyDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs)
+{
+    // Default quad
+    platformFuncs->DestroyResource(defaultQuad.m_positionBuffer.gpuBufferHandle);
+    platformFuncs->DestroyResource(defaultQuad.m_uvBuffer.gpuBufferHandle);
+    platformFuncs->DestroyResource(defaultQuad.m_normalBuffer.gpuBufferHandle);
+    platformFuncs->DestroyResource(defaultQuad.m_indexBuffer.gpuBufferHandle);
+}
+
 void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     ResourceDesc desc;
@@ -294,64 +402,11 @@ GAME_UPDATE(GameUpdate)
 
         // Load mesh files
         g_AssetManager.LoadAllAssets(platformFuncs);
-        g_AssetManager.InitAssetGraphicsResources(platformFuncs);
+        g_AssetManager.InitAssetGraphicsResources(platformFuncs, graphicsCommandStream);
 
         graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
 
-        // Default geometry
-        ResourceDesc desc;
-        desc.resourceType = Platform::eResourceTypeBuffer1D;
-
-        desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
-        defaultQuad.m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::eBufferUsageStaging;
-        defaultQuad.m_positionBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        defaultQuad.m_positionBuffer.stagingBufferMemPtr = platformFuncs->MapResource(defaultQuad.m_positionBuffer.stagingBufferHandle);
-        memcpy(defaultQuad.m_positionBuffer.stagingBufferMemPtr, defaultQuad.m_points, desc.dims.x);
-
-        desc.dims = v3ui(sizeof(defaultQuad.m_uvs), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
-        defaultQuad.m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::eBufferUsageStaging;
-        defaultQuad.m_uvBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        defaultQuad.m_uvBuffer.stagingBufferMemPtr = platformFuncs->MapResource(defaultQuad.m_uvBuffer.stagingBufferHandle);
-        memcpy(defaultQuad.m_uvBuffer.stagingBufferMemPtr, defaultQuad.m_uvs, desc.dims.x);
-
-        desc.dims = v3ui(sizeof(defaultQuad.m_normals), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
-        defaultQuad.m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::eBufferUsageStaging;
-        defaultQuad.m_normalBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        defaultQuad.m_normalBuffer.stagingBufferMemPtr = platformFuncs->MapResource(defaultQuad.m_normalBuffer.stagingBufferHandle);
-        memcpy(defaultQuad.m_normalBuffer.stagingBufferMemPtr, defaultQuad.m_normals, desc.dims.x);
-
-        desc.dims = v3ui(sizeof(defaultQuad.m_indices), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageIndex;
-        defaultQuad.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::eBufferUsageStaging;
-        defaultQuad.m_indexBuffer.stagingBufferHandle = platformFuncs->CreateResource(desc);
-        defaultQuad.m_indexBuffer.stagingBufferMemPtr = platformFuncs->MapResource(defaultQuad.m_indexBuffer.stagingBufferHandle);
-        memcpy(defaultQuad.m_indexBuffer.stagingBufferMemPtr, defaultQuad.m_indices, desc.dims.x);
-
-        Platform::GraphicsCommand command = {};
-        command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
-        command.m_sizeInBytes = sizeof(defaultQuad.m_points);
-        command.m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
-        command.m_srcBufferHandle = defaultQuad.m_positionBuffer.stagingBufferHandle;
-        graphicsCommands.push_back(command);
-        command.m_sizeInBytes = sizeof(defaultQuad.m_indices);
-        command.m_dstBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
-        command.m_srcBufferHandle = defaultQuad.m_indexBuffer.stagingBufferHandle;
-        graphicsCommands.push_back(command);
-        command.m_sizeInBytes = sizeof(defaultQuad.m_normals);
-        command.m_dstBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
-        command.m_srcBufferHandle = defaultQuad.m_normalBuffer.stagingBufferHandle;
-        graphicsCommands.push_back(command);
+        CreateDefaultGeometry(platformFuncs, graphicsCommandStream);
 
         CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
 
@@ -402,7 +457,8 @@ GAME_UPDATE(GameUpdate)
     Platform::GraphicsCommand command = {};
 
     // Record buffer update commands
-    for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
+    // TODO: have dynamic assets?
+    /*for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
     {
         DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
 
@@ -410,7 +466,7 @@ GAME_UPDATE(GameUpdate)
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_uvBuffer, meshData->m_numIndices * sizeof(v2f), "Update Asset Vtx Uv Buf");
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f), "Update Asset Vtx Norm Buf");
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idx Buf");
-    }
+    }*/
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
     command.debugLabel = "Main Draw Pass";
@@ -427,7 +483,7 @@ GAME_UPDATE(GameUpdate)
 
     for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
     {
-        DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
+        StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
 
         DrawMeshDataCommand(graphicsCommands,
             meshData->m_numIndices,
@@ -528,44 +584,17 @@ GAME_DESTROY(GameDestroy)
     {
         DestroyWindowResizeDependentResources(platformFuncs);
 
-        // Default geometry
-        platformFuncs->DestroyResource(defaultQuad.m_positionBuffer.gpuBufferHandle);
-        platformFuncs->UnmapResource(defaultQuad.m_positionBuffer.stagingBufferHandle);
-        platformFuncs->DestroyResource(defaultQuad.m_positionBuffer.stagingBufferHandle);
-
-        platformFuncs->DestroyResource(defaultQuad.m_uvBuffer.gpuBufferHandle);
-        platformFuncs->UnmapResource(defaultQuad.m_uvBuffer.stagingBufferHandle);
-        platformFuncs->DestroyResource(defaultQuad.m_uvBuffer.stagingBufferHandle);
-
-        platformFuncs->DestroyResource(defaultQuad.m_normalBuffer.gpuBufferHandle);
-        platformFuncs->UnmapResource(defaultQuad.m_normalBuffer.stagingBufferHandle);
-        platformFuncs->DestroyResource(defaultQuad.m_normalBuffer.stagingBufferHandle);
-
-        platformFuncs->DestroyResource(defaultQuad.m_indexBuffer.gpuBufferHandle);
-        platformFuncs->UnmapResource(defaultQuad.m_indexBuffer.stagingBufferHandle);
-        platformFuncs->DestroyResource(defaultQuad.m_indexBuffer.stagingBufferHandle);
-        //-----
+        DestroyDefaultGeometry(platformFuncs);
 
         // Game graphics
         for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
         {
-            DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
+            StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
 
             platformFuncs->DestroyResource(meshData->m_positionBuffer.gpuBufferHandle);
-            platformFuncs->UnmapResource(meshData->m_positionBuffer.stagingBufferHandle);
-            platformFuncs->DestroyResource(meshData->m_positionBuffer.stagingBufferHandle);
-
             platformFuncs->DestroyResource(meshData->m_uvBuffer.gpuBufferHandle);
-            platformFuncs->UnmapResource(meshData->m_uvBuffer.stagingBufferHandle);
-            platformFuncs->DestroyResource(meshData->m_uvBuffer.stagingBufferHandle);
-
             platformFuncs->DestroyResource(meshData->m_normalBuffer.gpuBufferHandle);
-            platformFuncs->UnmapResource(meshData->m_normalBuffer.stagingBufferHandle);
-            platformFuncs->DestroyResource(meshData->m_normalBuffer.stagingBufferHandle);
-
             platformFuncs->DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
-            platformFuncs->UnmapResource(meshData->m_indexBuffer.stagingBufferHandle);
-            platformFuncs->DestroyResource(meshData->m_indexBuffer.stagingBufferHandle);
         }
 
         if (isMultiplayer && connectedToServer)
