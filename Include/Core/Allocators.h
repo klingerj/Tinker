@@ -9,12 +9,11 @@ namespace Tinker
         template <size_t Size = 0, uint32 Alignment = 1>
         class LinearAllocator
         {
-        private:
+        public:
             size_t m_size;
             uint8* m_ownedMemPtr = nullptr;
             size_t m_nextAllocOffset = 0;
 
-        public:
             LinearAllocator()
             {
                 TINKER_ASSERT(ISPOW2(Alignment));
@@ -36,7 +35,11 @@ namespace Tinker
 
             void Free()
             {
-                if (m_ownedMemPtr) Platform::FreeAligned(m_ownedMemPtr);
+                if (m_ownedMemPtr)
+                {
+                    Platform::FreeAligned(m_ownedMemPtr);
+                    m_ownedMemPtr = nullptr;
+                }
                 m_nextAllocOffset = 0;
                 m_size = 0;
             }
