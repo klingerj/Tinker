@@ -4,6 +4,70 @@ namespace Tinker
 {
     namespace Platform
     {
+        // Enums
+        enum DescriptorType : uint32
+        {
+            eDescriptorTypeBuffer = 0,
+            eDescriptorTypeSampledImage,
+            eDescriptorTypeMax
+        };
+
+        enum BufferUsage : uint32
+        {
+            eBufferUsageVertex = 0,
+            eBufferUsageIndex,
+            eBufferUsageStaging,
+            eBufferUsageUniform
+        };
+
+        enum ResourceType : uint32
+        {
+            eResourceTypeBuffer1D = 0,
+            eResourceTypeImage2D,
+            eResourceTypeMax
+        };
+
+        enum BlendState : uint32
+        {
+            eBlendStateAlphaBlend = 0,
+            eBlendStateMax
+        };
+
+        enum DepthState : uint32
+        {
+            eDepthStateOff = 0,
+            eDepthStateTestOnWriteOn,
+            eDepthStateMax
+        };
+
+        enum ImageFormat : uint32
+        {
+            eImageFormat_BGRA8_Unorm = 0,
+            eImageFormat_RGBA8_Unorm,
+            eImageFormat_Depth_32F,
+            eImageFormat_Invalid,
+            eImageFormatMax
+        };
+
+        enum ImageLayout : uint32
+        {
+            eImageLayoutUndefined = 0,
+            eImageLayoutShaderRead,
+            eImageLayoutColorAttachment,
+            eImageLayoutSwapChainPresent,
+            eImageLayoutMax
+        };
+
+        enum GraphicsCmdType : uint32
+        {
+            eGraphicsCmdDrawCall = 0,
+            eGraphicsCmdMemTransfer,
+            eGraphicsCmdRenderPassBegin,
+            eGraphicsCmdRenderPassEnd,
+            eGraphicsCmdImageCopy,
+            eGraphicsCmdMax
+        };
+
         // Concrete type for resource handle to catch errors at compile time, e.g.
         // Try to free a descriptor set with a resource handle, which can happen if all handles
         // are just plain uint32.
@@ -34,6 +98,24 @@ namespace Tinker
         };
         #define DefaultResHandle_Invalid ResourceHandle()
 
+        typedef struct graphics_resource_description
+        {
+            Core::Math::v3ui dims;
+            uint32 resourceType;
+
+            union
+            {
+                // Buffers
+                uint32 bufferUsage;
+
+                // Images
+                struct
+                {
+                    uint32 imageFormat;
+                };
+            };
+        } ResourceDesc;
+
         struct ShaderHandle
         {
             uint32 m_hShader;
@@ -60,6 +142,33 @@ namespace Tinker
             }
         };
         #define DefaultShaderHandle_Invalid ShaderHandle()
+
+        struct FramebufferHandle
+        {
+            uint32 m_hFramebuffer;
+
+            FramebufferHandle()
+            {
+                m_hFramebuffer = TINKER_INVALID_HANDLE;
+            }
+
+            // Warning: probably don't pass around handles as uint32 willy-nilly
+            explicit FramebufferHandle(uint32 h)
+            {
+                m_hFramebuffer = h;
+            }
+
+            inline bool operator==(const FramebufferHandle& other) const
+            {
+                return m_hFramebuffer == other.m_hFramebuffer;
+            }
+
+            inline bool operator!=(const FramebufferHandle& other) const
+            {
+                return m_hFramebuffer != other.m_hFramebuffer;
+            }
+        };
+        #define DefaultFramebufferHandle_Invalid FramebufferHandle()
 
         struct DescriptorHandle
         {
@@ -91,30 +200,15 @@ namespace Tinker
         #define MAX_DESCRIPTOR_SETS_PER_SHADER 1
         #define MAX_DESCRIPTORS_PER_SET 1
 
-        enum
-        {
-            eDescriptorTypeBuffer = 0,
-            eDescriptorTypeSampledImage,
-            eDescriptorTypeMax
-        };
-
-        enum
-        {
-            eBufferUsageVertex = 0,
-            eBufferUsageIndex,
-            eBufferUsageStaging,
-            eBufferUsageUniform
-        };
-
-        typedef struct descriptor_type
+        typedef struct descriptor_layout_params
         {
             uint32 type;
             uint32 amount;
-        } DescriptorType;
+        } DescriptorLayoutParams;
 
         typedef struct descriptor_layout
         {
-            DescriptorType descriptorTypes[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET];
+            DescriptorLayoutParams descriptorLayoutParams[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET];
         } DescriptorLayout;
 
         // list of resource handles in a descriptor set
@@ -135,8 +229,8 @@ namespace Tinker
             {
                 for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
                 {
-                    layout->descriptorTypes[uiDescSet][uiDesc].type = eDescriptorTypeMax;
-                    layout->descriptorTypes[uiDescSet][uiDesc].amount = 0;
+                    layout->descriptorLayoutParams[uiDescSet][uiDesc].type = eDescriptorTypeMax;
+                    layout->descriptorLayoutParams[uiDescSet][uiDesc].amount = 0;
                 }
             }
         }
@@ -148,38 +242,6 @@ namespace Tinker
                 descSetDescHandles->handles[uiDesc] = DefaultDescHandle_Invalid;
             }
         }
-
-        enum
-        {
-            eBlendStateAlphaBlend = 0,
-            eBlendStateMax
-        };
-
-        enum
-        {
-            eDepthStateTestOnWriteOn = 0,
-            eDepthStateOff,
-            eDepthStateMax
-        };
-
-        enum
-        {
-            eImageLayoutUndefined = 0,
-            eImageLayoutShaderRead,
-            eImageLayoutColorAttachment,
-            eImageLayoutSwapChainPresent,
-            eImageLayoutMax
-        };
-
-        enum
-        {
-            eGraphicsCmdDrawCall = 0,
-            eGraphicsCmdMemTransfer,
-            eGraphicsCmdRenderPassBegin,
-            eGraphicsCmdRenderPassEnd,
-            eGraphicsCmdImageCopy,
-            eGraphicsCmdMax
-        };
 
         typedef struct graphics_command
         {
@@ -210,8 +272,7 @@ namespace Tinker
                 // Begin render pass
                 struct
                 {
-                    ResourceHandle m_renderPassHandle;
-                    ResourceHandle m_framebufferHandle;
+                    FramebufferHandle m_framebufferHandle;
                     uint32 m_renderWidth;
                     uint32 m_renderHeight;
                 };
@@ -248,33 +309,9 @@ namespace Tinker
             uint32 depthState;
             uint32 viewportWidth;
             uint32 viewportHeight;
-            ResourceHandle renderPassHandle;
+            FramebufferHandle framebufferHandle;
             DescriptorHandle descriptorHandle;
         } GraphicsPipelineParams;
-
-        enum : uint32
-        {
-            eResourceTypeBuffer1D = 0,
-            eResourceTypeImage2D,
-            eResourceTypeMax
-        };
-
-        typedef struct graphics_resource_description
-        {
-            uint32 resourceType;
-            Core::Math::v3ui dims;
-
-            union
-            {
-                uint32 bufferUsage;
-
-                /*struct
-                {
-                    uint32 ;
-                };*/ // TODO: image params, e.g. format
-            };
-
-        } ResourceDesc;
 
         #define CREATE_RESOURCE(name) ResourceHandle name(const ResourceDesc& resDesc)
         typedef CREATE_RESOURCE(create_resource);
@@ -288,23 +325,17 @@ namespace Tinker
         #define UNMAP_RESOURCE(name) void name(ResourceHandle handle)
         typedef UNMAP_RESOURCE(unmap_resource);
 
-        #define CREATE_FRAMEBUFFER(name) ResourceHandle name(ResourceHandle* imageViewResourceHandles, uint32 numImageViewResourceHandles, uint32 width, uint32 height, ResourceHandle renderPassHandle)
+        #define CREATE_FRAMEBUFFER(name) FramebufferHandle name(ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle, uint32 colorEndLayout, uint32 width, uint32 height)
         typedef CREATE_FRAMEBUFFER(create_framebuffer);
 
-        #define DESTROY_FRAMEBUFFER(name) void name(ResourceHandle handle)
+        #define DESTROY_FRAMEBUFFER(name) void name(FramebufferHandle handle)
         typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
 
-        #define CREATE_GRAPHICS_PIPELINE(name) ShaderHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, ResourceHandle renderPassHandle, DescriptorHandle descriptorHandle)
+        #define CREATE_GRAPHICS_PIPELINE(name) ShaderHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, FramebufferHandle framebufferHandle, DescriptorHandle descriptorHandle)
         typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
         #define DESTROY_GRAPHICS_PIPELINE(name) void name(ShaderHandle handle)
         typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
-
-        #define CREATE_RENDER_PASS(name) ResourceHandle name(uint32 startLayout, uint32 endLayout)
-        typedef CREATE_RENDER_PASS(create_render_pass);
-
-        #define DESTROY_RENDER_PASS(name) void name(ResourceHandle handle)
-        typedef DESTROY_RENDER_PASS(destroy_render_pass);
         
         #define CREATE_DESCRIPTOR(name) DescriptorHandle name(DescriptorLayout* descLayout)
         typedef CREATE_DESCRIPTOR(create_descriptor);

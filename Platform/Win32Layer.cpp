@@ -243,8 +243,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_renderPassHandle,
-                            currentCmd.m_framebufferHandle, currentCmd.m_renderWidth, currentCmd.m_renderHeight,
+                        Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_framebufferHandle,
+                            currentCmd.m_renderWidth, currentCmd.m_renderHeight,
                             currentCmd.debugLabel, immediateSubmit);
                         break;
                     }
@@ -400,8 +400,8 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
         case eGraphicsAPIVulkan:
         {
             return Graphics::VulkanCreateFramebuffer(&vulkanContextResources,
-                imageViewResourceHandles, numImageViewResourceHandles,
-                width, height, renderPassHandle);
+                rtColorHandles, numRTColorHandles, rtDepthHandle,
+                colorEndLayout, width, height);
             //break;
         }
 
@@ -409,7 +409,7 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
         {
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
-            return DefaultResHandle_Invalid;
+            return DefaultFramebufferHandle_Invalid;
         }
     }
 }
@@ -423,7 +423,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
                     vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
                     numFragmentShaderBytes, blendState, depthState,
-                    viewportWidth, viewportHeight, renderPassHandle, descriptorHandle);
+                    viewportWidth, viewportHeight, framebufferHandle, descriptorHandle);
             //break;
         }
 
@@ -432,26 +432,6 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             runGame = false;
             return DefaultShaderHandle_Invalid;
-        }
-    }
-}
-
-CREATE_RENDER_PASS(CreateRenderPass)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            return Graphics::VulkanCreateRenderPass(&vulkanContextResources, startLayout, endLayout);
-            //break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            return DefaultResHandle_Invalid;
-            //break;
         }
     }
 }
@@ -521,25 +501,6 @@ DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
         case eGraphicsAPIVulkan:
         {
             Graphics::VulkanDestroyGraphicsPipeline(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-DESTROY_RENDER_PASS(DestroyRenderPass)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case eGraphicsAPIVulkan:
-        {
-            Graphics::VulkanDestroyRenderPass(&vulkanContextResources, handle);
             break;
         }
 
@@ -989,8 +950,6 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
     g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
     g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
-    g_platformAPIFuncs.CreateRenderPass = CreateRenderPass;
-    g_platformAPIFuncs.DestroyRenderPass = DestroyRenderPass;
     g_platformAPIFuncs.CreateDescriptor = CreateDescriptor;
     g_platformAPIFuncs.DestroyAllDescriptors = DestroyAllDescriptors;
     g_platformAPIFuncs.DestroyDescriptor = DestroyDescriptor;

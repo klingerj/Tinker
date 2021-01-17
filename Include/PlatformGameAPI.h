@@ -55,8 +55,8 @@ namespace Tinker
             destroy_framebuffer* DestroyFramebuffer;
             create_graphics_pipeline* CreateGraphicsPipeline;
             destroy_graphics_pipeline* DestroyGraphicsPipeline;
-            create_render_pass* CreateRenderPass;
-            destroy_render_pass* DestroyRenderPass;
+            //create_render_pass* CreateRenderPass;
+            //destroy_render_pass* DestroyRenderPass;
             create_descriptor* CreateDescriptor;
             destroy_descriptor* DestroyDescriptor;
             destroy_all_descriptors* DestroyAllDescriptors;
