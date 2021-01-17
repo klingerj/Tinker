@@ -108,7 +108,7 @@ Platform::ShaderHandle LoadShader(const Platform::PlatformAPIFuncs* platformFunc
     platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
     platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
 
-    return platformFuncs->CreateGraphicsPipeline(vertexShaderBuffer, vertexShaderFileSize, fragmentShaderBuffer, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->renderPassHandle, params->descriptorHandle);
+    return platformFuncs->CreateGraphicsPipeline(vertexShaderBuffer, vertexShaderFileSize, fragmentShaderBuffer, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->framebufferHandle, params->descriptorHandle);
 }
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -123,7 +123,7 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.depthState = Platform::eDepthStateTestOnWriteOn;
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
-    params.renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
+    params.framebufferHandle = gameGraphicsData.m_framebufferHandle;
     params.descriptorHandle = gameGraphicsData.m_modelMatrixDescHandle1;
     gameGraphicsData.m_shaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
 
@@ -131,7 +131,7 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.depthState = Platform::eDepthStateOff;
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
-    params.renderPassHandle = DefaultResHandle_Invalid;
+    params.framebufferHandle = DefaultFramebufferHandle_Invalid;
     params.descriptorHandle = gameGraphicsData.m_swapChainBlitDescHandle;
     gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\blit_vert_glsl.spv", "..\\Shaders\\spv\\blit_frag_glsl.spv", &params);
 }
@@ -163,12 +163,12 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     // Swap chain blit
     Platform::DescriptorLayout blitDescriptorLayout = {};
     Platform::InitDescLayout(&blitDescriptorLayout);
-    blitDescriptorLayout.descriptorTypes[0][0].type = Platform::eDescriptorTypeSampledImage;
-    blitDescriptorLayout.descriptorTypes[0][0].amount = 1;
+    blitDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::eDescriptorTypeSampledImage;
+    blitDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
     gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(&blitDescriptorLayout);
 
     Platform::DescriptorSetDataHandles blitHandles = {};
-    blitHandles.handles[0] = gameGraphicsData.m_imageHandle;
+    blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
     platformFuncs->WriteDescriptor(&blitDescriptorLayout, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 
     // Model matrix
@@ -181,8 +181,8 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 
     Platform::DescriptorLayout instanceDataDescriptorLayout = {};
     Platform::InitDescLayout(&instanceDataDescriptorLayout);
-    instanceDataDescriptorLayout.descriptorTypes[0][0].type = Platform::eDescriptorTypeBuffer;
-    instanceDataDescriptorLayout.descriptorTypes[0][0].amount = 1;
+    instanceDataDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::eDescriptorTypeBuffer;
+    instanceDataDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
     gameGraphicsData.m_modelMatrixDescHandle1 = platformFuncs->CreateDescriptor(&instanceDataDescriptorLayout);
 
     Platform::DescriptorSetDataHandles modeMatrixHandles = {};
@@ -313,9 +313,11 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     ResourceDesc desc;
     desc.resourceType = Platform::eResourceTypeImage2D;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
-    gameGraphicsData.m_imageHandle = platformFuncs->CreateResource(desc);
-    gameGraphicsData.m_mainRenderPassHandle = platformFuncs->CreateRenderPass(Platform::eImageLayoutUndefined, Platform::eImageLayoutShaderRead);
-    gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_imageHandle, 1, windowWidth, windowHeight, gameGraphicsData.m_mainRenderPassHandle);
+    desc.imageFormat = Platform::eImageFormat_RGBA8_Unorm;
+    gameGraphicsData.m_rtColorHandle = platformFuncs->CreateResource(desc);
+    desc.imageFormat = Platform::eImageFormat_Depth_32F;
+    gameGraphicsData.m_rtDepthHandle = platformFuncs->CreateResource(desc);
+    gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
 }
 
 void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
@@ -470,7 +472,7 @@ GAME_UPDATE(GameUpdate)
 
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
     command.debugLabel = "Main Draw Pass";
-    command.m_renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
+    //command.m_renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
     command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
     command.m_renderWidth = windowWidth;
     command.m_renderHeight = windowHeight;
@@ -500,7 +502,7 @@ GAME_UPDATE(GameUpdate)
     graphicsCommands.push_back(command);
 
     /*command.m_commandType = (uint32)Platform::eGraphicsCmdImageCopy;
-    command.m_srcImgHandle = gameGraphicsData.m_imageHandle;
+    command.m_srcImgHandle = gameGraphicsData.m_rtColorHandle;
     command.m_dstImgHandle = DefaultResHandle_Invalid;
     command.m_width = windowWidth;
     command.m_height = windowHeight;
@@ -509,8 +511,7 @@ GAME_UPDATE(GameUpdate)
     // Blit to screen
     command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
     command.debugLabel = "Blit to screen";
-    command.m_renderPassHandle = DefaultResHandle_Invalid;
-    command.m_framebufferHandle = DefaultResHandle_Invalid;
+    command.m_framebufferHandle = DefaultFramebufferHandle_Invalid;
     command.m_renderWidth = 0;
     command.m_renderHeight = 0;
     graphicsCommands.push_back(command);
@@ -554,9 +555,10 @@ GAME_UPDATE(GameUpdate)
 
 void DestroyWindowResizeDependentResources(const Platform::PlatformAPIFuncs* platformFuncs)
 {
-    platformFuncs->DestroyRenderPass(gameGraphicsData.m_mainRenderPassHandle);
+    //platformFuncs->DestroyRenderPass(gameGraphicsData.m_mainRenderPassHandle);
     platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
-    platformFuncs->DestroyResource(gameGraphicsData.m_imageHandle);
+    platformFuncs->DestroyResource(gameGraphicsData.m_rtColorHandle);
+    platformFuncs->DestroyResource(gameGraphicsData.m_rtDepthHandle);
 
     DestroyShaders(platformFuncs);
     DestroyDescriptors(platformFuncs);
