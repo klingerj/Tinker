@@ -599,6 +599,12 @@ GAME_DESTROY(GameDestroy)
             platformFuncs->DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
         }
 
+        for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numTextureAssets; ++uiAssetID)
+        {
+            ResourceHandle* textureHandle = g_AssetManager.GetTextureGraphicsDataByID(uiAssetID);
+            platformFuncs->DestroyResource(*textureHandle);
+        }
+
         if (isMultiplayer && connectedToServer)
         {
             platformFuncs->EndNetworkConnection();

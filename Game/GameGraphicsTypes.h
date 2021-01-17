@@ -53,11 +53,18 @@ void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommand
     ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
     const char* debugLabel);
 
-typedef struct meshTriangles
+typedef struct mesh_triangles
 {
     uint32 m_numVertices;
     uint8* m_vertexBufferData; // positions, uvs, normals, indices
 } MeshAttributeData;
+
+typedef struct texture_metadata
+{
+    Core::Math::v3ui m_dims;
+    uint16 m_bitsPerPixel;
+    // TODO: file type/ext?
+} TextureMetadata;
 
 typedef struct game_graphic_data
 {

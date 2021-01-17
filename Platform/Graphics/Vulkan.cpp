@@ -1794,14 +1794,6 @@ namespace Tinker
             {
                 VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
 
-                VkBuffer& dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->buffer;
-                VkBuffer& srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->buffer;
-
-                VkBufferCopy bufferCopy = {};
-                bufferCopy.srcOffset = 0;
-                bufferCopy.dstOffset = 0;
-                bufferCopy.size = sizeInBytes;
-
                 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
                 VkDebugUtilsLabelEXT label =
                 {
@@ -1813,7 +1805,66 @@ namespace Tinker
                 vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
                 #endif
 
-                vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
+                VulkanMemResource* dstResource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes);
+                switch (dstResource->resDesc.resourceType)
+                {
+                    case eResourceTypeBuffer1D:
+                    {
+                        VkBuffer& srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->buffer;
+                        VkBuffer& dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->buffer;
+
+                        VkBufferCopy bufferCopy = {};
+                        bufferCopy.srcOffset = 0; // TODO: make these function params
+                        bufferCopy.dstOffset = 0;
+                        bufferCopy.size = sizeInBytes;
+
+                        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
+
+                        break;
+                    }
+
+                    case eResourceTypeImage2D:
+                    {
+                        uint32 bytesPerPixel = 0;
+                        switch (dstResource->resDesc.imageFormat)
+                        {
+                            case eImageFormat_BGRA8_Unorm:
+                            case eImageFormat_RGBA8_Unorm:
+                            {
+                                bytesPerPixel = 32 / 8;
+                                break;
+                            }
+
+                            default:
+                            {
+                                LogMsg("Unsupported image copy dst format!", eLogSeverityCritical);
+                                TINKER_ASSERT(0);
+                                return;
+                            }
+                        }
+
+                        uint32 width = dstResource->resDesc.dims.x;
+                        uint32 height = (sizeInBytes / bytesPerPixel) / width;
+
+                        VkBuffer& srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->buffer;
+                        VkImage& dstImage = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->image;
+
+                        // TODO: make some of these function params
+                        VkBufferImageCopy region = {};
+                        region.bufferOffset = 0;
+                        region.bufferRowLength = 0;
+                        region.bufferImageHeight = 0;
+                        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                        region.imageSubresource.mipLevel = 0;
+                        region.imageSubresource.baseArrayLayer = 0;
+                        region.imageSubresource.layerCount = 1;
+                        region.imageOffset = { 0, 0, 0 };
+                        region.imageExtent = { width, height, 1 };
+
+                        vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+                        break;
+                    }
+                }
             }
 
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
@@ -2155,7 +2206,7 @@ namespace Tinker
                     case eImageFormat_BGRA8_Unorm:
                     case eImageFormat_RGBA8_Unorm:
                     {
-                        imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+                        imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
                         break;
                     }
                     

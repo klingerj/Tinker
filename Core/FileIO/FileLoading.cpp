@@ -246,6 +246,13 @@ namespace Tinker
 
                 delete attrReadBuffer;
             }
+
+            BMPInfo GetBMPInfo(uint8* entireFileBuffer)
+            {
+                // NOTE: assumes the buffer is a well-formed bmp file
+                // Skips the file header, which is immediately followed by the bmp info
+                return *(BMPInfo*)(entireFileBuffer + sizeof(BMPHeader));
+            }
         }
     }
 }
