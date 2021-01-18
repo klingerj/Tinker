@@ -48,11 +48,6 @@ void CopyStagingBufferToGPUBufferCommand(std::vector<Platform::GraphicsCommand>&
     ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
     const char* debugLabel);
 
-void DrawMeshDataCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands, uint32 numIndices,
-    ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
-    ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
-    const char* debugLabel);
-
 typedef struct mesh_triangles
 {
     uint32 m_numVertices;
