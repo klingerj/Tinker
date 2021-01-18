@@ -279,7 +279,29 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 break;
             }
 
-            case eGraphicsCmdImageCopy:
+            case eGraphicsCmdLayoutTransition:
+            {
+                switch (g_GlobalAppParams.m_graphicsAPI)
+                {
+                    case eGraphicsAPIVulkan:
+                    {
+                        Graphics::VulkanRecordCommandTransitionLayout(&vulkanContextResources, currentCmd.m_imageHandle,
+                            currentCmd.m_startLayout, currentCmd.m_endLayout,
+                            currentCmd.debugLabel, immediateSubmit);
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+                        runGame = false;
+                    }
+                }
+
+                break;
+            }
+
+            /*case eGraphicsCmdImageCopy:
             {
                 TINKER_ASSERT(0); // Don't use this command rn
                 switch (g_GlobalAppParams.m_graphicsAPI)
@@ -300,7 +322,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 }
 
                 break;
-            }
+            }*/
 
             default:
             {

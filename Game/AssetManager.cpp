@@ -369,7 +369,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         ResourceDesc desc;
         desc.resourceType = Platform::eResourceTypeImage2D;
 
-        desc.imageFormat = Platform::eImageFormat_RGBA8_Unorm; // TODO: don't hard code this
+        desc.imageFormat = Platform::eImageFormat_RGBA8_SRGB; // TODO: don't hard code this
         desc.dims = m_allTextureMetadata[uiAsset].m_dims;
         m_allTextureGraphicsHandles[uiAsset] = platformFuncs->CreateResource(desc);
 
@@ -394,7 +394,16 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
     {
         uint32 textureSizeInBytes = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y * 4; // 4 bytes per pixel since RGBA8
 
-        // Position buffer copy
+        // Transition to transfer dst optimal layout
+        command->m_commandType = (uint32)Platform::eGraphicsCmdLayoutTransition;
+        command->debugLabel = "Transition image layout to transfer dst optimal";
+        command->m_imageHandle = m_allTextureGraphicsHandles[uiAsset];
+        command->m_startLayout = Platform::eImageLayoutUndefined;
+        command->m_endLayout = Platform::eImageLayoutTransferDst;
+        ++command;
+        ++graphicsCommandStream->m_numCommands;
+
+        // Texture buffer copy
         command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
         command->debugLabel = "Update Asset Texture Data";
         command->m_sizeInBytes = textureSizeInBytes;
@@ -402,6 +411,8 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         command->m_dstBufferHandle = m_allTextureGraphicsHandles[uiAsset];
         ++command;
         ++graphicsCommandStream->m_numCommands;
+
+        // TODO: transition image to shader read optimal?
     }
 
     // Perform the copies

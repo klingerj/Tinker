@@ -71,7 +71,6 @@ typedef struct game_graphic_data
     ResourceHandle m_rtColorHandle;
     ResourceHandle m_rtDepthHandle;
     FramebufferHandle m_framebufferHandle;
-    //ResourceHandle m_mainRenderPassHandle;
 
     ShaderHandle m_shaderHandle;
     DescriptorHandle m_modelMatrixDescHandle1;

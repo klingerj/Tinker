@@ -197,13 +197,15 @@ namespace Tinker
             void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextResources,
                 uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
                 const char* debugLabel, bool immediateSubmit);
-            void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
-                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height,
-                bool immediateSubmit);
             void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
                 FramebufferHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
                 const char* debugLabel, bool immediateSubmit);
             void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources, bool immediateSubmit);
+            void VulkanRecordCommandTransitionLayout(VulkanContextResources*  vulkanContextResources, ResourceHandle imageHandle,
+                uint32 startLayout, uint32 endLayout, const char* debugLabel, bool immediateSubmit);
+            void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
+                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height,
+                bool immediateSubmit);
         }
     }
 }

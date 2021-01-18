@@ -114,11 +114,10 @@ namespace Tinker
 
                 VulkanImageLayouts[eImageLayoutUndefined] = VK_IMAGE_LAYOUT_UNDEFINED;
                 VulkanImageLayouts[eImageLayoutShaderRead] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                VulkanImageLayouts[eImageLayoutColorAttachment] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-                VulkanImageLayouts[eImageLayoutSwapChainPresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+                VulkanImageLayouts[eImageLayoutTransferDst] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-                VulkanImageFormats[eImageFormat_BGRA8_Unorm] = VK_FORMAT_B8G8R8A8_SRGB;
-                VulkanImageFormats[eImageFormat_RGBA8_Unorm] = VK_FORMAT_R8G8B8A8_SRGB;
+                VulkanImageFormats[eImageFormat_BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
+                VulkanImageFormats[eImageFormat_RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
                 VulkanImageFormats[eImageFormat_Depth_32F] = VK_FORMAT_D32_SFLOAT;
                 VulkanImageFormats[eImageFormat_Invalid] = VK_FORMAT_UNDEFINED;
 
@@ -1828,8 +1827,8 @@ namespace Tinker
                         uint32 bytesPerPixel = 0;
                         switch (dstResource->resDesc.imageFormat)
                         {
-                            case eImageFormat_BGRA8_Unorm:
-                            case eImageFormat_RGBA8_Unorm:
+                            case eImageFormat_BGRA8_SRGB:
+                            case eImageFormat_RGBA8_SRGB:
                             {
                                 bytesPerPixel = 32 / 8;
                                 break;
@@ -1865,6 +1864,160 @@ namespace Tinker
                         break;
                     }
                 }
+            }
+
+            void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
+                FramebufferHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
+                const char* debugLabel, bool immediateSubmit)
+            {
+                VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
+
+                VkRenderPassBeginInfo renderPassBeginInfo = {};
+                renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+                renderPassBeginInfo.renderArea.extent = VkExtent2D({ renderWidth, renderHeight });
+
+                FramebufferHandle framebuffer = framebufferHandle;
+                if (framebuffer == DefaultFramebufferHandle_Invalid)
+                {
+                    framebuffer = vulkanContextResources->swapChainFramebufferHandles[vulkanContextResources->currentSwapChainImage];
+                    renderPassBeginInfo.renderArea.extent = vulkanContextResources->swapChainExtent;
+                }
+                VulkanFramebufferResource* framebufferPtr = vulkanContextResources->vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer);
+                renderPassBeginInfo.framebuffer = framebufferPtr->framebuffer;
+                renderPassBeginInfo.renderPass = framebufferPtr->renderPass;
+
+                renderPassBeginInfo.clearValueCount = framebufferPtr->numClearValues;
+                renderPassBeginInfo.pClearValues = framebufferPtr->clearValues;
+
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                VkDebugUtilsLabelEXT label =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    NULL,
+                    debugLabel,
+                    { 0.0f, 0.0f, 0.0f, 0.0f },
+                };
+                vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
+                #endif
+
+                vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+            }
+
+            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources, bool immediateSubmit)
+            {
+                VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
+
+                vkCmdEndRenderPass(commandBuffer);
+
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                vulkanContextResources->pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
+                #endif
+            }
+
+            void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextResources, ResourceHandle imageHandle,
+                uint32 startLayout, uint32 endLayout, const char* debugLabel, bool immediateSubmit)
+            {
+                if (startLayout == endLayout)
+                {
+                    // Useless transition, don't record it
+                    TINKER_ASSERT(0);
+                    return;
+                }
+
+                VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
+
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                VkDebugUtilsLabelEXT label =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    NULL,
+                    debugLabel,
+                    { 0.0f, 0.0f, 0.0f, 0.0f },
+                };
+                vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+                #endif
+
+                VkImageMemoryBarrier barrier = {};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.oldLayout = GetVkImageLayout(startLayout);
+                barrier.newLayout = GetVkImageLayout(endLayout);
+
+                VkPipelineStageFlags srcStage;
+                VkPipelineStageFlags dstStage;
+
+                switch (startLayout)
+                {
+                    case eImageLayoutUndefined:
+                    {
+                        barrier.srcAccessMask = 0;
+                        srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                        break;
+                    }
+
+                    case eImageLayoutShaderRead:
+                    {
+                        barrier.srcAccessMask = 0;
+                        srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                        break;
+                    }
+
+                    case eImageLayoutTransferDst:
+                    {
+                        barrier.srcAccessMask = 0;
+                        srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid dst image resource layout specified for layout transition!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
+                        return;
+                    }
+                }
+
+                switch (endLayout)
+                {
+                    case eImageLayoutUndefined:
+                    {
+                        TINKER_ASSERT(0);
+                        // Can't transition to undefined according to Vulkan spec
+                        return;
+                    }
+
+                    case eImageLayoutShaderRead:
+                    {
+                        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                        dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                        break;
+                    }
+
+                    case eImageLayoutTransferDst:
+                    {
+                        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                        dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid src image resource layout specified for layout transition!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
+                        return;
+                    }
+                }
+
+                barrier.image = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes)->image;
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = 1;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = 1;
+
+                vkCmdPipelineBarrier(
+                    commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
             }
 
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
@@ -2064,54 +2217,6 @@ namespace Tinker
                 }*/
             }
 
-            void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-                FramebufferHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
-                const char* debugLabel, bool immediateSubmit)
-            {
-                VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
-
-                VkRenderPassBeginInfo renderPassBeginInfo = {};
-                renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-                renderPassBeginInfo.renderArea.extent = VkExtent2D({ renderWidth, renderHeight });
-
-                FramebufferHandle framebuffer = framebufferHandle;
-                if (framebuffer == DefaultFramebufferHandle_Invalid)
-                {
-                    framebuffer = vulkanContextResources->swapChainFramebufferHandles[vulkanContextResources->currentSwapChainImage];
-                    renderPassBeginInfo.renderArea.extent = vulkanContextResources->swapChainExtent;
-                }
-                VulkanFramebufferResource* framebufferPtr = vulkanContextResources->vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer);
-                renderPassBeginInfo.framebuffer = framebufferPtr->framebuffer;
-                renderPassBeginInfo.renderPass = framebufferPtr->renderPass;
-
-                renderPassBeginInfo.clearValueCount = framebufferPtr->numClearValues;
-                renderPassBeginInfo.pClearValues = framebufferPtr->clearValues;
-
-                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
-                VkDebugUtilsLabelEXT label =
-                {
-                    VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-                    NULL,
-                    debugLabel,
-                    { 0.0f, 0.0f, 0.0f, 0.0f },
-                };
-                vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
-                #endif
-
-                vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-            }
-
-            void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources, bool immediateSubmit)
-            {
-                VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
-
-                vkCmdEndRenderPass(commandBuffer);
-
-                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
-                vulkanContextResources->pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
-                #endif
-            }
-
             FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
                 ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle,
                 uint32 colorEndLayout, uint32 width, uint32 height)
@@ -2203,8 +2308,8 @@ namespace Tinker
                 imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
                 switch (imageFormat)
                 {
-                    case eImageFormat_BGRA8_Unorm:
-                    case eImageFormat_RGBA8_Unorm:
+                    case eImageFormat_BGRA8_SRGB:
+                    case eImageFormat_RGBA8_SRGB:
                     {
                         imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
                         break;
@@ -2253,8 +2358,8 @@ namespace Tinker
 
                 switch (imageFormat)
                 {
-                    case eImageFormat_BGRA8_Unorm:
-                    case eImageFormat_RGBA8_Unorm:
+                    case eImageFormat_BGRA8_SRGB:
+                    case eImageFormat_RGBA8_SRGB:
                     {
                         imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         break;
