@@ -42,8 +42,8 @@ namespace Tinker
 
         enum ImageFormat : uint32
         {
-            eImageFormat_BGRA8_Unorm = 0,
-            eImageFormat_RGBA8_Unorm,
+            eImageFormat_BGRA8_SRGB = 0,
+            eImageFormat_RGBA8_SRGB,
             eImageFormat_Depth_32F,
             eImageFormat_Invalid,
             eImageFormatMax
@@ -53,8 +53,7 @@ namespace Tinker
         {
             eImageLayoutUndefined = 0,
             eImageLayoutShaderRead,
-            eImageLayoutColorAttachment,
-            eImageLayoutSwapChainPresent,
+            eImageLayoutTransferDst,
             eImageLayoutMax
         };
 
@@ -64,7 +63,8 @@ namespace Tinker
             eGraphicsCmdMemTransfer,
             eGraphicsCmdRenderPassBegin,
             eGraphicsCmdRenderPassEnd,
-            eGraphicsCmdImageCopy,
+            eGraphicsCmdLayoutTransition,
+            //eGraphicsCmdImageCopy,
             eGraphicsCmdMax
         };
 
@@ -283,14 +283,22 @@ namespace Tinker
                 {
                 };*/
 
-                // Image copy
+                // Image Layout Transition
                 struct
+                {
+                    ResourceHandle m_imageHandle;
+                    uint32 m_startLayout;
+                    uint32 m_endLayout;
+                };
+
+                // Image copy
+                /*struct
                 {
                     uint32 m_width;
                     uint32 m_height;
                     ResourceHandle m_srcImgHandle;
                     ResourceHandle m_dstImgHandle;
-                };
+                };*/
 
                 // TODO: other commands
             };

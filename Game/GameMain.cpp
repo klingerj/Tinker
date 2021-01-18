@@ -313,7 +313,7 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     ResourceDesc desc;
     desc.resourceType = Platform::eResourceTypeImage2D;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
-    desc.imageFormat = Platform::eImageFormat_RGBA8_Unorm;
+    desc.imageFormat = Platform::eImageFormat_RGBA8_SRGB;
     gameGraphicsData.m_rtColorHandle = platformFuncs->CreateResource(desc);
     desc.imageFormat = Platform::eImageFormat_Depth_32F;
     gameGraphicsData.m_rtDepthHandle = platformFuncs->CreateResource(desc);
