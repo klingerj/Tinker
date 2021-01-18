@@ -4,12 +4,13 @@
 #include "../Include/Core/Containers/RingBuffer.h"
 #include "../Include/Core/FileIO/FileLoading.h"
 #include "GameGraphicsTypes.h"
+#include "ShaderLoading.h"
+#include "GameRenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
 
 #include <cstring>
 #include <string.h>
-#include <vector>
 
 using namespace Tinker;
 using namespace Core;
@@ -49,17 +50,13 @@ DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad
 };
 
 static GameGraphicsData gameGraphicsData = {};
-
-static std::vector<Platform::GraphicsCommand> graphicsCommands;
+static GameRenderPass gameRenderPasses[1] = {};
 
 static bool isGameInitted = false;
 static const bool isMultiplayer = false;
 static bool connectedToServer = false;
 
 uint32 currentWindowWidth, currentWindowHeight;
-
-Memory::LinearAllocator shaderBytecodeAllocator;
-const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
 
 typedef struct input_state
 {
@@ -94,27 +91,9 @@ void UpdateDescriptorState()
     memcpy(gameGraphicsData.m_modelMatrixBufferMemPtr1, &instanceData, sizeof(instanceData));
 }
 
-Platform::ShaderHandle LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Platform::GraphicsPipelineParams* params)
-{
-    // get file size, load entire file
-    uint32 vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
-    uint32 fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
-    TINKER_ASSERT(vertexShaderFileSize > 0);
-    TINKER_ASSERT(fragmentShaderFileSize > 0);
-
-    uint8* vertexShaderBuffer = shaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
-    uint8* fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
-    
-    platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
-    platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
-
-    return platformFuncs->CreateGraphicsPipeline(vertexShaderBuffer, vertexShaderFileSize, fragmentShaderBuffer, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->framebufferHandle, params->descriptorHandle);
-}
-
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
-    shaderBytecodeAllocator.Free();
-    shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
+    ResetShaderAllocator();
 
     Platform::DescriptorLayout mainDrawDescriptorLayout = {};
     Platform::InitDescLayout(&mainDrawDescriptorLayout);
@@ -126,6 +105,14 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.framebufferHandle = gameGraphicsData.m_framebufferHandle;
     params.descriptorHandle = gameGraphicsData.m_modelMatrixDescHandle1;
     gameGraphicsData.m_shaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
+
+    // TODO: dont want to have to do this
+    // Set data for render pass
+    gameRenderPasses[0].shader = gameGraphicsData.m_shaderHandle;
+    Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+    InitDescSetDescHandles(descriptors);
+    descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
+    memcpy(gameRenderPasses[0].descriptors, descriptors, sizeof(descriptors));
 
     params.blendState = Platform::eBlendStateAlphaBlend;
     params.depthState = Platform::eDepthStateOff;
@@ -318,6 +305,11 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     desc.imageFormat = Platform::eImageFormat_Depth_32F;
     gameGraphicsData.m_rtDepthHandle = platformFuncs->CreateResource(desc);
     gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
+
+    gameRenderPasses[0] = {};
+    gameRenderPasses[0].framebuffer = gameGraphicsData.m_framebufferHandle;
+    gameRenderPasses[0].renderWidth = windowWidth;
+    gameRenderPasses[0].renderHeight = windowHeight;
 }
 
 void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
@@ -378,7 +370,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
-    graphicsCommands.clear();
+    graphicsCommandStream->m_numCommands = 0;
 
     if (!isGameInitted)
     {
@@ -405,8 +397,6 @@ GAME_UPDATE(GameUpdate)
         // Load mesh files
         g_AssetManager.LoadAllAssets(platformFuncs);
         g_AssetManager.InitAssetGraphicsResources(platformFuncs, graphicsCommandStream);
-
-        graphicsCommands.reserve(graphicsCommandStream->m_maxCommands);
 
         CreateDefaultGeometry(platformFuncs, graphicsCommandStream);
 
@@ -454,9 +444,6 @@ GAME_UPDATE(GameUpdate)
     {
         platformFuncs->WaitOnThreadJob(jobs[i]);
     }*/
-    
-    // Issue graphics commands
-    Platform::GraphicsCommand command = {};
 
     // Record buffer update commands
     // TODO: have dynamic assets?
@@ -470,72 +457,37 @@ GAME_UPDATE(GameUpdate)
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idx Buf");
     }*/
 
-    command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
-    command.debugLabel = "Main Draw Pass";
-    //command.m_renderPassHandle = gameGraphicsData.m_mainRenderPassHandle;
-    command.m_framebufferHandle = gameGraphicsData.m_framebufferHandle;
-    command.m_renderWidth = windowWidth;
-    command.m_renderHeight = windowHeight;
-    graphicsCommands.push_back(command);
-
     // Draw calls
-    Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-    InitDescSetDescHandles(descriptors);
-    descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
+    RecordAllCommands(&gameRenderPasses[0], platformFuncs, graphicsCommandStream);
 
-    for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
-    {
-        StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
-
-        DrawMeshDataCommand(graphicsCommands,
-            meshData->m_numIndices,
-            meshData->m_indexBuffer.gpuBufferHandle,
-            meshData->m_positionBuffer.gpuBufferHandle,
-            meshData->m_uvBuffer.gpuBufferHandle,
-            meshData->m_normalBuffer.gpuBufferHandle,
-            gameGraphicsData.m_shaderHandle,
-            descriptors,
-            "Draw asset");
-    }
-
-    command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassEnd;
-    graphicsCommands.push_back(command);
-
-    /*command.m_commandType = (uint32)Platform::eGraphicsCmdImageCopy;
-    command.m_srcImgHandle = gameGraphicsData.m_rtColorHandle;
-    command.m_dstImgHandle = DefaultResHandle_Invalid;
-    command.m_width = windowWidth;
-    command.m_height = windowHeight;
-    graphicsCommands.push_back(command);*/
+    // FINAL BLIT TO SCREEN
+    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     // Blit to screen
-    command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
-    command.debugLabel = "Blit to screen";
-    command.m_framebufferHandle = DefaultFramebufferHandle_Invalid;
-    command.m_renderWidth = 0;
-    command.m_renderHeight = 0;
-    graphicsCommands.push_back(command);
+    command->m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
+    command->debugLabel = "Blit to screen";
+    command->m_framebufferHandle = DefaultFramebufferHandle_Invalid;
+    command->m_renderWidth = 0;
+    command->m_renderHeight = 0;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
 
-    command.m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
-    command.debugLabel = "Draw default quad";
-    command.m_numIndices = DEFAULT_QUAD_NUM_INDICES;
-    command.m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
-    command.m_uvBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
-    command.m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
-    command.m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
-    command.m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
-    Platform::InitDescSetDescHandles(command.m_descriptors);
-    command.m_descriptors[0].handles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
-    graphicsCommands.push_back(command);
+    command->m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
+    command->debugLabel = "Draw default quad";
+    command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
+    command->m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
+    command->m_uvBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
+    command->m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
+    command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
+    command->m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
+    Platform::InitDescSetDescHandles(command->m_descriptors);
+    command->m_descriptors[0].handles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
 
-    command.m_commandType = (uint32)Platform::eGraphicsCmdRenderPassEnd;
-    graphicsCommands.push_back(command);
-
-    graphicsCommandStream->m_numCommands = (uint32)graphicsCommands.size();
-    Platform::GraphicsCommand* graphicsCmdBase = graphicsCommandStream->m_graphicsCommands;
-    uint32 graphicsCmdSizeInBytes = (uint32)graphicsCommands.size() * sizeof(Platform::GraphicsCommand);
-    memcpy(graphicsCmdBase, graphicsCommands.data(), graphicsCmdSizeInBytes);
-    graphicsCmdBase += graphicsCmdSizeInBytes;
+    command->m_commandType = (uint32)Platform::eGraphicsCmdRenderPassEnd;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
 
     if (isGameInitted && isMultiplayer && connectedToServer)
     {
@@ -555,7 +507,6 @@ GAME_UPDATE(GameUpdate)
 
 void DestroyWindowResizeDependentResources(const Platform::PlatformAPIFuncs* platformFuncs)
 {
-    //platformFuncs->DestroyRenderPass(gameGraphicsData.m_mainRenderPassHandle);
     platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
     platformFuncs->DestroyResource(gameGraphicsData.m_rtColorHandle);
     platformFuncs->DestroyResource(gameGraphicsData.m_rtDepthHandle);
