@@ -981,7 +981,7 @@ wWinMain(HINSTANCE hInstance,
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
     graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-    graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)malloc(graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand));
+    graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)_aligned_malloc(graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand), 64);
 
     g_GameCode = {};
     const char* GameDllStr = "TinkerGame.dll";
