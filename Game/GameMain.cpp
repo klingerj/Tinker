@@ -93,7 +93,8 @@ void UpdateDescriptorState()
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
-    ResetShaderAllocator();
+
+    ResetShaderBytecodeAllocator();
 
     Platform::DescriptorLayout mainDrawDescriptorLayout = {};
     Platform::InitDescLayout(&mainDrawDescriptorLayout);
@@ -560,5 +561,12 @@ GAME_DESTROY(GameDestroy)
         {
             platformFuncs->EndNetworkConnection();
         }
+
+        g_AssetManager.FreeMemory();
+        FreeShaderBytecodeMemory();
     }
+
+    #if defined(MEM_TRACKING)
+    _CrtDumpMemoryLeaks();
+    #endif
 }

@@ -11,6 +11,8 @@ using namespace Math;
 #define TINKER_MAX_MESHES 16
 #define TINKER_MAX_TEXTURES 16
 
+// TODO: probably heap-allocate all these arrays once things get large enough
+
 class AssetManager
 {
 private:
@@ -32,6 +34,8 @@ public:
 
     AssetManager() {}
     ~AssetManager() {}
+
+    void FreeMemory();
 
     void LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platformFuncs);
     void InitAssetGraphicsResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs,

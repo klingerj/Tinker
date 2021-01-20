@@ -18,9 +18,9 @@ namespace Tinker
             {
                 TINKER_ASSERT(ISPOW2(Alignment));
                 m_size = Size;
-                if (m_size > 0)
+                if (Size > 0)
                 {
-                    m_ownedMemPtr = (uint8*)Platform::AllocAligned(Size, Alignment);
+                    Init(Size, Alignment);
                 }
                 else
                 {
@@ -30,10 +30,10 @@ namespace Tinker
 
             ~LinearAllocator()
             {
-                Free();
+                ExplicitFree();
             }
 
-            void Free()
+            void ExplicitFree()
             {
                 if (m_ownedMemPtr)
                 {
@@ -48,7 +48,11 @@ namespace Tinker
             {
                 TINKER_ASSERT(size > 0);
                 m_size = size;
+                #if defined(MEM_TRACKING) && defined(_DEBUG)
+                m_ownedMemPtr = (uint8*)Platform::AllocAligned_Tracked(m_size, alignment, __FILE__, __LINE__);
+                #else
                 m_ownedMemPtr = (uint8*)Platform::AllocAligned(m_size, alignment);
+                #endif
             }
 
             uint8* Alloc(size_t size, size_t alignment)
@@ -126,11 +130,9 @@ namespace Tinker
             PoolAllocator()
             {
                 TINKER_ASSERT(ISPOW2(Alignment));
-                m_maxPoolElements = NumElements;
-                if (m_maxPoolElements > 0)
+                if (NumElements > 0)
                 {
-                    m_pool = (PoolElement<T>*)Platform::AllocAligned(m_maxPoolElements * m_elementSizeInBytes, Alignment);
-                    InitFreeListPtrs();
+                    Init(NumElements, Alignment);
                 }
                 else
                 {
@@ -140,7 +142,16 @@ namespace Tinker
 
             ~PoolAllocator()
             {
-                if (m_pool) Platform::FreeAligned(m_pool);
+                ExplicitFree();
+            }
+
+            void ExplicitFree()
+            {
+                if (m_pool)
+                {
+                    Platform::FreeAligned(m_pool);
+                    m_pool = nullptr;
+                }
             }
 
             inline T* PtrFromHandle(uint32 handle)
@@ -155,7 +166,13 @@ namespace Tinker
 
                 TINKER_ASSERT(maxPoolElements > 0 && maxPoolElements < TINKER_INVALID_HANDLE);
                 m_maxPoolElements = maxPoolElements;
+
+                #if defined(MEM_TRACKING) && defined(_DEBUG)
+                m_pool = (PoolElement<T>*)Platform::AllocAligned_Tracked(m_maxPoolElements * m_elementSizeInBytes, alignment, __FILE__, __LINE__);
+                #else
                 m_pool = (PoolElement<T>*)Platform::AllocAligned(m_maxPoolElements * m_elementSizeInBytes, alignment);
+                #endif
+
                 InitFreeListPtrs();
             }
 

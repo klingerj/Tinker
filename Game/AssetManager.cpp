@@ -2,6 +2,10 @@
 
 AssetManager g_AssetManager;
 
+void AssetManager::FreeMemory()
+{
+    m_meshBufferAllocator.ExplicitFree();
+}
 
 void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
 {
@@ -426,7 +430,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         platformFuncs->DestroyResource(imageStagingBufferHandles[uiAsset]);
     }
 
-    m_textureBufferAllocator.Free();
+    m_textureBufferAllocator.ExplicitFree();
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

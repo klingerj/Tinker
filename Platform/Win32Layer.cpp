@@ -9,7 +9,7 @@
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
 #ifndef TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX
-#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX 64
+#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX 512
 #endif
 #ifndef TINKER_PLATFORM_HOTLOAD_FILENAME
 #define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
@@ -981,7 +981,7 @@ wWinMain(HINSTANCE hInstance,
     GraphicsCommandStream graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
     graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-    graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)_aligned_malloc(graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand), 64);
+    graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)_aligned_malloc_dbg(graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand), 64, __FILE__, __LINE__);
 
     g_GameCode = {};
     const char* GameDllStr = "TinkerGame.dll";
@@ -1046,6 +1046,8 @@ wWinMain(HINSTANCE hInstance,
     g_ThreadPool.Shutdown();
     #endif
 
+    _aligned_free(graphicsCommandStream.m_graphicsCommands);
+
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
@@ -1060,6 +1062,10 @@ wWinMain(HINSTANCE hInstance,
             break;
         }
     }
+
+    #if defined(MEM_TRACKING)
+    _CrtDumpMemoryLeaks();
+    #endif
 
     return 0;
 }

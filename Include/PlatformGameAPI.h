@@ -5,6 +5,16 @@
 #include "PlatformGameGraphicsAPI.h"
 #include "PlatformGameInputHandingAPI.h"
 
+// Quick simple memory allocation and leak tracking
+#define MEM_TRACKING
+
+#ifdef MEM_TRACKING
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#define DEBUG_NEW new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#define new DEBUG_NEW
+#endif
+
 namespace Tinker
 {
     namespace Platform
@@ -14,6 +24,9 @@ namespace Tinker
 
         // Memory
         void* AllocAligned(size_t size, size_t alignment);
+        #ifdef MEM_TRACKING
+        void* AllocAligned_Tracked(size_t size, size_t alignment, const char* filename, int lineNum);
+        #endif
         void FreeAligned(void* ptr);
 
         // Platform File API function
