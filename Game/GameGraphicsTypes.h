@@ -61,13 +61,20 @@ typedef struct texture_metadata
     // TODO: file type/ext?
 } TextureMetadata;
 
+enum
+{
+    eRenderPass_ZPrePass = 0,
+    eRenderPass_MainView,
+    eRenderPass_Max
+};
+
 typedef struct game_graphic_data
 {
     ResourceHandle m_rtColorHandle;
     ResourceHandle m_rtDepthHandle;
-    FramebufferHandle m_framebufferHandle;
+    FramebufferHandle m_framebufferHandles[eRenderPass_Max];
 
-    ShaderHandle m_shaderHandle;
+    ShaderHandle m_shaderHandles[eRenderPass_Max];
     DescriptorHandle m_modelMatrixDescHandle1;
     ResourceHandle m_modelMatrixBufferHandle1;
     void* m_modelMatrixBufferMemPtr1;

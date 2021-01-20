@@ -1,16 +1,14 @@
 #include "GameGraphicsTypes.h"
 
-void CopyStagingBufferToGPUBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
+void CopyStagingBufferToGPUBufferCommand(Tinker::Platform::GraphicsCommandStream* graphicsCommandStream,
     ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
     const char* debugLabel)
 {
-    Platform::GraphicsCommand command = {};
-    command.m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
-    command.debugLabel = debugLabel;
-
-    command.m_sizeInBytes = bufferSizeInBytes;
-    command.m_srcBufferHandle = stagingBufferHandle;
-    command.m_dstBufferHandle = gpuBufferHandle;
-    graphicsCommands.push_back(command);
+    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    command->m_commandType = Platform::eGraphicsCmdMemTransfer;
+    command->debugLabel = debugLabel;
+    command->m_sizeInBytes = bufferSizeInBytes;
+    command->m_srcBufferHandle = stagingBufferHandle;
+    command->m_dstBufferHandle = gpuBufferHandle;
+    ++graphicsCommandStream->m_numCommands;
 }
-

@@ -50,7 +50,7 @@ DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad
 };
 
 static GameGraphicsData gameGraphicsData = {};
-static GameRenderPass gameRenderPasses[1] = {};
+static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
 
 static bool isGameInitted = false;
 static const bool isMultiplayer = false;
@@ -99,21 +99,33 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     Platform::DescriptorLayout mainDrawDescriptorLayout = {};
     Platform::InitDescLayout(&mainDrawDescriptorLayout);
     Platform::GraphicsPipelineParams params;
-    params.blendState = Platform::eBlendStateAlphaBlend;
-    params.depthState = Platform::eDepthStateTestOnWriteOn;
+    params.blendState = Platform::eBlendStateInvalid; // no color attachment
+    params.depthState = Platform::eDepthStateTestOnWriteOn; // Write to depth
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
-    params.framebufferHandle = gameGraphicsData.m_framebufferHandle;
+    params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
     params.descriptorHandle = gameGraphicsData.m_modelMatrixDescHandle1;
-    gameGraphicsData.m_shaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
+    gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
+
+    params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
+    params.blendState = Platform::eBlendStateAlphaBlend; // Default alpha blending for now
+    params.depthState = Platform::eDepthStateTestOnWriteOff; // Read depth buffer, don't write to it
+    gameGraphicsData.m_shaderHandles[eRenderPass_MainView] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
+    //**************************************************************************************************TODO: handle the not-consumed color output of this shader
 
     // TODO: dont want to have to do this
     // Set data for render pass
-    gameRenderPasses[0].shader = gameGraphicsData.m_shaderHandle;
+    gameRenderPasses[eRenderPass_ZPrePass].shader = gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass];
     Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
     InitDescSetDescHandles(descriptors);
     descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
-    memcpy(gameRenderPasses[0].descriptors, descriptors, sizeof(descriptors));
+    memcpy(gameRenderPasses[eRenderPass_ZPrePass].descriptors, descriptors, sizeof(descriptors));
+
+    gameRenderPasses[eRenderPass_MainView].shader = gameGraphicsData.m_shaderHandles[eRenderPass_MainView];
+    descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+    InitDescSetDescHandles(descriptors);
+    descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
+    memcpy(gameRenderPasses[eRenderPass_MainView].descriptors, descriptors, sizeof(descriptors));
 
     params.blendState = Platform::eBlendStateAlphaBlend;
     params.depthState = Platform::eDepthStateOff;
@@ -126,9 +138,13 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
 
 void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
 {
-    platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandle);
+    for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
+    {
+        platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandles[uiPass]);
+        gameGraphicsData.m_shaderHandles[uiPass] = DefaultShaderHandle_Invalid;
+    }
+
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_blitShaderHandle);
-    gameGraphicsData.m_shaderHandle = DefaultShaderHandle_Invalid;
     gameGraphicsData.m_blitShaderHandle = DefaultShaderHandle_Invalid;
 }
 
@@ -305,12 +321,22 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     gameGraphicsData.m_rtColorHandle = platformFuncs->CreateResource(desc);
     desc.imageFormat = Platform::eImageFormat_Depth_32F;
     gameGraphicsData.m_rtDepthHandle = platformFuncs->CreateResource(desc);
-    gameGraphicsData.m_framebufferHandle = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
 
-    gameRenderPasses[0] = {};
-    gameRenderPasses[0].framebuffer = gameGraphicsData.m_framebufferHandle;
-    gameRenderPasses[0].renderWidth = windowWidth;
-    gameRenderPasses[0].renderHeight = windowHeight;
+    // Depth-only pass
+    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = platformFuncs->CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
+
+    // Color and depth
+    gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
+
+    gameRenderPasses[eRenderPass_ZPrePass] = {};
+    gameRenderPasses[eRenderPass_ZPrePass].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
+    gameRenderPasses[eRenderPass_ZPrePass].renderWidth = windowWidth;
+    gameRenderPasses[eRenderPass_ZPrePass].renderHeight = windowHeight;
+
+    gameRenderPasses[eRenderPass_MainView] = {};
+    gameRenderPasses[eRenderPass_MainView].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
+    gameRenderPasses[eRenderPass_MainView].renderWidth = windowWidth;
+    gameRenderPasses[eRenderPass_MainView].renderHeight = windowHeight;
 }
 
 void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
@@ -403,6 +429,15 @@ GAME_UPDATE(GameUpdate)
 
         CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
 
+        // One-time transition of depth buffer from layout undefined to depth_attachment_optimal
+        Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
+        command->debugLabel = "Transition depth to depth_attachment_optimal";
+        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
+        command->m_startLayout = Platform::eImageLayoutUndefined;
+        command->m_endLayout = Platform::eImageLayoutDepthOptimal;
+        ++graphicsCommandStream->m_numCommands;
+
         CreateAllDescriptors(platformFuncs);
         LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
@@ -458,14 +493,25 @@ GAME_UPDATE(GameUpdate)
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idx Buf");
     }*/
 
-    // Draw calls
-    RecordAllCommands(&gameRenderPasses[0], platformFuncs, graphicsCommandStream);
-
-    // FINAL BLIT TO SCREEN
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
+    // Clear depth buffer - before z-prepass
+    command->m_commandType = Platform::eGraphicsCmdClearImage;
+    command->debugLabel = "Clear depth buffer";
+    command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
+    command->clearValue = v4f( 1.0f, 0.0f, 0.0f, 0.0f); // depth clear uses x-component
+
+    // Draw calls
+    for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
+    {
+        RecordAllCommands(&gameRenderPasses[uiPass], platformFuncs, graphicsCommandStream);
+    }
+
+    // FINAL BLIT TO SCREEN
+    command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
     // Blit to screen
-    command->m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
+    command->m_commandType = Platform::eGraphicsCmdRenderPassBegin;
     command->debugLabel = "Blit to screen";
     command->m_framebufferHandle = DefaultFramebufferHandle_Invalid;
     command->m_renderWidth = 0;
@@ -473,7 +519,7 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
-    command->m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
+    command->m_commandType = Platform::eGraphicsCmdDrawCall;
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
@@ -486,7 +532,7 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
-    command->m_commandType = (uint32)Platform::eGraphicsCmdRenderPassEnd;
+    command->m_commandType = Platform::eGraphicsCmdRenderPassEnd;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
@@ -508,7 +554,10 @@ GAME_UPDATE(GameUpdate)
 
 void DestroyWindowResizeDependentResources(const Platform::PlatformAPIFuncs* platformFuncs)
 {
-    platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandle);
+    for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
+    {
+        platformFuncs->DestroyFramebuffer(gameGraphicsData.m_framebufferHandles[uiPass]);
+    }
     platformFuncs->DestroyResource(gameGraphicsData.m_rtColorHandle);
     platformFuncs->DestroyResource(gameGraphicsData.m_rtDepthHandle);
 

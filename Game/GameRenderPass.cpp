@@ -8,7 +8,7 @@ void DrawMeshDataCommand(Platform::GraphicsCommandStream* graphicsCommandStream,
 {
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = (uint32)Platform::eGraphicsCmdDrawCall;
+    command->m_commandType = Platform::eGraphicsCmdDrawCall;
     command->debugLabel = debugLabel;
 
     command->m_numIndices = numIndices;
@@ -26,7 +26,7 @@ void RecordAllCommands(GameRenderPass* renderPass, const Platform::PlatformAPIFu
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     // Start render pass
-    command->m_commandType = (uint32)Platform::eGraphicsCmdRenderPassBegin;
+    command->m_commandType = Platform::eGraphicsCmdRenderPassBegin;
     command->debugLabel = "Main Draw Pass";
     command->m_framebufferHandle = renderPass->framebuffer;
     command->m_renderWidth = renderPass->renderWidth;
@@ -53,7 +53,7 @@ void RecordAllCommands(GameRenderPass* renderPass, const Platform::PlatformAPIFu
 
     command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
     // End render pass
-    command->m_commandType = (uint32)Platform::eGraphicsCmdRenderPassEnd;
+    command->m_commandType = Platform::eGraphicsCmdRenderPassEnd;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 }
