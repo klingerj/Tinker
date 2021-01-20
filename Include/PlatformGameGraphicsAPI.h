@@ -30,6 +30,7 @@ namespace Tinker
         enum BlendState : uint32
         {
             eBlendStateAlphaBlend = 0,
+            eBlendStateInvalid,
             eBlendStateMax
         };
 
@@ -37,6 +38,7 @@ namespace Tinker
         {
             eDepthStateOff = 0,
             eDepthStateTestOnWriteOn,
+            eDepthStateTestOnWriteOff,
             eDepthStateMax
         };
 
@@ -54,6 +56,7 @@ namespace Tinker
             eImageLayoutUndefined = 0,
             eImageLayoutShaderRead,
             eImageLayoutTransferDst,
+            eImageLayoutDepthOptimal,
             eImageLayoutMax
         };
 
@@ -64,6 +67,7 @@ namespace Tinker
             eGraphicsCmdRenderPassBegin,
             eGraphicsCmdRenderPassEnd,
             eGraphicsCmdLayoutTransition,
+            eGraphicsCmdClearImage,
             //eGraphicsCmdImageCopy,
             eGraphicsCmdMax
         };
@@ -289,6 +293,13 @@ namespace Tinker
                     ResourceHandle m_imageHandle;
                     uint32 m_startLayout;
                     uint32 m_endLayout;
+                };
+
+                // Clear image
+                struct
+                {
+                    ResourceHandle m_imageHandle;
+                    Core::Math::v4f clearValue;
                 };
 
                 // Image copy

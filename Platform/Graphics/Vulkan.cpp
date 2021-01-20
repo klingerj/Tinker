@@ -82,6 +82,7 @@ namespace Tinker
                 vulkanContextResources->windowWidth = width;
                 vulkanContextResources->windowHeight = height;
 
+                VulkanBlendStates[eBlendStateInvalid] = {};
                 VkPipelineColorBlendAttachmentState blendStateProperties = {};
                 blendStateProperties.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
                     VK_COLOR_COMPONENT_G_BIT |
@@ -98,23 +99,27 @@ namespace Tinker
 
                 VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
                 depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-                depthStencilState.depthTestEnable = VK_FALSE;
-                depthStencilState.depthWriteEnable = VK_FALSE;
-                depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
+                depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL; // TODO: strictly less?
                 depthStencilState.depthBoundsTestEnable = VK_FALSE;
                 depthStencilState.minDepthBounds = 0.0f;
                 depthStencilState.maxDepthBounds = 1.0f;
                 depthStencilState.stencilTestEnable = VK_FALSE;
                 depthStencilState.front = {};
                 depthStencilState.back = {};
+
+                depthStencilState.depthTestEnable = VK_FALSE;
+                depthStencilState.depthWriteEnable = VK_FALSE;
                 VulkanDepthStates[eDepthStateOff] = depthStencilState;
                 depthStencilState.depthTestEnable = VK_TRUE;
                 depthStencilState.depthWriteEnable = VK_TRUE;
                 VulkanDepthStates[eDepthStateTestOnWriteOn] = depthStencilState;
+                depthStencilState.depthWriteEnable = VK_FALSE;
+                VulkanDepthStates[eDepthStateTestOnWriteOff] = depthStencilState;
 
                 VulkanImageLayouts[eImageLayoutUndefined] = VK_IMAGE_LAYOUT_UNDEFINED;
                 VulkanImageLayouts[eImageLayoutShaderRead] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 VulkanImageLayouts[eImageLayoutTransferDst] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+                VulkanImageLayouts[eImageLayoutDepthOptimal] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
                 VulkanImageFormats[eImageFormat_BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
                 VulkanImageFormats[eImageFormat_RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
@@ -909,11 +914,11 @@ namespace Tinker
 
                 attachments[numColorAttachments].format = depthFormat;
                 attachments[numColorAttachments].samples = VK_SAMPLE_COUNT_1_BIT;
-                attachments[numColorAttachments].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+                attachments[numColorAttachments].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
                 attachments[numColorAttachments].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
                 attachments[numColorAttachments].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 attachments[numColorAttachments].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-                attachments[numColorAttachments].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                attachments[numColorAttachments].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
                 attachments[numColorAttachments].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
                 depthAttachmentRef.attachment = numColorAttachments;
@@ -1112,18 +1117,28 @@ namespace Tinker
                 multisampling.alphaToCoverageEnable = VK_FALSE;
                 multisampling.alphaToOneEnable = VK_FALSE;
 
-                VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
-
                 VkPipelineColorBlendStateCreateInfo colorBlending = {};
                 colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
                 colorBlending.logicOpEnable = VK_FALSE;
                 colorBlending.logicOp = VK_LOGIC_OP_COPY;
-                colorBlending.attachmentCount = 1;
-                colorBlending.pAttachments = &colorBlendAttachment;
                 colorBlending.blendConstants[0] = 0.0f;
                 colorBlending.blendConstants[1] = 0.0f;
                 colorBlending.blendConstants[2] = 0.0f;
                 colorBlending.blendConstants[3] = 0.0f;
+
+                if (blendState == eBlendStateInvalid)
+                {
+                    colorBlending.attachmentCount = 0;
+                    colorBlending.pAttachments = nullptr;
+                }
+                else
+                {
+                    VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
+
+                    // TODO: support multiple RTs here too
+                    colorBlending.attachmentCount = 1;
+                    colorBlending.pAttachments = &colorBlendAttachment;
+                }
 
                 VkDynamicState dynamicStates[] =
                 {
@@ -1950,6 +1965,7 @@ namespace Tinker
                 {
                     case eImageLayoutUndefined:
                     {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         barrier.srcAccessMask = 0;
                         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                         break;
@@ -1957,15 +1973,25 @@ namespace Tinker
 
                     case eImageLayoutShaderRead:
                     {
-                        barrier.srcAccessMask = 0;
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
                         srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                         break;
                     }
 
                     case eImageLayoutTransferDst:
                     {
-                        barrier.srcAccessMask = 0;
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                         srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                        break;
+                    }
+
+                    case eImageLayoutDepthOptimal:
+                    {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                        barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                        srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
                         break;
                     }
 
@@ -1981,6 +2007,7 @@ namespace Tinker
                 {
                     case eImageLayoutUndefined:
                     {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         TINKER_ASSERT(0);
                         // Can't transition to undefined according to Vulkan spec
                         return;
@@ -1988,6 +2015,7 @@ namespace Tinker
 
                     case eImageLayoutShaderRead:
                     {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
                         dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                         break;
@@ -1995,8 +2023,17 @@ namespace Tinker
 
                     case eImageLayoutTransferDst:
                     {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                         dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                        break;
+                    }
+
+                    case eImageLayoutDepthOptimal:
+                    {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                        dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
                         break;
                     }
 
@@ -2009,7 +2046,6 @@ namespace Tinker
                 }
 
                 barrier.image = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes)->image;
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 barrier.subresourceRange.baseMipLevel = 0;
                 barrier.subresourceRange.levelCount = 1;
                 barrier.subresourceRange.baseArrayLayer = 0;

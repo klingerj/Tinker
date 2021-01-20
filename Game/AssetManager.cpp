@@ -310,7 +310,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
             // Position buffer copy
-            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
             command->debugLabel = "Update Asset Vtx Pos Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
             command->m_srcBufferHandle = stagingBufferHandle_Pos;
@@ -319,7 +319,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             ++command;
 
             // UV buffer copy
-            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
             command->debugLabel = "Update Asset Vtx UV Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
             command->m_srcBufferHandle = stagingBufferHandle_UV;
@@ -328,7 +328,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             ++command;
 
             // Normal buffer copy
-            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
             command->debugLabel = "Update Asset Vtx Norm Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
             command->m_srcBufferHandle = stagingBufferHandle_Norm;
@@ -337,7 +337,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             ++command;
 
             // Index buffer copy
-            command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
             command->debugLabel = "Update Asset Vtx Idx Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
             command->m_srcBufferHandle = stagingBufferHandle_Idx;
@@ -399,7 +399,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         uint32 textureSizeInBytes = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y * 4; // 4 bytes per pixel since RGBA8
 
         // Transition to transfer dst optimal layout
-        command->m_commandType = (uint32)Platform::eGraphicsCmdLayoutTransition;
+        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
         command->debugLabel = "Transition image layout to transfer dst optimal";
         command->m_imageHandle = m_allTextureGraphicsHandles[uiAsset];
         command->m_startLayout = Platform::eImageLayoutUndefined;
@@ -408,7 +408,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         ++graphicsCommandStream->m_numCommands;
 
         // Texture buffer copy
-        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->m_commandType = Platform::eGraphicsCmdMemTransfer;
         command->debugLabel = "Update Asset Texture Data";
         command->m_sizeInBytes = textureSizeInBytes;
         command->m_srcBufferHandle = imageStagingBufferHandles[uiAsset];
