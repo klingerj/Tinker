@@ -27,9 +27,6 @@ typedef int16_t  int16;
 typedef int32_t  int32;
 typedef int64_t  int64;
 
-#define SIZE_1MB 1024
-#define SIZE_2MB 1024 * 2
-
 #define MAX(a, b) ((a > b) ? a : b)
 #define MIN(a, b) ((a < b) ? a : b)
 #define CLAMP(a, b, c) MIN(MAX(a, b), c)
