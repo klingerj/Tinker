@@ -18,6 +18,11 @@ namespace Tinker
             return _aligned_malloc(size, alignment);
         }
 
+        void* AllocAligned_Tracked(size_t size, size_t alignment, const char* filename, int lineNum)
+        {
+            return _aligned_malloc_dbg(size, alignment, filename, lineNum); // This only actually works if _DEBUG is defined
+        }
+
         void FreeAligned(void* ptr)
         {
             _aligned_free(ptr);

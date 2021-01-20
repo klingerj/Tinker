@@ -368,6 +368,7 @@ namespace Tinker
                                 vulkanContextResources->presentationQueueIndex = uiQueueFamily;
                             }
                         }
+                        delete queueFamilyProperties;
 
                         uint32 numAvailablePhysicalDeviceExtensions = 0;
                         vkEnumerateDeviceExtensionProperties(currPhysicalDevice,
@@ -423,8 +424,6 @@ namespace Tinker
                             vulkanContextResources->physicalDevice = currPhysicalDevice;
                             break;
                         }
-
-                        delete queueFamilyProperties;
                     }
                 }
                 delete physicalDevices;
@@ -2520,6 +2519,11 @@ namespace Tinker
                 vkDestroyDevice(vulkanContextResources->device, nullptr);
                 vkDestroySurfaceKHR(vulkanContextResources->instance, vulkanContextResources->surface, nullptr);
                 vkDestroyInstance(vulkanContextResources->instance, nullptr);
+
+                vulkanContextResources->vulkanMemResourcePool.ExplicitFree();
+                vulkanContextResources->vulkanPipelineResourcePool.ExplicitFree();
+                vulkanContextResources->vulkanDescriptorResourcePool.ExplicitFree();
+                vulkanContextResources->vulkanFramebufferResourcePool.ExplicitFree();
             }
         }
     }

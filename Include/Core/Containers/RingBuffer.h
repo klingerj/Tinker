@@ -10,7 +10,7 @@ namespace Tinker
     namespace Containers
     {
         // Single Producer, Single Consumer wait-free queue
-        template <typename T, uint32 size> // TODO: assert Size >= 1? or that it is a power of 2?
+        template <typename T, uint32 size = 0> // TODO: assert Size >= 1? or that it is a power of 2?
         class RingBuffer
         {
         private:
@@ -23,14 +23,40 @@ namespace Tinker
 
             RingBuffer()
             {
-                _SIZE = POW2_ROUNDUP(size);
-                _MASK = _SIZE - 1;
-                m_data = (T*)Platform::AllocAligned(_SIZE * sizeof(T), 64);
+                if (size > 0)
+                {
+                    Init(size);
+                }
+                else
+                {
+                    // User must specify size with Init()
+                }
+                
             }
 
             ~RingBuffer()
             {
-                if (m_data) Platform::FreeAligned(m_data);
+                ExplicitFree();
+            }
+
+            void ExplicitFree()
+            {
+                if (m_data)
+                {
+                    Platform::FreeAligned(m_data);
+                    m_data = nullptr;
+                }
+            }
+
+            void Init(uint32 size)
+            {
+                _SIZE = POW2_ROUNDUP(size);
+                _MASK = _SIZE - 1;
+                #if defined(MEM_TRACKING) && defined(_DEBUG)
+                m_data = (T*)Platform::AllocAligned_Tracked(_SIZE * sizeof(T), 64, __FILE__, __LINE__);
+                #else
+                m_data = (T*)Platform::AllocAligned(_SIZE * sizeof(T), 64);
+                #endif
             }
 
             uint32 Capacity() const

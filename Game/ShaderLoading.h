@@ -9,4 +9,5 @@ Platform::ShaderHandle LoadShader(const Platform::PlatformAPIFuncs* platformFunc
     const char* fragmentShaderFileName,
     Platform::GraphicsPipelineParams* params);
 
-void ResetShaderAllocator();
+void FreeShaderBytecodeMemory();
+void ResetShaderBytecodeAllocator();

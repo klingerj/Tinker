@@ -25,7 +25,7 @@ namespace Tinker
             volatile bool didTerminate = true;
             uint32 threadId = 0;
             BYTE_ALIGN(64) HANDLE semaphoreHandle = INVALID_HANDLE_VALUE;
-            BYTE_ALIGN(64) Containers::RingBuffer<WorkerJob*, NUM_JOBS_PER_WORKER> jobs;
+            BYTE_ALIGN(64) Containers::RingBuffer<WorkerJob*> jobs;
         } ThreadInfo;
 
         void __cdecl WorkerThreadFunction(void* arg)
@@ -96,6 +96,7 @@ namespace Tinker
                 m_numThreads = MIN(NumThreads, 16);
                 for (uint32 i = 0; i < m_numThreads; ++i)
                 {
+                    m_threads[i].jobs.Init(NUM_JOBS_PER_WORKER);
                     m_threads[i].terminate = false;
                     m_threads[i].didTerminate = false;
                     m_threads[i].threadId = i;
@@ -106,14 +107,22 @@ namespace Tinker
 
             void Shutdown()
             {
+                // Tell the threads to wake up and terminate ASAP
                 for (uint8 i = 0; i < m_numThreads; ++i)
                 {
                     m_threads[i].terminate = true;
                     ReleaseSemaphore(m_threads[i].semaphoreHandle, 1, 0);
                 }
+                // Wait for the threads to finish their current tasks, then terminate
                 for (uint8 i = 0; i < m_numThreads; ++i)
                 {
                     while(!m_threads[i].didTerminate);
+                }
+
+                // Free the job buffers
+                for (uint8 i = 0; i < m_numThreads; ++i)
+                {
+                    m_threads[i].jobs.ExplicitFree();
                 }
             }
 

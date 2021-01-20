@@ -6,9 +6,14 @@ const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
 
 using namespace Tinker;
 
-void ResetShaderAllocator()
+void FreeShaderBytecodeMemory()
 {
-    shaderBytecodeAllocator.Free();
+    shaderBytecodeAllocator.ExplicitFree();
+}
+
+void ResetShaderBytecodeAllocator()
+{
+    FreeShaderBytecodeMemory();
     shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
 }
 
