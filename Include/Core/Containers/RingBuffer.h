@@ -45,6 +45,8 @@ namespace Tinker
                 {
                     Platform::FreeAligned(m_data);
                     m_data = nullptr;
+                    _SIZE = 0;
+                    _MASK = 0;
                 }
             }
 

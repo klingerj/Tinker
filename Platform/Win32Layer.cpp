@@ -36,6 +36,20 @@ Win32GameCode g_GameCode;
 InputStateDeltas g_inputStateDeltas;
 Graphics::VulkanContextResources vulkanContextResources;
 
+#ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
+WorkerThreadPool g_ThreadPool;
+ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
+{
+    g_ThreadPool.EnqueueNewThreadJob(newJob);
+}
+#else
+ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
+{
+    (*newJob)();
+    newJob->m_done = true;
+}
+#endif
+
 // TODO: implement other graphics APIs
 enum
 {
@@ -50,6 +64,9 @@ typedef struct global_app_params
     uint32 m_windowHeight;
 } GlobalAppParams;
 GlobalAppParams g_GlobalAppParams;
+
+SYSTEM_INFO g_SystemInfo;
+Graphics::PlatformWindowHandles g_platformWindowHandles;
 
 static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
@@ -99,6 +116,29 @@ static void ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
             GameCode->GameDestroy = (game_destroy*)GetProcAddress(GameCode->GameDll, "GameDestroy");
             GameCode->GameWindowResize = (game_window_resize*)GetProcAddress(GameCode->GameDll, "GameWindowResize");
             GameCode->lastWriteTime = gameDllLastWriteTime;
+
+            // Reset thread pool
+            #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
+            g_ThreadPool.Shutdown();
+            g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
+            #endif
+
+            // Reset graphics context
+            switch (g_GlobalAppParams.m_graphicsAPI)
+            {
+                case eGraphicsAPIVulkan:
+                {
+                    DestroyVulkan(&vulkanContextResources);
+                    InitVulkan(&vulkanContextResources, &g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    break;
+                }
+
+                default:
+                {
+                    LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+                    break;
+                }
+            }
         }
     }
 }
@@ -158,20 +198,6 @@ READ_ENTIRE_FILE(ReadEntireFile)
         LogMsg("Unable to create file handle!", eLogSeverityCritical);
     }
 }
-
-#ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-WorkerThreadPool g_ThreadPool;
-ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
-{
-    g_ThreadPool.EnqueueNewThreadJob(newJob);
-}
-#else
-ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
-{
-    (*newJob)();
-    newJob->m_done = true;
-}
-#endif
 
 static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit)
 {
@@ -890,8 +916,8 @@ wWinMain(HINSTANCE hInstance,
     g_GlobalAppParams.m_windowHeight = 600;
 
     // Get system info
-    SYSTEM_INFO systemInfo;
-    GetSystemInfo(&systemInfo);
+    g_SystemInfo = {};
+    GetSystemInfo(&g_SystemInfo);
 
     // Setup window
     WNDCLASS windowClass = {};
@@ -929,16 +955,16 @@ wWinMain(HINSTANCE hInstance,
         return 1;
     }
 
-    Graphics::PlatformWindowHandles platformWindowHandles = {};
-    platformWindowHandles.instance = hInstance;
-    platformWindowHandles.windowHandle = windowHandle;
+    g_platformWindowHandles = {};
+    g_platformWindowHandles.instance = hInstance;
+    g_platformWindowHandles.windowHandle = windowHandle;
 
     switch(g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
             vulkanContextResources = {};
-            int result = InitVulkan(&vulkanContextResources, &platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            int result = InitVulkan(&vulkanContextResources, &g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
             if (result)
             {
                 LogMsg("Failed to init graphics backend!", eLogSeverityCritical);
@@ -988,12 +1014,6 @@ wWinMain(HINSTANCE hInstance,
     ReloadGameCode(&g_GameCode, GameDllStr);
     
     g_inputStateDeltas = {};
-
-    // Start threadpool
-    #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-    uint32 numThreads = systemInfo.dwNumberOfProcessors;
-    g_ThreadPool.Startup(numThreads / 2);
-    #endif
 
     // Main loop
     while (runGame)
