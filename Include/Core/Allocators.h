@@ -151,6 +151,8 @@ namespace Tinker
                 {
                     Platform::FreeAligned(m_pool);
                     m_pool = nullptr;
+                    m_freeListHead = 0;
+                    m_maxPoolElements = 0;
                 }
             }
 

@@ -56,7 +56,7 @@ namespace Tinker
                 return VulkanDescriptorTypes[gameDescriptorType];
             }
 
-            #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)// && defined(_DEBUG)
+            #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
             static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
                 VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                 VkDebugUtilsMessageTypeFlagsEXT messageType,
