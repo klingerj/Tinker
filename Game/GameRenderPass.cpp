@@ -27,7 +27,7 @@ void RecordAllCommands(GameRenderPass* renderPass, const Platform::PlatformAPIFu
 
     // Start render pass
     command->m_commandType = Platform::eGraphicsCmdRenderPassBegin;
-    command->debugLabel = "Main Draw Pass";
+    command->debugLabel = renderPass->debugLabel;
     command->m_framebufferHandle = renderPass->framebuffer;
     command->m_renderWidth = renderPass->renderWidth;
     command->m_renderHeight = renderPass->renderHeight;
