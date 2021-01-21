@@ -121,9 +121,6 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     memcpy(gameRenderPasses[eRenderPass_ZPrePass].descriptors, descriptors, sizeof(descriptors));
 
     gameRenderPasses[eRenderPass_MainView].shader = gameGraphicsData.m_shaderHandles[eRenderPass_MainView];
-    descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-    InitDescSetDescHandles(descriptors);
-    descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
     memcpy(gameRenderPasses[eRenderPass_MainView].descriptors, descriptors, sizeof(descriptors));
 
     params.blendState = Platform::eBlendStateAlphaBlend;
