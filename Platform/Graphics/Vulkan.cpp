@@ -11,7 +11,7 @@
 // NOTE: The convention in this project to is flip the viewport upside down since a left-handed projection
 // matrix is often used. However, doing this flip causes the application to not render properly when run
 // in RenderDoc for some reason. To debug with RenderDoc, you should turn on this #define.
-//#define WORK_WITH_RENDERDOC
+#define WORK_WITH_RENDERDOC
 
 namespace Tinker
 {
@@ -1000,11 +1000,21 @@ namespace Tinker
                 uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight,
                 FramebufferHandle framebufferHandle, DescriptorHandle descriptorHandle)
             {
-                VkShaderModule vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources);
-                VkShaderModule fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources);
+                VkShaderModule vertexShaderModule = VK_NULL_HANDLE;
+                VkShaderModule fragmentShaderModule = VK_NULL_HANDLE;
+
+                if (numVertexShaderBytes > 0)
+                {
+                    vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources);
+                }
+                if (numFragmentShaderBytes > 0)
+                {
+                    fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources);
+                }
                 
                 // Programmable shader stages
-                VkPipelineShaderStageCreateInfo shaderStages[2] = {};
+                const uint32 maxNumStages = 2;
+                VkPipelineShaderStageCreateInfo shaderStages[maxNumStages] = {};
                 shaderStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
                 shaderStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
                 shaderStages[0].module = vertexShaderModule;
@@ -1014,6 +1024,10 @@ namespace Tinker
                 shaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
                 shaderStages[1].module = fragmentShaderModule;
                 shaderStages[1].pName = "main";
+
+                uint32 numStages = 0;
+                if (numVertexShaderBytes > 0) ++numStages;
+                if (numFragmentShaderBytes > 0) ++numStages;
 
                 // Fixed function
                 const uint32 numBindings = 3;
@@ -1126,6 +1140,8 @@ namespace Tinker
                 colorBlending.blendConstants[2] = 0.0f;
                 colorBlending.blendConstants[3] = 0.0f;
 
+                VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
+
                 if (blendState == eBlendStateInvalid)
                 {
                     colorBlending.attachmentCount = 0;
@@ -1133,8 +1149,6 @@ namespace Tinker
                 }
                 else
                 {
-                    VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
-
                     // TODO: support multiple RTs here too
                     colorBlending.attachmentCount = 1;
                     colorBlending.pAttachments = &colorBlendAttachment;
@@ -1181,7 +1195,7 @@ namespace Tinker
 
                 VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
                 pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-                pipelineCreateInfo.stageCount = 2;
+                pipelineCreateInfo.stageCount = numStages;
                 pipelineCreateInfo.pStages = shaderStages;
                 pipelineCreateInfo.pVertexInputState = &vertexInputInfo;
                 pipelineCreateInfo.pInputAssemblyState = &inputAssembly;
@@ -1951,6 +1965,8 @@ namespace Tinker
                 vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
                 #endif
 
+                VulkanMemResource* memResource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
+
                 VkImageMemoryBarrier barrier = {};
                 barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
                 barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -2007,7 +2023,6 @@ namespace Tinker
                 {
                     case eImageLayoutUndefined:
                     {
-                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         TINKER_ASSERT(0);
                         // Can't transition to undefined according to Vulkan spec
                         return;
@@ -2015,7 +2030,6 @@ namespace Tinker
 
                     case eImageLayoutShaderRead:
                     {
-                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
                         dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
                         break;
@@ -2023,7 +2037,6 @@ namespace Tinker
 
                     case eImageLayoutTransferDst:
                     {
-                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                         dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
                         break;
@@ -2031,7 +2044,6 @@ namespace Tinker
 
                     case eImageLayoutDepthOptimal:
                     {
-                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
                         barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
                         dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
                         break;
@@ -2045,7 +2057,30 @@ namespace Tinker
                     }
                 }
 
-                barrier.image = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes)->image;
+                switch (memResource->resDesc.imageFormat)
+                {
+                    case eImageFormat_BGRA8_SRGB:
+                    case eImageFormat_RGBA8_SRGB:
+                    {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                        break;
+                    }
+
+                    case eImageFormat_Depth_32F:
+                    {
+                        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid image format for layout transition command!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
+                        return;
+                    }
+                }
+
+                barrier.image = memResource->image;
                 barrier.subresourceRange.baseMipLevel = 0;
                 barrier.subresourceRange.levelCount = 1;
                 barrier.subresourceRange.baseArrayLayer = 0;
@@ -2053,6 +2088,87 @@ namespace Tinker
 
                 vkCmdPipelineBarrier(
                     commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+            }
+
+            void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResources, ResourceHandle imageHandle,
+                const Core::Math::v4f& clearValue, const char* debugLabel, bool immediateSubmit)
+            {
+                VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
+
+                #if defined(ENABLE_VULKAN_DEBUG_LABELS)
+                VkDebugUtilsLabelEXT label =
+                {
+                    VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+                    NULL,
+                    debugLabel,
+                    { 0.0f, 0.0f, 0.0f, 0.0f },
+                };
+                vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+                #endif
+
+                VulkanMemResource* memResource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
+
+                VkClearColorValue clearColor = {};
+                VkClearDepthStencilValue clearDepth = {};
+
+                VkImageSubresourceRange range = {};
+                range.baseMipLevel = 0;
+                range.levelCount = 1;
+                range.baseArrayLayer = 0;
+                range.layerCount = 1;
+
+                switch (memResource->resDesc.imageFormat)
+                {
+                    case eImageFormat_BGRA8_SRGB:
+                    {
+                        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                        for (uint32 i = 0; i < 4; ++i)
+                        {
+                            clearColor.uint32[i] = (uint32)clearValue[i];
+                        }
+
+                        vkCmdClearColorImage(commandBuffer,
+                            memResource->image,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &range);
+
+                        break;
+                    }
+
+                    case eImageFormat_RGBA8_SRGB:
+                    {
+                        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                        for (uint32 i = 0; i < 4; ++i)
+                        {
+                            clearColor.uint32[i] = (uint32)clearValue[i];
+                        }
+
+                        vkCmdClearColorImage(commandBuffer,
+                            memResource->image,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &range);
+
+                        break;
+                    }
+
+                    case eImageFormat_Depth_32F:
+                    {
+                        range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                        clearDepth.depth = clearValue.x;
+                        clearDepth.stencil = (uint32)clearValue.y;
+
+                        vkCmdClearDepthStencilImage(commandBuffer,
+                            memResource->image,
+                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearDepth, 1, &range);
+
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid image format for clear command!", eLogSeverityCritical);
+                        TINKER_ASSERT(0);
+                        return;
+                    }
+                }
             }
 
             void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
@@ -2352,7 +2468,7 @@ namespace Tinker
                     
                     case eImageFormat_Depth_32F:
                     {
-                        imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+                        imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
                         break;
                     }
 

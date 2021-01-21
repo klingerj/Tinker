@@ -299,7 +299,7 @@ namespace Tinker
                 struct
                 {
                     ResourceHandle m_imageHandle;
-                    Core::Math::v4f clearValue;
+                    Core::Math::v4f m_clearValue;
                 };
 
                 // Image copy

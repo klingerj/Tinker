@@ -327,6 +327,27 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                 break;
             }
 
+            case eGraphicsCmdClearImage :
+            {
+                switch (g_GlobalAppParams.m_graphicsAPI)
+                {
+                    case eGraphicsAPIVulkan:
+                    {
+                        Graphics::VulkanRecordCommandClearImage(&vulkanContextResources, currentCmd.m_imageHandle,
+                            currentCmd.m_clearValue, currentCmd.debugLabel, immediateSubmit);
+                        break;
+                    }
+
+                    default:
+                    {
+                        LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
+                        runGame = false;
+                    }
+                }
+
+                break;
+            }
+
             /*case eGraphicsCmdImageCopy:
             {
                 TINKER_ASSERT(0); // Don't use this command rn

@@ -105,13 +105,12 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.viewportHeight = windowHeight;
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
     params.descriptorHandle = gameGraphicsData.m_modelMatrixDescHandle1;
-    gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
+    gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", nullptr, &params);
 
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
     params.blendState = Platform::eBlendStateAlphaBlend; // Default alpha blending for now
     params.depthState = Platform::eDepthStateTestOnWriteOff; // Read depth buffer, don't write to it
     gameGraphicsData.m_shaderHandles[eRenderPass_MainView] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
-    //**************************************************************************************************TODO: handle the not-consumed color output of this shader
 
     // TODO: dont want to have to do this
     // Set data for render pass
@@ -332,11 +331,13 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     gameRenderPasses[eRenderPass_ZPrePass].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
     gameRenderPasses[eRenderPass_ZPrePass].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_ZPrePass].renderHeight = windowHeight;
+    gameRenderPasses[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
 
     gameRenderPasses[eRenderPass_MainView] = {};
     gameRenderPasses[eRenderPass_MainView].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
     gameRenderPasses[eRenderPass_MainView].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_MainView].renderHeight = windowHeight;
+    gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
 }
 
 void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
@@ -429,15 +430,6 @@ GAME_UPDATE(GameUpdate)
 
         CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
 
-        // One-time transition of depth buffer from layout undefined to depth_attachment_optimal
-        Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
-        command->debugLabel = "Transition depth to depth_attachment_optimal";
-        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
-        command->m_startLayout = Platform::eImageLayoutUndefined;
-        command->m_endLayout = Platform::eImageLayoutDepthOptimal;
-        ++graphicsCommandStream->m_numCommands;
-
         CreateAllDescriptors(platformFuncs);
         LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
@@ -493,13 +485,35 @@ GAME_UPDATE(GameUpdate)
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idx Buf");
     }*/
 
-    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    {
+        Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    // Clear depth buffer - before z-prepass
-    command->m_commandType = Platform::eGraphicsCmdClearImage;
-    command->debugLabel = "Clear depth buffer";
-    command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
-    command->clearValue = v4f( 1.0f, 0.0f, 0.0f, 0.0f); // depth clear uses x-component
+        // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
+        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
+        command->debugLabel = "Transition depth to transfer_dst";
+        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
+        command->m_startLayout = Platform::eImageLayoutUndefined;
+        command->m_endLayout = Platform::eImageLayoutTransferDst;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        // Clear depth buffer - before z-prepass
+        command->m_commandType = Platform::eGraphicsCmdClearImage;
+        command->debugLabel = "Clear depth buffer";
+        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
+        command->m_clearValue = v4f(1.0f, 0.0f, 0.0f, 0.0f); // depth/stencil clear uses x and y components
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        // Transition of depth buffer from transfer dst to depth_attachment_optimal
+        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
+        command->debugLabel = "Transition depth to depth_attachment_optimal";
+        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
+        command->m_startLayout = Platform::eImageLayoutTransferDst;
+        command->m_endLayout = Platform::eImageLayoutDepthOptimal;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+    }
 
     // Draw calls
     for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
@@ -508,7 +522,7 @@ GAME_UPDATE(GameUpdate)
     }
 
     // FINAL BLIT TO SCREEN
-    command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     // Blit to screen
     command->m_commandType = Platform::eGraphicsCmdRenderPassBegin;
