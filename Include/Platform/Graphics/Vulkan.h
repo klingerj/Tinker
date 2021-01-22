@@ -22,6 +22,9 @@
 #define VULKAN_MAX_RENDERTARGETS_WITH_DEPTH VULKAN_MAX_RENDERTARGETS + 1 // +1 for depth
 // TODO: support multiple render targets more fully
 
+#define VULKAN_MAX_SWAP_CHAIN_IMAGES 3
+#define VULKAN_MAX_FRAMES_IN_FLIGHT 2
+
 namespace Tinker
 {
     namespace Platform
@@ -30,7 +33,6 @@ namespace Tinker
         {
             typedef struct vulkan_mem_resource
             {
-                ResourceDesc resDesc;
                 VkDeviceMemory deviceMemory;
 
                 union
@@ -66,6 +68,23 @@ namespace Tinker
                 VkDescriptorSet descriptorSet;
             } VulkanDescriptorResource;
 
+            // Chains of resources for multiple swap chain images
+            typedef struct
+            {
+                VulkanMemResource resourceChain[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+                ResourceDesc resDesc;
+            } VulkanMemResourceChain;
+
+            typedef struct
+            {
+                VulkanFramebufferResource resourceChain[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+            } VulkanFramebufferResourceChain;
+
+            typedef struct
+            {
+                VulkanDescriptorResource resourceChain[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+            } VulkanDescriptorChain;
+
             typedef struct vulkan_context_res
             {
                 bool isInitted = false;
@@ -87,22 +106,24 @@ namespace Tinker
                 VkFormat swapChainFormat = VK_FORMAT_UNDEFINED;
                 VkImage* swapChainImages = nullptr;
                 VkImageView* swapChainImageViews = nullptr;
-                FramebufferHandle* swapChainFramebufferHandles = nullptr;
+                FramebufferHandle swapChainFramebufferHandle = DefaultFramebufferHandle_Invalid;
                 uint32 numSwapChainImages = 0;
-                uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
+                uint32 currentSwapChainImage = 0;
+                uint32 currentFrame = 0;
                 uint32 windowWidth = 0;
                 uint32 windowHeight = 0;
 
                 VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
                 VkSampler linearSampler = VK_NULL_HANDLE;
-                Memory::PoolAllocator<VulkanDescriptorResource> vulkanDescriptorResourcePool;
+                Memory::PoolAllocator<VulkanMemResourceChain> vulkanMemResourcePool;
                 Memory::PoolAllocator<VulkanPipelineResource> vulkanPipelineResourcePool;
-                Memory::PoolAllocator<VulkanMemResource> vulkanMemResourcePool;
-                Memory::PoolAllocator<VulkanFramebufferResource> vulkanFramebufferResourcePool;
+                Memory::PoolAllocator<VulkanDescriptorChain> vulkanDescriptorResourcePool;
+                Memory::PoolAllocator<VulkanFramebufferResourceChain> vulkanFramebufferResourcePool;
                 // TODO: move this stuff elsewhere
-                VkFence fence = VK_NULL_HANDLE;
-                VkSemaphore swapChainImageAvailableSemaphore = VK_NULL_HANDLE;
-                VkSemaphore renderCompleteSemaphore = VK_NULL_HANDLE;
+                VkFence fences[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
+                VkFence* imageInFlightFences = nullptr;
+                VkSemaphore swapChainImageAvailableSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
+                VkSemaphore renderCompleteSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
                 VkCommandBuffer* commandBuffers = nullptr;
                 VkCommandPool commandPool = VK_NULL_HANDLE;
                 VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;
@@ -152,6 +173,7 @@ namespace Tinker
             void CreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 numColorAttachments, VkFormat colorFormat, VkImageLayout startLayout, VkImageLayout endLayout, VkFormat depthFormat, VkRenderPass* renderPass);
 
             // Frame command recording
+            void AcquireFrame(VulkanContextResources* vulkanContextResources);
             void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources);
             
             void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources);
@@ -205,9 +227,6 @@ namespace Tinker
                 uint32 startLayout, uint32 endLayout, const char* debugLabel, bool immediateSubmit);
             void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResources, ResourceHandle imageHandle,
                 const Core::Math::v4f& clearValue, const char* debugLabel, bool immediateSubmit);
-            void VulkanRecordCommandImageCopy(VulkanContextResources* vulkanContextResources,
-                ResourceHandle srcImgHandle, ResourceHandle dstImgHandle, uint32 width, uint32 height,
-                bool immediateSubmit);
         }
     }
 }
