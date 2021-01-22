@@ -447,29 +447,6 @@ GAME_UPDATE(GameUpdate)
     ProcessInputState(inputStateDeltas, platformFuncs);
     UpdateDescriptorState(platformFuncs);
 
-    // Test a thread job
-    /*Platform::WorkerJob* jobs[32] = {};
-    for (uint32 i = 0; i < 32; ++i)
-    {
-        jobs[i] = Platform::CreateNewThreadJob([=]()
-                {
-                    // TODO: custom string library...
-                    char* string = "I am from a thread";
-                    char dst[50] = "";
-                    strcpy_s(dst, string);
-                    _itoa_s(i, dst + strlen(string), 10, 10);
-                    if (i < 10) dst[strlen(string) + 1] = ' ';
-                    dst[strlen(string) + 2] = '\n';
-                    dst[strlen(string) + 3] = '\0';
-                    Platform::PrintDebugString(dst);
-                });
-        platformFuncs->EnqueueWorkerThreadJob(jobs[i]);
-    }
-    for (uint32 i = 0; i < 32; ++i)
-    {
-        platformFuncs->WaitOnThreadJob(jobs[i]);
-    }*/
-
     // Record buffer update commands
     // TODO: have dynamic assets?
     /*for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)

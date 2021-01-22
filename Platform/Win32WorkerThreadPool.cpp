@@ -7,7 +7,7 @@
 
 #include <emmintrin.h>
 
-#define NUM_JOBS_PER_WORKER 64
+#define NUM_JOBS_PER_WORKER 512
 #define WORKER_THREAD_STACK_SIZE 1024 * 1024 * 2
 
 namespace Tinker
