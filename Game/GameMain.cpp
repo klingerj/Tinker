@@ -75,7 +75,7 @@ static VirtualCamera g_gameCamera = {};
 
 // TODO: remove me
 #include <chrono>
-void UpdateDescriptorState()
+void UpdateDescriptorState(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     // TODO: remove this, is just for testing
     static auto startTime = std::chrono::high_resolution_clock::now();
@@ -88,7 +88,9 @@ void UpdateDescriptorState()
     //instanceData.modelMatrix[1][1] = 1.0f;
     instanceData.modelMatrix[3][3] = 1.0f;
     instanceData.viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
+    gameGraphicsData.m_modelMatrixBufferMemPtr1 = platformFuncs->MapResource(gameGraphicsData.m_modelMatrixBufferHandle1);
     memcpy(gameGraphicsData.m_modelMatrixBufferMemPtr1, &instanceData, sizeof(instanceData));
+    platformFuncs->UnmapResource(gameGraphicsData.m_modelMatrixBufferHandle1);
 }
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -151,7 +153,6 @@ void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_modelMatrixDescHandle1);
     gameGraphicsData.m_modelMatrixDescHandle1 = DefaultDescHandle_Invalid;
-    platformFuncs->UnmapResource(gameGraphicsData.m_modelMatrixBufferHandle1);
     platformFuncs->DestroyResource(gameGraphicsData.m_modelMatrixBufferHandle1);
     gameGraphicsData.m_modelMatrixBufferHandle1 = DefaultResHandle_Invalid;
 
@@ -177,7 +178,6 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     desc.dims = v3ui(sizeof(DescriptorInstanceData), 0, 0);
     desc.bufferUsage = Platform::eBufferUsageUniform;
     gameGraphicsData.m_modelMatrixBufferHandle1 = platformFuncs->CreateResource(desc);
-    gameGraphicsData.m_modelMatrixBufferMemPtr1 = platformFuncs->MapResource(gameGraphicsData.m_modelMatrixBufferHandle1);
 
     Platform::DescriptorLayout instanceDataDescriptorLayout = {};
     Platform::InitDescLayout(&instanceDataDescriptorLayout);
@@ -319,7 +319,7 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     gameGraphicsData.m_rtDepthHandle = platformFuncs->CreateResource(desc);
 
     // Depth-only pass
-    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = platformFuncs->CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
+    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = platformFuncs->CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutUndefined, windowWidth, windowHeight);
 
     // Color and depth
     gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
@@ -445,7 +445,7 @@ GAME_UPDATE(GameUpdate)
     currentWindowHeight = windowHeight;
 
     ProcessInputState(inputStateDeltas, platformFuncs);
-    UpdateDescriptorState();
+    UpdateDescriptorState(platformFuncs);
 
     // Test a thread job
     /*Platform::WorkerJob* jobs[32] = {};

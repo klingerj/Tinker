@@ -35,6 +35,7 @@ PlatformAPIFuncs g_platformAPIFuncs;
 Win32GameCode g_GameCode;
 InputStateDeltas g_inputStateDeltas;
 Graphics::VulkanContextResources vulkanContextResources;
+bool g_windowResized = false;
 
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
 WorkerThreadPool g_ThreadPool;
@@ -765,12 +766,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                         }
                         else
                         {
-                            VulkanDestroySwapChain(&vulkanContextResources);
-                            VulkanCreateSwapChain(&vulkanContextResources);
-
+                            // Normal window resize / maximize
                             g_GlobalAppParams.m_windowWidth = LOWORD(lParam);
                             g_GlobalAppParams.m_windowHeight = HIWORD(lParam);
-                            g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                            g_windowResized = true; // swap chain will be recreated
                         }
                     }
                     break;
@@ -980,7 +979,7 @@ wWinMain(HINSTANCE hInstance,
     g_platformWindowHandles.instance = hInstance;
     g_platformWindowHandles.windowHandle = windowHandle;
 
-    switch(g_GlobalAppParams.m_graphicsAPI)
+    /*switch(g_GlobalAppParams.m_graphicsAPI)
     {
         case eGraphicsAPIVulkan:
         {
@@ -999,7 +998,7 @@ wWinMain(HINSTANCE hInstance,
             LogMsg("Invalid/unsupported graphics API chosen!", eLogSeverityCritical);
             return 1;
         }
-    }
+    }*/
 
     // Init data passed from platform to game
     g_platformAPIFuncs = {};
@@ -1011,10 +1010,11 @@ wWinMain(HINSTANCE hInstance,
     g_platformAPIFuncs.EndNetworkConnection = EndNetworkConnection;
     g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
     g_platformAPIFuncs.SystemCommand = SystemCommand;
-    g_platformAPIFuncs.MapResource = MapResource;
-    g_platformAPIFuncs.UnmapResource = UnmapResource;
+    // Graphics
     g_platformAPIFuncs.CreateResource = CreateResource;
     g_platformAPIFuncs.DestroyResource = DestroyResource;
+    g_platformAPIFuncs.MapResource = MapResource;
+    g_platformAPIFuncs.UnmapResource = UnmapResource;
     g_platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
     g_platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
     g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
@@ -1048,6 +1048,17 @@ wWinMain(HINSTANCE hInstance,
             case eGraphicsAPIVulkan:
             {
                 shouldRenderFrame = vulkanContextResources.isSwapChainValid;
+
+                if (g_windowResized)
+                {
+                    VulkanDestroySwapChain(&vulkanContextResources);
+                    VulkanCreateSwapChain(&vulkanContextResources);
+
+                    g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+
+                    g_windowResized = false;
+                }
+
                 break;
             }
 
@@ -1062,6 +1073,8 @@ wWinMain(HINSTANCE hInstance,
 
         if (shouldRenderFrame)
         {
+            AcquireFrame(&vulkanContextResources);
+
             // Call game update and populate graphics command stream
             int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
             if (error != 0)
