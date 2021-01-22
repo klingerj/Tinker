@@ -8,7 +8,7 @@ using namespace Tinker;
 using namespace Core;
 using namespace Math;
 
-#define TINKER_MAX_MESHES 512
+#define TINKER_MAX_MESHES 64
 #define TINKER_MAX_TEXTURES 64
 
 // TODO: probably heap-allocate all these arrays once things get large enough
