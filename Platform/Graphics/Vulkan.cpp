@@ -72,7 +72,7 @@ namespace Tinker
 
             int InitVulkan(VulkanContextResources* vulkanContextResources,
                 const PlatformWindowHandles* platformWindowHandles,
-                uint32 width, uint32 height)
+                uint32 width, uint32 height, uint32 numThreads)
             {
                 vulkanContextResources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
                 vulkanContextResources->vulkanPipelineResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
@@ -556,17 +556,36 @@ namespace Tinker
                     vulkanContextResources->commandBuffers);
                 if (result != VK_SUCCESS)
                 {
-                    Utility::LogMsg("Platform", "Failed to allocate Vulkan command buffers!", Utility::eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to allocate Vulkan primary frame command buffers!", Utility::eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
+                // Secondary command buffers for parallelizing command recording
+                // These get executed into the primary command buffers just allocated above
+                vulkanContextResources->threaded_secondaryCommandBuffers = new VkCommandBuffer[numThreads];
+
+                commandBufferAllocInfo = {};
+                commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                commandBufferAllocInfo.commandPool = vulkanContextResources->commandPool;
+                commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+                commandBufferAllocInfo.commandBufferCount = numThreads;
+
+                result = vkAllocateCommandBuffers(vulkanContextResources->device,
+                    &commandBufferAllocInfo,
+                    vulkanContextResources->threaded_secondaryCommandBuffers);
+                if (result != VK_SUCCESS)
+                {
+                    Utility::LogMsg("Platform", "Failed to allocate Vulkan secondary frame command buffers!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
                 // Command buffer for immediate submission
-                VkCommandBufferAllocateInfo allocInfo = {};
-                allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-                allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-                allocInfo.commandPool = vulkanContextResources->commandPool;
-                allocInfo.commandBufferCount = 1;
-                result = vkAllocateCommandBuffers(vulkanContextResources->device, &allocInfo, &vulkanContextResources->commandBuffer_Immediate);
+                commandBufferAllocInfo = {};
+                commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                commandBufferAllocInfo.commandPool = vulkanContextResources->commandPool;
+                commandBufferAllocInfo.commandBufferCount = 1;
+                result = vkAllocateCommandBuffers(vulkanContextResources->device, &commandBufferAllocInfo, &vulkanContextResources->commandBuffer_Immediate);
                 if (result != VK_SUCCESS)
                 {
                     Utility::LogMsg("Platform", "Failed to allocate Vulkan command buffers (immediate)!", Utility::eLogSeverityCritical);
@@ -2549,6 +2568,7 @@ namespace Tinker
 
                 vkDestroyCommandPool(vulkanContextResources->device, vulkanContextResources->commandPool, nullptr);
                 delete vulkanContextResources->commandBuffers;
+                delete vulkanContextResources->threaded_secondaryCommandBuffers;
 
                 for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
                 {
