@@ -1052,8 +1052,6 @@ wWinMain(HINSTANCE hInstance,
                 {
                     case eGraphicsAPIVulkan:
                     {
-                        shouldRenderFrame = vulkanContextResources.isSwapChainValid;
-
                         if (g_windowResized)
                         {
                             VulkanDestroySwapChain(&vulkanContextResources);
@@ -1063,6 +1061,7 @@ wWinMain(HINSTANCE hInstance,
 
                             g_windowResized = false;
                         }
+                        shouldRenderFrame = vulkanContextResources.isSwapChainValid;
 
                         break;
                     }
