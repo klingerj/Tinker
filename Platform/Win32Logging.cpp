@@ -1,39 +1,47 @@
-#include "../Include/Core/Logging.h"
+#include "../Include/Core/Utilities/Logging.h"
 
 #include <windows.h>
 
-void LogMsg(const char* msg, uint32 severity)
+namespace Tinker
 {
-    OutputDebugString("[Platform] ");
+    namespace Utility
+    {
+        void LogMsg(const char* prefix, const char* msg, uint32 severity)
+        {
+            OutputDebugString("[");
+            OutputDebugString(prefix);
+            OutputDebugString("]");
 
-    const char* severityMsg;
-    switch (severity)
-    {
-    case eLogSeverityInfo:
-    {
-        severityMsg = "Info";
-        break;
-    }
-    case eLogSeverityWarning:
-    {
-        severityMsg = "Warning";
-        break;
-    }
-    case eLogSeverityCritical:
-    {
-        severityMsg = "Critical";
-        break;
-    }
-    default:
-    {
-        severityMsg = "Unknown Severity";
-        break;
-    }
-    }
-    OutputDebugString("[");
-    OutputDebugString(severityMsg);
-    OutputDebugString("] ");
+            const char* severityMsg;
+            switch (severity)
+            {
+                case eLogSeverityInfo:
+                {
+                    severityMsg = "Info";
+                    break;
+                }
+                case eLogSeverityWarning:
+                {
+                    severityMsg = "Warning";
+                    break;
+                }
+                case eLogSeverityCritical:
+                {
+                    severityMsg = "Critical";
+                    break;
+                }
+                default:
+                {
+                    severityMsg = "Unknown Severity";
+                    break;
+                }
+            }
+            OutputDebugString("[");
+            OutputDebugString(severityMsg);
+            OutputDebugString("] ");
 
-    OutputDebugString(msg);
-    OutputDebugString("\n");
+            OutputDebugString(msg);
+            OutputDebugString("\n");
+        }
+    }
 }

@@ -1,6 +1,6 @@
 #include "../../Include/Platform/Graphics/Vulkan.h"
 #include "../../Include/PlatformGameAPI.h"
-#include "../../Include/Core/Logging.h"
+#include "../../Include/Core/Utilities/Logging.h"
 
 #include <cstring>
 #include <iostream>
@@ -162,10 +162,10 @@ namespace Tinker
                     , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
                     #endif
                 };
-                LogMsg("******** Requested Instance Extensions: ********", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "******** Requested Instance Extensions: ********", Utility::eLogSeverityInfo);
                 for (uint32 uiReqExt = 0; uiReqExt < numRequestedExtensions; ++uiReqExt)
                 {
-                    LogMsg(requestedExtensionNames[uiReqExt], eLogSeverityInfo);
+                    Utility::LogMsg("Platform", requestedExtensionNames[uiReqExt], Utility::eLogSeverityInfo);
                 }
                 
                 instanceCreateInfo.enabledExtensionCount = numRequestedExtensions;
@@ -180,10 +180,10 @@ namespace Tinker
                 
                 VkExtensionProperties* availableExtensions = new VkExtensionProperties[numAvailableExtensions];
                 vkEnumerateInstanceExtensionProperties(nullptr, &numAvailableExtensions, availableExtensions);
-                LogMsg("******** Available Instance Extensions: ********", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "******** Available Instance Extensions: ********", Utility::eLogSeverityInfo);
                 for (uint32 uiAvailExt = 0; uiAvailExt < numAvailableExtensions; ++uiAvailExt)
                 {
-                    LogMsg(availableExtensions[uiAvailExt].extensionName, eLogSeverityInfo);
+                    Utility::LogMsg("Platform", availableExtensions[uiAvailExt].extensionName, Utility::eLogSeverityInfo);
                 }
                 delete availableExtensions;
 
@@ -194,10 +194,10 @@ namespace Tinker
                 {
                     "VK_LAYER_KHRONOS_validation"
                 };
-                LogMsg("******** Requested Instance Layers: ********", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "******** Requested Instance Layers: ********", Utility::eLogSeverityInfo);
                 for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
                 {
-                    LogMsg(requestedLayersStr[uiReqLayer], eLogSeverityInfo);
+                    Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Utility::eLogSeverityInfo);
                 }
 
                 uint32 numAvailableLayers = 0;
@@ -205,17 +205,17 @@ namespace Tinker
 
                 if (numAvailableLayers == 0)
                 {
-                    LogMsg("Zero available instance layers!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Zero available instance layers!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
                 VkLayerProperties* availableLayers = new VkLayerProperties[numAvailableLayers];
                 vkEnumerateInstanceLayerProperties(&numAvailableLayers, availableLayers);
 
-                LogMsg("******** Available Instance Layers: ********", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Utility::eLogSeverityInfo);
                 for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
                 {
-                    LogMsg(availableLayers[uiAvailLayer].layerName, eLogSeverityInfo);
+                    Utility::LogMsg("Platform", availableLayers[uiAvailLayer].layerName, Utility::eLogSeverityInfo);
                 }
 
                 bool layersSupported[numRequestedLayers] = { false };
@@ -237,8 +237,8 @@ namespace Tinker
                 {
                     if (!layersSupported[uiReqLayer])
                     {
-                        LogMsg("Requested instance layer not supported!", eLogSeverityCritical);
-                        LogMsg(requestedLayersStr[uiReqLayer], eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Requested instance layer not supported!", Utility::eLogSeverityCritical);
+                        Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                     }
                 }
@@ -252,7 +252,7 @@ namespace Tinker
                     &vulkanContextResources->instance);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan instance!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan instance!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -281,7 +281,7 @@ namespace Tinker
                 }
                 else
                 {
-                    LogMsg("Failed to get create debug utils messenger proc addr!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to get create debug utils messenger proc addr!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
                 #endif
@@ -299,7 +299,7 @@ namespace Tinker
                     &vulkanContextResources->surface);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Win32SurfaceKHR!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Win32SurfaceKHR!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
                 #else
@@ -313,7 +313,7 @@ namespace Tinker
 
                 if (numPhysicalDevices == 0)
                 {
-                    LogMsg("Zero available physical devices!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Zero available physical devices!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -325,10 +325,10 @@ namespace Tinker
                 {
                     VK_KHR_SWAPCHAIN_EXTENSION_NAME
                 };
-                LogMsg("******** Requested Device Extensions: ********", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "******** Requested Device Extensions: ********", Utility::eLogSeverityInfo);
                 for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
                 {
-                    LogMsg(requiredPhysicalDeviceExtensions[uiReqExt], eLogSeverityInfo);
+                    Utility::LogMsg("Platform", requiredPhysicalDeviceExtensions[uiReqExt], Utility::eLogSeverityInfo);
                 }
 
                 for (uint32 uiPhysicalDevice = 0; uiPhysicalDevice < numPhysicalDevices; ++uiPhysicalDevice)
@@ -383,7 +383,7 @@ namespace Tinker
 
                         if (numAvailablePhysicalDeviceExtensions == 0)
                         {
-                            LogMsg("Zero available device extensions!", eLogSeverityCritical);
+                            Utility::LogMsg("Platform", "Zero available device extensions!", Utility::eLogSeverityCritical);
                             TINKER_ASSERT(0);
                         }
 
@@ -393,10 +393,10 @@ namespace Tinker
                             &numAvailablePhysicalDeviceExtensions,
                             availablePhysicalDeviceExtensions);
 
-                        LogMsg("******** Available Device Extensions: ********", eLogSeverityInfo);
+                        Utility::LogMsg("Platform", "******** Available Device Extensions: ********", Utility::eLogSeverityInfo);
                         for (uint32 uiAvailExt = 0; uiAvailExt < numAvailablePhysicalDeviceExtensions; ++uiAvailExt)
                         {
-                            LogMsg(availablePhysicalDeviceExtensions[uiAvailExt].extensionName, eLogSeverityInfo);
+                            Utility::LogMsg("Platform", availablePhysicalDeviceExtensions[uiAvailExt].extensionName, Utility::eLogSeverityInfo);
                         }
 
                         for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
@@ -416,8 +416,8 @@ namespace Tinker
                         {
                             if (!extensionSupport[uiReqExt])
                             {
-                                LogMsg("Requested device extension not supported!", eLogSeverityCritical);
-                                LogMsg(requiredPhysicalDeviceExtensions[uiReqExt], eLogSeverityCritical);
+                                Utility::LogMsg("Platform", "Requested device extension not supported!", Utility::eLogSeverityCritical);
+                                Utility::LogMsg("Platform", requiredPhysicalDeviceExtensions[uiReqExt], Utility::eLogSeverityCritical);
                                 TINKER_ASSERT(0);
                             }
                         }
@@ -435,7 +435,7 @@ namespace Tinker
 
                 if (vulkanContextResources->physicalDevice == VK_NULL_HANDLE)
                 {
-                    LogMsg("No physical device chosen!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "No physical device chosen!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -475,7 +475,7 @@ namespace Tinker
                     &vulkanContextResources->device);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan device!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan device!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -489,7 +489,7 @@ namespace Tinker
                                                                            "vkCmdBeginDebugUtilsLabelEXT");
                 if (!vulkanContextResources->pfnCmdBeginDebugUtilsLabelEXT)
                 {
-                    LogMsg("Failed to get create debug utils begin label proc addr!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to get create debug utils begin label proc addr!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -498,7 +498,7 @@ namespace Tinker
                                                                            "vkCmdEndDebugUtilsLabelEXT");
                 if (!vulkanContextResources->pfnCmdEndDebugUtilsLabelEXT)
                 {
-                    LogMsg("Failed to get create debug utils end label proc addr!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to get create debug utils end label proc addr!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -507,7 +507,7 @@ namespace Tinker
                                                                            "vkCmdInsertDebugUtilsLabelEXT");
                 if (!vulkanContextResources->pfnCmdInsertDebugUtilsLabelEXT)
                 {
-                    LogMsg("Failed to get create debug utils insert label proc addr!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to get create debug utils insert label proc addr!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
                 #endif
@@ -538,7 +538,7 @@ namespace Tinker
                     &vulkanContextResources->commandPool);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan command pool!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan command pool!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -556,7 +556,7 @@ namespace Tinker
                     vulkanContextResources->commandBuffers);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to allocate Vulkan command buffers!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to allocate Vulkan command buffers!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -569,7 +569,7 @@ namespace Tinker
                 result = vkAllocateCommandBuffers(vulkanContextResources->device, &allocInfo, &vulkanContextResources->commandBuffer_Immediate);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to allocate Vulkan command buffers (immediate)!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to allocate Vulkan command buffers (immediate)!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -585,7 +585,7 @@ namespace Tinker
                         &vulkanContextResources->swapChainImageAvailableSemaphores[uiImage]);
                     if (result != VK_SUCCESS)
                     {
-                        LogMsg("Failed to create Vulkan semaphore!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Utility::eLogSeverityCritical);
                     }
 
                     result = vkCreateSemaphore(vulkanContextResources->device,
@@ -594,7 +594,7 @@ namespace Tinker
                         &vulkanContextResources->renderCompleteSemaphores[uiImage]);
                     if (result != VK_SUCCESS)
                     {
-                        LogMsg("Failed to create Vulkan semaphore!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Utility::eLogSeverityCritical);
                     }
                 }
 
@@ -607,7 +607,7 @@ namespace Tinker
                     result = vkCreateFence(vulkanContextResources->device, &fenceCreateInfo, nullptr, &vulkanContextResources->fences[uiImage]);
                     if (result != VK_SUCCESS)
                     {
-                        LogMsg("Failed to create Vulkan fence!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Failed to create Vulkan fence!", Utility::eLogSeverityCritical);
                     }
                 }
                 
@@ -659,7 +659,7 @@ namespace Tinker
 
                 if (numAvailableSurfaceFormats == 0)
                 {
-                    LogMsg("Zero available Vulkan swap chain surface formats!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Zero available Vulkan swap chain surface formats!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -688,7 +688,7 @@ namespace Tinker
 
                 if (numAvailablePresentModes == 0)
                 {
-                    LogMsg("Zero available Vulkan swap chain present modes!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Zero available Vulkan swap chain present modes!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -751,7 +751,7 @@ namespace Tinker
                     &vulkanContextResources->swapChain);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan swap chain!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan swap chain!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -850,7 +850,7 @@ namespace Tinker
                     imageView);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan image view!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
             }
@@ -863,7 +863,7 @@ namespace Tinker
 
                 if (numAttachments == 0)
                 {
-                    LogMsg("No attachments specified for framebuffer!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "No attachments specified for framebuffer!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
                 else
@@ -896,7 +896,7 @@ namespace Tinker
                     framebuffer);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan framebuffer!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan framebuffer!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -977,7 +977,7 @@ namespace Tinker
                 VkResult result = vkCreateRenderPass(vulkanContextResources->device, &renderPassCreateInfo, nullptr, renderPass);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan render pass!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan render pass!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -1005,7 +1005,7 @@ namespace Tinker
                 VkResult result = vkCreateShaderModule(vulkanContextResources->device, &shaderModuleCreateInfo, nullptr, &shaderModule);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan shader module!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan shader module!", Utility::eLogSeverityCritical);
                     return VK_NULL_HANDLE;
                 }
                 return shaderModule;
@@ -1205,7 +1205,7 @@ namespace Tinker
 
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan pipeline layout!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan pipeline layout!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -1246,7 +1246,7 @@ namespace Tinker
 
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create Vulkan graphics pipeline!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -1278,7 +1278,7 @@ namespace Tinker
                 VkResult result = vkQueueSubmit(vulkanContextResources->graphicsQueue, 1, &submitInfo, vulkanContextResources->fences[vulkanContextResources->currentFrame]);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to submit command buffer to queue!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Utility::eLogSeverityCritical);
                 }
 
                 // Present
@@ -1295,18 +1295,18 @@ namespace Tinker
 
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to present swap chain!", eLogSeverityInfo);
+                    Utility::LogMsg("Platform", "Failed to present swap chain!", Utility::eLogSeverityInfo);
                     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
                     {
                         TINKER_ASSERT(0);
-                        /*LogMsg("Recreating swap chain!", eLogSeverityInfo);
+                        /*Utility::LogMsg("Platform", "Recreating swap chain!", Utility::eLogSeverityInfo);
                         VulkanDestroySwapChain(vulkanContextResources);
                         VulkanCreateSwapChain(vulkanContextResources);
                         return; // Don't present on this frame*/
                     }
                     else
                     {
-                        LogMsg("Not recreating swap chain!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Not recreating swap chain!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                     }
                 }
@@ -1326,7 +1326,7 @@ namespace Tinker
 
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to map gpu memory!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to map gpu memory!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                     return nullptr;
                 }
@@ -1360,7 +1360,7 @@ namespace Tinker
                 }
                 if (memTypeIndex == 0xffffffff)
                 {
-                    LogMsg("Failed to find memory property flags!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to find memory property flags!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -1371,7 +1371,7 @@ namespace Tinker
                 VkResult result = vkAllocateMemory(vulkanContextResources->device, &memAllocInfo, nullptr, deviceMemory);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to allocate gpu memory!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to allocate gpu memory!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
             }
@@ -1389,7 +1389,7 @@ namespace Tinker
                 VkResult result = vkCreateBuffer(vulkanContextResources->device, &bufferCreateInfo, nullptr, &buffer);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to allocate Vulkan buffer!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to allocate Vulkan buffer!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -1447,7 +1447,7 @@ namespace Tinker
 
                         default:
                         {
-                            LogMsg("Invalid buffer usage specified!", eLogSeverityCritical);
+                            Utility::LogMsg("Platform", "Invalid buffer usage specified!", Utility::eLogSeverityCritical);
                             TINKER_ASSERT(0);
                             break;
                         }
@@ -1501,7 +1501,7 @@ namespace Tinker
                 }
                 else
                 {
-                    LogMsg("No descriptors passed to VulkanCreateDescriptor()!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "No descriptors passed to VulkanCreateDescriptor()!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -1519,7 +1519,7 @@ namespace Tinker
                     result = vkCreateDescriptorSetLayout(vulkanContextResources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
                     if (result != VK_SUCCESS)
                     {
-                        LogMsg("Failed to create Vulkan descriptor set layout!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set layout!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                     }
 
@@ -1536,7 +1536,7 @@ namespace Tinker
                             &vulkanContextResources->vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiImage].descriptorSet);
                         if (result != VK_SUCCESS)
                         {
-                            LogMsg("Failed to create Vulkan descriptor set!", eLogSeverityCritical);
+                            Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set!", Utility::eLogSeverityCritical);
                             TINKER_ASSERT(0);
                         }
                     }
@@ -1655,7 +1655,7 @@ namespace Tinker
                 VkResult result = vkCreateDescriptorPool(vulkanContextResources->device, &descPoolCreateInfo, nullptr, &vulkanContextResources->descriptorPool);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create descriptor pool!", eLogSeverityInfo);
+                    Utility::LogMsg("Platform", "Failed to create descriptor pool!", Utility::eLogSeverityInfo);
                     return;
                 }
             }
@@ -1684,7 +1684,7 @@ namespace Tinker
                 VkResult result = vkCreateSampler(vulkanContextResources->device, &samplerCreateInfo, nullptr, &vulkanContextResources->linearSampler);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to create sampler!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to create sampler!", Utility::eLogSeverityCritical);
                     return;
                 }
             }
@@ -1704,17 +1704,17 @@ namespace Tinker
                 
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to acquire next swap chain image!", eLogSeverityInfo);
+                    Utility::LogMsg("Platform", "Failed to acquire next swap chain image!", Utility::eLogSeverityInfo);
                     if (result == VK_ERROR_OUT_OF_DATE_KHR)
                     {
-                        LogMsg("Recreating swap chain!", eLogSeverityInfo);
+                        Utility::LogMsg("Platform", "Recreating swap chain!", Utility::eLogSeverityInfo);
                         VulkanDestroySwapChain(vulkanContextResources);
                         VulkanCreateSwapChain(vulkanContextResources);
                         return; // Don't present on this frame
                     }
                     else
                     {
-                        LogMsg("Not recreating swap chain!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Not recreating swap chain!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                     }
                 }
@@ -1737,7 +1737,7 @@ namespace Tinker
                 VkResult result = vkBeginCommandBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage], &commandBufferBeginInfo);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to begin Vulkan command buffer!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
             }
@@ -1752,7 +1752,7 @@ namespace Tinker
                 VkResult result = vkEndCommandBuffer(vulkanContextResources->commandBuffers[vulkanContextResources->currentSwapChainImage]);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to end Vulkan command buffer!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to end Vulkan command buffer!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
             }
@@ -1766,7 +1766,7 @@ namespace Tinker
                 VkResult result = vkBeginCommandBuffer(vulkanContextResources->commandBuffer_Immediate, &commandBufferBeginInfo);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to begin Vulkan command buffer (immediate)!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer (immediate)!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
             }
@@ -1776,7 +1776,7 @@ namespace Tinker
                 VkResult result = vkEndCommandBuffer(vulkanContextResources->commandBuffer_Immediate);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to end Vulkan command buffer (immediate)!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to end Vulkan command buffer (immediate)!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
 
@@ -1788,7 +1788,7 @@ namespace Tinker
                 result = vkQueueSubmit(vulkanContextResources->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
                 if (result != VK_SUCCESS)
                 {
-                    LogMsg("Failed to submit command buffer to queue!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Utility::eLogSeverityCritical);
                 }
                 vkQueueWaitIdle(vulkanContextResources->graphicsQueue);
             }
@@ -1924,7 +1924,7 @@ namespace Tinker
 
                             default:
                             {
-                                LogMsg("Unsupported image copy dst format!", eLogSeverityCritical);
+                                Utility::LogMsg("Platform", "Unsupported image copy dst format!", Utility::eLogSeverityCritical);
                                 TINKER_ASSERT(0);
                                 return;
                             }
@@ -2075,7 +2075,7 @@ namespace Tinker
 
                     default:
                     {
-                        LogMsg("Invalid dst image resource layout specified for layout transition!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                         return;
                     }
@@ -2113,7 +2113,7 @@ namespace Tinker
 
                     default:
                     {
-                        LogMsg("Invalid src image resource layout specified for layout transition!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Invalid src image resource layout specified for layout transition!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                         return;
                     }
@@ -2136,7 +2136,7 @@ namespace Tinker
 
                     default:
                     {
-                        LogMsg("Invalid image format for layout transition command!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                         return;
                     }
@@ -2226,7 +2226,7 @@ namespace Tinker
 
                     default:
                     {
-                        LogMsg("Invalid image format for clear command!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Invalid image format for clear command!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                         return;
                     }
@@ -2354,7 +2354,7 @@ namespace Tinker
                         case eImageFormat_Invalid:
                         default:
                         {
-                            LogMsg("Invalid image resource format specified!", eLogSeverityCritical);
+                            Utility::LogMsg("Platform", "Invalid image resource format specified!", Utility::eLogSeverityCritical);
                             TINKER_ASSERT(0);
                             break;
                         }
@@ -2404,7 +2404,7 @@ namespace Tinker
                         case eImageFormat_Invalid:
                         default:
                         {
-                            LogMsg("Invalid image resource format specified!", eLogSeverityCritical);
+                            Utility::LogMsg("Platform", "Invalid image resource format specified!", Utility::eLogSeverityCritical);
                             TINKER_ASSERT(0);
                             break;
                         }
@@ -2416,7 +2416,7 @@ namespace Tinker
                         &newResource->imageView);
                     if (result != VK_SUCCESS)
                     {
-                        LogMsg("Failed to create Vulkan image view!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Failed to create Vulkan image view!", Utility::eLogSeverityCritical);
                         TINKER_ASSERT(0);
                     }
                 }
@@ -2444,7 +2444,7 @@ namespace Tinker
 
                     default:
                     {
-                        LogMsg("Invalid resource description type!", eLogSeverityCritical);
+                        Utility::LogMsg("Platform", "Invalid resource description type!", Utility::eLogSeverityCritical);
                         return newHandle;
                     }
                 }
@@ -2571,7 +2571,7 @@ namespace Tinker
                 }
                 else
                 {
-                    LogMsg("Failed to get destroy debug utils messenger proc addr!", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Failed to get destroy debug utils messenger proc addr!", Utility::eLogSeverityCritical);
                     TINKER_ASSERT(0);
                 }
                 #endif

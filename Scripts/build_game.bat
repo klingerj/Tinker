@@ -27,16 +27,16 @@ set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
     echo Debug mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd /fp:fast
+    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd
     set CommonLinkFlags=%CommonLinkFlags% /debug:full
     ) else (
     echo Release mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT /fp:fast
+    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
-set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Game/GameMain.cpp ../Game/GameGraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/ShaderLoading.cpp ../Game/GameRenderPass.cpp
+set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Game/GameMain.cpp ../Game/GameGraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/ShaderLoading.cpp ../Game/GameRenderPass.cpp
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%
