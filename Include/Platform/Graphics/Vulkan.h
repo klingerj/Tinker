@@ -125,6 +125,7 @@ namespace Tinker
                 VkSemaphore swapChainImageAvailableSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
                 VkSemaphore renderCompleteSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
                 VkCommandBuffer* commandBuffers = nullptr;
+                VkCommandBuffer* threaded_secondaryCommandBuffers = nullptr;
                 VkCommandPool commandPool = VK_NULL_HANDLE;
                 VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;
             } VulkanContextResources;
@@ -155,7 +156,7 @@ namespace Tinker
             } PlatformWindowHandles;
 
             // Init/destroy - called one time
-            int InitVulkan(VulkanContextResources* vulkanContextResources, const PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height);
+            int InitVulkan(VulkanContextResources* vulkanContextResources, const PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height, uint32 numThreads);
             void DestroyVulkan(VulkanContextResources* vulkanContextResources);
 
             void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources);
