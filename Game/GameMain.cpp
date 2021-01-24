@@ -3,6 +3,7 @@
 #include "../Include/Core/Math/VectorTypes.h"
 #include "../Include/Core/Containers/RingBuffer.h"
 #include "../Include/Core/FileIO/FileLoading.h"
+#include "../Include/Core/Utilities/ScopedTimer.h"
 #include "GameGraphicsTypes.h"
 #include "ShaderLoading.h"
 #include "GameRenderPass.h"
@@ -399,6 +400,8 @@ GAME_UPDATE(GameUpdate)
 
     if (!isGameInitted)
     {
+        TIMED_SCOPED_BLOCK("Game Init");
+
         g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
         currentWindowWidth = windowWidth;
         currentWindowHeight = windowHeight;
@@ -419,9 +422,11 @@ GAME_UPDATE(GameUpdate)
             }
         }
 
-        // Load mesh files
-        g_AssetManager.LoadAllAssets(platformFuncs);
-        g_AssetManager.InitAssetGraphicsResources(platformFuncs, graphicsCommandStream);
+        {
+            TIMED_SCOPED_BLOCK("Load game assets");
+            g_AssetManager.LoadAllAssets(platformFuncs);
+            g_AssetManager.InitAssetGraphicsResources(platformFuncs, graphicsCommandStream);
+        }
 
         CreateDefaultGeometry(platformFuncs, graphicsCommandStream);
 

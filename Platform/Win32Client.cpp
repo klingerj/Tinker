@@ -3,7 +3,7 @@
 #endif
 
 #include "../Include/Platform/Win32Client.h"
-#include "../Include/Core/Logging.h"
+#include "../Include/Core/Utilities/Logging.h"
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -38,20 +38,20 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(result, buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    LogMsg(buffer, eLogSeverityCritical);
+                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
                     return 1;
                 }
 
                 // Confirm that the Winsock dll is the correct version
                 if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
                 {
-                    LogMsg("Could not find a usable version of Winsock.dll. Exiting.", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "Could not find a usable version of Winsock.dll. Exiting.", Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
                 else
                 {
-                    LogMsg("The Winsock 2.2 dll was found okay.", eLogSeverityInfo);
+                    Utility::LogMsg("Platform", "The Winsock 2.2 dll was found okay.", Utility::eLogSeverityInfo);
                 }
 
                 struct addrinfo hints = {};
@@ -70,7 +70,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(result, buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    LogMsg(buffer, eLogSeverityCritical);
+                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -86,14 +86,14 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    LogMsg(buffer, eLogSeverityCritical);
+                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
                     WSACleanup();
                     freeaddrinfo(infos);
                     return 1;
                 }
 
                 // Connect to the server
-                LogMsg("Attempting to connect to the server...", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "Attempting to connect to the server...", Utility::eLogSeverityInfo);
                 result = connect(ConnectSocket, infos->ai_addr, (int)infos->ai_addrlen);
                 if (result == SOCKET_ERROR)
                 {
@@ -107,7 +107,7 @@ namespace Tinker
 
                 if (ConnectSocket == INVALID_SOCKET)
                 {
-                    LogMsg("connect failed", eLogSeverityCritical);
+                    Utility::LogMsg("Platform", "connect failed", Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -126,7 +126,7 @@ namespace Tinker
 
             int DisconnectFromServer()
             {
-                LogMsg("Shutting down client.", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "Shutting down client.", Utility::eLogSeverityInfo);
 
                 // Shutdown receiving from the server
                 int result = shutdown(ConnectSocket, SD_RECEIVE);
@@ -138,7 +138,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    LogMsg(buffer, eLogSeverityCritical);
+                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -153,7 +153,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    LogMsg(buffer, eLogSeverityCritical);
+                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -164,7 +164,7 @@ namespace Tinker
             int SendMessageToServer()
             {
                 // Send data to the server
-                LogMsg("Attempting to send data to the server...", eLogSeverityInfo);
+                Utility::LogMsg("Platform", "Attempting to send data to the server...", Utility::eLogSeverityInfo);
                 char clientMsg[512] = {};
                 clientMsg[0] = 'J';
                 clientMsg[1] = 'o';
@@ -175,11 +175,11 @@ namespace Tinker
                 numBytesSent = send(ConnectSocket, clientMsg, 512, 0);
                 if (numBytesSent > 0)
                 {
-                    LogMsg("Successfully sent message to server", eLogSeverityInfo);
+                    Utility::LogMsg("Platform", "Successfully sent message to server", Utility::eLogSeverityInfo);
                 }
                 else if (numBytesSent == 0)
                 {
-                    LogMsg("Received 0 bytes - connection has been gracefully closed.", eLogSeverityInfo);
+                    Utility::LogMsg("Platform", "Received 0 bytes - connection has been gracefully closed.", Utility::eLogSeverityInfo);
                 }
                 else
                 {
@@ -189,7 +189,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    LogMsg(buffer, eLogSeverityCritical);
+                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
                     DisconnectFromServer();
                     return 1;
                 }
