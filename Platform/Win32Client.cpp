@@ -38,20 +38,20 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(result, buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
                     return 1;
                 }
 
                 // Confirm that the Winsock dll is the correct version
                 if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
                 {
-                    Utility::LogMsg("Platform", "Could not find a usable version of Winsock.dll. Exiting.", Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", "Could not find a usable version of Winsock.dll. Exiting.", Core::Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
                 else
                 {
-                    Utility::LogMsg("Platform", "The Winsock 2.2 dll was found okay.", Utility::eLogSeverityInfo);
+                    Core::Utility::LogMsg("Platform", "The Winsock 2.2 dll was found okay.", Core::Utility::eLogSeverityInfo);
                 }
 
                 struct addrinfo hints = {};
@@ -70,7 +70,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(result, buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -86,14 +86,14 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
                     WSACleanup();
                     freeaddrinfo(infos);
                     return 1;
                 }
 
                 // Connect to the server
-                Utility::LogMsg("Platform", "Attempting to connect to the server...", Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "Attempting to connect to the server...", Core::Utility::eLogSeverityInfo);
                 result = connect(ConnectSocket, infos->ai_addr, (int)infos->ai_addrlen);
                 if (result == SOCKET_ERROR)
                 {
@@ -107,7 +107,7 @@ namespace Tinker
 
                 if (ConnectSocket == INVALID_SOCKET)
                 {
-                    Utility::LogMsg("Platform", "connect failed", Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", "connect failed", Core::Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -126,7 +126,7 @@ namespace Tinker
 
             int DisconnectFromServer()
             {
-                Utility::LogMsg("Platform", "Shutting down client.", Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "Shutting down client.", Core::Utility::eLogSeverityInfo);
 
                 // Shutdown receiving from the server
                 int result = shutdown(ConnectSocket, SD_RECEIVE);
@@ -138,7 +138,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -153,7 +153,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
                     WSACleanup();
                     return 1;
                 }
@@ -164,7 +164,7 @@ namespace Tinker
             int SendMessageToServer()
             {
                 // Send data to the server
-                Utility::LogMsg("Platform", "Attempting to send data to the server...", Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "Attempting to send data to the server...", Core::Utility::eLogSeverityInfo);
                 char clientMsg[512] = {};
                 clientMsg[0] = 'J';
                 clientMsg[1] = 'o';
@@ -175,11 +175,11 @@ namespace Tinker
                 numBytesSent = send(ConnectSocket, clientMsg, 512, 0);
                 if (numBytesSent > 0)
                 {
-                    Utility::LogMsg("Platform", "Successfully sent message to server", Utility::eLogSeverityInfo);
+                    Core::Utility::LogMsg("Platform", "Successfully sent message to server", Core::Utility::eLogSeverityInfo);
                 }
                 else if (numBytesSent == 0)
                 {
-                    Utility::LogMsg("Platform", "Received 0 bytes - connection has been gracefully closed.", Utility::eLogSeverityInfo);
+                    Core::Utility::LogMsg("Platform", "Received 0 bytes - connection has been gracefully closed.", Core::Utility::eLogSeverityInfo);
                 }
                 else
                 {
@@ -189,7 +189,7 @@ namespace Tinker
                     size_t len = strlen(str);
                     _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
                     buffer[len + 1] = '\0';
-                    Utility::LogMsg("Platform", buffer, Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
                     DisconnectFromServer();
                     return 1;
                 }

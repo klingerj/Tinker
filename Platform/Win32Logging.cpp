@@ -4,44 +4,47 @@
 
 namespace Tinker
 {
-    namespace Utility
+    namespace Core
     {
-        void LogMsg(const char* prefix, const char* msg, uint32 severity)
+        namespace Utility
         {
-            OutputDebugString("[");
-            OutputDebugString(prefix);
-            OutputDebugString("]");
-
-            const char* severityMsg;
-            switch (severity)
+            void LogMsg(const char* prefix, const char* msg, uint32 severity)
             {
-                case eLogSeverityInfo:
-                {
-                    severityMsg = "Info";
-                    break;
-                }
-                case eLogSeverityWarning:
-                {
-                    severityMsg = "Warning";
-                    break;
-                }
-                case eLogSeverityCritical:
-                {
-                    severityMsg = "Critical";
-                    break;
-                }
-                default:
-                {
-                    severityMsg = "Unknown Severity";
-                    break;
-                }
-            }
-            OutputDebugString("[");
-            OutputDebugString(severityMsg);
-            OutputDebugString("] ");
+                OutputDebugString("[");
+                OutputDebugString(prefix);
+                OutputDebugString("]");
 
-            OutputDebugString(msg);
-            OutputDebugString("\n");
+                const char* severityMsg;
+                switch (severity)
+                {
+                    case eLogSeverityInfo:
+                    {
+                        severityMsg = "Info";
+                        break;
+                    }
+                    case eLogSeverityWarning:
+                    {
+                        severityMsg = "Warning";
+                        break;
+                    }
+                    case eLogSeverityCritical:
+                    {
+                        severityMsg = "Critical";
+                        break;
+                    }
+                    default:
+                    {
+                        severityMsg = "Unknown Severity";
+                        break;
+                    }
+                }
+                OutputDebugString("[");
+                OutputDebugString(severityMsg);
+                OutputDebugString("] ");
+
+                OutputDebugString(msg);
+                OutputDebugString("\n");
+            }
         }
     }
 }

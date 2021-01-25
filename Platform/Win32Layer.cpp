@@ -86,7 +86,7 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
         else
         {
             // some other error, log a failure
-            Utility::LogMsg("Platform", "Failed to get handle to game dll to reload!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Failed to get handle to game dll to reload!", Core::Utility::eLogSeverityCritical);
         }
 
         // Regardless of error code, don't continue with the hotload attempt
@@ -100,7 +100,7 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     CloseHandle(gameDllFileHandle);
     if (CompareFileTime(&gameDllLastWriteTime, &GameCode->lastWriteTime))
     {
-        Utility::LogMsg("Platform", "Loading game dll!", Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Loading game dll!", Core::Utility::eLogSeverityInfo);
 
         // Unload old code
         if (GameCode->GameDll)
@@ -148,7 +148,7 @@ GET_FILE_SIZE(GetFileSize)
     }
     else
     {
-        Utility::LogMsg("Platform", "Unable to create file handle!", Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::eLogSeverityCritical);
         return 0;
     }
 }
@@ -179,7 +179,7 @@ READ_ENTIRE_FILE(ReadEntireFile)
     }
     else
     {
-        Utility::LogMsg("Platform", "Unable to create file handle!", Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::eLogSeverityCritical);
     }
 }
 
@@ -246,7 +246,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
                         default:
                         {
-                            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                             runGame = false;
                         }
                     }
@@ -268,7 +268,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
                         default:
                         {
-                            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                             runGame = false;
                         }
                     }
@@ -290,7 +290,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
                         default:
                         {
-                            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                             runGame = false;
                         }
                     }
@@ -310,7 +310,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
                         default:
                         {
-                            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                             runGame = false;
                         }
                     }
@@ -332,7 +332,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
                         default:
                         {
-                            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                             runGame = false;
                         }
                     }
@@ -353,7 +353,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 
                         default:
                         {
-                            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                             runGame = false;
                         }
                     }
@@ -391,7 +391,7 @@ static void BeginFrameRecording()
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
         }
     }
@@ -409,7 +409,7 @@ static void EndFrameRecording()
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
         }
     }
@@ -427,7 +427,7 @@ static void SubmitFrameToGPU()
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
         }
     }
@@ -445,7 +445,7 @@ CREATE_RESOURCE(CreateResource)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
 
             return DefaultResHandle_Invalid;
@@ -467,7 +467,7 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             return DefaultFramebufferHandle_Invalid;
         }
@@ -489,7 +489,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             return DefaultShaderHandle_Invalid;
         }
@@ -508,7 +508,7 @@ CREATE_DESCRIPTOR(CreateDescriptor)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             return DefaultDescHandle_Invalid;
             //break;
@@ -528,7 +528,7 @@ DESTROY_RESOURCE(DestroyResource)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             break;
         }
@@ -547,7 +547,7 @@ DESTROY_FRAMEBUFFER(DestroyFramebuffer)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             break;
         }
@@ -566,7 +566,7 @@ DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             break;
         }
@@ -585,7 +585,7 @@ DESTROY_DESCRIPTOR(DestroyDescriptor)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             break;
         }
@@ -604,7 +604,7 @@ DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             break;
         }
@@ -623,7 +623,7 @@ WRITE_DESCRIPTOR(WriteDescriptor)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             break;
         }
@@ -642,7 +642,7 @@ MAP_RESOURCE(MapResource)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             return nullptr;
             //break;
@@ -662,7 +662,7 @@ UNMAP_RESOURCE(UnmapResource)
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             runGame = false;
             break;
         }
@@ -673,12 +673,12 @@ INIT_NETWORK_CONNECTION(InitNetworkConnection)
 {
     if (Network::InitClient() != 0)
     {
-        Utility::LogMsg("Platform", "Failed to init network client!", Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to init network client!", Core::Utility::eLogSeverityCritical);
         return 1;
     }
     else
     {
-        Utility::LogMsg("Platform", "Successfully initialized network client.", Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Successfully initialized network client.", Core::Utility::eLogSeverityInfo);
         return 0;
     }
 }
@@ -687,12 +687,12 @@ END_NETWORK_CONNECTION(EndNetworkConnection)
 {
     if (Network::DisconnectFromServer() != 0)
     {
-        Utility::LogMsg("Platform", "Failed to cleanup network client!", Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to cleanup network client!", Core::Utility::eLogSeverityCritical);
         return 1;
     }
     else
     {
-        Utility::LogMsg("Platform", "Successfully cleaned up network client.", Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Successfully cleaned up network client.", Core::Utility::eLogSeverityInfo);
         return 0;
     }
 }
@@ -701,7 +701,7 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
 {
     if (Network::SendMessageToServer() != 0)
     {
-        Utility::LogMsg("Platform", "Failed to send message to server!", Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to send message to server!", Core::Utility::eLogSeverityCritical);
         return 1;
     }
     else
@@ -717,8 +717,8 @@ SYSTEM_COMMAND(SystemCommand)
 
     if (!CreateProcess(NULL, (LPSTR)command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInfo))
     {
-        Utility::LogMsg("Platform", "Failed to create new process to execute system command:", Utility::eLogSeverityCritical);
-        Utility::LogMsg("Platform", command, Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create new process to execute system command:", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", command, Core::Utility::eLogSeverityCritical);
         return 1;
     }
 
@@ -771,7 +771,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
 
                 default:
                 {
-                    Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                     runGame = false;
                     break;
                 }
@@ -795,18 +795,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
             if (wParam) procPrior = ABOVE_NORMAL_PRIORITY_CLASS;
             if (!SetPriorityClass(GetCurrentProcess(), procPrior))
             {
-                Utility::LogMsg("Platform", "Failed to change process priority when changing window focus!", Utility::eLogSeverityCritical);
+                Core::Utility::LogMsg("Platform", "Failed to change process priority when changing window focus!", Core::Utility::eLogSeverityCritical);
             }
             else
             {
-                Utility::LogMsg("Platform", "Changing process priority!", Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "Changing process priority!", Core::Utility::eLogSeverityInfo);
                 if (wParam)
                 {
-                    Utility::LogMsg("Platform", "ABOVE_NORMAL", Utility::eLogSeverityInfo);
+                    Core::Utility::LogMsg("Platform", "ABOVE_NORMAL", Core::Utility::eLogSeverityInfo);
                 }
                 else
                 {
-                    Utility::LogMsg("Platform", "NORMAL", Utility::eLogSeverityInfo);
+                    Core::Utility::LogMsg("Platform", "NORMAL", Core::Utility::eLogSeverityInfo);
                 }
             }
             break;
@@ -945,7 +945,7 @@ wWinMain(HINSTANCE hInstance,
         windowClass.lpszClassName = "Tinker Platform Window";
         if (!RegisterClass(&windowClass))
         {
-            Utility::LogMsg("Platform", "Failed to register window class!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Failed to register window class!", Core::Utility::eLogSeverityCritical);
             return 1;
         }
 
@@ -968,7 +968,7 @@ wWinMain(HINSTANCE hInstance,
 
         if (!windowHandle)
         {
-            Utility::LogMsg("Platform", "Failed to create window!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Failed to create window!", Core::Utility::eLogSeverityCritical);
             return 1;
         }
 
@@ -984,7 +984,7 @@ wWinMain(HINSTANCE hInstance,
                 int result = InitVulkan(&vulkanContextResources, &g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, g_SystemInfo.dwNumberOfProcessors / 2);
                 if (result)
                 {
-                    Utility::LogMsg("Platform", "Failed to init graphics backend!", Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", "Failed to init graphics backend!", Core::Utility::eLogSeverityCritical);
                     return 1;
                 }
                 break;
@@ -992,7 +992,7 @@ wWinMain(HINSTANCE hInstance,
 
             default:
             {
-                Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                 return 1;
             }
         }
@@ -1072,7 +1072,7 @@ wWinMain(HINSTANCE hInstance,
 
                     default:
                     {
-                        Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                        Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                         shouldRenderFrame = false;
                         runGame = false;
                         break;
@@ -1094,7 +1094,7 @@ wWinMain(HINSTANCE hInstance,
                     int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &g_graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
                     if (error != 0)
                     {
-                        Utility::LogMsg("Platform", "Error occurred in game code! Shutting down application.", Utility::eLogSeverityCritical);
+                        Core::Utility::LogMsg("Platform", "Error occurred in game code! Shutting down application.", Core::Utility::eLogSeverityCritical);
                         runGame = false;
                         break;
                     }
@@ -1131,7 +1131,7 @@ wWinMain(HINSTANCE hInstance,
 
                 default:
                 {
-                    Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
                     break;
                 }
             }
@@ -1156,7 +1156,7 @@ wWinMain(HINSTANCE hInstance,
 
         default:
         {
-            Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::eLogSeverityCritical);
             break;
         }
     }
