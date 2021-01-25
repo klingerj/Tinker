@@ -27,14 +27,27 @@ typedef int16_t  int16;
 typedef int32_t  int32;
 typedef int64_t  int64;
 
-#define MAX(a, b) ((a > b) ? a : b)
-#define MIN(a, b) ((a < b) ? a : b)
-#define CLAMP(a, b, c) MIN(MAX(a, b), c)
-
-#define ISPOW2(x) x && ((x & (x - 1)) == 0)
+template <typename T>
+inline T max(const T& a, const T& b)
+{
+    return a > b ? a : b;
+}
 
 template <typename T>
-T LOG2(T x)
+inline T min(const T& a, const T& b)
+{
+    return a < b ? a : b;
+}
+#define CLAMP(a, b, c) min(max(a, b), c)
+
+template <typename T>
+inline bool ISPOW2(const T& x)
+{
+    return x && ((x & (x - 1)) == 0);
+}
+
+template <typename T>
+inline T LOG2(T x)
 {
     T i = 1;
     for (; x >> i; ++i) {}
@@ -42,11 +55,16 @@ T LOG2(T x)
 }
 
 template <typename T>
-T POW2(T x)
+inline T POW2(T x)
 {
     return 1 << LOG2(x);
 }
-#define POW2_ROUNDUP(x) ISPOW2(x) ? x : POW2(x);
+
+template <typename T>
+inline T POW2_ROUNDUP(const T& x)
+{
+    return ISPOW2(x) ? x : POW2(x);
+}
 
 #define FLOAT_EQUAL(a, b) fabs(a - b) < FLT_EPSILON
 
@@ -62,3 +80,16 @@ inline uint32 SafeTruncateUint64(uint64 value)
 #endif
 
 #define BYTE_ALIGN(n) alignas(n)
+
+// Quick simple memory allocation and leak tracking
+// NOTE: placement new doesn't compile nicely with this.
+
+#if defined(_WIN32) && defined(_DEBUG)
+#define MEM_TRACKING
+#endif
+
+#if defined(MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
+#endif

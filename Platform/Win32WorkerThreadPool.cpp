@@ -14,11 +14,6 @@ namespace Tinker
 {
     namespace Platform
     {
-        void WaitOnJob(WorkerJob* job)
-        {
-            while (!job->m_done);
-        }
-
         typedef struct thread_info
         {
             BYTE_ALIGN(64) volatile bool terminate = false;
@@ -31,29 +26,6 @@ namespace Tinker
         void __cdecl WorkerThreadFunction(void* arg)
         {
             ThreadInfo* info = (ThreadInfo*)(arg);
-
-            /*char buffer[50] = {};
-                    strcpy_s(buffer, "From thread Id: ");
-                    _itoa_s(info->threadId, buffer + 16, 10, 10);
-                    buffer[17] = '\n';
-                    buffer[18] = '\0';
-                    PrintDebugString(buffer);*/
-
-            /* old:
-            while (!info->terminate)
-            {
-                if (info->jobs.Size() > 0)
-                {
-                    WorkerJob* job;
-                    info->jobs.Dequeue(&job);
-                    (*job)();
-                    
-                    job->m_done = true;
-                }
-
-                WaitForSingleObjectEx(info->semaphoreHandle, INFINITE, FALSE);
-            }
-            */
 
         outer_loop:
             while (!info->terminate)
@@ -93,7 +65,7 @@ namespace Tinker
         public:
             void Startup(uint32 NumThreads)
             {
-                m_numThreads = MIN(NumThreads, 16);
+                m_numThreads = min(NumThreads, 16);
                 for (uint32 i = 0; i < m_numThreads; ++i)
                 {
                     m_threads[i].jobs.Init(NUM_JOBS_PER_WORKER);

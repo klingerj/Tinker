@@ -54,11 +54,7 @@ namespace Tinker
             {
                 _SIZE = POW2_ROUNDUP(size);
                 _MASK = _SIZE - 1;
-                #if defined(MEM_TRACKING) && defined(_DEBUG)
-                m_data = (T*)Platform::AllocAligned_Tracked(_SIZE * sizeof(T), 64, __FILE__, __LINE__);
-                #else
-                m_data = (T*)Platform::AllocAligned(_SIZE * sizeof(T), 64);
-                #endif
+                m_data = (T*)Platform::AllocAligned(_SIZE * sizeof(T), 64, __FILE__, __LINE__);
             }
 
             uint32 Capacity() const

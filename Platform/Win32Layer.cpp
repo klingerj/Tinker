@@ -187,12 +187,14 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
 {
     TINKER_ASSERT(graphicsCommandStream->m_numCommands <= graphicsCommandStream->m_maxCommands);
 
-    bool multithreadedCmdRecording = false;
+    const bool multithreadedCmdRecording = false;
 
     if (multithreadedCmdRecording)
     {
-        uint32 numThreads = g_SystemInfo.dwNumberOfProcessors / 2;
+        // TODO: old API, change to be job list
+        /*uint32 numThreads = g_SystemInfo.dwNumberOfProcessors / 2;
         Platform::WorkerJob** jobs = new Platform::WorkerJob*[numThreads];
+
         for (uint32 uiJob = 0; uiJob < g_SystemInfo.dwNumberOfProcessors / 2; ++uiJob)
         {
             // TODO: we could probably just simply break up the list of commands into even-ish chunks, record them,
@@ -212,7 +214,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
         {
             delete jobs[i];
         }
-        delete jobs;
+        delete jobs;*/
     }
     else
     {
@@ -999,7 +1001,6 @@ wWinMain(HINSTANCE hInstance,
 
         g_platformAPIFuncs = {};
         g_platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
-        g_platformAPIFuncs.WaitOnThreadJob = WaitOnJob;
         g_platformAPIFuncs.ReadEntireFile = ReadEntireFile;
         g_platformAPIFuncs.GetFileSize = GetFileSize;
         g_platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;

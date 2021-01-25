@@ -666,9 +666,9 @@ namespace Tinker
                 uint32 numSwapChainImages = capabilities.minImageCount + 1;
                 if (capabilities.maxImageCount > 0) // 0 can indicate no maximum
                 {
-                    numSwapChainImages = MIN(numSwapChainImages, capabilities.maxImageCount);
+                    numSwapChainImages = min(numSwapChainImages, capabilities.maxImageCount);
                 }
-                numSwapChainImages = MIN(numSwapChainImages, VULKAN_MAX_SWAP_CHAIN_IMAGES);
+                numSwapChainImages = min(numSwapChainImages, VULKAN_MAX_SWAP_CHAIN_IMAGES);
 
                 uint32 numAvailableSurfaceFormats;
                 vkGetPhysicalDeviceSurfaceFormatsKHR(vulkanContextResources->physicalDevice,
