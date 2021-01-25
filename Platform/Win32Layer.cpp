@@ -723,10 +723,14 @@ SYSTEM_COMMAND(SystemCommand)
     }
 
     WaitForSingleObject(processInfo.hProcess, INFINITE);
+
+    DWORD exitCode;
+    GetExitCodeProcess(processInfo.hProcess, &exitCode);
+
     CloseHandle(processInfo.hProcess);
     CloseHandle(processInfo.hThread);
 
-    return 0;
+    return exitCode;
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd,
