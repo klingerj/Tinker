@@ -45,29 +45,24 @@ void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platf
     bool multithreadObjLoading = true;
     if (multithreadObjLoading)
     {
-        Platform::WorkerJob* jobs[numMeshAssets] = {};
+        Platform::WorkerJobList jobs;
+        jobs.Init(numMeshAssets);
         for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
         {
             uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
             uint32 currentObjFileSize = meshFileSizes[uiAsset];
             accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
 
-            jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
+            jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
                 {
                     platformFuncs->ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
                     currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
                 });
 
-            platformFuncs->EnqueueWorkerThreadJob(jobs[uiAsset]);
+            platformFuncs->EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
         }
-        for (uint32 i = 0; i < numMeshAssets; ++i)
-        {
-            platformFuncs->WaitOnThreadJob(jobs[i]);
-        }
-        for (uint32 i = 0; i < numMeshAssets; ++i)
-        {
-            delete jobs[i];
-        }
+        jobs.WaitOnJobs();
+        jobs.FreeList();
     }
     else
     {
@@ -162,28 +157,23 @@ void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platf
     bool multithreadTextureLoading = true;
     if (multithreadTextureLoading)
     {
-        Platform::WorkerJob* jobs[numTextureAssets] = {};
+        Platform::WorkerJobList jobs;
+        jobs.Init(numTextureAssets);
         for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
         {
             uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
             uint32 currentTextureFileSize = textureFileSizes[uiAsset];
             accumFileOffset += currentTextureFileSize;
 
-            jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
+            jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
                 {
                     platformFuncs->ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
                 });
 
-            platformFuncs->EnqueueWorkerThreadJob(jobs[uiAsset]);
+            platformFuncs->EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
         }
-        for (uint32 i = 0; i < numTextureAssets; ++i)
-        {
-            platformFuncs->WaitOnThreadJob(jobs[i]);
-        }
-        for (uint32 i = 0; i < numTextureAssets; ++i)
-        {
-            delete jobs[i];
-        }
+        jobs.WaitOnJobs();
+        jobs.FreeList();
     }
     else
     {
