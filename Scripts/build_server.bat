@@ -1,4 +1,5 @@
 @echo off
+setlocal
 
 pushd ..
 if NOT EXIST .\Build mkdir .\Build

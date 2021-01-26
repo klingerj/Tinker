@@ -1,4 +1,5 @@
 @echo off
+setlocal
 
 set BuildConfig=%1
 if "%BuildConfig%" NEQ "Debug" (
