@@ -1,4 +1,5 @@
 @echo off
+setlocal
 
 rem This is meant to be an easy way to build and run the app/benchmarks/tests.
 rem This script can just be double clicked in Windows Explorer.

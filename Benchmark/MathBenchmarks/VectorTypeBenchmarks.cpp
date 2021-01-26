@@ -22,7 +22,7 @@ const uint32 numIters = 20;
 
 void BM_v2_Startup()
 {
-    g_v2s = (v2f*)AllocAligned(numVectors * sizeof(v2f), 64);
+    g_v2s = (v2f*)AllocAligned(numVectors * sizeof(v2f), 64, __FILE__, __LINE__);
     for (uint32 i = 0; i < numVectors; ++i)
     {
         g_v2s[i] = v2f((float)i, (float)(i + 1));
@@ -151,12 +151,12 @@ void BM_m2MulV2_fVectorized()
 
 void BM_v4_Startup()
 {
-    g_v4s = (v4f*)AllocAligned(numVectors * sizeof(v4f), 64);
+    g_v4s = (v4f*)AllocAligned(numVectors * sizeof(v4f), 64, __FILE__, __LINE__);
     for (uint32 i = 0; i < numVectors; ++i)
     {
         g_v4s[i] = v4f((float)i, (float)(i + 1),(float)(i + 2), (float)(i + 3));
     }
-    g_v4s_dst = (v4f*)AllocAligned(numVectors * sizeof(v4f), 64);
+    g_v4s_dst = (v4f*)AllocAligned(numVectors * sizeof(v4f), 64, __FILE__, __LINE__);
 }
 
 void BM_v4_Shutdown()
