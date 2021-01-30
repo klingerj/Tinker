@@ -2573,8 +2573,19 @@ namespace Tinker
                 for (uint32 uiImage = 0; uiImage < vulkanContextResources->numSwapChainImages; ++uiImage)
                 {
                     VulkanMemResource* resource = &vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiImage];
-                    vkDestroyBuffer(vulkanContextResources->device, resource->buffer, nullptr);
-                    vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
+
+                    // Only destroy/free memory if it's a validly created buffer
+                    if (resource->buffer != VK_NULL_HANDLE)
+                    {
+                        vkDestroyBuffer(vulkanContextResources->device, resource->buffer, nullptr);
+                        vkFreeMemory(vulkanContextResources->device, resource->deviceMemory, nullptr);
+                    }
+                    else
+                    {
+                        // TODO: this is currently happening since vertex buffers are only alloc'd once, but
+                        // currently the architecture stores a chain of buffer objects.
+                        //Core::Utility::LogMsg("Platform", "Freeing a null buffer", Core::Utility::eLogSeverityWarning);
+                    }
                 }
 
                 vulkanContextResources->vulkanMemResourcePool.Dealloc(handle.m_hRes);
