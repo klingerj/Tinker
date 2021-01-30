@@ -1358,6 +1358,20 @@ namespace Tinker
                 VulkanMemResource* resource =
                     &vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[vulkanContextResources->currentSwapChainImage];
 
+                // Flush right before unmapping
+                VkMappedMemoryRange memoryRange = {};
+                memoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+                memoryRange.memory = resource->deviceMemory;
+                memoryRange.offset = 0;
+                memoryRange.size = VK_WHOLE_SIZE;
+
+                VkResult result = vkFlushMappedMemoryRanges(vulkanContextResources->device, 1, &memoryRange);
+                if (result != VK_SUCCESS)
+                {
+                    Core::Utility::LogMsg("Platform", "Failed to flush mapped gpu memory!", Core::Utility::eLogSeverityCritical);
+                    TINKER_ASSERT(0);
+                }
+
                 vkUnmapMemory(vulkanContextResources->device, resource->deviceMemory);
             }
 
@@ -1425,10 +1439,15 @@ namespace Tinker
                 uint32 newResourceHandle =
                     vulkanContextResources->vulkanMemResourcePool.Alloc();
                 TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
+                VulkanMemResourceChain* newResourceChain = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
+                *newResourceChain = {};
 
-                for (uint32 uiImage = 0; uiImage < vulkanContextResources->numSwapChainImages; ++uiImage)
+                // TODO: do or do not have a resource chain for buffers.
+                bool oneBufferOnly = false;
+                bool perSwapChainSize = false;
+
+                for (uint32 uiImage = 0; uiImage < vulkanContextResources->numSwapChainImages && !oneBufferOnly; ++uiImage)
                 {
-                    VulkanMemResourceChain* newResourceChain = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
                     VulkanMemResource* newResource = &newResourceChain->resourceChain[uiImage];
 
                     VkBufferUsageFlags usageFlags = {};
@@ -1438,6 +1457,8 @@ namespace Tinker
                     {
                         case eBufferUsageVertex:
                         {
+                            oneBufferOnly = true;
+                            perSwapChainSize = true;
                             usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                             propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
                             break;
@@ -1445,6 +1466,8 @@ namespace Tinker
 
                         case eBufferUsageIndex:
                         {
+                            oneBufferOnly = true;
+                            perSwapChainSize = true;
                             usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                             propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
                             break;
@@ -1452,8 +1475,10 @@ namespace Tinker
 
                         case eBufferUsageStaging:
                         {
+                            oneBufferOnly = true;
+                            perSwapChainSize = false;
                             usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-                            propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                            propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT /*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/);
                             break;
                         }
 
@@ -1472,8 +1497,11 @@ namespace Tinker
                         }
                     }
 
+                    // allocate buffer resource size in bytes equal to one buffer per swap chain image
+                    uint32 numBytesToAllocate = perSwapChainSize ? sizeInBytes * vulkanContextResources->numSwapChainImages : sizeInBytes;
+
                     CreateBuffer(vulkanContextResources,
-                        sizeInBytes,
+                        numBytesToAllocate,
                         usageFlags,
                         propertyFlags,
                         newResource->buffer,
@@ -1836,27 +1864,42 @@ namespace Tinker
 
                 VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
 
+                uint32 numSwapChainImages = vulkanContextResources->numSwapChainImages;
+                uint32 currentSwapChainImage = vulkanContextResources->currentSwapChainImage;
+
+                // Vertex buffers
                 const uint32 numVertexBufferBindings = 3;
-                /*VkBuffer vertexBuffers[numVertexBufferBindings] =
+                VulkanMemResourceChain* vertexBufferResources[numVertexBufferBindings] = {};
+                vertexBufferResources[0] = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(positionBufferHandle.m_hRes);
+                vertexBufferResources[1] = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(uvBufferHandle.m_hRes);
+                vertexBufferResources[2] = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(normalBufferHandle.m_hRes);
+
+                uint32 vertexBufferSizes[numVertexBufferBindings] = {};
+                for (uint32 uiBuf = 0; uiBuf < numVertexBufferBindings; ++uiBuf)
                 {
-                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(positionBufferHandle.m_hRes)->resourceChain[vulkanContextResources->currentSwapChainImage].buffer,
-                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(uvBufferHandle.m_hRes)->resourceChain[vulkanContextResources->currentSwapChainImage].buffer,
-                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(normalBufferHandle.m_hRes)->resourceChain[vulkanContextResources->currentSwapChainImage].buffer
-                };*/
-                // TODO: this is bad, fix later
+                    vertexBufferSizes[uiBuf] = vertexBufferResources[uiBuf]->resDesc.dims.x;
+                }
+
                 VkBuffer vertexBuffers[numVertexBufferBindings] =
                 {
-                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(positionBufferHandle.m_hRes)->resourceChain[0].buffer,
-                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(uvBufferHandle.m_hRes)->resourceChain[0].buffer,
-                    vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(normalBufferHandle.m_hRes)->resourceChain[0].buffer
+                    //TODO: bad indexing
+                    vertexBufferResources[0]->resourceChain[0/*currentSwapChainImage*/].buffer,
+                    vertexBufferResources[1]->resourceChain[0/*currentSwapChainImage*/].buffer,
+                    vertexBufferResources[2]->resourceChain[0/*currentSwapChainImage*/].buffer
                 };
-                VkDeviceSize offsets[numVertexBufferBindings] = { 0, 0, 0 };
+                VkDeviceSize offsets[numVertexBufferBindings] = {};
+                for (uint32 uiBuf = 0; uiBuf < numVertexBufferBindings; ++uiBuf)
+                {
+                    offsets[uiBuf] = vertexBufferSizes[uiBuf] * currentSwapChainImage; // offset into the buffer based on current swap chain image
+                }
                 vkCmdBindVertexBuffers(commandBuffer, 0, numVertexBufferBindings, vertexBuffers, offsets);
 
-                // TODO: this is bad, fix later
-                //VkBuffer& indexBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes)->resourceChain[vulkanContextResources->currentSwapChainImage].buffer;
-                VkBuffer& indexBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes)->resourceChain[0].buffer;
-                vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+                // Index buffer
+                VulkanMemResourceChain* indexBufferResource = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
+                uint32 indexBufferSize = indexBufferResource->resDesc.dims.x;
+                //TODO: bad indexing
+                VkBuffer& indexBuffer = indexBufferResource->resourceChain[0/*vulkanContextResources->currentSwapChainImage*/].buffer;
+                vkCmdBindIndexBuffer(commandBuffer, indexBuffer, indexBufferSize * currentSwapChainImage, VK_INDEX_TYPE_UINT32);
 
                 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
                 VkDebugUtilsLabelEXT label =
@@ -1916,15 +1959,19 @@ namespace Tinker
                 {
                     case eResourceTypeBuffer1D:
                     {
-                        VkBuffer& srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[vulkanContextResources->currentSwapChainImage].buffer;
-                        VkBuffer& dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[vulkanContextResources->currentSwapChainImage].buffer;
+                        VkBufferCopy bufferCopies[VULKAN_MAX_SWAP_CHAIN_IMAGES] = {};
 
-                        VkBufferCopy bufferCopy = {};
-                        bufferCopy.srcOffset = 0; // TODO: make these function params
-                        bufferCopy.dstOffset = 0;
-                        bufferCopy.size = sizeInBytes;
+                        for (uint32 uiBuf = 0; uiBuf < vulkanContextResources->numSwapChainImages; ++uiBuf)
+                        {
+                            bufferCopies[uiBuf].srcOffset = 0; // TODO: make this a function param?
+                            bufferCopies[uiBuf].size = sizeInBytes;
 
-                        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
+                            bufferCopies[uiBuf].dstOffset = sizeInBytes * uiBuf;
+                        }
+
+                        VkBuffer srcBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
+                        VkBuffer dstBuffer = vulkanContextResources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[0].buffer;
+                        vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, vulkanContextResources->numSwapChainImages, bufferCopies);
 
                         break;
                     }
