@@ -441,6 +441,58 @@ namespace Tinker
                     TINKER_ASSERT(0);
                 }
 
+                // Physical device memory heaps
+                VkPhysicalDeviceMemoryProperties memoryProperties = {};
+                vkGetPhysicalDeviceMemoryProperties(vulkanContextResources->resources->physicalDevice, &memoryProperties);
+                {
+                    Core::Utility::LogMsg("Platform", "******** Device Memory Properties: ********", Core::Utility::eLogSeverityInfo);
+
+                    for (uint32 uiMemType = 0; uiMemType < memoryProperties.memoryTypeCount; ++uiMemType)
+                    {
+                        Core::Utility::LogMsg("Platform", "****************", Core::Utility::eLogSeverityInfo);
+
+                        // Heap properties
+                        // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryPropertyFlagBits.html
+                        VkMemoryPropertyFlags propertyFlags = memoryProperties.memoryTypes[uiMemType].propertyFlags;
+
+                        Core::Utility::LogMsg("Platform", "Heap Properties:", Core::Utility::eLogSeverityInfo);
+                        if (propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+                        {
+                            Core::Utility::LogMsg("Platform", "- Device local", Core::Utility::eLogSeverityInfo);
+                        }
+                        if (propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+                        {
+                            Core::Utility::LogMsg("Platform", "- Host visible", Core::Utility::eLogSeverityInfo);
+                        }
+                        if (propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+                        {
+                            Core::Utility::LogMsg("Platform", "- Host coherent", Core::Utility::eLogSeverityInfo);
+                        }
+                        if (propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+                        {
+                            Core::Utility::LogMsg("Platform", "- Host cached", Core::Utility::eLogSeverityInfo);
+                        }
+                        if (propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+                        {
+                            Core::Utility::LogMsg("Platform", "- Lazily allocated", Core::Utility::eLogSeverityInfo);
+                        }
+
+                        // Heap size
+                        uint32 heapIndex = memoryProperties.memoryTypes[uiMemType].heapIndex;
+                        char buffer[16] = {};
+                        _ui64toa_s(memoryProperties.memoryHeaps[heapIndex].size, buffer, 16, 10);
+
+                        Core::Utility::LogMsg("Platform", "Heap Size:", Core::Utility::eLogSeverityInfo);
+                        Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityInfo);
+
+                        // Heap flags
+                        // memoryProperties.memoryHeaps[heapIndex].flags
+                        // Don't really care about these I think
+                        // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryHeapFlagBits.html
+                    }
+                    Core::Utility::LogMsg("Platform", "****************", Core::Utility::eLogSeverityInfo);
+                }
+
                 // Logical device
                 const uint32 numQueues = 2;
                 VkDeviceQueueCreateInfo deviceQueueCreateInfos[numQueues] = {};
