@@ -7,7 +7,7 @@ namespace Tinker
         class WorkerJob
         {
         public:
-            volatile bool m_done = false;
+            BYTE_ALIGN(64) volatile bool m_done = false;
             virtual ~WorkerJob() {}
 
             virtual void operator()() = 0;

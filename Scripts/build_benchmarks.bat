@@ -38,7 +38,7 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerBenchmark - benchmarking
-set SourceListBenchmark=../Platform/Win32PlatformGameAPI.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp
+set SourceListBenchmark=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb
     set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb

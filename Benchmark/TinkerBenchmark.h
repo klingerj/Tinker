@@ -6,7 +6,7 @@
 #include <iostream>
 
 #define NUM_SAMPLES 10
-#define SEC_2_MSEC 1000.0f
+#define SEC_2_MSEC 1000.0
 
 #define TINKER_BENCHMARK_HEADER \
         std::cout << "Tinker Engine Benchmarks\n"; \
@@ -36,7 +36,7 @@
             QueryPerformanceCounter(&start); \
             func(); \
             QueryPerformanceCounter(&end); \
-            timeSamples[i] = (float)(end.QuadPart - start.QuadPart) * SEC_2_MSEC / (float)freq.QuadPart; \
+            timeSamples[i] = (float)(end.QuadPart - start.QuadPart) / ((float)freq.QuadPart * SEC_2_MSEC); \
         } \
         TINKER_PRINT_STATS(timeSamples); \
         }
@@ -46,13 +46,14 @@
         float timeSamples[NUM_SAMPLES] = {}; \
         LARGE_INTEGER start = {}, end = {}, freq = {}; \
         QueryPerformanceFrequency(&freq); \
+        freq.QuadPart = freq.QuadPart / (LONGLONG)SEC_2_MSEC; \
         funcSU(); \
         for (uint32 i = 0; i < NUM_SAMPLES; ++i) \
         { \
             QueryPerformanceCounter(&start); \
             func(); \
             QueryPerformanceCounter(&end); \
-            timeSamples[i] = (float)(end.QuadPart - start.QuadPart) * SEC_2_MSEC / (float)freq.QuadPart; \
+            timeSamples[i] = (float)(end.QuadPart - start.QuadPart) / ((float)freq.QuadPart); \
         } \
         funcSD(); \
         TINKER_PRINT_STATS(timeSamples); \
