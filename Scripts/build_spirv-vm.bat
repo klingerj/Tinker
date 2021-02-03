@@ -9,10 +9,6 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
-rem Run core engine build script
-call build_core_engine_lib.bat %BuildConfig%
-echo.
-
 echo ***** Building SPIR-V VM *****
 
 pushd ..
