@@ -83,8 +83,9 @@ inline uint32 SafeTruncateUint64(uint64 value)
 
 // Quick simple memory allocation and leak tracking
 // NOTE: placement new doesn't compile nicely with this.
+//#define DISABLE_MEM_TRACKING
 
-#if defined(_WIN32) && defined(_DEBUG)
+#if !defined(DISABLE_MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
 #define MEM_TRACKING
 #endif
 
