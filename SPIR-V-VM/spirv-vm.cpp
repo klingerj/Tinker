@@ -17,7 +17,7 @@ int main()
 
     // Run some VM stuff
     {
-        const uint32 numThreads = 4;
+        const uint32 numThreads = 1;
         SPIRV_VM::State state[numThreads];
         SPIRV_VM::Descriptors descs[numThreads];
 
@@ -29,16 +29,23 @@ int main()
 
         SPIRV_VM::VM_Shader shader = SPIRV_VM::CreateShader((uint32*)fileBuffer, fileSizeInBytes);
 
+        printf("Executing shader...\n\n");
         for (uint32 i = 0; i < numThreads; ++i)
         {
             SPIRV_VM::ExecuteEntireShader(&state[i], &descs[i], &shader);
 
-            printf("VM state after execution: \n");
+            /*printf("VM state after execution: \n");
             printf("Instructions executed: %lu\n", state[i].programCounter);
             printf("Reg A: %llu\n", state[i].regA);
-            printf("Reg B: %llu\n", state[i].regB);
+            printf("Reg B: %llu\n", state[i].regB);*/
+        }
+        for (uint32 i = 0; i < numThreads; ++i)
+        {
+            delete state[i].resultIDs;
         }
 
+        // TODO: turn this back on when we implement full rewinding
+        /*
         // Save final states for checking with stepping forward/backward
         SPIRV_VM::State finalState[numThreads];
         SPIRV_VM::Descriptors finalDescs[numThreads];
@@ -65,7 +72,8 @@ int main()
         for (uint32 i = 0; i < numThreads; ++i)
         {
             // Step forward
-            for (uint32 uiInsn = 0; uiInsn < shader.numInsns; ++uiInsn)
+            // TODO: NEED A REAL WAY TO CHECK IF THE SHADER IS STILL NOT FINISHED RUNNING
+            for (uint32 uiInsn = 0; uiInsn < 64; ++uiInsn)
             {
                 // Step from the beginning all the way up to the current insn
                 for (uint32 uiStep = 0; uiStep <= uiInsn; ++uiStep)
@@ -104,9 +112,11 @@ int main()
                 printf("Rewinding worked.\n");
             }
         }
+        
 
         delete stateLog;
         delete descLog;
+        */
         SPIRV_VM::DestroyShader(shader);
     }
 
