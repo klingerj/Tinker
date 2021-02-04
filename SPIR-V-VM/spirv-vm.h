@@ -11,15 +11,33 @@ namespace SPIRV_VM
 
 #define MAX_SHADER_INSNS 4096
 
+// TODO: WIP, adding instruction support over time
+enum Insn_ID
+{
+    eInsnID_Nop = 0,
+    eInsnID_Max
+};
+
 struct Insn
 {
-    uint32 opcode;
+    Insn_ID opcode;
+};
+
+#define MAX_CAPABILITIES 64
+enum ShaderCapability
+{
+    eShaderCapability_Matrix = 0,
+    eShaderCapability_Shader,
+    // TODO: support more capabilities
+    eShaderCapability_Max
 };
 
 struct VM_Shader
 {
-    uint32 numInsns;
     uint32 boundNum; // insn id max value
+    uint16 capabilities[MAX_CAPABILITIES];
+    uint16 numCapabilities;
+    uint32 numInsns;
     Insn* insns;
 };
 
@@ -61,6 +79,14 @@ VM_Shader CreateShader(const uint32* spvFile, uint32 fileSizeInBytes)
     printf("Bound number: %d\n", bound);
     ++spvFilePtr;
 
+    // Skip next word
+    // "Reserved for instruction scheme, if needed"
+    ++spvFilePtr;
+
+    VM_Shader newShader = {};
+    newShader.boundNum = bound;
+    newShader.numCapabilities = 0;
+
     // TODO: figure out how many instructions are in the file
     // Allocate shader instructions
     Insn* insns = new Insn[MAX_SHADER_INSNS];
@@ -69,23 +95,85 @@ VM_Shader CreateShader(const uint32* spvFile, uint32 fileSizeInBytes)
     uint32 wordsRead = (uint32)(spvFilePtr - spvFileBase);
     while ((wordsRead * 4) < fileSizeInBytes)
     {
-        uint32 opcode = *spvFilePtr;
-        insns[numInsns].opcode = opcode;
-        ++numInsns;
-        printf("Opcode: %x\n", opcode);
-        ++spvFilePtr;
+        uint32 opcodeWord = *spvFilePtr;
 
         // TODO: process instructions
-        // e.g. extract insn enumerant
+        uint16 insnWordCount = (uint16)((opcodeWord & 0xFFFF0000) >> 16);
+        uint16 insnOpcode = (uint16)(opcodeWord & 0x0000FFFF);
+        printf("Opcode: %d\n", insnOpcode);
+        ++spvFilePtr;
 
+        if (insnOpcode != 0)
+        {
+            ++numInsns;
+            insns[numInsns].opcode = (Insn_ID)insnOpcode;
+        }
+        else
+        {
+            // NOP - can safely skip
+            printf("NOP insn - skipping.\n");
+        }
 
+        switch (insnOpcode)
+        {
+            case 11:
+            {
+                printf("OpExtInstImport - ignored for now\n");
+                break;
+            }
+
+            case 17:
+            {
+                printf("OpCapability\n");
+                break;
+            }
+
+            default:
+            {
+                break;
+            }
+        }
+
+        if (insnWordCount > 1)
+        {
+            // Upcoming words in the file, excluding opcode word, associated with this insn
+            for (uint8 uiWord = 0; uiWord < insnWordCount - 1; ++uiWord)
+            {
+                uint32 word = *spvFilePtr;
+
+                switch (insnOpcode)
+                {
+                    case 11:
+                    {
+                        if (uiWord == 0) printf("OpExtInstImport id: %d\n", word);
+                        if (uiWord > 0) printf("OpExtInstImport operand: %d\n", word);
+                        break;
+                    }
+
+                    case 17:
+                    {
+                        // Add capability to list of supported capabilities
+                        uint16 capability = (uint16)word;
+                        newShader.capabilities[newShader.numCapabilities++] = capability;
+                        printf("Capability: %d\n", capability);
+                        break;
+                    }
+
+                    default:
+                    {
+                        break;
+                    }
+                }
+
+                ++spvFilePtr;
+            }
+            printf("\n");
+        }
 
         wordsRead = (uint32)(spvFilePtr - spvFileBase);
     }
 
-    VM_Shader newShader = {};
     newShader.numInsns = numInsns;
-    newShader.boundNum = bound;
     newShader.insns = insns;
     return newShader;
 }
