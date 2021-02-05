@@ -57,12 +57,131 @@ enum SpecType : uint8
     eSpecType_Max
 };
 
-enum SpecDecorations : uint16
+enum SpecDecoration : uint16
 {
     eSpecDecoration_RelaxedPrecision = 0,
     // TODO: add all the spec decorations
+    eSpecDecoration_SpecId = 1,
+    eSpecDecoration_Block = 2,
+    eSpecDecoration_BufferBlock = 3,
+    eSpecDecoration_RowMajor = 4,
+    eSpecDecoration_ColMajor = 5,
+    eSpecDecoration_ArrayStride = 6,
+    eSpecDecoration_MatrixStride = 7,
+    eSpecDecoration_GLSLShared = 8,
+    eSpecDecoration_GLSLPacked = 9,
+    eSpecDecoration_CPacked = 10,
+    eSpecDecoration_BuiltIn = 11,
+    eSpecDecoration_NoPerspective = 13,
+    eSpecDecoration_Flat = 14,
+    eSpecDecoration_Patch = 15,
+    eSpecDecoration_Centroid = 16,
+    eSpecDecoration_Sample = 17,
+    eSpecDecoration_Invariant = 18,
+    eSpecDecoration_Restrict = 19,
+    eSpecDecoration_Aliased = 20,
+    eSpecDecoration_Volatile = 21,
+    eSpecDecoration_Constant = 22,
+    eSpecDecoration_Coherent = 23,
+    eSpecDecoration_NonWritable = 24,
+    eSpecDecoration_NonReadable = 25,
+    eSpecDecoration_Uniform = 26,
+    eSpecDecoration_UniformId = 27,
+    eSpecDecoration_SaturatedConversion = 28,
+    eSpecDecoration_Stream  = 29,
+    eSpecDecoration_Location = 30,
+    eSpecDecoration_Component = 31,
+    eSpecDecoration_Index = 32,
+    eSpecDecoration_Binding = 33,
+    eSpecDecoration_DescriptorSet = 34,
+    eSpecDecoration_Offset = 35,
+    eSpecDecoration_XfbBuffer = 36,
+    eSpecDecoration_XfbStride = 37,
+    eSpecDecoration_FuncParamAttr = 38,
+    eSpecDecoration_FPRoundingMode = 39,
+    eSpecDecoration_FPFastMathMode = 40,
+    eSpecDecoration_LinkageAttributes = 41,
+    eSpecDecoration_NoContraction = 42,
+    eSpecDecoration_InputAttachmentIndex = 43,
+    eSpecDecoration_Alignment = 44,
+    eSpecDecoration_MaxByteOffset = 45,
+    eSpecDecoration_AlignmentId = 46,
+    eSpecDecoration_MaxByteOffsetId = 47,
+    eSpecDecoration_NoSignedWrap = 4469,
+    eSpecDecoration_NoUnsignedWrap = 4470,
+    eSpecDecoration_ExplicitInterpAMD = 4999,
+    eSpecDecoration_OverrideCoverageNV = 5248,
+    eSpecDecoration_PassthroughNV = 5250,
+    eSpecDecoration_ViewportRelativeNV = 5252,
+    eSpecDecoration_SecondaryViewportRelativeNV = 5256,
+    eSpecDecoration_PerPrimitiveNV = 5271,
+    eSpecDecoration_PerViewNV = 5272,
+    eSpecDecoration_PerTaskNV = 5273,
+    eSpecDecoration_PerVertexNV = 5285,
+    eSpecDecoration_NonUniform = 5300, //eSpecDecoration_NonUniformEXT = 5300,
+    eSpecDecoration_RestrictPointer = 5355, //eSpecDecoration_RestrictPointerEXT = 5355,
+    eSpecDecoration_AliasedPointer = 5356, //eSpecDecoration_AliasedPointerEXT = 5356,
+    eSpecDecoration_ReferencedIndirectlyINTEL = 5602,
+    eSpecDecoration_CounterBuffer = 5634, //eSpecDecoration_HlslCounterBufferGOOGLE = 5634,
+    eSpecDecoration_UserSemantic = 5635, //eSpecDecoration_HlslSemanticGOOGLE = 5635,
+    eSpecDecoration_UserTypeGOOGLE = 5636,
+    eSpecDecoration_RegisterINTEL = 5825,
+    eSpecDecoration_MemoryINTEL = 5826,
+    eSpecDecoration_NumbanksINTEL = 5827,
+    eSpecDecoration_BankwidthINTEL = 5828,
+    eSpecDecoration_MaxPricateCopiesINTEL = 5829,
+    eSpecDecoration_SinglepumpINTL = 5830,
+    eSpecDecoration_DoublepumpINTEL = 5831,
+    eSpecDecoration_MaxReplicatesINTEL = 5832,
+    eSpecDecoration_SimpleDualPortINTEL = 5833,
+    eSpecDecoration_MergeINTEL = 5834,
+    eSpecDecoration_BankBitsINTEL = 5835,
+    eSpecDecoration_ForcePow2DepthINTEL = 5836,
     eSpecDecoration_Max
 };
+
+#define MAX_DECORATION_LITERALS 2
+uint16 NumDecorationLiterals(SpecDecoration decorationID)
+{
+    switch (decorationID)
+    {
+        case eSpecDecoration_SpecId:
+        case eSpecDecoration_ArrayStride:
+        case eSpecDecoration_MatrixStride:
+        case eSpecDecoration_BuiltIn:
+        case eSpecDecoration_UniformId:
+        case eSpecDecoration_Stream:
+        case eSpecDecoration_Location:
+        case eSpecDecoration_Component:
+        case eSpecDecoration_Index:
+        case eSpecDecoration_Binding:
+        case eSpecDecoration_DescriptorSet:
+        case eSpecDecoration_XfbBuffer:
+        case eSpecDecoration_XfbStride:
+        case eSpecDecoration_FuncParamAttr:
+        case eSpecDecoration_FPRoundingMode:
+        case eSpecDecoration_FPFastMathMode:
+        case eSpecDecoration_InputAttachmentIndex:
+        case eSpecDecoration_Alignment:
+        case eSpecDecoration_MaxByteOffset:
+        case eSpecDecoration_AlignmentId:
+        case eSpecDecoration_MaxByteOffsetId:
+        {
+            return 1;
+        }
+
+        case eSpecDecoration_LinkageAttributes:
+        case eSpecDecoration_MergeINTEL:
+        {
+            return 2;
+        }
+
+        default:
+        {
+            return 0;
+        }
+    }
+}
 
 #define MAX_CAPABILITIES 64
 // NOTE: these must match the SPIR-V spec
@@ -474,8 +593,7 @@ struct Descriptors
 struct Decoration
 {
     uint16 type;
-    uint16 literal0;
-    uint16 literal1;
+    uint16 literals[MAX_DECORATION_LITERALS];
 };
 
 enum ResultType : uint8
@@ -603,6 +721,22 @@ const uint32* ExecuteSingleInsn(State* state, Descriptors* descriptors, const ui
             break;
         }
 
+        case 19:
+        {
+            PRINT_DEBUG("OpTypeVoid\n");
+
+            uint32 id = *insnPtr;
+            PRINT_DEBUG("id: %d\n", id);
+            ++insnPtr;
+
+            // Result id is a type, that type is void
+            state->resultIDs[id].type = eResultType_Type;
+            state->resultIDs[id].specType = eSpecType_Void;
+            PRINT_DEBUG("\n");
+
+            break;
+        }
+
         case 71:
         {
             PRINT_DEBUG("OpDecorate\n");
@@ -611,7 +745,7 @@ const uint32* ExecuteSingleInsn(State* state, Descriptors* descriptors, const ui
             PRINT_DEBUG("id: %d\n", id);
             ++insnPtr;
 
-            for (int16 uiWordsToProcess = insnWordCount - 1; uiWordsToProcess > 0;)
+            for (int16 uiWordsToProcess = insnWordCount - 2; uiWordsToProcess > 0;)
             {
                 Decoration newDecoration = {};
 
@@ -619,44 +753,18 @@ const uint32* ExecuteSingleInsn(State* state, Descriptors* descriptors, const ui
                 PRINT_DEBUG("Decoration type: %d\n", decorationType);
                 newDecoration.type = (uint16)decorationType;
                 ++insnPtr;
+                --uiWordsToProcess;
 
-                switch (decorationType)
+                uint16 numDecorationLiterals = NumDecorationLiterals((SpecDecoration)newDecoration.type);
+
+                for (uint16 uiLiteral = 0; uiLiteral < numDecorationLiterals; ++uiLiteral)
                 {
-                    // One-literal decorations
-                    case 30:
-                    {
-                        uint32 decorationLiteral = *insnPtr;
-                        PRINT_DEBUG("Decoration literal: %d\n", decorationLiteral);
-                        newDecoration.literal0 = (uint16)decorationLiteral;
-                        ++insnPtr;
+                    uint32 decorationLiteral = *insnPtr;
+                    PRINT_DEBUG("Decoration literal: %d\n", decorationLiteral);
+                    newDecoration.literals[uiLiteral] = (uint16)decorationLiteral;
+                    ++insnPtr;
 
-                        uiWordsToProcess -= 3;
-                        break;
-                    }
-
-                    // Two-literal decorations
-                    case 2:
-                    {
-                        uint32 decorationLiteral = *insnPtr;
-                        PRINT_DEBUG("Decoration literal: %d\n", decorationLiteral);
-                        newDecoration.literal0 = (uint16)decorationLiteral;
-                        ++insnPtr;
-
-                        decorationLiteral = *insnPtr;
-                        PRINT_DEBUG("Decoration literal: %d\n", decorationLiteral);
-                        newDecoration.literal1 = (uint16)decorationLiteral;
-                        ++insnPtr;
-
-                        uiWordsToProcess -= 4;
-                        break;
-                    }
-
-                    // Zero-literal decorations
-                    default:
-                    {
-                        uiWordsToProcess -= 2;
-                        break;
-                    }
+                    --uiWordsToProcess;
                 }
 
                 state->resultIDs[id].decorations[state->resultIDs[id].numDecorations++] = newDecoration;
