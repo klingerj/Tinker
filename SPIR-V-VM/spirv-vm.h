@@ -54,6 +54,7 @@ enum SpecType : uint8
     eSpecType_Opaque = 18,
     eSpecType_VariablePointer = 19,
     eSpecType_Void = 20,
+    eSpecType_Function = 21,
     eSpecType_Max
 };
 
@@ -596,10 +597,13 @@ struct Decoration
     uint16 literals[MAX_DECORATION_LITERALS];
 };
 
+#define MAX_FUNC_PARAMETERS 8
+
 enum ResultType : uint8
 {
     //eResultType_EntryPoint = 0,
     eResultType_Type = 0,
+    eResultType_Data,
     eResultType_Max
 };
 
@@ -621,6 +625,41 @@ struct Result_ID
         struct
         {
             SpecType specType;
+
+            // Union of various spec type metadata
+            union
+            {
+                // Void type has no metadata
+
+                // Float type
+                struct
+                {
+                    uint8 bitWidth;
+                };
+
+                // Pointer type
+                struct
+                {
+                    uint16 storageClass;
+                    uint8 pointerSpecType;
+                };
+
+                // Function type
+                struct
+                {
+                    SpecType returnType;
+                    uint8 numParameters;
+                    SpecType parameters[MAX_FUNC_PARAMETERS];
+                };
+            };
+        };
+
+        // eResultType_Data
+        struct
+        {
+            uint16 elementSizeInBytes;
+            uint16 numElements;
+            void* data;
         };
     };
 };
@@ -730,8 +769,207 @@ const uint32* ExecuteSingleInsn(State* state, Descriptors* descriptors, const ui
             ++insnPtr;
 
             // Result id is a type, that type is void
-            state->resultIDs[id].type = eResultType_Type;
-            state->resultIDs[id].specType = eSpecType_Void;
+            Result_ID& result = state->resultIDs[id];
+            result.type = eResultType_Type;
+            result.specType = eSpecType_Void;
+            PRINT_DEBUG("\n");
+
+            break;
+        }
+
+        case 22:
+        {
+            PRINT_DEBUG("OpTypeFloat\n");
+
+            uint32 id = *insnPtr;
+            PRINT_DEBUG("id: %d\n", id);
+            ++insnPtr;
+
+            Result_ID& result = state->resultIDs[id];
+            result.type = eResultType_Type;
+            result.specType = eSpecType_Float;
+
+            uint32 bitWidth = *insnPtr;
+            PRINT_DEBUG("float bit width: %d\n", bitWidth);
+            ++insnPtr;
+
+            result.bitWidth = (uint8)bitWidth;
+
+            PRINT_DEBUG("\n");
+
+            break;
+        }
+
+        case 23:
+        {
+            PRINT_DEBUG("OpTypeVector\n");
+
+            uint32 id = *insnPtr;
+            PRINT_DEBUG("id: %d\n", id);
+            ++insnPtr;
+
+            uint32 componentType = *insnPtr;
+            PRINT_DEBUG("component type id: %d\n", componentType);
+            ++insnPtr;
+
+            uint32 componentCount = *insnPtr;
+            PRINT_DEBUG("component count: %d\n", componentCount);
+            ++insnPtr;
+
+            PRINT_DEBUG("\n");
+
+            break;
+        }
+
+        case 32:
+        {
+            PRINT_DEBUG("OpTypePointer\n");
+
+            uint32 id = *insnPtr;
+            PRINT_DEBUG("id: %d\n", id);
+            ++insnPtr;
+
+            Result_ID& result = state->resultIDs[id];
+            result.type = eResultType_Type;
+            result.specType = eSpecType_LogicalPointer;
+            // TODO: handle physical pointers?
+            
+            uint32 storageClass = *insnPtr;
+            PRINT_DEBUG("storage class: %d\n", storageClass);
+            ++insnPtr;
+
+            uint32 typeID = *insnPtr;
+            PRINT_DEBUG("type id: %d\n", typeID);
+            ++insnPtr;
+
+            result.storageClass = (uint16)storageClass;
+            result.pointerSpecType = state->resultIDs[typeID].specType;
+
+            PRINT_DEBUG("\n");
+
+            break;
+        }
+
+        case 33:
+        {
+            PRINT_DEBUG("OpTypeFunction\n");
+
+            uint32 id = *insnPtr;
+            PRINT_DEBUG("id: %d\n", id);
+            ++insnPtr;
+
+            Result_ID& result = state->resultIDs[id];
+            result.type = eResultType_Type;
+            result.specType = eSpecType_Function;
+
+            uint32 returnTypeID = *insnPtr;
+            PRINT_DEBUG("return type: %d\n", returnTypeID);
+            ++insnPtr;
+
+            Result_ID& returnTypeResult = state->resultIDs[returnTypeID];
+            if (returnTypeResult.type != eResultType_Type)
+            {
+                PRINT_ERR("Attempted to create function whose return type ID was not record as a type.\n");
+            }
+            else
+            {
+                result.returnType = returnTypeResult.specType;
+
+                // Remaining parameters
+                for (int16 uiWordsToProcess = insnWordCount - 3; uiWordsToProcess > 0;)
+                {
+                    Result_ID& paramResult = state->resultIDs[returnTypeID];
+                    if (returnTypeResult.type != eResultType_Type)
+                    {
+                        PRINT_ERR("Attempted to create function whose return type ID was not record as a type.\n");
+                    }
+                    else
+                    {
+                        if (paramResult.specType == eSpecType_Void)
+                        {
+                            PRINT_ERR("Function parameter type was specified at void.\n");
+                        }
+                        else
+                        {
+                            result.parameters[result.numParameters++] = paramResult.specType;
+                        }
+                    }
+                }
+            }
+            PRINT_DEBUG("\n");
+
+            break;
+        }
+
+        case 43:
+        {
+            PRINT_DEBUG("OpConstant\n");
+
+            uint32 resultType = *insnPtr;
+            PRINT_DEBUG("result type id: %d\n", resultType);
+            ++insnPtr;
+
+            uint32 id = *insnPtr;
+            PRINT_DEBUG("id: %d\n", id);
+            ++insnPtr;
+
+            Result_ID& result = state->resultIDs[id];
+            result.type = eResultType_Data;
+            result.specType = state->resultIDs[resultType].specType;
+
+            uint32 value = *insnPtr;
+            PRINT_DEBUG("value: %d\n", value);
+            ++insnPtr;
+
+            result.elementSizeInBytes = state->resultIDs[resultType].bitWidth / 8;
+            result.numElements = 1;
+            uint32 dataSize = result.elementSizeInBytes * result.numElements;
+            result.data = malloc(dataSize); // TODO: allocate less terribly
+            memcpy(result.data, &value, dataSize);
+
+            // Drain remaining words
+            for (uint16 uiWord = 0; uiWord < insnWordCount - 4; ++uiWord)
+            {
+                PRINT_ERR("Extra word in OpConstant detected - types above 32 bits not currently supported.\n");
+                PRINT_ERR("Word value: %d\n", *insnPtr);
+                ++insnPtr;
+            }
+            PRINT_DEBUG("\n");
+
+            break;
+        }
+
+        case 44:
+        {
+            PRINT_DEBUG("OpConstantComposite\n");
+
+            uint32 resultType = *insnPtr;
+            PRINT_DEBUG("result type id: %d\n", resultType);
+            ++insnPtr;
+
+            uint32 id = *insnPtr;
+            PRINT_DEBUG("id: %d\n", id);
+            ++insnPtr;
+
+            Result_ID& result = state->resultIDs[id];
+            result.type = eResultType_Data;
+            result.specType = state->resultIDs[resultType].specType;
+
+            // TODO: figure out the right way to find out the bit width of the elements, either store it per element, or store a type id reference and follow it
+            result.elementSizeInBytes = 4;
+            result.numElements = insnWordCount - 3;
+            uint32 dataSizeInBytes = result.numElements * result.elementSizeInBytes;
+            result.data = malloc(dataSizeInBytes);
+            for (uint16 uiWord = 0; uiWord < result.numElements; ++uiWord)
+            {
+                uint16 eleID = (uint16)*insnPtr;
+                PRINT_DEBUG("element id: %d\n", eleID);
+                Result_ID& eleResult = state->resultIDs[eleID];
+                PRINT_DEBUG("element data: %d\n", *(uint32*)eleResult.data);
+                // TODO: need to deduce the type here too
+                memcpy((uint32*)result.data + uiWord, eleResult.data, eleResult.elementSizeInBytes * eleResult.numElements);
+                ++insnPtr;
+            }
             PRINT_DEBUG("\n");
 
             break;
