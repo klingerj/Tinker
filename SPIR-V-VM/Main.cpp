@@ -1,4 +1,4 @@
-#include "spirv-vm.h"
+#include "SpirvVM.h"
 
 #include <stdio.h>
 #include <cstdlib>
@@ -14,35 +14,38 @@ int main()
     fseek(spvFP, 0L, SEEK_SET);
     uint8* fileBuffer = (uint8*)malloc(fileSizeInBytes);
     fread(fileBuffer, 1, fileSizeInBytes, spvFP);
+    fclose(spvFP);
 
     // Run some VM stuff
     {
         const uint32 numThreads = 1;
-        SPIRV_VM::State state[numThreads];
-        SPIRV_VM::Descriptors descs[numThreads];
 
-        for (uint32 i = 0; i < numThreads; ++i)
+        VM_Context* context = CreateContext();
+        VM_Shader* shader = CreateShader(context, (uint32*)fileBuffer, fileSizeInBytes);
+        VM_State* state = CreateState(shader);
+
+
+
+        /*for (uint32 i = 0; i < numThreads; ++i)
         {
-            state[i].Init();
+            state[i].Init(&shader);
             descs[i].Init();
         }
-
-        SPIRV_VM::VM_Shader shader = SPIRV_VM::CreateShader((uint32*)fileBuffer, fileSizeInBytes);
 
         printf("Executing shader...\n\n");
         for (uint32 i = 0; i < numThreads; ++i)
         {
             SPIRV_VM::ExecuteEntireShader(&state[i], &descs[i], &shader);
 
-            /*printf("VM state after execution: \n");
+            printf("VM state after execution: \n");
             printf("Instructions executed: %lu\n", state[i].programCounter);
             printf("Reg A: %llu\n", state[i].regA);
-            printf("Reg B: %llu\n", state[i].regB);*/
+            printf("Reg B: %llu\n", state[i].regB);*
         }
         for (uint32 i = 0; i < numThreads; ++i)
         {
             delete state[i].resultIDs;
-        }
+        }*/
 
         // TODO: turn this back on when we implement full rewinding
         /*
@@ -112,16 +115,15 @@ int main()
                 printf("Rewinding worked.\n");
             }
         }
-        
+
 
         delete stateLog;
         delete descLog;
         */
-        SPIRV_VM::DestroyShader(shader);
+        DestroyShader(shader);
     }
 
     free(fileBuffer);
-    fclose(spvFP);
 
     return 0;
 }
