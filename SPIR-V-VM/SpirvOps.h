@@ -4,12 +4,16 @@
 #include "CoreDefines.h"
 
 struct VM_State;
-#define OP_HANDLER(name) void name(VM_State* state, uint16 numWordsAfterOpcode)
+#define OP_HANDLER(name) void name(VM_State* state, const uint32** insnStreamPtr, uint16 numWordsAfterOpcode)
 typedef OP_HANDLER(op_handler);
 inline OP_HANDLER(OpHandler_Stub)
 {
     // Unsupported operation
-    PRINT_ERR("Unsupported opcode.\n");
+    PRINT_ERR("\nUnsupported opcode.\n");
+    for (uint16 uiWord = 0; uiWord < numWordsAfterOpcode; ++uiWord)
+    {
+        CONSUME_SPIRV_WORD(insnStreamPtr);
+    }
 }
 
 OP_HANDLER(OpHandler_OpSource); // 3

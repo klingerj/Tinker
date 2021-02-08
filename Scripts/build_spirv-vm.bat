@@ -14,7 +14,7 @@ echo ***** Building SPIR-V VM *****
 pushd ..
 if NOT EXIST .\Build mkdir .\Build
 pushd .\Build
-del spirv-vm.pdb > NUL 2> NUL
+del SpirvVM.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
@@ -31,29 +31,29 @@ if "%BuildConfig%" == "Debug" (
     )
 
 rem *********************************************************************************************************
-rem spirv-vm - primary exe
+rem SpirvVM - primary exe
 rem ../SPIR-V-VM/VMShader.cpp
 set SourceList=../SPIR-V-VM/SpirvVM.cpp ../SPIR-V-VM/VMState.cpp ../SPIR-V-VM/SpirvOps.cpp ../SPIR-V-VM/Main.cpp
 
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlags=/Fdspirv-vm.pdb
-    set DebugLinkFlags=/pdb:spirv-vm.pdb
+    set DebugCompileFlags=/FdSpirvVM.pdb
+    set DebugLinkFlags=/pdb:SpirvVM.pdb
     ) else (
     set DebugCompileFlags=
     set DebugLinkFlags=
     )
 
 echo.
-echo Building spirv-vm.exe...
+echo Building SpirvVM.exe...
 
 set CompileIncludePaths=
 set LibsToLink=user32.lib
 
-set OBJDir=%cd%\obj_spirv-vm\
+set OBJDir=%cd%\obj_SpirvVM\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %DebugCompileFlags% %SourceList% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlags% /out:spirv-vm.exe
+cl %CommonCompileFlags% %DebugCompileFlags% %SourceList% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlags% /out:SpirvVM.exe
 
 :DoneBuild
 popd

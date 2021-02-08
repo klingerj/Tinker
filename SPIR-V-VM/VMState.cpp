@@ -3,8 +3,35 @@
 
 #include <cstring>
 
-VM_State* CreateState_Internal(const VM_Shader* shader)
+VM_State* CreateState_Internal(VM_Context* context, VM_Shader* shader)
 {
+    VM_State* newState = (VM_State*)malloc(sizeof(VM_State));
+    newState->ownerShader = shader;
+    newState->numResultIDs = shader->boundNum;
+    newState->results = (Result*)malloc(sizeof(Result) * newState->numResultIDs);
+    memset(newState->results, 0, sizeof(Result) * newState->numResultIDs);
+
+    const uint32* insnStream = shader->insnStream;
+
+    while (insnStream < (shader->insnStream + shader->insnStreamSizeInWords))
+    {
+        uint32 opcodeAndWordCount = ReadSpirvWord(&insnStream);
+        uint16 opcode = (uint16)OPCODE(opcodeAndWordCount);
+        uint16 wordCount = (uint16)WORD_COUNT(opcodeAndWordCount);
+
+        if (opcode < OPCODE_MAX)
+        {
+            context->opHandlers[opcode](newState, &insnStream, wordCount - 1);
+        }
+        else
+        {
+            PRINT_ERR("Opcode detected that exceeded array size.\n");
+        }
+    }
+
+    return newState;
+
+    /*
     const uint32* insnPtr = shader->insnStream;
 
     uint32 word = *insnPtr;
@@ -453,10 +480,11 @@ VM_State* CreateState_Internal(const VM_Shader* shader)
     }
 
     return insnPtr;
+    */
 }
 
-void DestroyState_Internal(VM_State* state)
+void DestroyState_Internal(VM_Context* context, VM_State* state)
 {
-    free(state->resultIDs);
+    free(state->results);
     free(state);
 }

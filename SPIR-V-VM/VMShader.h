@@ -15,7 +15,8 @@ struct VM_Shader
 
     uint16 capabilities[MAX_CAPABILITIES];
     uint16 numCapabilities;
-    uint16 executionModel;
+    uint16 addressingModel;
+    uint16 memoryModel;
 
     // insn id max value, also equal to number of elements allocated in resultIDs
     uint32 boundNum;
@@ -55,7 +56,7 @@ inline VM_Shader* CreateShader_Internal(VM_Context* context, const uint32* spvFi
     }
 
     uint32 bound = *spvFilePtr; // max id number
-    PRINT_DEBUG("Bound number: %d\n\n", bound)
+    PRINT_DEBUG("Bound number: %d\n", bound);
     ++spvFilePtr;
 
     // Skip next word
@@ -247,7 +248,7 @@ inline VM_Shader* CreateShader_Internal(VM_Context* context, const uint32* spvFi
     }*/
 }
 
-inline void DestroyShader_Internal(VM_Shader* shader)
+inline void DestroyShader_Internal(VM_Context* context, VM_Shader* shader)
 {
     if (shader->insnStream)
     {

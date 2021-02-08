@@ -47,13 +47,13 @@ typedef int64_t  int64;
 //-----
 
 #define CONSUME_SPIRV_WORD(insnStream) (++(*insnStream))
-inline uint32 ReadSpirvWord(uint32** insnStream)
+inline uint32 ReadSpirvWord(const uint32** insnStream)
 {
     uint32 word = **insnStream;
     CONSUME_SPIRV_WORD(insnStream);
     return word;
 }
-#define INSN_COUNT(word) ((word & 0xFFFF0000) >> 16)
+#define WORD_COUNT(word) ((word & 0xFFFF0000) >> 16)
 #define OPCODE(word) (word & 0x0000FFFF)
 
 #endif
