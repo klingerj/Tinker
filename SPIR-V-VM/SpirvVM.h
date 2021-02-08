@@ -18,17 +18,17 @@ inline VM_Shader* CreateShader(VM_Context* context, const uint32* spvFile, uint3
 {
     return CreateShader_Internal(context, spvFile, fileSizeInBytes);
 }
-inline void DestroyShader(VM_Shader* shader)
+inline void DestroyShader(VM_Context* context, VM_Shader* shader)
 {
-    DestroyShader_Internal(shader);
+    DestroyShader_Internal(context, shader);
 }
-inline VM_State* CreateState(const VM_Shader* shader)
+inline VM_State* CreateState(VM_Context* context, VM_Shader* shader)
 {
-    return CreateState_Internal(shader);
+    return CreateState_Internal(context, shader);
 }
-inline void DestroyState(VM_State* state)
+inline void DestroyState(VM_Context* context, VM_State* state)
 {
-    DestroyState_Internal(state);
+    DestroyState_Internal(context, state);
 }
 
 /*struct Descriptors

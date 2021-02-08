@@ -7,7 +7,7 @@ if NOT EXIST .\Build (
     )
 pushd .\Build
 
-spirv-vm.exe
+SpirvVM.exe
 
 popd
 popd

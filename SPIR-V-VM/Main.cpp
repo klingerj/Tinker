@@ -22,7 +22,7 @@ int main()
 
         VM_Context* context = CreateContext();
         VM_Shader* shader = CreateShader(context, (uint32*)fileBuffer, fileSizeInBytes);
-        VM_State* state = CreateState(shader);
+        VM_State* state = CreateState(context, shader);
 
 
 
@@ -120,7 +120,7 @@ int main()
         delete stateLog;
         delete descLog;
         */
-        DestroyShader(shader);
+        DestroyShader(context, shader);
     }
 
     free(fileBuffer);

@@ -35,14 +35,14 @@ inline VM_Context* CreateContext_Internal()
     context->opHandlers[SpvOpTypePointer] = OpHandler_OpTypePointer;
     context->opHandlers[SpvOpTypeFunction] = OpHandler_OpTypeFunction;
     context->opHandlers[SpvOpConstant] = OpHandler_OpConstant;
-    context->opHandlers[SpvOpConstantComposite] = OpHandler_OpConstantComposite;
-    context->opHandlers[SpvOpFunction] = OpHandler_OpFunction;
-    context->opHandlers[SpvOpFunctionEnd] = OpHandler_OpFunctionEnd;
-    context->opHandlers[SpvOpVariable] = OpHandler_OpVariable;
-    context->opHandlers[SpvOpLoad] = OpHandler_OpLoad;
-    context->opHandlers[SpvOpDecorate] = OpHandler_OpDecorate;
-    context->opHandlers[SpvOpLabel] = OpHandler_OpLabel;
-    context->opHandlers[SpvOpReturn] = OpHandler_OpReturn;
+    //context->opHandlers[SpvOpConstantComposite] = OpHandler_OpConstantComposite;
+    //context->opHandlers[SpvOpFunction] = OpHandler_OpFunction;
+    //context->opHandlers[SpvOpFunctionEnd] = OpHandler_OpFunctionEnd;
+    //context->opHandlers[SpvOpVariable] = OpHandler_OpVariable;
+    //context->opHandlers[SpvOpLoad] = OpHandler_OpLoad;
+    //context->opHandlers[SpvOpDecorate] = OpHandler_OpDecorate;
+    //context->opHandlers[SpvOpLabel] = OpHandler_OpLabel;
+    //context->opHandlers[SpvOpReturn] = OpHandler_OpReturn;
 
     return context;
 }
