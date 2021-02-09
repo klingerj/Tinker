@@ -1,14 +1,21 @@
 #include "SpirvVM.h"
 
 #include <stdio.h>
-#include <cstdlib>
+#include <stdlib.h>
 
 int main()
 {
     const char* spvFilePath = "../Shaders/spv/basic_frag_glsl.spv";
     printf("SPV file specified: %s\n", spvFilePath);
 
-    FILE* spvFP = fopen(spvFilePath, "rb");
+    FILE* spvFP;
+    errno_t err = fopen_s(&spvFP, spvFilePath, "rb");
+    if (err)
+    {
+        printf("Failed to open file\n");
+        return 1;
+    }
+
     fseek(spvFP, 0L, SEEK_END);
     uint32 fileSizeInBytes = ftell(spvFP); // get file size
     fseek(spvFP, 0L, SEEK_SET);
@@ -18,12 +25,34 @@ int main()
 
     // Run some VM stuff
     {
-        const uint32 numThreads = 1;
+        //const uint32 numThreads = 1;
 
         VM_Context* context = CreateContext();
         VM_Shader* shader = CreateShader(context, (uint32*)fileBuffer, fileSizeInBytes);
         VM_State* state = CreateState(context, shader);
 
+        // Pretend interpolated triangle data for fragment shader
+        float inNormal[3];
+        inNormal[0] = 1.0f;
+        inNormal[1] = 0.0f;
+        inNormal[2] = 0.0f;
+
+        float inUV[2];
+        inUV[0] = 0.5f;
+        inUV[1] = 0.5f;
+
+        AddStateInputData(context, state, 0, inUV, sizeof(float) * 2);
+        AddStateInputData(context, state, 1, inNormal, sizeof(float) * 3);
+        uint8 error = CallEntryPointByName(context, state, "main");
+
+        if (!error)
+        {
+            printf("Executed the shader.\n");
+        }
+        else
+        {
+            // TODO: handle error
+        }
 
 
         /*for (uint32 i = 0; i < numThreads; ++i)
@@ -120,6 +149,7 @@ int main()
         delete stateLog;
         delete descLog;
         */
+        DestroyState(context, state);
         DestroyShader(context, shader);
     }
 

@@ -3,24 +3,55 @@
 
 // State data types
 #define MAX_DECORATIONS 8
-struct Decoration
+typedef struct decor
 {
     uint16 type;
     uint16 literals[2];
-};
+} Decoration;
 
-enum ResultType : uint8
+inline uint16 NumDecorationLiterals(uint16 decorationID)
 {
-    eResultType_EntryPoint,
-    eResultType_Type,
-    eResultType_Constant,
-    eResultType_Variable,
-    eResultType_Function,
-    eResultType_BlockLabel,
-    eResultType_Max
-};
+    switch (decorationID)
+    {
+        case SpvDecorationSpecId:
+        case SpvDecorationArrayStride:
+        case SpvDecorationMatrixStride:
+        case SpvDecorationBuiltIn:
+        case SpvDecorationUniformId:
+        case SpvDecorationStream:
+        case SpvDecorationLocation:
+        case SpvDecorationComponent:
+        case SpvDecorationIndex:
+        case SpvDecorationBinding:
+        case SpvDecorationDescriptorSet:
+        case SpvDecorationXfbBuffer:
+        case SpvDecorationXfbStride:
+        case SpvDecorationFuncParamAttr:
+        case SpvDecorationFPRoundingMode:
+        case SpvDecorationFPFastMathMode:
+        case SpvDecorationInputAttachmentIndex:
+        case SpvDecorationAlignment:
+        case SpvDecorationMaxByteOffset:
+        case SpvDecorationAlignmentId:
+        case SpvDecorationMaxByteOffsetId:
+        {
+            return 1;
+        }
 
-enum ResultDataType : uint8
+        case SpvDecorationLinkageAttributes:
+        case SpvDecorationMergeINTEL:
+        {
+            return 2;
+        }
+
+        default:
+        {
+            return 0;
+        }
+    }
+}
+
+typedef enum result_data_type
 {
     eResultDataType_Boolean,
     eResultDataType_Int,
@@ -32,28 +63,25 @@ enum ResultDataType : uint8
     eResultDataType_Struct,
     eResultDataType_Void,
     eResultDataType_Max
-};
-
+} ResultDataType;
 typedef uint16 ResultID;
-struct TypeData
+
+typedef struct type_data
 {
     union
     {
         // Member data
-        struct
-        {
-            ResultID* memberTypes; // member types - are result IDs
-            uint16* memberSizesInBytes; // size of each member in bytes
-        };
+        ResultID* memberTypes; // member types - are result IDs
+        uint16* memberSizesInBytes; // size of each member in bytes
 
         // Scalar size
         uint16 elementSizeInBytes;
     } memberData;
     ResultDataType resultType; // float, vector, pointer
     uint16 numElements;
-};
+} TypeData;
 
-inline bool IsScalarType(ResultDataType type)
+inline uint8 IsScalarType(ResultDataType type)
 {
     return (
         type == eResultDataType_Boolean ||
@@ -62,16 +90,28 @@ inline bool IsScalarType(ResultDataType type)
         );
 }
 
+inline uint16 CountChars(const uint32* insnStream)
+{
+    const char* chars = (const char*)insnStream;
+    uint16 numChars = 1; // count null-terminator
+    while (*chars != '\0')
+    {
+        ++numChars;
+        ++chars;
+    }
+    return numChars;
+}
+
 // TODO: dynamically allocate this?
 #define MAX_FUNC_PARAMETERS 8
-struct FunctionTypeData
+typedef struct function_type_data
 {
     ResultDataType parameters[MAX_FUNC_PARAMETERS];
     ResultDataType returnType;
     uint8 numParameters;
-};
+} FunctionTypeData;
 
-union Member
+typedef union
 {
     uint8 u8;
     float f32;
@@ -79,23 +119,34 @@ union Member
     uint32 u32;
     int32 i32;
     uint64 u64;
-};
+} Member;
 
-struct MemberList
+typedef struct
 {
     Member* members; // actual list of member data
 
     // TODO: not sure if we need this yet:
     //MemberList* subMemberList; // for vector/array/matrix/struct
-};
+} MemberList;
 
-struct Result
+typedef enum result_type
+{
+    eResultType_EntryPoint,
+    eResultType_Type,
+    eResultType_Constant,
+    eResultType_Variable,
+    eResultType_Function,
+    eResultType_BlockLabel,
+    eResultType_Max
+} ResultType;
+
+typedef struct result
 {
     char* name;
     uint16 nameLen;
 
     // Type / Function
-    union
+    union type_function_data
     {
         TypeData typeData;
         FunctionTypeData funcTypeData;
@@ -103,45 +154,39 @@ struct Result
 
     union
     {
-        // Entry point
-        /*struct
-        {
-            uint16 executionModel;
-            char name[4];
-        };*/
-
         // Constant/Variable
-        struct
+        struct constant_variable
         {
             MemberList memberList;
-        };
+        } constantVariableData;
 
         // Function / Entry point
-        struct
+        struct function_entry_point
         {
-            uint32 insnStartOffset; // offset into instruction stream
+            // Function
+            const uint32* insnPtr; // pointer into instruction stream
+            ResultID funcReturnTypeID;
             ResultID funcTypeID;
 
-            ResultID labelID; // block label
-
+            // Entry point
             uint16 executionModel;
             uint16 executionMode;
-        };
+        } functionEntryPointData;
 
         // Block label
-        /*struct
+        struct block_label
         {
-            ResultID labelID;
-        };*/
+            const uint32* insnBlockPtr; // pointer into instruction stream
+        } BlockLabelData;
 
     } data;
 
     // TODO: dynamically allocate decorations?
     Decoration decorations[MAX_DECORATIONS];
-    uint8 numDecorations = 0;
+    uint8 numDecorations;
 
     // enum for the union
     ResultType resultType;
-};
+} Result;
 
 #endif
