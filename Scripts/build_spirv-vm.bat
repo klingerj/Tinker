@@ -33,7 +33,7 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem SpirvVM - primary exe
 rem ../SPIR-V-VM/VMShader.cpp
-set SourceList=../SPIR-V-VM/SpirvVM.cpp ../SPIR-V-VM/VMState.cpp ../SPIR-V-VM/SpirvOps.cpp ../SPIR-V-VM/Main.cpp
+set SourceList=../SPIR-V-VM/SpirvVM.c ../SPIR-V-VM/VMState.c ../SPIR-V-VM/VMShader.c ../SPIR-V-VM/SpirvOps.c ../SPIR-V-VM/Main.c
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlags=/FdSpirvVM.pdb

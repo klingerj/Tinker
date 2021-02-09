@@ -33,16 +33,16 @@ typedef int64_t  int64;
 #define ENABLE_SHADER_PARSING_LOGGING_DEBUG
 #endif
 
-#ifdef ENABLE_SHADER_PARSING_LOGGING_ERRORS
-#define PRINT_ERR(...) printf(__VA_ARGS__);
-#else PRINT_ERR(...)
-#define 
+#if defined(ENABLE_SHADER_PARSING_LOGGING_ERRORS)
+#define PRINT_ERR(...) printf(__VA_ARGS__)
+#else
+#define PRINT_ERR(...) {}
 #endif
 
-#ifdef ENABLE_SHADER_PARSING_LOGGING_DEBUG
-#define PRINT_DEBUG(...) printf(__VA_ARGS__);
+#if defined(ENABLE_SHADER_PARSING_LOGGING_DEBUG)
+#define PRINT_DEBUG(...) printf(__VA_ARGS__)
 #else
-#define PRINT_DEBUG(...)
+#define PRINT_DEBUG(...) {}
 #endif
 //-----
 
@@ -53,6 +53,14 @@ inline uint32 ReadSpirvWord(const uint32** insnStream)
     CONSUME_SPIRV_WORD(insnStream);
     return word;
 }
+inline void ConsumeSpirvWords(const uint32** insnStream, uint16 numWords)
+{
+    for (uint16 uiWord = 0; uiWord < numWords; ++uiWord)
+    {
+        CONSUME_SPIRV_WORD(insnStream);
+    }
+}
+
 #define WORD_COUNT(word) ((word & 0xFFFF0000) >> 16)
 #define OPCODE(word) (word & 0x0000FFFF)
 
