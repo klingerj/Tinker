@@ -1,11 +1,14 @@
-#ifndef SPIV_OPS_H
-#define SPIV_OPS_H
+#ifndef SPIRV_OPS_H
+#define SPIRV_OPS_H
 
 #include "CoreDefines.h"
+#include "VMTypes.h"
 
 struct vm_state;
 typedef struct vm_state VM_State;
-#define OP_HANDLER(name) void name(VM_State* state, const uint32** insnStreamPtr, uint16 numWordsAfterOpcode)
+struct vm_context;
+typedef struct vm_context VM_Context;
+#define OP_HANDLER(name) void name(VM_Context* context, VM_State* state, const uint32** insnStreamPtr, uint16 numWordsAfterOpcode)
 typedef OP_HANDLER(op_handler);
 inline OP_HANDLER(OpHandler_Stub)
 {

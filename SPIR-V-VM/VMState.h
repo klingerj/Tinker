@@ -1,8 +1,6 @@
 #ifndef VM_STATE_H
 #define VM_STATE_H
 
-#include "KHR/spirv.h"
-#include "KHR/GLSL.std.450.h"
 #include "CoreDefines.h"
 #include "VMTypes.h"
 #include "VMContext.h"
@@ -12,6 +10,7 @@ typedef struct vm_shader VM_Shader;
 
 #define MAX_FUNCTION_STACK_DEPTH 64
 #define MAX_INPUT_DATA_LOCATIONS 64
+#define MAX_OUTPUT_DATA_LOCATIONS 8
 
 typedef struct vm_state
 {
@@ -38,6 +37,7 @@ typedef struct vm_state
     
     // Input data (e.g. vertex buffers, interpolated fragment data)
     void* inputData[MAX_INPUT_DATA_LOCATIONS];
+    void* outputData[MAX_OUTPUT_DATA_LOCATIONS];
 
 } VM_State;
 VM_State* CreateState_Internal(VM_Context* context, VM_Shader* shader);

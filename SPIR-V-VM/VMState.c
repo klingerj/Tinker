@@ -1,6 +1,7 @@
 #include "VMState.h"
 #include "VMShader.h"
 #include "VMContext.h"
+#include "VMTypes.h"
 
 #include <string.h>
 
@@ -25,7 +26,9 @@ VM_State* CreateState_Internal(VM_Context* context, VM_Shader* shader)
 
         if (opcode < OPCODE_MAX)
         {
-            context->opHandlers[opcode](newState, &insnStream, wordCount - 1);
+             PRINT_DEBUG("\nOpcode: %d\n", opcode);
+
+             context->opHandlers[opcode](context, newState, &insnStream, wordCount - 1);
         }
         else
         {
@@ -76,7 +79,8 @@ void CallFunction(VM_Context* context, VM_State* state, ResultID functionID)
 
         if (opcode < OPCODE_MAX)
         {
-            context->opHandlers[opcode](state, &insnStream, wordCount - 1);
+            //PRINT_DEBUG("\nOpcode: %d\n", opcode);
+            context->opHandlers[opcode](context, state, &insnStream, wordCount - 1);
         }
         else
         {
