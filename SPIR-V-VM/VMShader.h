@@ -1,10 +1,9 @@
 #ifndef VM_SHADER_H
 #define VM_SHADER_H
 
-#include "KHR/spirv.h"
-#include "KHR/GLSL.std.450.h"
 #include "CoreDefines.h"
 #include "VMContext.h"
+#include "VMTypes.h"
 
 #include <string.h>
 

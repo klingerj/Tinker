@@ -22,5 +22,6 @@ void DestroyState(VM_Context* context, VM_State* state);
 
 uint8 CallEntryPointByName(VM_Context* context, VM_State* state, const char* name);
 void AddStateInputData(VM_Context* context, VM_State* state, uint32 location, void* data, uint32 dataSizeInBytes);
+void* ReadOutputData(VM_State* state, uint32 location);
 
 #endif

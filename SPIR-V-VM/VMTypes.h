@@ -1,6 +1,28 @@
 #ifndef VM_TYPES_H
 #define VM_TYPES_H
 
+#include "KHR/spirv.h"
+#include "KHR/GLSL.std.450.h"
+
+#define CONSUME_SPIRV_WORD(insnStream) (++(*insnStream))
+inline uint32 ReadSpirvWord(const uint32** insnStream)
+{
+    uint32 word = **insnStream;
+    CONSUME_SPIRV_WORD(insnStream);
+    return word;
+}
+inline void ConsumeSpirvWords(const uint32** insnStream, uint16 numWords)
+{
+    for (uint16 uiWord = 0; uiWord < numWords; ++uiWord)
+    {
+        CONSUME_SPIRV_WORD(insnStream);
+    }
+}
+
+#define WORD_COUNT(word) ((word & ~SpvOpCodeMask) >> SpvWordCountShift)
+#define OPCODE(word) (word & SpvOpCodeMask)
+//-----
+
 // State data types
 #define MAX_DECORATIONS 8
 typedef struct decor
@@ -9,50 +31,9 @@ typedef struct decor
     uint16 literals[2];
 } Decoration;
 
-inline uint16 NumDecorationLiterals(uint16 decorationID)
-{
-    switch (decorationID)
-    {
-        case SpvDecorationSpecId:
-        case SpvDecorationArrayStride:
-        case SpvDecorationMatrixStride:
-        case SpvDecorationBuiltIn:
-        case SpvDecorationUniformId:
-        case SpvDecorationStream:
-        case SpvDecorationLocation:
-        case SpvDecorationComponent:
-        case SpvDecorationIndex:
-        case SpvDecorationBinding:
-        case SpvDecorationDescriptorSet:
-        case SpvDecorationXfbBuffer:
-        case SpvDecorationXfbStride:
-        case SpvDecorationFuncParamAttr:
-        case SpvDecorationFPRoundingMode:
-        case SpvDecorationFPFastMathMode:
-        case SpvDecorationInputAttachmentIndex:
-        case SpvDecorationAlignment:
-        case SpvDecorationMaxByteOffset:
-        case SpvDecorationAlignmentId:
-        case SpvDecorationMaxByteOffsetId:
-        {
-            return 1;
-        }
-
-        case SpvDecorationLinkageAttributes:
-        case SpvDecorationMergeINTEL:
-        {
-            return 2;
-        }
-
-        default:
-        {
-            return 0;
-        }
-    }
-}
-
 typedef enum result_data_type
 {
+    eResultDataType_Invalid = 0,
     eResultDataType_Boolean,
     eResultDataType_Int,
     eResultDataType_Float,
@@ -62,45 +43,43 @@ typedef enum result_data_type
     eResultDataType_Array,
     eResultDataType_Struct,
     eResultDataType_Void,
-    eResultDataType_Max
 } ResultDataType;
 typedef uint16 ResultID;
 
-typedef struct type_data
+/*typedef struct type_data
 {
-    union
+    struct // TODO: change me
     {
-        // Member data
+        // Aggregate member data
         ResultID* memberTypes; // member types - are result IDs
-        uint16* memberSizesInBytes; // size of each member in bytes
+        uint32* memberSizesInBytes; // size of each member in bytes
 
-        // Scalar size
-        uint16 elementSizeInBytes;
+        // Scalar data
+        ResultID elementType;
+        uint32 elementSizeInBytes;
     } memberData;
     ResultDataType resultType; // float, vector, pointer
     uint16 numElements;
 } TypeData;
+*/
 
-inline uint8 IsScalarType(ResultDataType type)
+typedef struct type_data
+{
+    ResultID* subTypes; // sub-type IDs - e.g., pointed type if this type is a pointer
+    uint32 typeSizeInBytes; // size of an element of this type in bytes
+    ResultDataType resultType; // the actual data type of this result
+    uint16 numElements; // number of elements
+    //uint16 numSubTypes; // number of sub-type IDs
+} TypeData;
+
+/*inline uint8 IsScalarType(ResultDataType type)
 {
     return (
         type == eResultDataType_Boolean ||
         type == eResultDataType_Int ||
         type == eResultDataType_Float
         );
-}
-
-inline uint16 CountChars(const uint32* insnStream)
-{
-    const char* chars = (const char*)insnStream;
-    uint16 numChars = 1; // count null-terminator
-    while (*chars != '\0')
-    {
-        ++numChars;
-        ++chars;
-    }
-    return numChars;
-}
+}*/
 
 // TODO: dynamically allocate this?
 #define MAX_FUNC_PARAMETERS 8
@@ -158,6 +137,8 @@ typedef struct result
         struct constant_variable
         {
             MemberList memberList;
+            ResultID typeResultID;
+            uint16 storageClass;
         } constantVariableData;
 
         // Function / Entry point
@@ -188,5 +169,61 @@ typedef struct result
     // enum for the union
     ResultType resultType;
 } Result;
+//-----
+
+// Helper functions
+
+inline uint16 CountChars(const uint32* insnStream)
+{
+    const char* charsBase = (const char*)insnStream;
+    const char* chars = charsBase;
+    while (*chars != '\0')
+    {
+        ++chars;
+    }
+    return (uint16)(chars - charsBase) + 1;
+}
+
+inline uint16 NumDecorationLiterals(uint16 decorationID)
+{
+    switch (decorationID)
+    {
+        case SpvDecorationSpecId:
+        case SpvDecorationArrayStride:
+        case SpvDecorationMatrixStride:
+        case SpvDecorationBuiltIn:
+        case SpvDecorationUniformId:
+        case SpvDecorationStream:
+        case SpvDecorationLocation:
+        case SpvDecorationComponent:
+        case SpvDecorationIndex:
+        case SpvDecorationBinding:
+        case SpvDecorationDescriptorSet:
+        case SpvDecorationXfbBuffer:
+        case SpvDecorationXfbStride:
+        case SpvDecorationFuncParamAttr:
+        case SpvDecorationFPRoundingMode:
+        case SpvDecorationFPFastMathMode:
+        case SpvDecorationInputAttachmentIndex:
+        case SpvDecorationAlignment:
+        case SpvDecorationMaxByteOffset:
+        case SpvDecorationAlignmentId:
+        case SpvDecorationMaxByteOffsetId:
+        {
+            return 1;
+        }
+
+        case SpvDecorationLinkageAttributes:
+        case SpvDecorationMergeINTEL:
+        {
+            return 2;
+        }
+
+        default:
+        {
+            return 0;
+        }
+    }
+}
 
 #endif

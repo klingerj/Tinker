@@ -4,6 +4,8 @@
 #include "VMState.h"
 #include "VMShader.h"
 
+#include <stdio.h>
+
 VM_Context* CreateContext()
 {
     return CreateContext_Internal();
@@ -47,4 +49,9 @@ uint8 CallEntryPointByName(VM_Context* context, VM_State* state, const char* nam
 void AddStateInputData(VM_Context* context, VM_State* state, uint32 location, void* data, uint32 dataSizeInBytes)
 {
     AddStateInputData_Internal(context, state, location, data, dataSizeInBytes);
+}
+
+void* ReadOutputData(VM_State* state, uint32 location)
+{
+    return state->outputData[location];
 }

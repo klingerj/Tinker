@@ -18,7 +18,8 @@ clang $flags -c $sourceDir/VMShader.c -o $objDir/VMShader.o
 clang $flags -c $sourceDir/VMState.c -o $objDir/VMState.o
 clang $flags -c $sourceDir/SpirvVM.c -o $objDir/SpirvVM.o
 clang $flags -c $sourceDir/SpirvOps.c -o $objDir/SpirvOps.o
-clang $flags -o SpirvVM.exe $sourceDir/Main.c $objDir/VMShader.o $objDir/VMState.o $objDir/SpirvVM.o $objDir/SpirvOps.o
+clang $flags -c $sourceDir/GLSL.std.450_Ops.c -o $objDir/GLSL.std.450_Ops.o
+clang $flags -o SpirvVM.exe $sourceDir/Main.c $objDir/VMShader.o $objDir/VMState.o $objDir/SpirvVM.o $objDir/SpirvOps.o $objDir/GLSL.std.450_Ops.o
 echo Done.
 
 popd > /dev/null

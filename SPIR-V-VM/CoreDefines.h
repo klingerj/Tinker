@@ -25,7 +25,7 @@ typedef int64_t  int64;
 //-----
 
 // Debug printing
-#define ENABLE_SHADER_PARSING_LOGGING_ALL
+//#define ENABLE_SHADER_PARSING_LOGGING_ALL
 
 #if defined(ENABLE_SHADER_PARSING_LOGGING_ALL)
 #include <stdio.h>
@@ -45,23 +45,5 @@ typedef int64_t  int64;
 #define PRINT_DEBUG(...) {}
 #endif
 //-----
-
-#define CONSUME_SPIRV_WORD(insnStream) (++(*insnStream))
-inline uint32 ReadSpirvWord(const uint32** insnStream)
-{
-    uint32 word = **insnStream;
-    CONSUME_SPIRV_WORD(insnStream);
-    return word;
-}
-inline void ConsumeSpirvWords(const uint32** insnStream, uint16 numWords)
-{
-    for (uint16 uiWord = 0; uiWord < numWords; ++uiWord)
-    {
-        CONSUME_SPIRV_WORD(insnStream);
-    }
-}
-
-#define WORD_COUNT(word) ((word & 0xFFFF0000) >> 16)
-#define OPCODE(word) (word & 0x0000FFFF)
 
 #endif
