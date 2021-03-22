@@ -13,3 +13,13 @@ let @z = "build_app.bat Release\n"
 nnoremap <m-m> <c-w>j
 tnoremap <m-m> <c-w>"y<c-w>k
 tnoremap <m-n> <c-w>"z<c-w>k
+
+" CtrlP Plugin
+set runtimepath^=~/.vim/bundle/ctrlp.vim
+let g:ctrlp_map = '<c-p>'
+let g:ctrlp_cmd = 'CtrlP'
+
+" PaperColor theme setup
+set t_Co=256
+set background=dark
+colorscheme PaperColor
