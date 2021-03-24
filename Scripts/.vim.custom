@@ -20,6 +20,8 @@ let g:ctrlp_map = '<c-p>'
 let g:ctrlp_cmd = 'CtrlP'
 
 " PaperColor theme setup
-set t_Co=256
-set background=dark
-colorscheme PaperColor
+"set t_Co=256
+"set background=dark
+"colorscheme PaperColor
+
+colorscheme gruvbox8
