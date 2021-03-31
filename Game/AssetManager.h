@@ -1,7 +1,6 @@
 #pragma once
 
 #include "GameGraphicsTypes.h"
-#include "Core/FileIO/FileLoading.h"
 #include "Core/Allocators.h"
 
 using namespace Tinker;

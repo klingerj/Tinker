@@ -393,6 +393,8 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
     }
 }
 
+#include "Core/Containers/Vector.h"
+
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
@@ -436,6 +438,23 @@ GAME_UPDATE(GameUpdate)
         LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
         isGameInitted = true;
+
+        // Vector test
+        {
+            Core::Containers::Vector<float> testVec;
+            testVec.Reserve(8);
+            testVec.PushBackRaw(1.0f);
+            testVec.PushBackRaw(2.0f);
+            uint32 i = testVec.Find(2.0f);
+            testVec.Clear();
+            testVec.PushBackRaw(3.0f);
+            testVec.PushBackRaw(4.0f);
+            testVec.PushBackRaw(5.0f);
+            testVec.PushBackRaw(6.0f);
+            i = testVec.Find(2.0f);
+            i = testVec.Find(3.0f);
+            testVec.Clear();
+        }
     }
 
     // TODO: move this
