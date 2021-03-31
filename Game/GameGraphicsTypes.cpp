@@ -5,7 +5,7 @@ void CopyStagingBufferToGPUBufferCommand(Tinker::Platform::GraphicsCommandStream
     const char* debugLabel)
 {
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-    command->m_commandType = Platform::eGraphicsCmdMemTransfer;
+    command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
     command->debugLabel = debugLabel;
     command->m_sizeInBytes = bufferSizeInBytes;
     command->m_srcBufferHandle = stagingBufferHandle;

@@ -39,20 +39,20 @@ int InitClient()
         size_t len = strlen(str);
         _itoa_s(result, buffer + len, 10, 10);
         buffer[len + 1] = '\0';
-        Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eCritical);
         return 1;
     }
 
     // Confirm that the Winsock dll is the correct version
     if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
     {
-        Core::Utility::LogMsg("Platform", "Could not find a usable version of Winsock.dll. Exiting.", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Could not find a usable version of Winsock.dll. Exiting.", Core::Utility::LogSeverity::eCritical);
         WSACleanup();
         return 1;
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "The Winsock 2.2 dll was found okay.", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "The Winsock 2.2 dll was found okay.", Core::Utility::LogSeverity::eInfo);
     }
 
     struct addrinfo hints = {};
@@ -71,7 +71,7 @@ int InitClient()
         size_t len = strlen(str);
         _itoa_s(result, buffer + len, 10, 10);
         buffer[len + 1] = '\0';
-        Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eCritical);
         WSACleanup();
         return 1;
     }
@@ -87,14 +87,14 @@ int InitClient()
         size_t len = strlen(str);
         _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
         buffer[len + 1] = '\0';
-        Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eCritical);
         WSACleanup();
         freeaddrinfo(infos);
         return 1;
     }
 
     // Connect to the server
-    Core::Utility::LogMsg("Platform", "Attempting to connect to the server...", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "Attempting to connect to the server...", Core::Utility::LogSeverity::eInfo);
     result = connect(ConnectSocket, infos->ai_addr, (int)infos->ai_addrlen);
     if (result == SOCKET_ERROR)
     {
@@ -108,7 +108,7 @@ int InitClient()
 
     if (ConnectSocket == INVALID_SOCKET)
     {
-        Core::Utility::LogMsg("Platform", "connect failed", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "connect failed", Core::Utility::LogSeverity::eCritical);
         WSACleanup();
         return 1;
     }
@@ -127,7 +127,7 @@ void CleanupClient()
 
 int DisconnectFromServer()
 {
-    Core::Utility::LogMsg("Platform", "Shutting down client.", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "Shutting down client.", Core::Utility::LogSeverity::eInfo);
 
     // Shutdown receiving from the server
     int result = shutdown(ConnectSocket, SD_RECEIVE);
@@ -139,7 +139,7 @@ int DisconnectFromServer()
         size_t len = strlen(str);
         _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
         buffer[len + 1] = '\0';
-        Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eCritical);
         WSACleanup();
         return 1;
     }
@@ -154,7 +154,7 @@ int DisconnectFromServer()
         size_t len = strlen(str);
         _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
         buffer[len + 1] = '\0';
-        Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eCritical);
         WSACleanup();
         return 1;
     }
@@ -165,7 +165,7 @@ int DisconnectFromServer()
 int SendMessageToServer()
 {
     // Send data to the server
-    Core::Utility::LogMsg("Platform", "Attempting to send data to the server...", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "Attempting to send data to the server...", Core::Utility::LogSeverity::eInfo);
     char clientMsg[512] = {};
     clientMsg[0] = 'J';
     clientMsg[1] = 'o';
@@ -176,11 +176,11 @@ int SendMessageToServer()
     numBytesSent = send(ConnectSocket, clientMsg, 512, 0);
     if (numBytesSent > 0)
     {
-        Core::Utility::LogMsg("Platform", "Successfully sent message to server", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Successfully sent message to server", Core::Utility::LogSeverity::eInfo);
     }
     else if (numBytesSent == 0)
     {
-        Core::Utility::LogMsg("Platform", "Received 0 bytes - connection has been gracefully closed.", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Received 0 bytes - connection has been gracefully closed.", Core::Utility::LogSeverity::eInfo);
     }
     else
     {
@@ -190,7 +190,7 @@ int SendMessageToServer()
         size_t len = strlen(str);
         _itoa_s(WSAGetLastError(), buffer + len, 10, 10);
         buffer[len + 1] = '\0';
-        Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eCritical);
         DisconnectFromServer();
         return 1;
     }

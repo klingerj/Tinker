@@ -3,58 +3,61 @@ namespace Tinker
 namespace Platform
 {
 
-enum
+namespace Keycode
 {
-    eKeyA = 0,
-    eKeyB,
-    eKeyC,
-    eKeyD,
-    eKeyE,
-    eKeyF,
-    eKeyG,
-    eKeyH,
-    eKeyI,
-    eKeyJ,
-    eKeyK,
-    eKeyL,
-    eKeyM,
-    eKeyN,
-    eKeyO,
-    eKeyP,
-    eKeyQ,
-    eKeyR,
-    eKeyS,
-    eKeyT,
-    eKeyU,
-    eKeyV,
-    eKeyW,
-    eKeyX,
-    eKeyY,
-    eKeyZ,
-    eKey0,
-    eKey1,
-    eKey2,
-    eKey3,
-    eKey4,
-    eKey5,
-    eKey6,
-    eKey7,
-    eKey8,
-    eKey9,
-    eKeyF1,
-    eKeyF2,
-    eKeyF3,
-    eKeyF4,
-    eKeyF5,
-    eKeyF6,
-    eKeyF7,
-    eKeyF8,
-    eKeyF9,
-    eKeyF10,
-    eKeyF11,
-    eKeyF12,
-    eMaxKeycodes
-};
+    enum : uint32
+    {
+        eA = 0,
+        eB,
+        eC,
+        eD,
+        eE,
+        eF,
+        eG,
+        eH,
+        eI,
+        eJ,
+        eK,
+        eL,
+        eM,
+        eN,
+        eO,
+        eP,
+        eQ,
+        eR,
+        eS,
+        eT,
+        eU,
+        eV,
+        eW,
+        eX,
+        eY,
+        eZ,
+        e0,
+        e1,
+        e2,
+        e3,
+        e4,
+        e5,
+        e6,
+        e7,
+        e8,
+        e9,
+        eF1,
+        eF2,
+        eF3,
+        eF4,
+        eF5,
+        eF6,
+        eF7,
+        eF8,
+        eF9,
+        eF10,
+        eF11,
+        eF12,
+        eMax
+    };
+}
 
 typedef struct keycode_state
 {
@@ -67,7 +70,7 @@ typedef struct input_state_delta
     // TODO: gamepad input
 
     // Keyboard input
-    KeycodeState keyCodes[eMaxKeycodes];
+    KeycodeState keyCodes[Keycode::eMax];
 } InputStateDeltas;
 
 }

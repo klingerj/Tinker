@@ -24,7 +24,7 @@ const GPUMemAllocRecord& GPU_PassthroughAllocator::Alloc(uint32 size, uint32 res
     VkResult result = VK_SUCCESS;// vkAllocateMemory(device, &allocInfo, nullptr, deviceMemory);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to allocate gpu memory!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to allocate gpu memory!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
