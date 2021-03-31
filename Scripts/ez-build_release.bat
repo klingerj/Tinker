@@ -14,7 +14,7 @@ call build_app.bat Release
 call build_server.bat Release
 call build_benchmarks.bat Release
 call build_tests.bat Release
-call compile_shaders_glsl2spv.bat
+call build_compile_shaders_glsl2spv.bat
 
 echo.
 echo Build finished.
