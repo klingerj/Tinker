@@ -48,7 +48,7 @@ public:
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>((currentTime - m_startTime));
 
         _ultoa_s((uint32)duration.count(), m_msg + m_msgSizeBeforeTimer, MAX_TIME_DIGITS, 10);
-        Utility::LogMsg("Core - Performance", m_msg, Utility::eLogSeverityInfo);
+        Utility::LogMsg("Core - Performance", m_msg, Utility::LogSeverity::eInfo);
     }
 };
 

@@ -304,44 +304,44 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
     {
         // Create buffer handles
         ResourceDesc desc;
-        desc.resourceType = Platform::eResourceTypeBuffer1D;
+        desc.resourceType = Platform::ResourceType::eBuffer1D;
 
         ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
         void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
 
         // Positions
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
+        desc.bufferUsage = Platform::BufferUsage::eVertex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
 
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         stagingBufferHandle_Pos = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_Pos = platformFuncs->MapResource(stagingBufferHandle_Pos);
 
         // UVs
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
+        desc.bufferUsage = Platform::BufferUsage::eVertex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         stagingBufferHandle_UV = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_UV = platformFuncs->MapResource(stagingBufferHandle_UV);
 
         // Normals
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
+        desc.bufferUsage = Platform::BufferUsage::eVertex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         stagingBufferHandle_Norm = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_Norm = platformFuncs->MapResource(stagingBufferHandle_Norm);
 
         // Indices
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageIndex;
+        desc.bufferUsage = Platform::BufferUsage::eIndex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         stagingBufferHandle_Idx = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
 
@@ -370,7 +370,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
             // Position buffer copy
-            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx Pos Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
             command->m_srcBufferHandle = stagingBufferHandle_Pos;
@@ -379,7 +379,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             ++command;
 
             // UV buffer copy
-            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx UV Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
             command->m_srcBufferHandle = stagingBufferHandle_UV;
@@ -388,7 +388,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             ++command;
 
             // Normal buffer copy
-            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx Norm Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
             command->m_srcBufferHandle = stagingBufferHandle_Norm;
@@ -397,7 +397,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
             ++command;
 
             // Index buffer copy
-            command->m_commandType = Platform::eGraphicsCmdMemTransfer;
+            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx Idx Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
             command->m_srcBufferHandle = stagingBufferHandle_Idx;
@@ -431,16 +431,16 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
     {
         // Create texture handles
         ResourceDesc desc;
-        desc.resourceType = Platform::eResourceTypeImage2D;
+        desc.resourceType = Platform::ResourceType::eImage2D;
 
-        desc.imageFormat = Platform::eImageFormat_RGBA8_SRGB; // TODO: don't hard code this
+        desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB; // TODO: don't hard code this
         desc.dims = m_allTextureMetadata[uiAsset].m_dims;
         m_allTextureGraphicsHandles[uiAsset] = platformFuncs->CreateResource(desc);
 
         uint32 textureSizeInBytes = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y * 4; // 4 bytes per pixel since RGBA8
         desc.dims = v3ui(textureSizeInBytes, 0, 0);
-        desc.resourceType = Platform::eResourceTypeBuffer1D; // staging buffer is just a 1D buffer
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.resourceType = Platform::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         imageStagingBufferHandles[uiAsset] = platformFuncs->CreateResource(desc);
         void* stagingBufferMemPtr = platformFuncs->MapResource(imageStagingBufferHandles[uiAsset]);
 
@@ -459,16 +459,16 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         uint32 textureSizeInBytes = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y * 4; // 4 bytes per pixel since RGBA8
 
         // Transition to transfer dst optimal layout
-        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
+        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition image layout to transfer dst optimal";
         command->m_imageHandle = m_allTextureGraphicsHandles[uiAsset];
-        command->m_startLayout = Platform::eImageLayoutUndefined;
-        command->m_endLayout = Platform::eImageLayoutTransferDst;
+        command->m_startLayout = Platform::ImageLayout::eUndefined;
+        command->m_endLayout = Platform::ImageLayout::eTransferDst;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
         // Texture buffer copy
-        command->m_commandType = Platform::eGraphicsCmdMemTransfer;
+        command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Asset Texture Data";
         command->m_sizeInBytes = textureSizeInBytes;
         command->m_srcBufferHandle = imageStagingBufferHandles[uiAsset];

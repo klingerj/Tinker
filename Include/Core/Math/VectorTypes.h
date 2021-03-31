@@ -19,7 +19,6 @@ class vec2
     {
         numEles = 2,
         numEleBytes = numEles * sizeof(T)
-
     };
 
 public:

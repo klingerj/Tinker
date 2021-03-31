@@ -29,7 +29,7 @@ void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMe
     }
     if (memTypeIndex == 0xffffffff)
     {
-        Core::Utility::LogMsg("Platform", "Failed to find memory property flags!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to find memory property flags!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -40,7 +40,7 @@ void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMe
     VkResult result = vkAllocateMemory(device, &memAllocInfo, nullptr, deviceMemory);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to allocate gpu memory!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to allocate gpu memory!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 }
@@ -58,7 +58,7 @@ void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeI
     VkResult result = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan buffer!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan buffer!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -90,7 +90,7 @@ void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspect
     VkResult result = vkCreateImageView(device, &imageViewCreateInfo, nullptr, imageView);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan image view!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan image view!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 }
@@ -103,7 +103,7 @@ void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRT
 
     if (numAttachments == 0)
     {
-        Core::Utility::LogMsg("Platform", "No attachments specified for framebuffer!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "No attachments specified for framebuffer!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
     else
@@ -133,7 +133,7 @@ void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRT
     VkResult result = vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, framebuffer);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan framebuffer!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan framebuffer!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -214,7 +214,7 @@ void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colo
     VkResult result = vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, renderPass);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan render pass!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan render pass!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 }

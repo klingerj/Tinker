@@ -18,17 +18,17 @@ void LogMsg(const char* prefix, const char* msg, uint32 severity)
     const char* severityMsg;
     switch (severity)
     {
-        case eLogSeverityInfo:
+        case LogSeverity::eInfo:
         {
             severityMsg = "Info";
             break;
         }
-        case eLogSeverityWarning:
+        case LogSeverity::eWarning:
         {
             severityMsg = "Warning";
             break;
         }
-        case eLogSeverityCritical:
+        case LogSeverity::eCritical:
         {
             severityMsg = "Critical";
             break;

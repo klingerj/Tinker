@@ -61,7 +61,7 @@ uint32 currentWindowWidth, currentWindowHeight;
 
 typedef struct input_state
 {
-    Platform::KeycodeState keyCodes[Platform::eMaxKeycodes];
+    Platform::KeycodeState keyCodes[Platform::Keycode::eMax];
 } InputState;
 static InputState currentInputState = {};
 static InputState previousInputState = {};
@@ -102,8 +102,8 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     Platform::DescriptorLayout mainDrawDescriptorLayout = {};
     Platform::InitDescLayout(&mainDrawDescriptorLayout);
     Platform::GraphicsPipelineParams params;
-    params.blendState = Platform::eBlendStateInvalid; // no color attachment
-    params.depthState = Platform::eDepthStateTestOnWriteOn; // Write to depth
+    params.blendState = Platform::BlendState::eInvalid; // no color attachment
+    params.depthState = Platform::DepthState::eTestOnWriteOn; // Write to depth
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
@@ -111,8 +111,8 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", nullptr, &params);
 
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
-    params.blendState = Platform::eBlendStateAlphaBlend; // Default alpha blending for now
-    params.depthState = Platform::eDepthStateTestOnWriteOff; // Read depth buffer, don't write to it
+    params.blendState = Platform::BlendState::eAlphaBlend; // Default alpha blending for now
+    params.depthState = Platform::DepthState::eTestOnWriteOff; // Read depth buffer, don't write to it
     gameGraphicsData.m_shaderHandles[eRenderPass_MainView] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
 
     // TODO: dont want to have to do this
@@ -126,8 +126,8 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     gameRenderPasses[eRenderPass_MainView].shader = gameGraphicsData.m_shaderHandles[eRenderPass_MainView];
     memcpy(gameRenderPasses[eRenderPass_MainView].descriptors, descriptors, sizeof(descriptors));
 
-    params.blendState = Platform::eBlendStateAlphaBlend;
-    params.depthState = Platform::eDepthStateOff;
+    params.blendState = Platform::BlendState::eAlphaBlend;
+    params.depthState = Platform::DepthState::eOff;
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
     params.framebufferHandle = DefaultFramebufferHandle_Invalid;
@@ -165,7 +165,7 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     // Swap chain blit
     Platform::DescriptorLayout blitDescriptorLayout = {};
     Platform::InitDescLayout(&blitDescriptorLayout);
-    blitDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::eDescriptorTypeSampledImage;
+    blitDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eSampledImage;
     blitDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
     gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(&blitDescriptorLayout);
 
@@ -175,14 +175,14 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 
     // Model matrix
     ResourceDesc desc;
-    desc.resourceType = Platform::eResourceTypeBuffer1D;
+    desc.resourceType = Platform::ResourceType::eBuffer1D;
     desc.dims = v3ui(sizeof(DescriptorInstanceData), 0, 0);
-    desc.bufferUsage = Platform::eBufferUsageUniform;
+    desc.bufferUsage = Platform::BufferUsage::eUniform;
     gameGraphicsData.m_modelMatrixBufferHandle1 = platformFuncs->CreateResource(desc);
 
     Platform::DescriptorLayout instanceDataDescriptorLayout = {};
     Platform::InitDescLayout(&instanceDataDescriptorLayout);
-    instanceDataDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::eDescriptorTypeBuffer;
+    instanceDataDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eBuffer;
     instanceDataDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
     gameGraphicsData.m_modelMatrixDescHandle1 = platformFuncs->CreateDescriptor(&instanceDataDescriptorLayout);
 
@@ -206,41 +206,41 @@ void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Plat
     // Default Quad
     {
         ResourceDesc desc;
-        desc.resourceType = Platform::eResourceTypeBuffer1D;
+        desc.resourceType = Platform::ResourceType::eBuffer1D;
 
         // Positions
         desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
+        desc.bufferUsage = Platform::BufferUsage::eVertex;
         defaultQuad.m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
 
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         ResourceHandle stagingBufferHandle_Pos = platformFuncs->CreateResource(desc);
         void* stagingBufferMemPtr_Pos = platformFuncs->MapResource(stagingBufferHandle_Pos);
 
         // UVs
         desc.dims = v3ui(sizeof(defaultQuad.m_uvs), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
+        desc.bufferUsage = Platform::BufferUsage::eVertex;
         defaultQuad.m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
 
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         ResourceHandle stagingBufferHandle_UV = platformFuncs->CreateResource(desc);
         void* stagingBufferMemPtr_UV = platformFuncs->MapResource(stagingBufferHandle_UV);
 
         // Normals
         desc.dims = v3ui(sizeof(defaultQuad.m_normals), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageVertex;
+        desc.bufferUsage = Platform::BufferUsage::eVertex;
         defaultQuad.m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
 
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         ResourceHandle stagingBufferHandle_Norm = platformFuncs->CreateResource(desc);
         void* stagingBufferMemPtr_Norm = platformFuncs->MapResource(stagingBufferHandle_Norm);
 
         // Indices
         desc.dims = v3ui(sizeof(defaultQuad.m_indices), 0, 0);
-        desc.bufferUsage = Platform::eBufferUsageIndex;
+        desc.bufferUsage = Platform::BufferUsage::eIndex;
         defaultQuad.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
 
-        desc.bufferUsage = Platform::eBufferUsageStaging;
+        desc.bufferUsage = Platform::BufferUsage::eStaging;
         ResourceHandle stagingBufferHandle_Idx = platformFuncs->CreateResource(desc);
         void* stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
 
@@ -252,7 +252,7 @@ void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Plat
 
         // Do GPU buffer copies
         Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Pos Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_points);
         command->m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
@@ -260,7 +260,7 @@ void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Plat
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx UV Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_uvs);
         command->m_dstBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
@@ -268,7 +268,7 @@ void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Plat
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Norm Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_normals);
         command->m_dstBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
@@ -276,7 +276,7 @@ void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Plat
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        command->m_commandType = (uint32)Platform::eGraphicsCmdMemTransfer;
+        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Idx Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_indices);
         command->m_dstBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
@@ -312,18 +312,18 @@ void DestroyDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs)
 void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     ResourceDesc desc;
-    desc.resourceType = Platform::eResourceTypeImage2D;
+    desc.resourceType = Platform::ResourceType::eImage2D;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
-    desc.imageFormat = Platform::eImageFormat_RGBA8_SRGB;
+    desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB;
     gameGraphicsData.m_rtColorHandle = platformFuncs->CreateResource(desc);
-    desc.imageFormat = Platform::eImageFormat_Depth_32F;
+    desc.imageFormat = Platform::ImageFormat::Depth_32F;
     gameGraphicsData.m_rtDepthHandle = platformFuncs->CreateResource(desc);
 
     // Depth-only pass
-    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = platformFuncs->CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutUndefined, windowWidth, windowHeight);
+    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = platformFuncs->CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, Platform::ImageLayout::eUndefined, windowWidth, windowHeight);
 
     // Color and depth
-    gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::eImageLayoutShaderRead, windowWidth, windowHeight);
+    gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::ImageLayout::eShaderRead, windowWidth, windowHeight);
 
     gameRenderPasses[eRenderPass_ZPrePass] = {};
     gameRenderPasses[eRenderPass_ZPrePass].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
@@ -342,7 +342,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
 {
     previousInputState = currentInputState;
 
-    for (uint32 uiKeycode = 0; uiKeycode < Platform::eMaxKeycodes; ++uiKeycode)
+    for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
     {
         if (inputStateDeltas->keyCodes[uiKeycode].numStateChanges > 0)
         {
@@ -352,11 +352,11 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
         }
     }
 
-    for (uint32 uiKeycode = 0; uiKeycode < Platform::eMaxKeycodes; ++uiKeycode)
+    for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
     {
         switch (uiKeycode)
         {
-            case Platform::eKeyF10:
+            case Platform::Keycode::eF10:
             {
                 // Handle the initial downpress once and nothing more
                 if (currentInputState.keyCodes[uiKeycode].isDown && !previousInputState.keyCodes[uiKeycode].isDown)
@@ -468,16 +468,16 @@ GAME_UPDATE(GameUpdate)
         Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
         // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
-        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
+        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition depth to transfer_dst";
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
-        command->m_startLayout = Platform::eImageLayoutUndefined;
-        command->m_endLayout = Platform::eImageLayoutTransferDst;
+        command->m_startLayout = Platform::ImageLayout::eUndefined;
+        command->m_endLayout = Platform::ImageLayout::eTransferDst;
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
         // Clear depth buffer - before z-prepass
-        command->m_commandType = Platform::eGraphicsCmdClearImage;
+        command->m_commandType = Platform::GraphicsCmd::eClearImage;
         command->debugLabel = "Clear depth buffer";
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
         command->m_clearValue = v4f(1.0f, 0.0f, 0.0f, 0.0f); // depth/stencil clear uses x and y components
@@ -485,11 +485,11 @@ GAME_UPDATE(GameUpdate)
         ++command;
 
         // Transition of depth buffer from transfer dst to depth_attachment_optimal
-        command->m_commandType = Platform::eGraphicsCmdLayoutTransition;
+        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition depth to depth_attachment_optimal";
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
-        command->m_startLayout = Platform::eImageLayoutTransferDst;
-        command->m_endLayout = Platform::eImageLayoutDepthOptimal;
+        command->m_startLayout = Platform::ImageLayout::eTransferDst;
+        command->m_endLayout = Platform::ImageLayout::eDepthOptimal;
         ++graphicsCommandStream->m_numCommands;
         ++command;
     }
@@ -504,7 +504,7 @@ GAME_UPDATE(GameUpdate)
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     // Blit to screen
-    command->m_commandType = Platform::eGraphicsCmdRenderPassBegin;
+    command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
     command->m_framebufferHandle = DefaultFramebufferHandle_Invalid;
     command->m_renderWidth = 0;
@@ -512,7 +512,7 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
-    command->m_commandType = Platform::eGraphicsCmdDrawCall;
+    command->m_commandType = Platform::GraphicsCmd::eDrawCall;
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
@@ -525,7 +525,7 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
-    command->m_commandType = Platform::eGraphicsCmdRenderPassEnd;
+    command->m_commandType = Platform::GraphicsCmd::eRenderPassEnd;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 

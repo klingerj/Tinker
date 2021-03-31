@@ -6,72 +6,98 @@ namespace Platform
 {
 
 // Enums
-enum DescriptorType : uint32
+namespace DescriptorType
 {
-    eDescriptorTypeBuffer = 0,
-    eDescriptorTypeSampledImage,
-    eDescriptorTypeMax
-};
+    enum : uint32
+    {
+        eBuffer = 0,
+        eSampledImage,
+        eMax
+    };
+}
 
-enum BufferUsage : uint32
+namespace BufferUsage
 {
-    eBufferUsageVertex = 0,
-    eBufferUsageIndex,
-    eBufferUsageStaging,
-    eBufferUsageUniform
-};
+    enum : uint32
+    {
+        eVertex = 0,
+        eIndex,
+        eStaging,
+        eUniform,
+        eMax
+    };
+}
 
-enum ResourceType : uint32
+namespace ResourceType
 {
-    eResourceTypeBuffer1D = 0,
-    eResourceTypeImage2D,
-    eResourceTypeMax
-};
+    enum : uint32
+    {
+        eBuffer1D = 0,
+        eImage2D,
+        eMax
+    };
+}
 
-enum BlendState : uint32
+namespace BlendState
 {
-    eBlendStateAlphaBlend = 0,
-    eBlendStateInvalid,
-    eBlendStateMax
-};
+    enum : uint32
+    {
+        eAlphaBlend = 0,
+        eInvalid,
+        eMax
+    };
+}
 
-enum DepthState : uint32
+namespace DepthState
 {
-    eDepthStateOff = 0,
-    eDepthStateTestOnWriteOn,
-    eDepthStateTestOnWriteOff,
-    eDepthStateMax
-};
+     enum : uint32
+     {
+         eOff = 0,
+         eTestOnWriteOn,
+         eTestOnWriteOff,
+         eMax
+     };   
+}
 
-enum ImageFormat : uint32
+namespace ImageFormat
 {
-    eImageFormat_BGRA8_SRGB = 0,
-    eImageFormat_RGBA8_SRGB,
-    eImageFormat_Depth_32F,
-    eImageFormat_Invalid,
-    eImageFormatMax
-};
+    enum : uint32
+    {
+        BGRA8_SRGB = 0,
+        RGBA8_SRGB,
+        Depth_32F,
+        Invalid,
+        eMax
+    };
+}
 
-enum ImageLayout : uint32
+namespace ImageLayout
 {
-    eImageLayoutUndefined = 0,
-    eImageLayoutShaderRead,
-    eImageLayoutTransferDst,
-    eImageLayoutDepthOptimal,
-    eImageLayoutMax
-};
+    enum : uint32
+    {
+        eUndefined = 0,
+        eShaderRead,
+        eTransferDst,
+        eDepthOptimal,
+        eMax
+    };
+}
 
-enum GraphicsCmdType : uint32
+namespace GraphicsCmd
 {
-    eGraphicsCmdDrawCall = 0,
-    eGraphicsCmdMemTransfer,
-    eGraphicsCmdRenderPassBegin,
-    eGraphicsCmdRenderPassEnd,
-    eGraphicsCmdLayoutTransition,
-    eGraphicsCmdClearImage,
-    //eGraphicsCmdImageCopy,
-    eGraphicsCmdMax
-};
+    enum : uint32
+    {
+        eDrawCall = 0,
+        eMemTransfer,
+        eRenderPassBegin,
+        eRenderPassEnd,
+        eLayoutTransition,
+        eClearImage,
+        //eImageCopy,
+        eMax
+    };
+}
+
 
 // Concrete type for resource handle to catch errors at compile time, e.g.
 // Try to free a descriptor set with a resource handle, which can happen if all handles
@@ -234,7 +260,7 @@ inline void InitDescLayout(DescriptorLayout* layout)
     {
         for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
         {
-            layout->descriptorLayoutParams[uiDescSet][uiDesc].type = eDescriptorTypeMax;
+            layout->descriptorLayoutParams[uiDescSet][uiDesc].type = DescriptorType::eMax;
             layout->descriptorLayoutParams[uiDescSet][uiDesc].amount = 0;
         }
     }

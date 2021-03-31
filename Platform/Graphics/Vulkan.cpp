@@ -21,39 +21,39 @@ namespace Graphics
 {
 
 // NOTE: Must correspond the blend state enum in PlatformGameAPI.h
-static VkPipelineColorBlendAttachmentState   VulkanBlendStates    [eBlendStateMax]     = {};
-static VkPipelineDepthStencilStateCreateInfo VulkanDepthStates    [eDepthStateMax]     = {};
-static VkImageLayout                         VulkanImageLayouts   [eImageLayoutMax]    = {};
-static VkFormat                              VulkanImageFormats   [eImageFormatMax]    = {};
-static VkDescriptorType                      VulkanDescriptorTypes[eDescriptorTypeMax] = {};
+static VkPipelineColorBlendAttachmentState   VulkanBlendStates    [BlendState::eMax]     = {};
+static VkPipelineDepthStencilStateCreateInfo VulkanDepthStates    [DepthState::eMax]     = {};
+static VkImageLayout                         VulkanImageLayouts   [ImageLayout::eMax]    = {};
+static VkFormat                              VulkanImageFormats   [ImageFormat::eMax]    = {};
+static VkDescriptorType                      VulkanDescriptorTypes[DescriptorType::eMax] = {};
 
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState)
 {
-    TINKER_ASSERT(gameBlendState < eBlendStateMax);
+    TINKER_ASSERT(gameBlendState < BlendState::eMax);
     return VulkanBlendStates[gameBlendState];
 }
 
 const VkPipelineDepthStencilStateCreateInfo& GetVkDepthState(uint32 gameDepthState)
 {
-    TINKER_ASSERT(gameDepthState < eDepthStateMax);
+    TINKER_ASSERT(gameDepthState < DepthState::eMax);
     return VulkanDepthStates[gameDepthState];
 }
 
 const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout)
 {
-    TINKER_ASSERT(gameImageLayout < eImageLayoutMax);
+    TINKER_ASSERT(gameImageLayout < ImageLayout::eMax);
     return VulkanImageLayouts[gameImageLayout];
 }
 
 const VkFormat& GetVkImageFormat(uint32 gameImageFormat)
 {
-    TINKER_ASSERT(gameImageFormat < eImageFormatMax);
+    TINKER_ASSERT(gameImageFormat < ImageFormat::eMax);
     return VulkanImageFormats[gameImageFormat];
 }
 
 const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType)
 {
-    TINKER_ASSERT(gameDescriptorType < eDescriptorTypeMax);
+    TINKER_ASSERT(gameDescriptorType < DescriptorType::eMax);
     return VulkanDescriptorTypes[gameDescriptorType];
 }
 
@@ -85,7 +85,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     vulkanContextResources->resources->windowWidth = width;
     vulkanContextResources->resources->windowHeight = height;
 
-    VulkanBlendStates[eBlendStateInvalid] = {};
+    VulkanBlendStates[BlendState::eInvalid] = {};
     VkPipelineColorBlendAttachmentState blendStateProperties = {};
     blendStateProperties.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
         VK_COLOR_COMPONENT_G_BIT |
@@ -98,7 +98,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     blendStateProperties.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     blendStateProperties.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     blendStateProperties.alphaBlendOp = VK_BLEND_OP_ADD;
-    VulkanBlendStates[eBlendStateAlphaBlend] = blendStateProperties;
+    VulkanBlendStates[BlendState::eAlphaBlend] = blendStateProperties;
 
     VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
     depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -112,25 +112,25 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
 
     depthStencilState.depthTestEnable = VK_FALSE;
     depthStencilState.depthWriteEnable = VK_FALSE;
-    VulkanDepthStates[eDepthStateOff] = depthStencilState;
+    VulkanDepthStates[DepthState::eOff] = depthStencilState;
     depthStencilState.depthTestEnable = VK_TRUE;
     depthStencilState.depthWriteEnable = VK_TRUE;
-    VulkanDepthStates[eDepthStateTestOnWriteOn] = depthStencilState;
+    VulkanDepthStates[DepthState::eTestOnWriteOn] = depthStencilState;
     depthStencilState.depthWriteEnable = VK_FALSE;
-    VulkanDepthStates[eDepthStateTestOnWriteOff] = depthStencilState;
+    VulkanDepthStates[DepthState::eTestOnWriteOff] = depthStencilState;
 
-    VulkanImageLayouts[eImageLayoutUndefined] = VK_IMAGE_LAYOUT_UNDEFINED;
-    VulkanImageLayouts[eImageLayoutShaderRead] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    VulkanImageLayouts[eImageLayoutTransferDst] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    VulkanImageLayouts[eImageLayoutDepthOptimal] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    VulkanImageLayouts[ImageLayout::eUndefined] = VK_IMAGE_LAYOUT_UNDEFINED;
+    VulkanImageLayouts[ImageLayout::eShaderRead] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    VulkanImageLayouts[ImageLayout::eTransferDst] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    VulkanImageLayouts[ImageLayout::eDepthOptimal] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VulkanImageFormats[eImageFormat_BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
-    VulkanImageFormats[eImageFormat_RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
-    VulkanImageFormats[eImageFormat_Depth_32F] = VK_FORMAT_D32_SFLOAT;
-    VulkanImageFormats[eImageFormat_Invalid] = VK_FORMAT_UNDEFINED;
+    VulkanImageFormats[ImageFormat::BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
+    VulkanImageFormats[ImageFormat::RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
+    VulkanImageFormats[ImageFormat::Depth_32F] = VK_FORMAT_D32_SFLOAT;
+    VulkanImageFormats[ImageFormat::Invalid] = VK_FORMAT_UNDEFINED;
 
-    VulkanDescriptorTypes[eDescriptorTypeBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    VulkanDescriptorTypes[eDescriptorTypeSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -165,10 +165,10 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
         #endif
     };
-    Core::Utility::LogMsg("Platform", "******** Requested Instance Extensions: ********", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "******** Requested Instance Extensions: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiReqExt = 0; uiReqExt < numRequestedExtensions; ++uiReqExt)
     {
-        Core::Utility::LogMsg("Platform", requestedExtensionNames[uiReqExt], Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", requestedExtensionNames[uiReqExt], Core::Utility::LogSeverity::eInfo);
     }
     
     instanceCreateInfo.enabledExtensionCount = numRequestedExtensions;
@@ -183,10 +183,10 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     
     VkExtensionProperties* availableExtensions = new VkExtensionProperties[numAvailableExtensions];
     vkEnumerateInstanceExtensionProperties(nullptr, &numAvailableExtensions, availableExtensions);
-    Core::Utility::LogMsg("Platform", "******** Available Instance Extensions: ********", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "******** Available Instance Extensions: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiAvailExt = 0; uiAvailExt < numAvailableExtensions; ++uiAvailExt)
     {
-        Core::Utility::LogMsg("Platform", availableExtensions[uiAvailExt].extensionName, Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", availableExtensions[uiAvailExt].extensionName, Core::Utility::LogSeverity::eInfo);
     }
     delete availableExtensions;
 
@@ -197,10 +197,10 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     {
         "VK_LAYER_KHRONOS_validation"
     };
-    Core::Utility::LogMsg("Platform", "******** Requested Instance Layers: ********", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "******** Requested Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
     {
-        Core::Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Core::Utility::LogSeverity::eInfo);
     }
 
     uint32 numAvailableLayers = 0;
@@ -208,17 +208,17 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
 
     if (numAvailableLayers == 0)
     {
-        Core::Utility::LogMsg("Platform", "Zero available instance layers!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Zero available instance layers!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
     VkLayerProperties* availableLayers = new VkLayerProperties[numAvailableLayers];
     vkEnumerateInstanceLayerProperties(&numAvailableLayers, availableLayers);
 
-    Core::Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
     {
-        Core::Utility::LogMsg("Platform", availableLayers[uiAvailLayer].layerName, Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", availableLayers[uiAvailLayer].layerName, Core::Utility::LogSeverity::eInfo);
     }
 
     bool layersSupported[numRequestedLayers] = { false };
@@ -240,8 +240,8 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     {
         if (!layersSupported[uiReqLayer])
         {
-            Core::Utility::LogMsg("Platform", "Requested instance layer not supported!", Core::Utility::eLogSeverityCritical);
-            Core::Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Requested instance layer not supported!", Core::Utility::LogSeverity::eCritical);
+            Core::Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
     }
@@ -255,7 +255,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         &vulkanContextResources->resources->instance);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan instance!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan instance!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -284,7 +284,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "Failed to get create debug utils messenger proc addr!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to get create debug utils messenger proc addr!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
     #endif
@@ -302,7 +302,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         &vulkanContextResources->resources->surface);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Win32SurfaceKHR!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Win32SurfaceKHR!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
     #else
@@ -316,7 +316,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
 
     if (numPhysicalDevices == 0)
     {
-        Core::Utility::LogMsg("Platform", "Zero available physical devices!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Zero available physical devices!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -328,10 +328,10 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
-    Core::Utility::LogMsg("Platform", "******** Requested Device Extensions: ********", Core::Utility::eLogSeverityInfo);
+    Core::Utility::LogMsg("Platform", "******** Requested Device Extensions: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
     {
-        Core::Utility::LogMsg("Platform", requiredPhysicalDeviceExtensions[uiReqExt], Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", requiredPhysicalDeviceExtensions[uiReqExt], Core::Utility::LogSeverity::eInfo);
     }
 
     for (uint32 uiPhysicalDevice = 0; uiPhysicalDevice < numPhysicalDevices; ++uiPhysicalDevice)
@@ -386,7 +386,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
 
             if (numAvailablePhysicalDeviceExtensions == 0)
             {
-                Core::Utility::LogMsg("Platform", "Zero available device extensions!", Core::Utility::eLogSeverityCritical);
+                Core::Utility::LogMsg("Platform", "Zero available device extensions!", Core::Utility::LogSeverity::eCritical);
                 TINKER_ASSERT(0);
             }
 
@@ -396,10 +396,10 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
                 &numAvailablePhysicalDeviceExtensions,
                 availablePhysicalDeviceExtensions);
 
-            Core::Utility::LogMsg("Platform", "******** Available Device Extensions: ********", Core::Utility::eLogSeverityInfo);
+            Core::Utility::LogMsg("Platform", "******** Available Device Extensions: ********", Core::Utility::LogSeverity::eInfo);
             for (uint32 uiAvailExt = 0; uiAvailExt < numAvailablePhysicalDeviceExtensions; ++uiAvailExt)
             {
-                Core::Utility::LogMsg("Platform", availablePhysicalDeviceExtensions[uiAvailExt].extensionName, Core::Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", availablePhysicalDeviceExtensions[uiAvailExt].extensionName, Core::Utility::LogSeverity::eInfo);
             }
 
             for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
@@ -419,8 +419,8 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
             {
                 if (!extensionSupport[uiReqExt])
                 {
-                    Core::Utility::LogMsg("Platform", "Requested device extension not supported!", Core::Utility::eLogSeverityCritical);
-                    Core::Utility::LogMsg("Platform", requiredPhysicalDeviceExtensions[uiReqExt], Core::Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", "Requested device extension not supported!", Core::Utility::LogSeverity::eCritical);
+                    Core::Utility::LogMsg("Platform", requiredPhysicalDeviceExtensions[uiReqExt], Core::Utility::LogSeverity::eCritical);
                     TINKER_ASSERT(0);
                 }
             }
@@ -438,7 +438,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
 
     if (vulkanContextResources->resources->physicalDevice == VK_NULL_HANDLE)
     {
-        Core::Utility::LogMsg("Platform", "No physical device chosen!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "No physical device chosen!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -446,36 +446,36 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     VkPhysicalDeviceMemoryProperties memoryProperties = {};
     vkGetPhysicalDeviceMemoryProperties(vulkanContextResources->resources->physicalDevice, &memoryProperties);
     {
-        Core::Utility::LogMsg("Platform", "******** Device Memory Properties: ********", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "******** Device Memory Properties: ********", Core::Utility::LogSeverity::eInfo);
 
         for (uint32 uiMemType = 0; uiMemType < memoryProperties.memoryTypeCount; ++uiMemType)
         {
-            Core::Utility::LogMsg("Platform", "****************", Core::Utility::eLogSeverityInfo);
+            Core::Utility::LogMsg("Platform", "****************", Core::Utility::LogSeverity::eInfo);
 
             // Heap properties
             // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryPropertyFlagBits.html
             VkMemoryPropertyFlags propertyFlags = memoryProperties.memoryTypes[uiMemType].propertyFlags;
 
-            Core::Utility::LogMsg("Platform", "Heap Properties:", Core::Utility::eLogSeverityInfo);
+            Core::Utility::LogMsg("Platform", "Heap Properties:", Core::Utility::LogSeverity::eInfo);
             if (propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
             {
-                Core::Utility::LogMsg("Platform", "- Device local", Core::Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "- Device local", Core::Utility::LogSeverity::eInfo);
             }
             if (propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
             {
-                Core::Utility::LogMsg("Platform", "- Host visible", Core::Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "- Host visible", Core::Utility::LogSeverity::eInfo);
             }
             if (propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
             {
-                Core::Utility::LogMsg("Platform", "- Host coherent", Core::Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "- Host coherent", Core::Utility::LogSeverity::eInfo);
             }
             if (propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
             {
-                Core::Utility::LogMsg("Platform", "- Host cached", Core::Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "- Host cached", Core::Utility::LogSeverity::eInfo);
             }
             if (propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
             {
-                Core::Utility::LogMsg("Platform", "- Lazily allocated", Core::Utility::eLogSeverityInfo);
+                Core::Utility::LogMsg("Platform", "- Lazily allocated", Core::Utility::LogSeverity::eInfo);
             }
 
             // Heap size
@@ -483,15 +483,15 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
             char buffer[16] = {};
             _ui64toa_s(memoryProperties.memoryHeaps[heapIndex].size, buffer, 16, 10);
 
-            Core::Utility::LogMsg("Platform", "Heap Size:", Core::Utility::eLogSeverityInfo);
-            Core::Utility::LogMsg("Platform", buffer, Core::Utility::eLogSeverityInfo);
+            Core::Utility::LogMsg("Platform", "Heap Size:", Core::Utility::LogSeverity::eInfo);
+            Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eInfo);
 
             // Heap flags
             // memoryProperties.memoryHeaps[heapIndex].flags
             // Don't really care about these I think
             // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryHeapFlagBits.html
         }
-        Core::Utility::LogMsg("Platform", "****************", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "****************", Core::Utility::LogSeverity::eInfo);
     }
 
     // Logical device
@@ -530,7 +530,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         &vulkanContextResources->resources->device);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan device!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan device!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -544,7 +544,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
                                                                "vkCmdBeginDebugUtilsLabelEXT");
     if (!vulkanContextResources->resources->pfnCmdBeginDebugUtilsLabelEXT)
     {
-        Core::Utility::LogMsg("Platform", "Failed to get create debug utils begin label proc addr!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to get create debug utils begin label proc addr!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -553,7 +553,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
                                                                "vkCmdEndDebugUtilsLabelEXT");
     if (!vulkanContextResources->resources->pfnCmdEndDebugUtilsLabelEXT)
     {
-        Core::Utility::LogMsg("Platform", "Failed to get create debug utils end label proc addr!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to get create debug utils end label proc addr!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -562,7 +562,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
                                                                "vkCmdInsertDebugUtilsLabelEXT");
     if (!vulkanContextResources->resources->pfnCmdInsertDebugUtilsLabelEXT)
     {
-        Core::Utility::LogMsg("Platform", "Failed to get create debug utils insert label proc addr!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to get create debug utils insert label proc addr!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
     #endif
@@ -593,7 +593,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         &vulkanContextResources->resources->commandPool);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan command pool!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan command pool!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -611,7 +611,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         vulkanContextResources->resources->commandBuffers);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan primary frame command buffers!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan primary frame command buffers!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -630,7 +630,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         vulkanContextResources->resources->threaded_secondaryCommandBuffers);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan secondary frame command buffers!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan secondary frame command buffers!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -643,7 +643,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     result = vkAllocateCommandBuffers(vulkanContextResources->resources->device, &commandBufferAllocInfo, &vulkanContextResources->resources->commandBuffer_Immediate);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan command buffers (immediate)!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan command buffers (immediate)!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -659,7 +659,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
             &vulkanContextResources->resources->swapChainImageAvailableSemaphores[uiImage]);
         if (result != VK_SUCCESS)
         {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Core::Utility::LogSeverity::eCritical);
         }
 
         result = vkCreateSemaphore(vulkanContextResources->resources->device,
@@ -668,7 +668,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
             &vulkanContextResources->resources->renderCompleteSemaphores[uiImage]);
         if (result != VK_SUCCESS)
         {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Core::Utility::LogSeverity::eCritical);
         }
     }
 
@@ -681,7 +681,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
         result = vkCreateFence(vulkanContextResources->resources->device, &fenceCreateInfo, nullptr, &vulkanContextResources->resources->fences[uiImage]);
         if (result != VK_SUCCESS)
         {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan fence!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan fence!", Core::Utility::LogSeverity::eCritical);
         }
     }
     
@@ -733,7 +733,7 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
 
     if (numAvailableSurfaceFormats == 0)
     {
-        Core::Utility::LogMsg("Platform", "Zero available Vulkan swap chain surface formats!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Zero available Vulkan swap chain surface formats!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -762,7 +762,7 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
 
     if (numAvailablePresentModes == 0)
     {
-        Core::Utility::LogMsg("Platform", "Zero available Vulkan swap chain present modes!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Zero available Vulkan swap chain present modes!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -825,7 +825,7 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
         &vulkanContextResources->resources->swapChain);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan swap chain!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan swap chain!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -914,7 +914,7 @@ VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBy
     VkResult result = vkCreateShaderModule(vulkanContextResources->resources->device, &shaderModuleCreateInfo, nullptr, &shaderModule);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan shader module!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan shader module!", Core::Utility::LogSeverity::eCritical);
         return VK_NULL_HANDLE;
     }
     return shaderModule;
@@ -1067,7 +1067,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
 
     VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
-    if (blendState == eBlendStateInvalid)
+    if (blendState == BlendState::eInvalid)
     {
         colorBlending.attachmentCount = 0;
         colorBlending.pAttachments = nullptr;
@@ -1114,7 +1114,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
 
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan pipeline layout!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan pipeline layout!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -1155,7 +1155,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
 
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -1187,7 +1187,7 @@ void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources)
     VkResult result = vkQueueSubmit(vulkanContextResources->resources->graphicsQueue, 1, &submitInfo, vulkanContextResources->resources->fences[vulkanContextResources->resources->currentFrame]);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::LogSeverity::eCritical);
     }
 
     // Present
@@ -1204,18 +1204,18 @@ void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources)
 
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to present swap chain!", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Failed to present swap chain!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {
             TINKER_ASSERT(0);
-            /*Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::eLogSeverityInfo);
+            /*Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
             VulkanDestroySwapChain(vulkanContextResources);
             VulkanCreateSwapChain(vulkanContextResources);
             return; // Don't present on this frame*/
         }
         else
         {
-            Core::Utility::LogMsg("Platform", "Not recreating swap chain!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Not recreating swap chain!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
     }
@@ -1235,7 +1235,7 @@ void* VulkanMapResource(VulkanContextResources* vulkanContextResources, Resource
 
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
         return nullptr;
     }
@@ -1258,7 +1258,7 @@ void VulkanUnmapResource(VulkanContextResources* vulkanContextResources, Resourc
     VkResult result = vkFlushMappedMemoryRanges(vulkanContextResources->resources->device, 1, &memoryRange);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to flush mapped gpu memory!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to flush mapped gpu memory!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -1286,7 +1286,7 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
 
         switch (bufferUsage)
         {
-            case eBufferUsageVertex:
+            case BufferUsage::eVertex:
             {
                 oneBufferOnly = true;
                 perSwapChainSize = true;
@@ -1295,7 +1295,7 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
                 break;
             }
 
-            case eBufferUsageIndex:
+            case BufferUsage::eIndex:
             {
                 oneBufferOnly = true;
                 perSwapChainSize = true;
@@ -1304,7 +1304,7 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
                 break;
             }
 
-            case eBufferUsageStaging:
+            case BufferUsage::eStaging:
             {
                 oneBufferOnly = true;
                 perSwapChainSize = false;
@@ -1313,7 +1313,7 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
                 break;
             }
 
-            case eBufferUsageUniform:
+            case BufferUsage::eUniform:
             {
                 usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
                 propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -1322,7 +1322,7 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
 
             default:
             {
-                Core::Utility::LogMsg("Platform", "Invalid buffer usage specified!", Core::Utility::eLogSeverityCritical);
+                Core::Utility::LogMsg("Platform", "Invalid buffer usage specified!", Core::Utility::LogSeverity::eCritical);
                 TINKER_ASSERT(0);
                 break;
             }
@@ -1380,7 +1380,7 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "No descriptors passed to VulkanCreateDescriptor()!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "No descriptors passed to VulkanCreateDescriptor()!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -1398,7 +1398,7 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
         result = vkCreateDescriptorSetLayout(vulkanContextResources->resources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
         if (result != VK_SUCCESS)
         {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set layout!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set layout!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
 
@@ -1415,7 +1415,7 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiImage].descriptorSet);
             if (result != VK_SUCCESS)
             {
-                Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set!", Core::Utility::eLogSeverityCritical);
+                Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set!", Core::Utility::LogSeverity::eCritical);
                 TINKER_ASSERT(0);
             }
         }
@@ -1469,7 +1469,7 @@ void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, Descr
             {
                 switch (descLayout->descriptorLayoutParams[uiDescSet][uiDesc].type)
                 {
-                    case eDescriptorTypeBuffer:
+                    case DescriptorType::eBuffer:
                     {
                         VkBuffer* buffer = &vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetHandles->handles[uiDesc].m_hRes)->resourceChain[uiImage].buffer;
 
@@ -1486,7 +1486,7 @@ void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, Descr
                         break;
                     }
 
-                    case eDescriptorTypeSampledImage:
+                    case DescriptorType::eSampledImage:
                     {
                         VkImageView imageView = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetHandles->handles[uiDesc].m_hRes)->resourceChain[uiImage].imageView;
 
@@ -1534,7 +1534,7 @@ void InitDescriptorPool(VulkanContextResources* vulkanContextResources)
     VkResult result = vkCreateDescriptorPool(vulkanContextResources->resources->device, &descPoolCreateInfo, nullptr, &vulkanContextResources->resources->descriptorPool);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create descriptor pool!", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Failed to create descriptor pool!", Core::Utility::LogSeverity::eInfo);
         return;
     }
 }
@@ -1563,7 +1563,7 @@ void CreateSamplers(VulkanContextResources* vulkanContextResources)
     VkResult result = vkCreateSampler(vulkanContextResources->resources->device, &samplerCreateInfo, nullptr, &vulkanContextResources->resources->linearSampler);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create sampler!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create sampler!", Core::Utility::LogSeverity::eCritical);
         return;
     }
 }
@@ -1583,17 +1583,17 @@ void AcquireFrame(VulkanContextResources* vulkanContextResources)
     
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to acquire next swap chain image!", Core::Utility::eLogSeverityInfo);
+        Core::Utility::LogMsg("Platform", "Failed to acquire next swap chain image!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::eLogSeverityInfo);
+            Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
             VulkanDestroySwapChain(vulkanContextResources);
             VulkanCreateSwapChain(vulkanContextResources);
             return; // Don't present on this frame
         }
         else
         {
-            Core::Utility::LogMsg("Platform", "Not recreating swap chain!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Not recreating swap chain!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
     }
@@ -1616,7 +1616,7 @@ void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
     VkResult result = vkBeginCommandBuffer(vulkanContextResources->resources->commandBuffers[vulkanContextResources->resources->currentSwapChainImage], &commandBufferBeginInfo);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 }
@@ -1631,7 +1631,7 @@ void EndVulkanCommandRecording(VulkanContextResources* vulkanContextResources)
     VkResult result = vkEndCommandBuffer(vulkanContextResources->resources->commandBuffers[vulkanContextResources->resources->currentSwapChainImage]);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 }
@@ -1645,7 +1645,7 @@ void BeginVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextR
     VkResult result = vkBeginCommandBuffer(vulkanContextResources->resources->commandBuffer_Immediate, &commandBufferBeginInfo);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer (immediate)!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer (immediate)!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 }
@@ -1655,7 +1655,7 @@ void EndVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextRes
     VkResult result = vkEndCommandBuffer(vulkanContextResources->resources->commandBuffer_Immediate);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer (immediate)!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer (immediate)!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
@@ -1667,7 +1667,7 @@ void EndVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextRes
     result = vkQueueSubmit(vulkanContextResources->resources->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::LogSeverity::eCritical);
     }
     vkQueueWaitIdle(vulkanContextResources->resources->graphicsQueue);
 }
@@ -1789,7 +1789,7 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
 
     switch (dstResourceChain->resDesc.resourceType)
     {
-        case eResourceTypeBuffer1D:
+        case ResourceType::eBuffer1D:
         {
             VkBufferCopy bufferCopies[VULKAN_MAX_SWAP_CHAIN_IMAGES] = {};
 
@@ -1808,13 +1808,13 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
             break;
         }
 
-        case eResourceTypeImage2D:
+        case ResourceType::eImage2D:
         {
             uint32 bytesPerPixel = 0;
             switch (dstResourceChain->resDesc.imageFormat)
             {
-                case eImageFormat_BGRA8_SRGB:
-                case eImageFormat_RGBA8_SRGB:
+                case ImageFormat::BGRA8_SRGB:
+                case ImageFormat::RGBA8_SRGB:
                 {
                     bytesPerPixel = 32 / 8;
                     break;
@@ -1822,7 +1822,7 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
 
                 default:
                 {
-                    Core::Utility::LogMsg("Platform", "Unsupported image copy dst format!", Core::Utility::eLogSeverityCritical);
+                    Core::Utility::LogMsg("Platform", "Unsupported image copy dst format!", Core::Utility::LogSeverity::eCritical);
                     TINKER_ASSERT(0);
                     return;
                 }
@@ -1939,7 +1939,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 
     switch (startLayout)
     {
-        case eImageLayoutUndefined:
+        case ImageLayout::eUndefined:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             barrier.srcAccessMask = 0;
@@ -1947,7 +1947,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
             break;
         }
 
-        case eImageLayoutShaderRead:
+        case ImageLayout::eShaderRead:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -1955,7 +1955,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
             break;
         }
 
-        case eImageLayoutTransferDst:
+        case ImageLayout::eTransferDst:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -1963,7 +1963,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
             break;
         }
 
-        case eImageLayoutDepthOptimal:
+        case ImageLayout::eDepthOptimal:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
@@ -1973,7 +1973,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 
         default:
         {
-            Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
             return;
         }
@@ -1981,28 +1981,28 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 
     switch (endLayout)
     {
-        case eImageLayoutUndefined:
+        case ImageLayout::eUndefined:
         {
             TINKER_ASSERT(0);
             // Can't transition to undefined according to Vulkan spec
             return;
         }
 
-        case eImageLayoutShaderRead:
+        case ImageLayout::eShaderRead:
         {
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
             dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
             break;
         }
 
-        case eImageLayoutTransferDst:
+        case ImageLayout::eTransferDst:
         {
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
             dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             break;
         }
 
-        case eImageLayoutDepthOptimal:
+        case ImageLayout::eDepthOptimal:
         {
             barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
             dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
@@ -2011,7 +2011,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 
         default:
         {
-            Core::Utility::LogMsg("Platform", "Invalid src image resource layout specified for layout transition!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid src image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
             return;
         }
@@ -2019,14 +2019,14 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 
     switch (memResourceChain->resDesc.imageFormat)
     {
-        case eImageFormat_BGRA8_SRGB:
-        case eImageFormat_RGBA8_SRGB:
+        case ImageFormat::BGRA8_SRGB:
+        case ImageFormat::RGBA8_SRGB:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             break;
         }
 
-        case eImageFormat_Depth_32F:
+        case ImageFormat::Depth_32F:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             break;
@@ -2034,7 +2034,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 
         default:
         {
-            Core::Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
             return;
         }
@@ -2079,7 +2079,7 @@ void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResource
 
     switch (memResourceChain->resDesc.imageFormat)
     {
-        case eImageFormat_BGRA8_SRGB:
+        case ImageFormat::BGRA8_SRGB:
         {
             range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             for (uint32 i = 0; i < 4; ++i)
@@ -2094,7 +2094,7 @@ void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResource
             break;
         }
 
-        case eImageFormat_RGBA8_SRGB:
+        case ImageFormat::RGBA8_SRGB:
         {
             range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             for (uint32 i = 0; i < 4; ++i)
@@ -2109,7 +2109,7 @@ void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResource
             break;
         }
 
-        case eImageFormat_Depth_32F:
+        case ImageFormat::Depth_32F:
         {
             range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             clearDepth.depth = clearValue.x;
@@ -2124,7 +2124,7 @@ void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResource
 
         default:
         {
-            Core::Utility::LogMsg("Platform", "Invalid image format for clear command!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid image format for clear command!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
             return;
         }
@@ -2155,13 +2155,13 @@ FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextR
             &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiImage];
 
         // Create render pass
-        uint32 colorFormat = eImageFormat_Invalid;
+        uint32 colorFormat = ImageFormat::Invalid;
         if (numRTColorHandles > 0)
         {
             // TODO: multiple RTs here
             colorFormat = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtColorHandles[0].m_hRes)->resDesc.imageFormat;
         }
-        uint32 depthFormat = eImageFormat_Invalid;
+        uint32 depthFormat = ImageFormat::Invalid;
         if (hasDepth)
         {
             depthFormat = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resDesc.imageFormat;
@@ -2236,23 +2236,23 @@ ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextRe
         imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         switch (imageFormat)
         {
-            case eImageFormat_BGRA8_SRGB:
-            case eImageFormat_RGBA8_SRGB:
+            case ImageFormat::BGRA8_SRGB:
+            case ImageFormat::RGBA8_SRGB:
             {
                 imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
                 break;
             }
 
-            case eImageFormat_Depth_32F:
+            case ImageFormat::Depth_32F:
             {
                 imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
                 break;
             }
 
-            case eImageFormat_Invalid:
+            case ImageFormat::Invalid:
             default:
             {
-                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::eLogSeverityCritical);
+                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
                 TINKER_ASSERT(0);
                 break;
             }
@@ -2277,23 +2277,23 @@ ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextRe
         VkImageAspectFlags aspectMask = {};
         switch (imageFormat)
         {
-            case eImageFormat_BGRA8_SRGB:
-            case eImageFormat_RGBA8_SRGB:
+            case ImageFormat::BGRA8_SRGB:
+            case ImageFormat::RGBA8_SRGB:
             {
                 aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
                 break;
             }
 
-            case eImageFormat_Depth_32F:
+            case ImageFormat::Depth_32F:
             {
                 aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
                 break;
             }
 
-            case eImageFormat_Invalid:
+            case ImageFormat::Invalid:
             default:
             {
-                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::eLogSeverityCritical);
+                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
                 TINKER_ASSERT(0);
                 break;
             }
@@ -2315,13 +2315,13 @@ ResourceHandle VulkanCreateResource(VulkanContextResources* vulkanContextResourc
 
     switch (resDesc.resourceType)
     {
-        case eResourceTypeBuffer1D:
+        case ResourceType::eBuffer1D:
         {
             newHandle = VulkanCreateBuffer(vulkanContextResources, resDesc.dims.x, resDesc.bufferUsage);
             break;
         }
 
-        case eResourceTypeImage2D:
+        case ResourceType::eImage2D:
         {
             newHandle = VulkanCreateImageResource(vulkanContextResources, resDesc.imageFormat, resDesc.dims.x, resDesc.dims.y);
             break;
@@ -2329,7 +2329,7 @@ ResourceHandle VulkanCreateResource(VulkanContextResources* vulkanContextResourc
 
         default:
         {
-            Core::Utility::LogMsg("Platform", "Invalid resource description type!", Core::Utility::eLogSeverityCritical);
+            Core::Utility::LogMsg("Platform", "Invalid resource description type!", Core::Utility::LogSeverity::eCritical);
             return newHandle;
         }
     }
@@ -2403,7 +2403,7 @@ void VulkanDestroyBuffer(VulkanContextResources* vulkanContextResources, Resourc
         {
             // TODO: this is currently happening since vertex buffers are only alloc'd once, but
             // currently the architecture stores a chain of buffer objects.
-            //Core::Utility::LogMsg("Platform", "Freeing a null buffer", Core::Utility::eLogSeverityWarning);
+            //Core::Utility::LogMsg("Platform", "Freeing a null buffer", Core::Utility::LogSeverity::eWarning);
         }
     }
 
@@ -2418,13 +2418,13 @@ void VulkanDestroyResource(VulkanContextResources* vulkanContextResources, Resou
 
     switch (resourceChain->resDesc.resourceType)
     {
-        case eResourceTypeBuffer1D:
+        case ResourceType::eBuffer1D:
         {
             VulkanDestroyBuffer(vulkanContextResources, handle, resourceChain->resDesc.bufferUsage);
             break;
         }
 
-        case eResourceTypeImage2D:
+        case ResourceType::eImage2D:
         {
             VulkanDestroyImageResource(vulkanContextResources, handle);
             break;
@@ -2470,7 +2470,7 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources)
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "Failed to get destroy debug utils messenger proc addr!", Core::Utility::eLogSeverityCritical);
+        Core::Utility::LogMsg("Platform", "Failed to get destroy debug utils messenger proc addr!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
     #endif

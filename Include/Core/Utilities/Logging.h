@@ -9,12 +9,15 @@ namespace Core
 namespace Utility
 {
 
-enum
+namespace LogSeverity
 {
-    eLogSeverityInfo,
-    eLogSeverityWarning,
-    eLogSeverityCritical
-};
+    enum : uint32
+    {
+        eInfo = 0,
+        eWarning,
+        eCritical
+    };
+}
 
 void LogMsg(const char* prefix, const char* msg, uint32 severity);
 
