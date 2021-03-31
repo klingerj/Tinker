@@ -84,7 +84,6 @@ inline uint32 SafeTruncateUint64(uint64 value)
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
 #endif
 
-#define BYTE_ALIGN(n) alignas(n)
 #define CACHE_LINE 64
 
 // Quick simple memory allocation and leak tracking

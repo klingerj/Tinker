@@ -1025,7 +1025,7 @@ wWinMain(HINSTANCE hInstance,
         g_graphicsCommandStream = {};
         g_graphicsCommandStream.m_numCommands = 0;
         g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-        g_graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand), 64, __FILE__, __LINE__);
+        g_graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
