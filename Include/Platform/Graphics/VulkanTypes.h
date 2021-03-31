@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../Core/CoreDefines.h"
-#include "../../Core/Allocators.h"
+#include "Core/CoreDefines.h"
+#include "Core/Allocators.h"
 
 #include <vulkan/vulkan.h>
 

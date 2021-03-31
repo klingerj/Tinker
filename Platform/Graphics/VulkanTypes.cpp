@@ -1,6 +1,6 @@
-#include "../../Include/Platform/Graphics/VulkanTypes.h"
-#include "../../Include/Platform/Graphics/GPUMemAllocator.h"
-#include "../../Include/Core/Utilities/Logging.h"
+#include "Platform/Graphics/VulkanTypes.h"
+#include "Platform/Graphics/GPUMemAllocator.h"
+#include "Core/Utilities/Logging.h"
 
 #include <cstring>
 

@@ -1,5 +1,5 @@
-#include "../Include/Core/Math/VectorTypes.h"
-#include "../TinkerTest.h"
+#include "Core/Math/VectorTypes.h"
+#include "TinkerTest.h"
 
 using namespace Tinker;
 using namespace Core;

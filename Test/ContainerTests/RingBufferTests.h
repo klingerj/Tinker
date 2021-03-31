@@ -1,5 +1,5 @@
-#include "../Include/Core/Containers/RingBuffer.h"
-#include "../TinkerTest.h"
+#include "Core/Containers/RingBuffer.h"
+#include "TinkerTest.h"
 
 using namespace Tinker;
 using namespace Containers;

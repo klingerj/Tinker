@@ -2,8 +2,8 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
-#include "../Include/Platform/Win32Client.h"
-#include "../Include/Core/Utilities/Logging.h"
+#include "Platform/Win32Client.h"
+#include "Core/Utilities/Logging.h"
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>

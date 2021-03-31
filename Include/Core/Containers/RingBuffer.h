@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../Core/CoreDefines.h"
-#include "../../PlatformGameAPI.h"
+#include "Core/CoreDefines.h"
+#include "PlatformGameAPI.h"
 #include <atomic>
 #include <xmmintrin.h>
 

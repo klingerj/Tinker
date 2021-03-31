@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../PlatformGameAPI.h"
+#include "PlatformGameAPI.h"
 
 namespace Tinker
 {

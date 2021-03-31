@@ -1,7 +1,7 @@
 #include "TinkerBenchmark.h"
 
 #include "MathBenchmarks/VectorTypeBenchmarks.h"
-#include "../Include/Core/Utilities/ScopedTimer.h"
+#include "Core/Utilities/ScopedTimer.h"
 
 #include <timeapi.h>
 

@@ -1,7 +1,7 @@
-#include "../../Include/Platform/Graphics/Vulkan.h"
-#include "../../Include/Platform/Graphics/VulkanTypes.h"
-#include "../../Include/PlatformGameAPI.h"
-#include "../../Include/Core/Utilities/Logging.h"
+#include "Platform/Graphics/Vulkan.h"
+#include "Platform/Graphics/VulkanTypes.h"
+#include "PlatformGameAPI.h"
+#include "Core/Utilities/Logging.h"
 
 #include <iostream>
 // TODO: move this to be a compile define

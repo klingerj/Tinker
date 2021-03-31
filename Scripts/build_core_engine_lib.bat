@@ -40,6 +40,8 @@ if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsCore=
     )
 
+set CompileIncludePaths=/I ../Include 
+
 set OBJDir=%cd%\obj_core_engine\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
@@ -47,7 +49,7 @@ set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj
 
 echo.
 echo Building TinkerCore.lib...
-cl /c %CommonCompileFlags% %DebugCompileFlagsCore% %SourceListCore%
+cl /c %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsCore% %SourceListCore%
 lib /machine:x64 /Wx /out:TinkerCore.lib /nologo %OBJListCore%
 
 :DoneBuild

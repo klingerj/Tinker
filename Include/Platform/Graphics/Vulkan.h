@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../Core/CoreDefines.h"
-#include "../../Core/Math/VectorTypes.h"
-#include "../../PlatformGameAPI.h"
+#include "Core/CoreDefines.h"
+#include "Core/Math/VectorTypes.h"
+#include "PlatformGameAPI.h"
 
 #ifdef _WIN32
 #include <windows.h>
