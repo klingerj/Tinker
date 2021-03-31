@@ -18,5 +18,5 @@ call compile_shaders_glsl2spv.bat
 
 echo.
 echo Build finished.
-echo Try running game.bat, benchmarks.bat, or test.bat!
+echo Try running run_game.bat, run_benchmarks.bat, or run_test.bat!
 pause

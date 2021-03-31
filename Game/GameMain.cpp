@@ -364,7 +364,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
                     Platform::PrintDebugString("Attempting to hotload shaders...\n");
 
                     // Recompile shaders via script
-                    const char* shaderCompileCommand = "..\\Scripts\\compile_shaders_glsl2spv.bat";
+                    const char* shaderCompileCommand = "..\\Scripts\\build_compile_shaders_glsl2spv.bat";
                     if (platformFuncs->SystemCommand(shaderCompileCommand) != 0)
                     {
                         Platform::PrintDebugString("Failed to create shader compile process! Shaders will not be compiled.\n");
