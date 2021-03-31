@@ -20,8 +20,8 @@ private:
     uint32 _MASK;
 public:
     T* m_data = nullptr;
-    BYTE_ALIGN(64) volatile std::atomic<uint32> m_head = 0;
-    BYTE_ALIGN(64) volatile std::atomic<uint32> m_tail = 0;
+    alignas(CACHE_LINE) volatile std::atomic<uint32> m_head = 0;
+    alignas(CACHE_LINE) volatile std::atomic<uint32> m_tail = 0;
 
     RingBuffer()
     {

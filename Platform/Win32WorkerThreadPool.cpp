@@ -16,11 +16,11 @@ namespace Platform
 
 typedef struct thread_info
 {
-    BYTE_ALIGN(64) volatile bool terminate = false;
+    alignas(CACHE_LINE) volatile bool terminate = false;
     volatile bool didTerminate = true;
     uint32 threadId = 0;
-    BYTE_ALIGN(64) HANDLE semaphoreHandle = INVALID_HANDLE_VALUE;
-    BYTE_ALIGN(64) Containers::RingBuffer<WorkerJob*> jobs;
+    alignas(CACHE_LINE) HANDLE semaphoreHandle = INVALID_HANDLE_VALUE;
+    alignas(CACHE_LINE) Containers::RingBuffer<WorkerJob*> jobs;
 } ThreadInfo;
 
 void __cdecl WorkerThreadFunction(void* arg)
