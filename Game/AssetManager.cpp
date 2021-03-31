@@ -1,5 +1,6 @@
 #include "AssetManager.h"
 #include "Core/Utilities/Logging.h"
+#include "Core/FileIO/FileLoading.h"
 
 AssetManager g_AssetManager;
 

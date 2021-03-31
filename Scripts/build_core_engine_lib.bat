@@ -32,7 +32,7 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerCore - static library
-set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp
+set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp ../Core/Containers/Vector.cpp
 set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (
