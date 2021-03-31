@@ -1,8 +1,8 @@
-#include "../Include/PlatformGameAPI.h"
-#include "../Include/Platform/Graphics/Vulkan.h"
-#include "../Include/Core/Utilities/Logging.h"
-#include "../Include/Core/Utilities/ScopedTimer.h"
-#include "../Include/Platform/Win32Client.h"
+#include "PlatformGameAPI.h"
+#include "Platform/Graphics/Vulkan.h"
+#include "Core/Utilities/Logging.h"
+#include "Core/Utilities/ScopedTimer.h"
+#include "Platform/Win32Client.h"
 #include "Win32WorkerThreadPool.cpp"
 
 #include <windows.h>

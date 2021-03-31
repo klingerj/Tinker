@@ -1,5 +1,5 @@
-#include "../Include/PlatformGameAPI.h"
-#include "../Include/Core/Containers/RingBuffer.h"
+#include "PlatformGameAPI.h"
+#include "Core/Containers/RingBuffer.h"
 
 #include <process.h>
 #include <windows.h>

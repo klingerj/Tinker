@@ -1,4 +1,4 @@
-#include "../Include/PlatformGameAPI.h"
+#include "PlatformGameAPI.h"
 
 #include <windows.h>
 

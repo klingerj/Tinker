@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../Include/Core/CoreDefines.h"
-#include "../Include/Core/Math/VectorTypes.h"
-#include "../Include/PlatformGameAPI.h"
+#include "Core/CoreDefines.h"
+#include "Core/Math/VectorTypes.h"
+#include "PlatformGameAPI.h"
 
 #include <vector> // TODO: remove me
 

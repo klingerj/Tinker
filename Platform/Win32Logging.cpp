@@ -1,4 +1,4 @@
-#include "../Include/Core/Utilities/Logging.h"
+#include "Core/Utilities/Logging.h"
 
 #include <windows.h>
 

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "../../Include/Core/FileIO/FileLoading.h"
+#include "Core/FileIO/FileLoading.h"
 
 namespace Tinker
 {

@@ -1,5 +1,5 @@
 #include "ShaderLoading.h"
-#include "../Include/Core/Allocators.h"
+#include "Core/Allocators.h"
 
 static Memory::LinearAllocator shaderBytecodeAllocator;
 const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;

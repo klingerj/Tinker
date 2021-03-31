@@ -46,6 +46,9 @@ if "%BuildConfig%" == "Debug" (
     set DebugLinkFlagsPlatform=
     )
 
+set CompileIncludePaths=/I ../Include 
+set LibsToLink=user32.lib ws2_32.lib 
+
 echo.
 echo Building TinkerPlatform.exe...
 
@@ -53,16 +56,16 @@ rem Vulkan
 set VulkanVersion=1.2.141.2
 echo Using Vulkan v%VulkanVersion%
 echo.
-set VulkanPath="C:\VulkanSDK"\%VulkanVersion%
+set VulkanPath=C:\VulkanSDK\%VulkanVersion%
 
-set CompileIncludePaths=%VulkanPath%\Include
-set LibsToLink=user32.lib ws2_32.lib %VulkanPath%\Lib\vulkan-1.lib
+set CompileIncludePaths=%CompileIncludePaths% /I %VulkanPath%/Include
+set LibsToLink=%LibsToLink% %VulkanPath%\Lib\vulkan-1.lib
 
 set OBJDir=%cd%\obj_platform\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% /I %CompileIncludePaths% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe
 
 :DoneBuild
 popd

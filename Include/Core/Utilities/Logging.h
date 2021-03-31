@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Core/CoreDefines.h"
+#include "Core/CoreDefines.h"
 
 namespace Tinker
 {

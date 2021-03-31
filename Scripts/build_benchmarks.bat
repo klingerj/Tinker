@@ -47,13 +47,15 @@ if "%BuildConfig%" == "Debug" (
     set DebugLinkFlagsBenchmark=
     )
 
+set CompileIncludePaths=/I ../Include /I ../Platform
+
 set OBJDir=%cd%\obj_benchmark\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerBenchmark.exe...
-cl %CommonCompileFlags% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerCore.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerCore.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
 
 :DoneBuild
 popd

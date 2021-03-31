@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Include/Core/Utilities/Logging.h"
+#include "Core/Utilities/Logging.h"
 #include "VulkanTypes.h"
 
 #define MAX_GPU_ALLOCS 4096

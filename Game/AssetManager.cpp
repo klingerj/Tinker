@@ -17,6 +17,7 @@ void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platf
 
     const char* meshFilePaths[numMeshAssets] =
     {
+        // TODO: get assets dir via compile define
         "..\\Assets\\UnitSphere\\sphere.obj",
         "..\\Assets\\UnitCube\\cube.obj",
         "..\\Assets\\FireElemental\\fire_elemental.obj",

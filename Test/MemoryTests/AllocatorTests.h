@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Include/Core/Allocators.h"
-#include "../TinkerTest.h"
+#include "Core/Allocators.h"
+#include "TinkerTest.h"
 
 using namespace Tinker;
 using namespace Memory;

@@ -36,6 +36,8 @@ if "%BuildConfig%" == "Debug" (
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
+set CompileIncludePaths=/I ../Include 
+
 rem *********************************************************************************************************
 rem TinkerTest - unit testing
 set SourceListTest=../Platform/Win32PlatformGameAPI.cpp ../Test/TestMain.cpp
@@ -47,13 +49,15 @@ if "%BuildConfig%" == "Debug" (
     set DebugLinkFlagsTest=
     )
 
+set CompileIncludePaths=%CompileIncludePaths% /I ../Test 
+
 set OBJDir=%cd%\obj_test\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerTest.exe...
-cl %CommonCompileFlags% %DebugCompileFlagsTest% %SourceListTest% /link %CommonLinkFlags% TinkerCore.lib %DebugLinkFlagsTest% /out:TinkerTest.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsTest% %SourceListTest% /link %CommonLinkFlags% TinkerCore.lib %DebugLinkFlagsTest% /out:TinkerTest.exe
 
 :DoneBuild
 popd
