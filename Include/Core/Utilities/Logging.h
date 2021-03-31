@@ -4,18 +4,20 @@
 
 namespace Tinker
 {
-    namespace Core
-    {
-        namespace Utility
-        {
-            enum
-            {
-                eLogSeverityInfo,
-                eLogSeverityWarning,
-                eLogSeverityCritical
-            };
+namespace Core
+{
+namespace Utility
+{
 
-            void LogMsg(const char* prefix, const char* msg, uint32 severity);
-        }
-    }
+enum
+{
+    eLogSeverityInfo,
+    eLogSeverityWarning,
+    eLogSeverityCritical
+};
+
+void LogMsg(const char* prefix, const char* msg, uint32 severity);
+
+}
+}
 }
