@@ -41,12 +41,16 @@ set CompileIncludePaths=/I ../Include
 rem *********************************************************************************************************
 rem TinkerTest - unit testing
 set SourceListTest=../Platform/Win32PlatformGameAPI.cpp ../Test/TestMain.cpp
+set CompileDefines= 
+
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsTest=/FdTinkerTest.pdb
     set DebugLinkFlagsTest=/pdb:TinkerTest.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
-    set DebugCompileFlagsTest=
-    set DebugLinkFlagsTest=
+    set DebugCompileFlagsTest=/FdTinkerTest.pdb
+    set DebugLinkFlagsTest=/pdb:TinkerTest.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
 set CompileIncludePaths=%CompileIncludePaths% /I ../Test 
@@ -57,7 +61,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerTest.exe...
-cl %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsTest% %SourceListTest% /link %CommonLinkFlags% TinkerCore.lib %DebugLinkFlagsTest% /out:TinkerTest.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsTest% %SourceListTest% /link %CommonLinkFlags% TinkerCore.lib %DebugLinkFlagsTest% /out:TinkerTest.exe
 
 :DoneBuild
 popd

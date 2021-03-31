@@ -4,18 +4,23 @@
 #include <math.h>
 #include <cmath>
 
-#define TINKER_ASSERTS_ON
+#ifdef ASSERTS_ENABLE
+#if ASSERTS_ENABLE
 
-#ifdef TINKER_ASSERTS_ON
+#endif
+#endif
+
+#ifdef ASSERTS_ENABLE
 #include <assert.h>
 #define TINKER_ASSERT(cond) assert((cond))
 #else
-#define TINKER_ASSERT(cond)
+#define TINKER_ASSERT(cond) 
 #endif
 
 // C++ only!
 #define RESTRICT __restrict
-
+#define _STRINGIFY(s) #s
+#define STRINGIFY(s) _STRINGIFY(s)
 #define TINKER_INVALID_HANDLE 0xffffffff
 
 typedef uint8_t  uint8;
@@ -80,6 +85,7 @@ inline uint32 SafeTruncateUint64(uint64 value)
 #endif
 
 #define BYTE_ALIGN(n) alignas(n)
+#define CACHE_LINE 64
 
 // Quick simple memory allocation and leak tracking
 // NOTE: placement new doesn't compile nicely with this.

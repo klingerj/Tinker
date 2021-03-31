@@ -40,6 +40,7 @@ set CompileIncludePaths=/I ../Include
 rem *********************************************************************************************************
 rem TinkerGame - shared library
 set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Game/GameMain.cpp ../Game/GameGraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/ShaderLoading.cpp ../Game/GameRenderPass.cpp
+set CompileDefines=/DASSETS_DIR=..\\Assets\\ 
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%
@@ -47,8 +48,16 @@ if "%TIME:~0,1%" == " " (
         set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__%TIME:~0,2%_%TIME:~3,2%_%TIME:~6,2%
         )
 set GameDllPdbName=TinkerGame_%BuildTimestamp%.pdb
-set DebugCompileFlagsGame=/Fd%GameDllPdbName%
-set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
+
+if "%BuildConfig%" == "Debug" (
+    set DebugCompileFlagsGame=/Fd%GameDllPdbName%
+    set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
+    ) else (
+    set DebugCompileFlagsGame=/Fd%GameDllPdbName%
+    set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
+    )
 
 set OBJDir=%cd%\obj_game\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
@@ -56,7 +65,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerCore.lib /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerCore.lib /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
 
 rem Delete unnecessary files
 echo.

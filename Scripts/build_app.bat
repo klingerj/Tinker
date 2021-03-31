@@ -37,13 +37,16 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe
 set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Graphics/Vulkan.cpp ../Platform/Graphics/VulkanTypes.cpp ../Platform/Graphics/VulkanGPUMemAllocator.cpp ../Platform/Win32Logging.cpp ../Platform/Win32Client.cpp
+set CompileDefines=/DASSETS_DIR="..\\Assets\\" 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
     set DebugLinkFlagsPlatform=/pdb:TinkerPlatform.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
-    set DebugCompileFlagsPlatform=
-    set DebugLinkFlagsPlatform=
+    set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
+    set DebugLinkFlagsPlatform=/pdb:TinkerPlatform.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
 set CompileIncludePaths=/I ../Include 
@@ -65,7 +68,7 @@ set OBJDir=%cd%\obj_platform\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe
 
 :DoneBuild
 popd
