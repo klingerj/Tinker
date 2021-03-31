@@ -1,4 +1,5 @@
 #include "AssetManager.h"
+#include "Core/Utilities/Logging.h"
 
 AssetManager g_AssetManager;
 
@@ -18,11 +19,15 @@ void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platf
     const char* meshFilePaths[numMeshAssets] =
     {
         // TODO: get assets dir via compile define
-        "..\\Assets\\UnitSphere\\sphere.obj",
-        "..\\Assets\\UnitCube\\cube.obj",
-        "..\\Assets\\FireElemental\\fire_elemental.obj",
-        "..\\Assets\\RTX3090\\rtx3090.obj"
+        ASSETS_PATH "UnitSphere\\sphere.obj",
+        ASSETS_PATH "UnitCube\\cube.obj",
+        ASSETS_PATH "FireElemental\\fire_elemental.obj",
+        ASSETS_PATH "RTX3090\\rtx3090.obj"
     };
+    //const char* dir = ASSETS_DIR;
+    //const char* dir2 = ASSETS_PATH;
+    //Core::Utility::LogMsg("Game", dir, Utility::LogSeverity::eInfo);
+    //Core::Utility::LogMsg("Game", dir2, Utility::LogSeverity::eInfo);
 
     uint32 totalMeshFileBytes = 0;
     uint32 meshFileSizes[numMeshAssets] = {};
@@ -134,8 +139,8 @@ void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platf
 
     const char* textureFilePaths[numTextureAssets] =
     {
-        "..\\Assets\\checkerboard512.bmp",
-        "..\\Assets\\checkerboardRGB512.bmp"
+        ASSETS_PATH "checkerboard512.bmp",
+        ASSETS_PATH "checkerboardRGB512.bmp"
     };
     // Compute the actual size of the texture data to be allocated and copied to the GPU
     // TODO: get file extension from string

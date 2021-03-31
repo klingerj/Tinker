@@ -34,13 +34,16 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem TinkerServer
 set SourceListServer=../Platform/Win32Server.cpp
+set CompileDefines= 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsServer=/FdTinkerServer.pdb
     set DebugLinkFlagsServer=/pdb:TinkerServer.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
-    set DebugCompileFlagsServer=
-    set DebugLinkFlagsServer=
+    set DebugCompileFlagsServer=/FdTinkerServer.pdb
+    set DebugLinkFlagsServer=/pdb:TinkerServer.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
 echo.
@@ -54,7 +57,7 @@ if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 rem /I %CompileIncludePaths%
-cl %CommonCompileFlags% %DebugCompileFlagsServer% %SourceListServer% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsServer% /out:TinkerServer.exe 
+cl %CommonCompileFlags% %CompileDefines% %DebugCompileFlagsServer% %SourceListServer% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsServer% /out:TinkerServer.exe 
 
 :DoneBuild
 popd

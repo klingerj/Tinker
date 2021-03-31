@@ -33,11 +33,14 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem TinkerCore - static library
 set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp
+set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsCore=/FdTinkerCore.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
-    set DebugCompileFlagsCore=
+    set DebugCompileFlagsCore=/FdTinkerCore.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
 set CompileIncludePaths=/I ../Include 
@@ -49,7 +52,7 @@ set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj
 
 echo.
 echo Building TinkerCore.lib...
-cl /c %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsCore% %SourceListCore%
+cl /c %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsCore% %SourceListCore%
 lib /machine:x64 /Wx /out:TinkerCore.lib /nologo %OBJListCore%
 
 :DoneBuild

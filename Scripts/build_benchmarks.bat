@@ -39,12 +39,16 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem TinkerBenchmark - benchmarking
 set SourceListBenchmark=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp
+set CompileDefines= 
+
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb
     set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
-    set DebugCompileFlagsBenchmark=
-    set DebugLinkFlagsBenchmark=
+    set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb
+    set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=0
     )
 
 set CompileIncludePaths=/I ../Include /I ../Platform
@@ -55,7 +59,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerBenchmark.exe...
-cl %CommonCompileFlags% %CompileIncludePaths% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerCore.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerCore.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
 
 :DoneBuild
 popd

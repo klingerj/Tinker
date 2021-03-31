@@ -5,10 +5,12 @@ namespace Tinker
 namespace Platform
 {
 
-class WorkerJob
+// TODO: do an aligned alloc for these jobs via PlatformGameAPI.h
+// should move all this stuff into a cpp file
+class /*alignas(CACHE_LINE)*/ WorkerJob
 {
 public:
-    BYTE_ALIGN(64) volatile bool m_done = false;
+    volatile bool m_done = false;
     virtual ~WorkerJob() {}
 
     virtual void operator()() = 0;
@@ -56,7 +58,7 @@ public:
             {
                 if (m_jobs[i])
                 {
-                    delete m_jobs[i];
+                    delete(m_jobs[i]);
                 }
             }
             delete m_jobs;
