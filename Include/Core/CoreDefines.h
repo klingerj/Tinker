@@ -1,14 +1,10 @@
 #pragma once
 
+#include "Core/Utilities/Mem.h"
+
 #include <stdint.h>
 #include <math.h>
 #include <cmath>
-
-#ifdef ASSERTS_ENABLE
-#if ASSERTS_ENABLE
-
-#endif
-#endif
 
 #ifdef ASSERTS_ENABLE
 #include <assert.h>
@@ -16,6 +12,8 @@
 #else
 #define TINKER_ASSERT(cond) 
 #endif
+
+#define CACHE_LINE 64
 
 // C++ only!
 #define RESTRICT __restrict
@@ -84,23 +82,10 @@ inline uint32 SafeTruncateUint64(uint64 value)
     return (uint32)value;
 }
 
+#define ARRAYCOUNT(arr) (sizeof((arr)) / sizeof((arr)[0]))
+
 #ifdef _WIN32
 #define OPTIMIZATIONS_ON __pragma(optimize( "", on ))
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
 #endif
 
-#define CACHE_LINE 64
-
-// Quick simple memory allocation and leak tracking
-// NOTE: placement new doesn't compile nicely with this.
-//#define DISABLE_MEM_TRACKING
-
-#if !defined(DISABLE_MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
-#define MEM_TRACKING
-#endif
-
-#if defined(MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
-#endif
