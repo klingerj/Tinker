@@ -2,6 +2,7 @@
 
 #include "MathTests/VectorTypeTests.h"
 #include "ContainerTests/RingBufferTests.h"
+#include "ContainerTests/VectorTests.h"
 #include "MemoryTests/AllocatorTests.h"
 
 uint8 g_AssertFailedFlag = 0;
@@ -61,4 +62,13 @@ int main()
     TINKER_TEST("Linear, 1K 1-byte size, 1-aligned allocs, no allocator alignment", Test_Linear_NoAlignment);
     TINKER_TEST("Linear, 1K 1-byte size, 16-aligned allocs, no allocator alignment", Test_Linear_Alignment);
     TINKER_TEST("Linear, 1K 1-byte size, 1-aligned allocs, no allocator alignment, w/ dealloc", Test_Linear_NoAlignment_WithDealloc);
+    
+    TINKER_TEST_PRINT_NAME("Vector");
+    TINKER_TEST("Vector Constructor Default", Test_VectorConstructorDefault);
+    TINKER_TEST("Vector Reserve", Test_VectorReserve);
+    TINKER_TEST("Vector Push Back Raw One Ele no Resize", Test_VectorPushBackRawOne);
+    TINKER_TEST("Vector Reserve then Push Back Raw One Ele", Test_VectorReservePushBackOne);
+    TINKER_TEST("Vector Reserve then Push Back Raw One Then Find", Test_VectorReservePushBackOneFind);
+    TINKER_TEST("Vector Push Back Raw Multiple Resize", Test_VectorPushBackMultipleResize);
+    TINKER_TEST("Vector Push Back Raw Multiple Clear", Test_VectorPushBackMultipleClear);
 }

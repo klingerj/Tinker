@@ -32,7 +32,11 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerCore - static library
+set OBJDir=%cd%\obj_core_engine\
+if NOT EXIST %OBJDir% mkdir %OBJDir%
+
 set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp ../Core/Containers/Vector.cpp
+set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj %OBJDir%Vector.obj
 set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (
@@ -44,11 +48,7 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set CompileIncludePaths=/I ../Include 
-
-set OBJDir=%cd%\obj_core_engine\
-if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
-set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj
 
 echo.
 echo Building TinkerCore.lib...

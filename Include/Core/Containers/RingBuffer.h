@@ -8,6 +8,8 @@
 
 namespace Tinker
 {
+namespace Core
+{
 namespace Containers
 {
 
@@ -104,3 +106,5 @@ public:
 
 }
 }
+}
+

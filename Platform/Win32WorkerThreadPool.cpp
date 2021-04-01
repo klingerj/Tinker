@@ -14,6 +14,8 @@ namespace Tinker
 namespace Platform
 {
 
+using namespace Core;
+
 typedef struct thread_info
 {
     alignas(CACHE_LINE) volatile bool terminate = false;
