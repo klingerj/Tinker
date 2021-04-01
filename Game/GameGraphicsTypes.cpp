@@ -1,5 +1,6 @@
 #include "GameGraphicsTypes.h"
 
+/*
 void CopyStagingBufferToGPUBufferCommand(Tinker::Platform::GraphicsCommandStream* graphicsCommandStream,
     ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
     const char* debugLabel)
@@ -12,3 +13,4 @@ void CopyStagingBufferToGPUBufferCommand(Tinker::Platform::GraphicsCommandStream
     command->m_dstBufferHandle = gpuBufferHandle;
     ++graphicsCommandStream->m_numCommands;
 }
+*/

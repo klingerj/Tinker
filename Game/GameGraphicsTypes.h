@@ -4,8 +4,6 @@
 #include "Core/Math/VectorTypes.h"
 #include "PlatformGameAPI.h"
 
-#include <vector> // TODO: remove me
-
 using namespace Tinker;
 using namespace Platform;
 
@@ -44,9 +42,11 @@ typedef struct dynamic_mesh_data
     uint32 m_numIndices;
 } DynamicMeshData;
 
+/*
 void CopyStagingBufferToGPUBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
     ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
     const char* debugLabel);
+*/
 
 typedef struct mesh_triangles
 {
