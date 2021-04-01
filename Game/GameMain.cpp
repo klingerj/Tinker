@@ -96,7 +96,6 @@ void UpdateDescriptorState(const Platform::PlatformAPIFuncs* platformFuncs)
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
-
     ResetShaderBytecodeAllocator();
 
     Platform::DescriptorLayout mainDrawDescriptorLayout = {};

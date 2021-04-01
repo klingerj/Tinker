@@ -35,8 +35,8 @@ rem TinkerCore - static library
 set OBJDir=%cd%\obj_core_engine\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 
-set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp ../Core/Containers/Vector.cpp
-set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj %OBJDir%Vector.obj
+set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp ../Core/Containers/Vector.cpp ../Core/Utilities/MemTracker.cpp ../Core/Utilities/Mem.cpp
+set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj %OBJDir%Vector.obj %OBJDir%MemTracker.obj %OBJDir%Mem.obj
 set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (

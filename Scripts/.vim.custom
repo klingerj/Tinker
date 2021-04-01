@@ -7,12 +7,12 @@
 :set tabstop=4
 :set expandtab
 :set shiftwidth=4
-:nnoremap <silent> <F1> :terminal<CR><c-w>x<c-w>k:vsplit<CR>
+:nnoremap <silent> <F1> :vertical terminal<CR><c-w>x<c-w>k:vsplit<CR>
 let @y = "build_app.bat Debug\n"
 let @z = "build_app.bat Release\n"
-nnoremap <m-m> <c-w>j
-tnoremap <m-m> <c-w>"y<c-w>k
-tnoremap <m-n> <c-w>"z<c-w>k
+nnoremap <m-m> <c-w>l
+tnoremap <m-m> <c-w>"y<c-w>h
+tnoremap <m-n> <c-w>"z<c-w>h
 
 " CtrlP Plugin
 " set runtimepath^=~/.vim/bundle/ctrlp.vim

@@ -13,7 +13,7 @@ void VectorBase::Reserve(uint32 numEles, uint32 eleSize)
 {
     if (numEles > m_capacity)
     {
-        void* newData = malloc(numEles * eleSize);
+        void* newData = Utility::CoreMalloc(numEles * eleSize);
         memcpy(newData, m_data, m_size * eleSize);
         m_data = (uint8*)newData;
         m_capacity = numEles;
@@ -31,12 +31,12 @@ void VectorBase::PushBackRaw(void* data, uint32 eleSize)
     {
         // Alloc new data
         uint32 newCapacity = m_capacity + 1;
-        void* newData = malloc(newCapacity * eleSize);
+        void* newData = Utility::CoreMalloc(newCapacity * eleSize);
         memcpy(newData, m_data, m_capacity * eleSize);
         m_capacity = newCapacity;
 
         // Replace data
-        free(m_data);
+        Utility::CoreFree(m_data);
         m_data = (uint8*)newData;
     }
 

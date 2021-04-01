@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/CoreDefines.h"
+#include "Core/Utilities/Mem.h"
 
 namespace Tinker
 {
@@ -19,7 +20,7 @@ struct VectorBase
 
     ~VectorBase()
     {
-        free(m_data);
+        Utility::CoreFree(m_data);
         m_data = nullptr;
         m_size = 0;
         m_capacity = 0;
@@ -41,7 +42,7 @@ protected:
 template <typename T>
 struct Vector : public VectorBase
 {
-    Vector()
+    Vector() : VectorBase()
     {
         m_data = nullptr;
         m_size = 0;
@@ -86,6 +87,12 @@ struct Vector : public VectorBase
     }
 
     const T& operator[](uint32 index) const
+    {
+        TINKER_ASSERT(index < m_size);
+        return ((T*)(m_data))[index];
+    }
+
+    T& operator[](uint32 index)
     {
         TINKER_ASSERT(index < m_size);
         return ((T*)(m_data))[index];
