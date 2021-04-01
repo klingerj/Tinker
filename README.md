@@ -11,8 +11,10 @@ Successor to the Joe Engine. Everything written from scratch.
 * Shader hotloading on keypress
 * Simple thread-job system with lockless queue
 * Custom memory allocators
+* Custom data structures (vector, ring buffer)
 
 #### Roadmap of features to come:
+* More data structures (e.g. map)
 * Polish and expand graphics layer
 * Memory allocation tracking
 * Threading and benchmarking of file loading and parsing
