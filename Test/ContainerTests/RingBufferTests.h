@@ -1,7 +1,6 @@
 #include "Core/Containers/RingBuffer.h"
 #include "TinkerTest.h"
 
-using namespace Tinker;
 using namespace Containers;
 
 void Test_RingBufferConstructorDefault()
