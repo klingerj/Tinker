@@ -1,6 +1,8 @@
 #include "GameRenderPass.h"
 #include "AssetManager.h"
 
+#include <string.h>
+
 void DrawMeshDataCommand(Platform::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
     ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
     ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,

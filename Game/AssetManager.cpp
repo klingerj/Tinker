@@ -2,6 +2,8 @@
 #include "Core/Utilities/Logging.h"
 #include "Core/FileIO/FileLoading.h"
 
+#include <string.h>
+
 AssetManager g_AssetManager;
 
 void AssetManager::FreeMemory()
