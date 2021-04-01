@@ -71,4 +71,5 @@ int main()
     TINKER_TEST("Vector Reserve then Push Back Raw One Then Find", Test_VectorReservePushBackOneFind);
     TINKER_TEST("Vector Push Back Raw Multiple Resize", Test_VectorPushBackMultipleResize);
     TINKER_TEST("Vector Push Back Raw Multiple Clear", Test_VectorPushBackMultipleClear);
+    TINKER_TEST("Vector Find Empty", Test_VectorFindEmpty);
 }

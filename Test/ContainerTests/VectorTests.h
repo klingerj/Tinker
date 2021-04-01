@@ -98,3 +98,10 @@ void Test_VectorPushBackMultipleClear()
     TINKER_TEST_ASSERT(vec.Capacity() == 2);
 }
 
+void Test_VectorFindEmpty()
+{
+    Vector<uint32> vec;
+    uint32 i = vec.Find(0);
+    TINKER_TEST_ASSERT(i == vec.eInvalidIndex);
+}
+
