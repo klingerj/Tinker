@@ -21,7 +21,6 @@
 #define RESTRICT __restrict
 #define _STRINGIFY(s) #s
 #define STRINGIFY(s) _STRINGIFY(s)
-#define TINKER_INVALID_HANDLE 0xffffffff
 
 typedef uint8_t  uint8;
 typedef uint16_t uint16;
@@ -31,6 +30,12 @@ typedef int8_t   int8;
 typedef int16_t  int16;
 typedef int32_t  int32;
 typedef int64_t  int64;
+
+#define MAX_UINT64 0xFFFFFFFFFFFFFFFF
+#define MAX_UINT32 0xFFFFFFFF
+#define MAX_UINT16 0xFFFF
+
+#define TINKER_INVALID_HANDLE MAX_UINT32
 
 template <typename T>
 inline T max(const T& a, const T& b)

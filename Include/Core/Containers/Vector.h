@@ -15,9 +15,12 @@ typedef CMP_FUNC(CompareFunc);
 // Type-erased base class - avoid template compilation overhead
 struct VectorBase
 {
+    enum : uint32 { eInvalidIndex = MAX_UINT32 };
+
     ~VectorBase()
     {
         free(m_data);
+        m_data = nullptr;
         m_size = 0;
         m_capacity = 0;
     }
@@ -72,14 +75,14 @@ struct Vector : public VectorBase
         VectorBase::PushBackRaw((void*)&data, sizeof(T));
     }
 
-    static CMP_FUNC(ShallowCompare)
+    static CMP_FUNC(DefaultEqualsCompare)
     {
         return *((T*)A) == *((T*)B);
     }
 
     uint32 Find(const T& data) const
     {
-        return VectorBase::Find((void*)&data, sizeof(T), ShallowCompare);
+        return VectorBase::Find((void*)&data, sizeof(T), DefaultEqualsCompare);
     }
 
     const T& operator[](uint32 index) const

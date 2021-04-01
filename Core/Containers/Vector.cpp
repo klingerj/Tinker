@@ -30,7 +30,7 @@ void VectorBase::PushBackRaw(void* data, uint32 eleSize)
     if (m_size == m_capacity)
     {
         // Alloc new data
-        uint32 newCapacity = m_capacity  + 1;
+        uint32 newCapacity = m_capacity + 1;
         void* newData = malloc(newCapacity * eleSize);
         memcpy(newData, m_data, m_capacity * eleSize);
         m_capacity = newCapacity;
@@ -57,7 +57,7 @@ uint32 VectorBase::Find(void* data, uint32 eleSize, CompareFunc Compare) const
         }
     }
 
-    return 0xffffffff;
+    return eInvalidIndex;
 }
 
 }
