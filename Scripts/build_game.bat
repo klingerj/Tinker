@@ -40,7 +40,7 @@ set CompileIncludePaths=/I ../Include
 rem *********************************************************************************************************
 rem TinkerGame - shared library
 set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Game/GameMain.cpp ../Game/GameGraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/ShaderLoading.cpp ../Game/GameRenderPass.cpp
-set CompileDefines=/DASSETS_DIR=..\\Assets\\ 
+set CompileDefines=/D_ASSETS_DIR=..\\Assets\\ /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ 
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%

@@ -7,10 +7,10 @@ using namespace Tinker;
 using namespace Core;
 using namespace Math;
 
-#ifdef ASSETS_DIR
-#define ASSETS_PATH STRINGIFY(ASSETS_DIR)
+#ifdef _ASSETS_DIR
+#define ASSETS_PATH STRINGIFY(_ASSETS_DIR)
 #else
-#define ASSETS_PATH "..\\Assets\\"
+//#define ASSETS_PATH "..\\Assets\\"
 #endif
 
 #define TINKER_MAX_MESHES 64
