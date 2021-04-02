@@ -1,4 +1,5 @@
 #include "Core/Containers/Vector.h"
+#include "Core/Utilities/Mem.h"
 
 #include <string.h>
 
@@ -8,6 +9,14 @@ namespace Core
 {
 namespace Containers
 {
+
+VectorBase::~VectorBase()
+{
+    Utility::CoreFree(m_data);
+    m_data = nullptr;
+    m_size = 0;
+    m_capacity = 0;
+}
 
 void VectorBase::Reserve(uint32 numEles, uint32 eleSize)
 {

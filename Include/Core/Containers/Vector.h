@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Core/CoreDefines.h"
-#include "Core/Utilities/Mem.h"
 
 namespace Tinker
 {
@@ -18,13 +17,7 @@ struct VectorBase
 {
     enum : uint32 { eInvalidIndex = MAX_UINT32 };
 
-    ~VectorBase()
-    {
-        Utility::CoreFree(m_data);
-        m_data = nullptr;
-        m_size = 0;
-        m_capacity = 0;
-    }
+    ~VectorBase();
 
 protected:
     uint8* m_data;
