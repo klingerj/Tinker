@@ -10,6 +10,12 @@
 #include "AssetManager.h"
 #include "Camera.h"
 
+#ifdef _SCRIPTS_DIR
+#define SCRIPTS_PATH STRINGIFY(_SCRIPTS_DIR)
+#else
+//#define SCRIPTS_PATH "..\\Scripts\\"
+#endif
+
 #include <cstring>
 #include <string.h>
 
@@ -107,12 +113,12 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.viewportHeight = windowHeight;
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
     params.descriptorHandle = gameGraphicsData.m_modelMatrixDescHandle1;
-    gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", nullptr, &params);
+    gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, SHADERS_SPV_PATH "basic_vert_glsl.spv", nullptr, &params);
 
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
     params.blendState = Platform::BlendState::eAlphaBlend; // Default alpha blending for now
     params.depthState = Platform::DepthState::eTestOnWriteOff; // Read depth buffer, don't write to it
-    gameGraphicsData.m_shaderHandles[eRenderPass_MainView] = LoadShader(platformFuncs, "..\\Shaders\\spv\\basic_vert_glsl.spv", "..\\Shaders\\spv\\basic_frag_glsl.spv", &params);
+    gameGraphicsData.m_shaderHandles[eRenderPass_MainView] = LoadShader(platformFuncs, SHADERS_SPV_PATH "basic_vert_glsl.spv", SHADERS_SPV_PATH "basic_frag_glsl.spv", &params);
 
     // TODO: dont want to have to do this
     // Set data for render pass
@@ -131,7 +137,7 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.viewportHeight = windowHeight;
     params.framebufferHandle = DefaultFramebufferHandle_Invalid;
     params.descriptorHandle = gameGraphicsData.m_swapChainBlitDescHandle;
-    gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, "..\\Shaders\\spv\\blit_vert_glsl.spv", "..\\Shaders\\spv\\blit_frag_glsl.spv", &params);
+    gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, SHADERS_SPV_PATH "blit_vert_glsl.spv", SHADERS_SPV_PATH "blit_frag_glsl.spv", &params);
 }
 
 void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
@@ -363,7 +369,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
                     Platform::PrintDebugString("Attempting to hotload shaders...\n");
 
                     // Recompile shaders via script
-                    const char* shaderCompileCommand = "..\\Scripts\\build_compile_shaders_glsl2spv.bat";
+                    const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
                     if (platformFuncs->SystemCommand(shaderCompileCommand) != 0)
                     {
                         Platform::PrintDebugString("Failed to create shader compile process! Shaders will not be compiled.\n");
