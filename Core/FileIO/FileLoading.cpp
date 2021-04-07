@@ -95,6 +95,7 @@ void scanWordIntoBuffer(uint8* buffer, uint32* currentIndex, char* nextWord)
     // Scan to the end of the word
     scanWord(buffer, currentIndex);
 
+    // TODO: fix this hardcodedness
     for (uint8 i = 0; i < 32; ++i)
     {
         nextWord[i] = '\0';

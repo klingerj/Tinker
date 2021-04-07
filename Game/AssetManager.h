@@ -47,7 +47,8 @@ public:
         Tinker::Platform::GraphicsCommandStream* graphicsCommandStream);
     // TODO: declare a mapping of ID to each asset file
     StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
-    ResourceHandle* GetTextureGraphicsDataByID(uint32 textureID);
+    ResourceHandle GetTextureGraphicsDataByID(uint32 textureID);
+    const MeshAttributeData& GetMeshAttrDataByID(uint32 meshID);
 };
 
 extern AssetManager g_AssetManager;

@@ -399,6 +399,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
 }
 
 #include "Core/Raytracing/AccelStructures/Octree.h"
+Raytracing::Octree* octree = nullptr;
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
@@ -443,11 +444,94 @@ GAME_UPDATE(GameUpdate)
 
         // Octree test
         {
-            const uint32 numTris = 3;
-            v3f triData[numTris] = { v3f(1, 0, 0), v3f(0, 1, 0), v3f(0, 0, 1) };
+            const MeshAttributeData& data = g_AssetManager.GetMeshAttrDataByID(2);
+            uint32 numVerts = data.m_numVertices / 4;
+            v3f* triData = new v3f[numVerts * sizeof(v3f)];
+            for (uint32 i = 0; i < numVerts; ++i)
+            {
+                const v4f& ptVec4 = ((v4f*)data.m_vertexBufferData)[i];
+                triData[i] = v3f(ptVec4.x, ptVec4.y, ptVec4.z);
+            }
+            octree = Raytracing::CreateEmptyOctree();
+            Raytracing::BuildOctree(octree, triData, numVerts);
 
-            Raytracing::Octree* octree = Raytracing::CreateEmptyOctree();
-            Raytracing::BuildOctree(octree, triData, numTris);
+            // TODO: write a raytracer to see if the accel structure works
+            // raytrace an image, write it out
+            {
+                const uint32 width = 512;
+                const uint32 height = 512;
+                uint32* img = new uint32[width * height];
+                memset(img, 0, width * height * 4);
+
+                float aspect = (float)width / height;
+
+                for (uint32 px = 0; px < width; ++px)
+                {
+                    for (uint32 py = 0; py < height; ++py)
+                    {
+                        v3f rayOrigin = v3f();
+                        v3f rayDir = v3f();
+                        
+                        // Cast ray from camera
+                        {
+                            v4f coord = v4f((float)px, (float)py, 1.0, 1.0);
+                            coord.x /= width;
+                            coord.y /= height;
+                            coord.x = coord.x * 2 - 1;
+                            coord.y = coord.y * 2 - 1;
+
+                            v3f camEye = v3f(27, 27, 27);
+                            v3f camRef = g_gameCamera.m_ref;
+                            rayOrigin = camEye;
+                            v3f look = camRef - camEye;
+                            float len = Length(look);
+                            Normalize(look);
+                            v3f right = Cross(look, v3f(0, 0, 1));
+                            Normalize(right);
+                            v3f up = Cross(right, look);
+                            Normalize(up);
+
+                            v3f H = right * len * tan(fovy * 0.5f) * aspect;
+                            v3f V = up * len * tan(fovy * 0.5f);
+
+                            v3f screenPt = camRef + H * coord.x + V * coord.y;
+                            rayDir = screenPt - camEye;
+                            Normalize(rayDir);
+                        }
+
+                        uint8 channel = 255;
+                        // intersect with octree
+                        {
+                            Raytracing::Ray ray = Raytracing::Ray();
+                            ray.origin = rayOrigin;
+                            ray.dir = rayDir;
+                            Raytracing::Intersection isx = Raytracing::IntersectRay(octree, ray);
+
+                            if (isx.t > 0.0f)
+                            {
+                                // TODO: use bary coord to interpolate vertex normals
+                                float lambert = 0.5f;
+                                channel = (uint8)(lambert * 255);
+                            }
+                            else
+                            {
+                                // No intersection
+                            }
+                        }
+
+                        img[py * 512 + px] = (uint32)(channel | (channel << 8) | (channel << 16) | (channel << 24));
+                    }
+                }
+
+                // Output image
+
+
+
+                delete img;
+            }
+
+
+            delete triData;
         }
 
         isGameInitted = true;
@@ -610,8 +694,8 @@ GAME_DESTROY(GameDestroy)
 
         for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numTextureAssets; ++uiAssetID)
         {
-            ResourceHandle* textureHandle = g_AssetManager.GetTextureGraphicsDataByID(uiAssetID);
-            platformFuncs->DestroyResource(*textureHandle);
+            ResourceHandle textureHandle = g_AssetManager.GetTextureGraphicsDataByID(uiAssetID);
+            platformFuncs->DestroyResource(textureHandle);
         }
 
         if (isMultiplayer && connectedToServer)

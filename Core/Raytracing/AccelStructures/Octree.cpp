@@ -47,10 +47,12 @@ struct Octree
     uint16 numNodes;
     OctreeNode nodes[65536];
     AABB3D aabbs[65536];
+    const v3f* triangleData;
 };
 
 void InitLeafNode(OctreeNode& node)
 {
+    node.flags = 0;
     node.flags |= OctreeNode::eIsLeafNode;
     node.numTris = 0;
 }
@@ -65,6 +67,7 @@ Octree* CreateEmptyOctree()
     }
     InitLeafNode(newOctree->nodes[newOctree->numNodes++]);
     newOctree->numNodes = 1;
+    newOctree->triangleData = nullptr;
 
     return newOctree;
 }
@@ -73,30 +76,34 @@ void SubdivideNode(Octree* octree, uint32 nodeIndex)
 {
     OctreeNode& node = octree->nodes[nodeIndex];
     node.childrenIndex = octree->numNodes;
+    TINKER_ASSERT(node.childrenIndex + 7 < 65536);
     octree->numNodes += 8; // claim 8 children nodes at once
+
+    const AABB3D& aabb = octree->aabbs[nodeIndex];
+    const v3f centerDisp = 0.5f * (aabb.maxExt - aabb.minExt);
 
     for (uint8 i = 0; i < 8; ++i)
     {
-        InitLeafNode(octree->nodes[i]);
+        InitLeafNode(octree->nodes[node.childrenIndex + i]);
         v3ui octant = v3ui();
         octant.x = i & 0x1;
         octant.y = (i >> 1) & 0x1;
         octant.z = (i >> 2) & 0x1;
 
         // Calculate new aabbs for children
-        const AABB3D& aabb = octree->aabbs[nodeIndex];
-        v3f disp = 0.5f * (aabb.maxExt - aabb.minExt);
+        v3f disp = centerDisp;
         disp.x *= octant.x ? -1.0f : 1.0f;
         disp.y *= octant.y ? -1.0f : 1.0f;
         disp.z *= octant.z ? -1.0f : 1.0f;
+        v3f corner = centerDisp + disp; // this point is the outer corner of each child node
 
         AABB3D& aabbChild = octree->aabbs[node.childrenIndex + i];
-        aabbChild.minExt = aabb.minExt + disp;
-        aabbChild.maxExt = aabbChild.minExt + disp;
+        aabbChild.ExpandTo(corner); // include corner
+        aabbChild.ExpandTo(centerDisp); // include parent center
     }
 }
 
-void InsertTriangleIntoNode(Octree* octree, uint32 nodeIndex, const v3f* triangleData, uint32 triIndex)
+void InsertTriangleIntoNode(Octree* octree, uint32 nodeIndex, uint32 triIndex)
 {
     OctreeNode& node = octree->nodes[nodeIndex];
 
@@ -110,12 +117,12 @@ void InsertTriangleIntoNode(Octree* octree, uint32 nodeIndex, const v3f* triangl
         {
             node.flags &= ~OctreeNode::eIsLeafNode;
             SubdivideNode(octree, nodeIndex);
+            InsertTriangleIntoNode(octree, nodeIndex, triIndex);
         }
     }
     else
     {
         // Intermediate node - already been subdivided
-        // TODO:
 
         // 1. figure out which children node(s) the triangle lies in
         /* Do this by getting the plane equation for each separating plane and evaluating it with
@@ -132,7 +139,8 @@ void InsertTriangleIntoNode(Octree* octree, uint32 nodeIndex, const v3f* triangl
         v3ui octants[3] = {};
         for (uint32 i = 0; i < 3; ++i)
         {
-            const v3f& triPt = triangleData[triIndex + i];
+            TINKER_ASSERT(octree->triangleData);
+            const v3f& triPt = octree->triangleData[triIndex + i];
             v3f aabbCenter = 0.5f * (octree->aabbs[nodeIndex].minExt + octree->aabbs[nodeIndex].maxExt);
             v3f disp = triPt - aabbCenter;
             octants[i].x = (uint32)signbit(Dot(disp, v3f(1, 0, 0)) - aabbCenter.x);
@@ -142,35 +150,61 @@ void InsertTriangleIntoNode(Octree* octree, uint32 nodeIndex, const v3f* triangl
         
         // Insert this triangle into each octant
         uint16 octant0 = (uint16)(octants[0].x + (octants[0].y << 1) + (octants[0].z << 2));
-        InsertTriangleIntoNode(octree, node.childrenIndex + octant0, triangleData, triIndex);
+        InsertTriangleIntoNode(octree, node.childrenIndex + octant0, triIndex);
 
         uint16 octant1 = (uint16)(octants[1].x + (octants[1].y << 1) + (octants[1].z << 2));
         if (octant1 != octant0)
         {
-            InsertTriangleIntoNode(octree, node.childrenIndex + octant1, triangleData, triIndex);
+            InsertTriangleIntoNode(octree, node.childrenIndex + octant1, triIndex);
         }
 
         uint16 octant2 = (uint16)(octants[2].x + (octants[2].y << 1) + (octants[2].z << 2));
         if (octant2 != octant0 && octant2 != octant1)
         {
-            InsertTriangleIntoNode(octree, node.childrenIndex + octant2, triangleData, triIndex);
+            InsertTriangleIntoNode(octree, node.childrenIndex + octant2, triIndex);
         }
+        // TODO: This isn't actually correct, need to insert triangle into every octree node that it overlaps, not
+        // just the ones that the points lie in. But it will require intersecting the triangle edge ray with each
+        // octree child node.
     }
 }
 
-void BuildOctree(Octree* octreeToBuild, v3f* triangleData, uint32 numTris)
+void BuildOctree(Octree* octreeToBuild, const v3f* triangleData, uint32 numTris)
 {
+    octreeToBuild->triangleData = triangleData;
+
     // Init root node to be large enough to contain all triangle points
-    for (uint32 i = 0; i < numTris; ++i)
+    for (uint32 i = 0; i < numTris; i += 3)
     {
         octreeToBuild->aabbs[Octree::eRootNode].ExpandTo(triangleData[i]);
+        octreeToBuild->aabbs[Octree::eRootNode].ExpandTo(triangleData[i + 1]);
+        octreeToBuild->aabbs[Octree::eRootNode].ExpandTo(triangleData[i + 2]);
     }
 
     // Insert all triangles into octree
     for (uint32 i = 0; i < numTris; i += 3)
     {
-        InsertTriangleIntoNode(octreeToBuild, Octree::eRootNode, triangleData, i);
+        InsertTriangleIntoNode(octreeToBuild, Octree::eRootNode, i);
     }
+}
+
+Intersection IntersectRayWithNode(const Octree* octree, uint32 nodeIndex, const Ray& ray)
+{
+    Intersection isx;
+    isx.InitInvalid();
+
+    const OctreeNode& node = octree->nodes[nodeIndex];
+    const AABB3D& aabb = octree->aabbs[nodeIndex];
+
+    // TODO: ray-cuboid intersection using aabb data
+
+    return isx;
+}
+
+Intersection IntersectRay(Octree* octree, const Ray& ray)
+{
+    Intersection isx = IntersectRayWithNode(octree, Octree::eRootNode, ray);
+    return isx;
 }
 
 }
