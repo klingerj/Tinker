@@ -398,6 +398,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
     }
 }
 
+#include "Core/Raytracing/AccelStructures/Octree.h"
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
@@ -439,6 +440,15 @@ GAME_UPDATE(GameUpdate)
 
         CreateAllDescriptors(platformFuncs);
         LoadAllShaders(platformFuncs, windowWidth, windowHeight);
+
+        // Octree test
+        {
+            const uint32 numTris = 3;
+            v3f triData[numTris] = { v3f(1, 0, 0), v3f(0, 1, 0), v3f(0, 0, 1) };
+
+            Raytracing::Octree* octree = Raytracing::CreateEmptyOctree();
+            Raytracing::BuildOctree(octree, triData, numTris);
+        }
 
         isGameInitted = true;
     }
