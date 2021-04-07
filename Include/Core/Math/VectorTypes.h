@@ -1092,14 +1092,17 @@ typedef mat2<float>  m2f;
 typedef mat3<float>  m3f;
 typedef mat4<float>  m4f;
 
+template<typename T>
+static inline T Length(const vec3<T>& v)
+{
+    T len2 = v.x * v.x + v.y * v.y + v.z * v.z;
+    // TODO: custom sqrt impl
+    return sqrtf(len2);
+}
+
 static inline void Normalize(v3f& v)
 {
-    float denom = 0.0f;
-    denom += v.x * v.x;
-    denom += v.y * v.y;
-    denom += v.z * v.z;
-    // TODO: custom sqrt impl
-    denom = sqrtf(denom);
+    float denom = Length(v);
     v /= denom;
 }
 
@@ -1111,7 +1114,7 @@ struct AABB3D
     void InitInvalidMinMax()
     {
         for (uint32 i = 0; i < 3; ++i) { minExt[i] = FLT_MAX; }
-        for (uint32 i = 0; i < 3; ++i) { maxExt[i] = FLT_MIN; }
+        for (uint32 i = 0; i < 3; ++i) { maxExt[i] = -FLT_MAX; }
     }
 
     void ExpandTo(const v3f& point)

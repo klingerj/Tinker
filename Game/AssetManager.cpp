@@ -505,14 +505,20 @@ StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)
 {
     TINKER_ASSERT(meshID != TINKER_INVALID_HANDLE);
     TINKER_ASSERT(meshID < TINKER_MAX_MESHES);
-    TINKER_ASSERT(meshID >= 0);
     return &m_allStaticMeshGraphicsHandles[meshID];
 }
 
-ResourceHandle* AssetManager::GetTextureGraphicsDataByID(uint32 textureID)
+ResourceHandle AssetManager::GetTextureGraphicsDataByID(uint32 textureID)
 {
     TINKER_ASSERT(textureID != TINKER_INVALID_HANDLE);
     TINKER_ASSERT(textureID < TINKER_MAX_TEXTURES);
-    TINKER_ASSERT(textureID >= 0);
-    return &m_allTextureGraphicsHandles[textureID];
+    return m_allTextureGraphicsHandles[textureID];
 }
+
+const MeshAttributeData& AssetManager::GetMeshAttrDataByID(uint32 meshID)
+{
+    TINKER_ASSERT(meshID != TINKER_INVALID_HANDLE);
+    TINKER_ASSERT(meshID < TINKER_MAX_MESHES);
+    return m_allMeshData[meshID];
+}
+
