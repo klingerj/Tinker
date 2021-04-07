@@ -2,6 +2,8 @@
 
 #include "Core/CoreDefines.h"
 
+#include <float.h>
+
 
 namespace Tinker
 {
@@ -1048,6 +1050,12 @@ vec4<T> operator*(const mat4<T>& m, const vec4<T>& v)
 }
 
 template <typename T>
+vec3<T> operator*(const T& scale, const vec3<T>& v)
+{
+    return { v.x * scale, v.y * scale, v.z * scale };
+}
+
+template <typename T>
 bool operator==(const mat4<T>& lhs, const mat4<T>& rhs)
 {
     bool equal = true;
@@ -1094,6 +1102,24 @@ static inline void Normalize(v3f& v)
     denom = sqrtf(denom);
     v /= denom;
 }
+
+struct AABB3D
+{
+    v3f minExt;
+    v3f maxExt;
+
+    void InitInvalidMinMax()
+    {
+        for (uint32 i = 0; i < 3; ++i) { minExt[i] = FLT_MAX; }
+        for (uint32 i = 0; i < 3; ++i) { maxExt[i] = FLT_MIN; }
+    }
+
+    void ExpandTo(const v3f& point)
+    {
+        for (uint32 i = 0; i < 3; ++i) { minExt[i] = min(minExt[i], point[i]); }
+        for (uint32 i = 0; i < 3; ++i) { maxExt[i] = max(maxExt[i], point[i]); }
+    }
+};
 
 // Vector Ops
 #include <smmintrin.h>

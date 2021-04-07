@@ -15,14 +15,14 @@ tnoremap <m-m> <c-w>"y<c-w>h
 tnoremap <m-n> <c-w>"z<c-w>h
 
 " CtrlP Plugin
-" set runtimepath^=~/.vim/bundle/ctrlp.vim
-" let g:ctrlp_map = '<c-p>'
-" let g:ctrlp_cmd = 'CtrlP'
-" let g:ctrlp_custom_ignore = '.git\|Build'
+set runtimepath^=~/.vim/bundle/ctrlp.vim
+let g:ctrlp_map = '<c-p>'
+let g:ctrlp_cmd = 'CtrlP'
+let g:ctrlp_custom_ignore = '.git\|Build'
 
 " PaperColor theme setup
-"set t_Co=256
-"set background=dark
-"colorscheme PaperColor
+set t_Co=256
+set background=dark
+colorscheme PaperColor
 
-colorscheme gruvbox8
+"colorscheme gruvbox8
