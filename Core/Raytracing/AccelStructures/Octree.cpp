@@ -11,7 +11,7 @@ using namespace Math;
 namespace Raytracing
 {
 
-#define MAX_TRIS_PER_NODE 2
+#define MAX_TRIS_PER_NODE 14
 struct OctreeNode
 {
     enum : uint8
@@ -32,11 +32,14 @@ struct OctreeNode
         {
             uint32 tris[MAX_TRIS_PER_NODE];
             uint8 numTris;
+            uint8 leafPad[3];
         };
     };
 
     uint8 flags;
+    uint8 nodePad[3];
 };
+// TODO: add a static assert that sizeof(OctreeNode) == CACHE_LINE (or a multiple)
 
 // TODO: allocate mem more better
 
@@ -135,37 +138,58 @@ void InsertTriangleIntoNode(Octree* octree, uint32 nodeIndex, uint32 triIndex)
          * Can side-by-side that with the non-SIMD version of the above as a test though.
         */
 
-        // Determine octant of each triangle point
-        v3ui octants[3] = {};
-        for (uint32 i = 0; i < 3; ++i)
+        if (1)
         {
-            TINKER_ASSERT(octree->triangleData);
-            const v3f& triPt = octree->triangleData[triIndex + i];
-            v3f aabbCenter = 0.5f * (octree->aabbs[nodeIndex].minExt + octree->aabbs[nodeIndex].maxExt);
-            v3f disp = triPt - aabbCenter;
-            octants[i].x = (uint32)signbit(Dot(disp, v3f(1, 0, 0)) - aabbCenter.x);
-            octants[i].y = (uint32)signbit(Dot(disp, v3f(0, 1, 0)) - aabbCenter.y);
-            octants[i].z = (uint32)signbit(Dot(disp, v3f(0, 0, 1)) - aabbCenter.z);
-        }
-        
-        // Insert this triangle into each octant
-        uint16 octant0 = (uint16)(octants[0].x + (octants[0].y << 1) + (octants[0].z << 2));
-        InsertTriangleIntoNode(octree, node.childrenIndex + octant0, triIndex);
+            // Add triangle to child octants that the tri intersects
+            // NOTE: this is done by checking if the triangle's aabb intersects the octant AABB. This can add a triangle
+            // to an octant that is does not actually lie in, which is wasteful, but shouldn't affect correctness ultimately.
+            AABB3D triAABB;
+            triAABB.InitInvalidMinMax();
+            for (uint32 i = 0; i < 3; ++i)
+            {
+                triAABB.ExpandTo(octree->triangleData[triIndex + i]);
+            }
 
-        uint16 octant1 = (uint16)(octants[1].x + (octants[1].y << 1) + (octants[1].z << 2));
-        if (octant1 != octant0)
-        {
-            InsertTriangleIntoNode(octree, node.childrenIndex + octant1, triIndex);
+            for (uint32 i = 0; i < 8; ++i)
+            {
+                if (triAABB.Intersects(octree->aabbs[node.childrenIndex + i]))
+                {
+                    InsertTriangleIntoNode(octree, node.childrenIndex + i, triIndex);
+                }
+            }
         }
+        else
+        {
+            // Determine octant of each triangle point
+            v3ui octants[3] = {};
+            for (uint32 i = 0; i < 3; ++i)
+            {
+                TINKER_ASSERT(octree->triangleData);
+                const v3f& triPt = octree->triangleData[triIndex + i];
+                v3f aabbCenter = 0.5f * (octree->aabbs[nodeIndex].minExt + octree->aabbs[nodeIndex].maxExt);
+                v3f disp = triPt - aabbCenter;
+                octants[i].x = (uint32)signbit(Dot(disp, v3f(1, 0, 0)) - aabbCenter.x);
+                octants[i].y = (uint32)signbit(Dot(disp, v3f(0, 1, 0)) - aabbCenter.y);
+                octants[i].z = (uint32)signbit(Dot(disp, v3f(0, 0, 1)) - aabbCenter.z);
+            }
 
-        uint16 octant2 = (uint16)(octants[2].x + (octants[2].y << 1) + (octants[2].z << 2));
-        if (octant2 != octant0 && octant2 != octant1)
-        {
-            InsertTriangleIntoNode(octree, node.childrenIndex + octant2, triIndex);
+
+            // Insert this triangle into each octant
+            uint16 octant0 = (uint16)(octants[0].x + (octants[0].y << 1) + (octants[0].z << 2));
+            InsertTriangleIntoNode(octree, node.childrenIndex + octant0, triIndex);
+
+            uint16 octant1 = (uint16)(octants[1].x + (octants[1].y << 1) + (octants[1].z << 2));
+            if (octant1 != octant0)
+            {
+                InsertTriangleIntoNode(octree, node.childrenIndex + octant1, triIndex);
+            }
+
+            uint16 octant2 = (uint16)(octants[2].x + (octants[2].y << 1) + (octants[2].z << 2));
+            if (octant2 != octant0 && octant2 != octant1)
+            {
+                InsertTriangleIntoNode(octree, node.childrenIndex + octant2, triIndex);
+            }
         }
-        // TODO: This isn't actually correct, need to insert triangle into every octree node that it overlaps, not
-        // just the ones that the points lie in. But it will require intersecting the triangle edge ray with each
-        // octree child node.
     }
 }
 
