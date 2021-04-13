@@ -445,7 +445,7 @@ GAME_UPDATE(GameUpdate)
         // Octree test
         {
             const MeshAttributeData& data = g_AssetManager.GetMeshAttrDataByID(2);
-            uint32 numVerts = data.m_numVertices / 4;
+            uint32 numVerts = data.m_numVertices / 1;
             v3f* triData = new v3f[numVerts * sizeof(v3f)];
             for (uint32 i = 0; i < numVerts; ++i)
             {

@@ -1122,6 +1122,11 @@ struct AABB3D
         for (uint32 i = 0; i < 3; ++i) { minExt[i] = min(minExt[i], point[i]); }
         for (uint32 i = 0; i < 3; ++i) { maxExt[i] = max(maxExt[i], point[i]); }
     }
+
+    bool Intersects(const AABB3D& other) const
+    {
+        return false;
+    }
 };
 
 // Vector Ops
