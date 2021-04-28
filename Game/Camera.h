@@ -17,7 +17,7 @@ static const float nearPlane = 0.1f;
 static const float farPlane = 1000.0f;
 static m4f g_projMat = m4f(1.0f);
 
-m4f CameraViewMatrix(const VirtualCamera* camera)
+inline m4f CameraViewMatrix(const VirtualCamera* camera)
 {
     v3f forward = camera->m_ref - camera->m_eye;
     Normalize(forward);
@@ -35,7 +35,7 @@ m4f CameraViewMatrix(const VirtualCamera* camera)
     return view;
 }
 
-m4f PerspectiveProjectionMatrix(float aspect)
+inline m4f PerspectiveProjectionMatrix(float aspect)
 {
     m4f proj;
 

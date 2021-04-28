@@ -19,20 +19,22 @@ struct Ray
 
 struct Intersection
 {
-    uint32 hitTri;
+    float bary[3];
     float t;
-    float bary;
+    uint32 hitTri;
 
     void InitInvalid()
     {
-        hitTri = MAX_UINT32;
+        bary[0] = 0.0f;
+        bary[1] = 0.0f;
+        bary[2] = 0.0f;
         t = -1.0f;
-        bary = 0.0f;
+        hitTri = MAX_UINT32;
     }
 };
 
-float IntersectRayTriangle(const Ray& ray, const v3f* triangle);
-//float IntersectRayCube(const Ray& ray, const Box& box);
+void IntersectRayTriangle(const Ray& ray, const v3f* triangle, Intersection& isx);
+//void IntersectRayCube(const Ray& ray, const Box& box);
 
 }
 }

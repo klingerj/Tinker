@@ -1063,7 +1063,7 @@ wWinMain(HINSTANCE hInstance,
     while (runGame)
     {
         {
-            TIMED_SCOPED_BLOCK("-----> Total Frame");
+            //TIMED_SCOPED_BLOCK("-----> Total Frame");
 
             {
                 //TIMED_SCOPED_BLOCK("Process window messages");
@@ -1112,7 +1112,7 @@ wWinMain(HINSTANCE hInstance,
                 }
 
                 {
-                    TIMED_SCOPED_BLOCK("Game Update");
+                    //TIMED_SCOPED_BLOCK("Game Update");
 
                     int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &g_graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
                     if (error != 0)
@@ -1125,7 +1125,7 @@ wWinMain(HINSTANCE hInstance,
 
                 // Process command stream
                 {
-                    TIMED_SCOPED_BLOCK("Graphics command stream processing");
+                    //TIMED_SCOPED_BLOCK("Graphics command stream processing");
                     BeginFrameRecording();
                     ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
                     EndFrameRecording();
