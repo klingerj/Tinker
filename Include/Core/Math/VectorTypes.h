@@ -479,25 +479,25 @@ bool operator!=(const vec4<T>& lhs, const vec4<T>& rhs)
 }
 
 template <typename T>
-static inline vec3<T> Cross(const vec3<T>& a, const vec3<T>& b)
+inline vec3<T> Cross(const vec3<T>& a, const vec3<T>& b)
 {
     return vec3<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
 }
 
 template <typename T>
-static inline T Dot(const vec2<T>& a, const vec2<T>& b)
+inline T Dot(const vec2<T>& a, const vec2<T>& b)
 {
     return a.x * b.x + a.y * b.y;
 }
 
 template <typename T>
-static inline T Dot(const vec3<T>& a, const vec3<T>& b)
+inline T Dot(const vec3<T>& a, const vec3<T>& b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 template <typename T>
-static inline T Dot(const vec4<T>& a, const vec4<T>& b)
+inline T Dot(const vec4<T>& a, const vec4<T>& b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
@@ -1093,14 +1093,14 @@ typedef mat3<float>  m3f;
 typedef mat4<float>  m4f;
 
 template<typename T>
-static inline T Length(const vec3<T>& v)
+inline T Length(const vec3<T>& v)
 {
     T len2 = v.x * v.x + v.y * v.y + v.z * v.z;
     // TODO: custom sqrt impl
     return sqrtf(len2);
 }
 
-static inline void Normalize(v3f& v)
+inline void Normalize(v3f& v)
 {
     float denom = Length(v);
     v /= denom;
@@ -1138,7 +1138,7 @@ struct AABB3D
 
 namespace VectorOps
 {
-    static inline void Mul_SIMD(const v2f* RESTRICT v, const m2f* RESTRICT m, v2f* RESTRICT out)
+    inline void Mul_SIMD(const v2f* RESTRICT v, const m2f* RESTRICT m, v2f* RESTRICT out)
     {
         // NOTE: mm_stream for __m64 type is not available on AMD.
         // We probably don't need a SIMD mul for v2f * m2f. We could write one that multiplies
@@ -1161,7 +1161,7 @@ namespace VectorOps
         *out = *m * *v;
     }
 
-    static inline void Mul_SIMD(const v2i* RESTRICT v, const m2i* RESTRICT m, v2i* RESTRICT out)
+    inline void Mul_SIMD(const v2i* RESTRICT v, const m2i* RESTRICT m, v2i* RESTRICT out)
     {
         TINKER_ASSERT(!(((size_t)v) & 15));
         TINKER_ASSERT(!(((size_t)m) & 15));
@@ -1181,7 +1181,7 @@ namespace VectorOps
         *out = *m * *v;
     }
 
-    static inline void Mul_SIMD(const v2ui* RESTRICT v, const m2ui* RESTRICT m, v2ui* RESTRICT out)
+    inline void Mul_SIMD(const v2ui* RESTRICT v, const m2ui* RESTRICT m, v2ui* RESTRICT out)
     {
         TINKER_ASSERT(!(((size_t)v) & 15));
         TINKER_ASSERT(!(((size_t)m) & 15));
@@ -1201,7 +1201,7 @@ namespace VectorOps
         *out = *m * *v;
     }
 
-    static inline void Mul_SIMD(const v4f* RESTRICT v, const m4f* m, v4f* RESTRICT out)
+    inline void Mul_SIMD(const v4f* RESTRICT v, const m4f* m, v4f* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
         TINKER_ASSERT(!(((size_t)v) & 15));
@@ -1231,7 +1231,7 @@ namespace VectorOps
         _mm_stream_ps((float*)out, sum);
     }
 
-    static inline void Mul_SIMD(const v4i* RESTRICT v, const m4i* m, v4i* RESTRICT out)
+    inline void Mul_SIMD(const v4i* RESTRICT v, const m4i* m, v4i* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
         TINKER_ASSERT(!(((size_t)v) & 15));
@@ -1261,7 +1261,7 @@ namespace VectorOps
         _mm_stream_si128((__m128i*)out, sum);
     }
 
-    static inline void Mul_SIMD(const v4ui* RESTRICT v, const m4ui* m, v4ui* RESTRICT out)
+    inline void Mul_SIMD(const v4ui* RESTRICT v, const m4ui* m, v4ui* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
         TINKER_ASSERT(!(((size_t)v) & 15));
