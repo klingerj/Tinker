@@ -172,13 +172,34 @@ READ_ENTIRE_FILE(ReadEntireFile)
             fileSize = GetFileSize(filename);
         }
 
-        DWORD numBytesRead = {};
+        DWORD numBytesRead = 0;
         ReadFile(fileHandle, buffer, fileSize, &numBytesRead, 0);
         TINKER_ASSERT(numBytesRead == fileSize);
         CloseHandle(fileHandle);
     }
     else
     {
+        Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
+    }
+}
+
+WRITE_ENTIRE_FILE(WriteEntireFile)
+{
+    // User must specify a file size and the dest buffer.
+    TINKER_ASSERT(fileSizeInBytes && buffer);
+
+    HANDLE fileHandle = CreateFile(filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+
+    if (fileHandle != INVALID_HANDLE_VALUE)
+    {
+        DWORD numBytesWritten = 0;
+        WriteFile(fileHandle, buffer, fileSizeInBytes, &numBytesWritten, 0);
+        TINKER_ASSERT(numBytesWritten == fileSizeInBytes);
+        CloseHandle(fileHandle);
+    }
+    else
+    {
+        DWORD dw = GetLastError();
         Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
     }
 }
@@ -1002,6 +1023,7 @@ wWinMain(HINSTANCE hInstance,
         g_platformAPIFuncs = {};
         g_platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
         g_platformAPIFuncs.ReadEntireFile = ReadEntireFile;
+        g_platformAPIFuncs.WriteEntireFile = WriteEntireFile;
         g_platformAPIFuncs.GetFileSize = GetFileSize;
         g_platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;
         g_platformAPIFuncs.EndNetworkConnection = EndNetworkConnection;

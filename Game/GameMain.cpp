@@ -189,11 +189,14 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     Platform::InitDescLayout(&instanceDataDescriptorLayout);
     instanceDataDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eBuffer;
     instanceDataDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
+    // TODO: add the number of vertex attribute buffers here ^^
     gameGraphicsData.m_modelMatrixDescHandle1 = platformFuncs->CreateDescriptor(&instanceDataDescriptorLayout);
 
-    Platform::DescriptorSetDataHandles modeMatrixHandles = {};
-    modeMatrixHandles.handles[0] = gameGraphicsData.m_modelMatrixBufferHandle1;
-    platformFuncs->WriteDescriptor(&instanceDataDescriptorLayout, gameGraphicsData.m_modelMatrixDescHandle1, &modeMatrixHandles);
+    Platform::DescriptorSetDataHandles modelMatrixHandles = {};
+    modelMatrixHandles.handles[0] = gameGraphicsData.m_modelMatrixBufferHandle1;
+    // TODO: populate handles with buffer handles. Need to bump up the limit and make sure that vk code works.
+    // TODO: then port over the shaders to use the uniform buffers and read from them
+    platformFuncs->WriteDescriptor(&instanceDataDescriptorLayout, gameGraphicsData.m_modelMatrixDescHandle1, &modelMatrixHandles);
 }
 
 void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -519,17 +522,17 @@ GAME_UPDATE(GameUpdate)
                             }
                         }
 
-                        img[py * 512 + px] = (uint32)(channel | (channel << 8) | (channel << 16) | (channel << 24));
+                        img[py * width + px] = (uint32)(0 | (channel << 8) | (channel << 16) | (0 << 24));
                     }
                 }
 
                 // Output image
-
-
-
+                Buffer imgBuffer = {};
+                FileLoading::SaveBMP(&imgBuffer, (uint8*)img, width, height, 32);
+                platformFuncs->WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", imgBuffer.m_sizeInBytes, imgBuffer.m_data);
+                imgBuffer.Dealloc();
                 delete img;
             }
-
 
             delete triData;
         }

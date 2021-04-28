@@ -22,6 +22,9 @@ void FreeAligned(void* ptr);
 #define READ_ENTIRE_FILE(name) void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
 typedef READ_ENTIRE_FILE(read_entire_file);
 
+#define WRITE_ENTIRE_FILE(name) void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
+typedef WRITE_ENTIRE_FILE(write_entire_file);
+
 #define GET_FILE_SIZE(name) uint32 name(const char* filename)
 typedef GET_FILE_SIZE(get_file_size);
 
@@ -43,6 +46,7 @@ typedef struct platform_api_functions
 {
     enqueue_worker_thread_job* EnqueueWorkerThreadJob;
     read_entire_file* ReadEntireFile;
+    write_entire_file* WriteEntireFile;
     get_file_size* GetFileSize;
     init_network_connection* InitNetworkConnection;
     end_network_connection* EndNetworkConnection;

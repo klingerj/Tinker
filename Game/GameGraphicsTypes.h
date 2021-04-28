@@ -48,7 +48,7 @@ void CopyStagingBufferToGPUBufferCommand(std::vector<Platform::GraphicsCommand>&
     const char* debugLabel);
 */
 
-typedef struct mesh_triangles
+typedef struct mesh_attribute_data
 {
     uint32 m_numVertices;
     uint8* m_vertexBufferData; // positions, uvs, normals, indices
@@ -68,7 +68,7 @@ enum
     eRenderPass_Max
 };
 
-typedef struct game_graphic_data
+typedef struct game_graphics_data
 {
     ResourceHandle m_rtColorHandle;
     ResourceHandle m_rtDepthHandle;

@@ -2,6 +2,27 @@
 
 #include "Core/Math/VectorTypes.h"
 
+// TODO: put this somewhere else
+#include "Core/Mem.h"
+struct Buffer
+{
+    uint8* m_data = nullptr;
+    uint32 m_sizeInBytes = 0;
+
+    void Alloc(uint32 sizeInBytes)
+    {
+        m_data = (uint8*)Tinker::Core::CoreMalloc(sizeInBytes);
+        m_sizeInBytes = sizeInBytes;
+    }
+
+    void Dealloc()
+    {
+        Tinker::Core::CoreFree(m_data);
+        m_data = nullptr;
+        m_sizeInBytes = 0;
+    }
+};
+
 namespace Tinker
 {
 namespace Core
@@ -60,6 +81,8 @@ typedef struct bmp_info
 #pragma pack(pop)
 
 BMPInfo GetBMPInfo(uint8* entireFileBuffer);
+
+void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, uint32 height, uint16 bitsPerPx);
 
 }
 }

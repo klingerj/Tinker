@@ -4,10 +4,8 @@ namespace Tinker
 {
 namespace Core
 {
-namespace Utility
-{
 
-//#define DISABLE_MEM_TRACKING
+#define DISABLE_MEM_TRACKING
 
 #if !defined(DISABLE_MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
 #define MEM_TRACKING
@@ -18,7 +16,6 @@ namespace Utility
 void* CoreMalloc(size_t size);
 void CoreFree(void* ptr);
 
-}
 }
 }
 

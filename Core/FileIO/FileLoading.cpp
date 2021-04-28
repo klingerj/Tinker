@@ -1,6 +1,9 @@
 #include <stdlib.h>
 
 #include "Core/FileIO/FileLoading.h"
+#include "Core/Mem.h"
+
+#include <string.h>
 
 namespace Tinker
 {
@@ -254,6 +257,43 @@ BMPInfo GetBMPInfo(uint8* entireFileBuffer)
     // NOTE: assumes the buffer is a well-formed bmp file
     // Skips the file header, which is immediately followed by the bmp info
     return *(BMPInfo*)(entireFileBuffer + sizeof(BMPHeader));
+}
+
+void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, uint32 height, uint16 bitsPerPx)
+{
+    TINKER_ASSERT(outputBuffer);
+
+    uint32 imgSize = width * height * bitsPerPx/8;
+
+    BMPHeader header;
+    memset(&header, 0, sizeof(BMPHeader));
+    header.type = 0x4D42;
+    header.fileSizeInBytes = imgSize;
+    header.offsetToBMPBytes = sizeof(BMPHeader) + sizeof(BMPInfo);
+
+    outputBuffer->Alloc(imgSize + header.offsetToBMPBytes);
+    uint8* data = outputBuffer->m_data;
+
+    BMPInfo info;
+    memset(&info, 0, sizeof(BMPInfo));
+    info.structSize = sizeof(BMPInfo);
+    info.width = width;
+    info.height = height;
+    info.planes = 1;
+    info.bitsPerPixel = bitsPerPx;
+    info.compression = 0;
+    info.sizeInBytes = imgSize;
+    info.xPPM = 0;
+    info.yPPM = 0;
+    info.clrUsed = 0;
+    info.clrImp = 0;
+
+    // TODO: simd stream
+    memcpy(data, &header, sizeof(header));
+    data += sizeof(header);
+    memcpy(data, &info, sizeof(info));
+    data += sizeof(info);
+    memcpy(data, inputData, imgSize);
 }
 
 }
