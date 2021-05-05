@@ -53,7 +53,7 @@ void RaytraceTest(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
     const uint32 width = 256;
     const uint32 height = 256;
     uint32* img = (uint32*)CoreMalloc(sizeof(uint32) * width * height);
-    memset(img, 0, width * height * 4);
+    memset(img, 0, width * height * sizeof(uint32));
 
     v3f camEye = v3f(27, 27, 27);
     v3f camRef = v3f(0, 0, 0);
@@ -126,21 +126,30 @@ void RaytraceTest(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
                 v3f lightDir = v3f(-1, -1, 1);
                 Normalize(lightDir);
                 float lambert = Dot(interpNormal, lightDir);
-                lambert = max(0.05f, lambert);
                 lambert *= 0.7f;
-                lambert = powf(lambert, 1/2.4f);
+                lambert = max(0.05f, lambert);
+                // Linear to SRGB
+                if (lambert > 0.0031308f)
+                {
+                    lambert = 1.055f * (powf(lambert, 1.0f/2.4f)) - 0.055f;
+                }
+                else
+                {
+                    lambert = 12.92f * lambert;
+                }
 
-                channel[0] = (uint8)(lambert * 255);
-                channel[1] = (uint8)(lambert * 255);
-                channel[2] = (uint8)(lambert * 255);
+                uint8 asUnorm = (uint8)(lambert * 255);
+                channel[0] = asUnorm;
+                channel[1] = asUnorm;
+                channel[2] = asUnorm;
+
+                // BGRA
+                img[py * width + px] = (uint32)(channel[2] | (channel[1] << 8) | (channel[0] << 16) | (channel[3] << 24));
             }
             else
             {
                 // No intersection
             }
-
-            // BGRA
-            img[py * width + px] = (uint32)(channel[2] | (channel[1] << 8) | (channel[0] << 16) | (channel[3] << 24));
         }
     }
 
