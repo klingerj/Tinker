@@ -79,13 +79,13 @@ void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, Fr
 ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
     uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes,
     uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight,
-    FramebufferHandle framebufferHandle, DescriptorHandle descriptorHandle);
+    FramebufferHandle framebufferHandle, DescriptorHandle* descriptorHandles, uint32 numDescriptorHandles);
 void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ShaderHandle handle);
 
 DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout);
 void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, DescriptorHandle handle);
 void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources);
-void VulkanWriteDescriptor(VulkanContextResources*  vulkanContextResources, DescriptorLayout* descLayout, DescriptorHandle descSetHandle, DescriptorSetDataHandles* descSetHandles);
+void VulkanWriteDescriptor(VulkanContextResources*  vulkanContextResources, DescriptorLayout* descLayout, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles);
 void InitDescriptorPool(VulkanContextResources* vulkanContextResources);
 
 void CreateSamplers(VulkanContextResources* vulkanContextResources);

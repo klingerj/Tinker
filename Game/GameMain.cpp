@@ -76,8 +76,12 @@ static InputState previousInputState = {};
 typedef struct descriptor_instance_data
 {
     alignas(16) m4f modelMatrix;
+} DescriptorData_Instance;
+
+typedef struct descriptor_global_data
+{
     alignas(16) m4f viewProj;
-} DescriptorInstanceData;
+} DescriptorData_Global;
 
 static VirtualCamera g_gameCamera = {};
 
@@ -91,14 +95,20 @@ void UpdateDescriptorState(const Platform::PlatformAPIFuncs* platformFuncs)
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
     float scale = 1.0f;
-    DescriptorInstanceData instanceData = {};
+    DescriptorData_Instance instanceData = {};
     instanceData.modelMatrix = m4f(scale);
-    //instanceData.modelMatrix[1][1] = 1.0f;
     instanceData.modelMatrix[3][3] = 1.0f;
-    instanceData.viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
-    gameGraphicsData.m_modelMatrixBufferMemPtr1 = platformFuncs->MapResource(gameGraphicsData.m_modelMatrixBufferHandle1);
-    memcpy(gameGraphicsData.m_modelMatrixBufferMemPtr1, &instanceData, sizeof(instanceData));
-    platformFuncs->UnmapResource(gameGraphicsData.m_modelMatrixBufferHandle1);
+
+    DescriptorData_Global globalData = {};
+    globalData.viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
+
+    gameGraphicsData.m_DescDataBufferMemPtr_Instance = platformFuncs->MapResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
+    memcpy(gameGraphicsData.m_DescDataBufferMemPtr_Instance, &instanceData, sizeof(DescriptorData_Instance));
+    platformFuncs->UnmapResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
+
+    gameGraphicsData.m_DescDataBufferMemPtr_Global = platformFuncs->MapResource(gameGraphicsData.m_DescDataBufferHandle_Global);
+    memcpy(gameGraphicsData.m_DescDataBufferMemPtr_Global, &globalData, sizeof(DescriptorData_Global));
+    platformFuncs->UnmapResource(gameGraphicsData.m_DescDataBufferHandle_Global);
 }
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -106,14 +116,17 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     ResetShaderBytecodeAllocator();
 
     Platform::DescriptorLayout mainDrawDescriptorLayout = {};
-    Platform::InitDescLayout(&mainDrawDescriptorLayout);
+    mainDrawDescriptorLayout.InitInvalid();
     Platform::GraphicsPipelineParams params;
     params.blendState = Platform::BlendState::eInvalid; // no color attachment
     params.depthState = Platform::DepthState::eTestOnWriteOn; // Write to depth
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
-    params.descriptorHandle = gameGraphicsData.m_modelMatrixDescHandle1;
+
+    DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance};
+    params.descriptorHandles = descHandles;
+    params.numDescriptorHandles = 2;
     gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, SHADERS_SPV_PATH "basic_vert_glsl.spv", nullptr, &params);
 
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
@@ -125,8 +138,10 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     // Set data for render pass
     gameRenderPasses[eRenderPass_ZPrePass].shader = gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass];
     Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-    InitDescSetDescHandles(descriptors);
-    descriptors[0].handles[0] = gameGraphicsData.m_modelMatrixDescHandle1;
+    descriptors[0].InitInvalid();
+    descriptors[0].handles[0] = gameGraphicsData.m_DescData_Global;
+    descriptors[1].InitInvalid();
+    descriptors[1].handles[0] = gameGraphicsData.m_DescData_Instance;
     memcpy(gameRenderPasses[eRenderPass_ZPrePass].descriptors, descriptors, sizeof(descriptors));
 
     gameRenderPasses[eRenderPass_MainView].shader = gameGraphicsData.m_shaderHandles[eRenderPass_MainView];
@@ -137,7 +152,8 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
     params.framebufferHandle = DefaultFramebufferHandle_Invalid;
-    params.descriptorHandle = gameGraphicsData.m_swapChainBlitDescHandle;
+    params.descriptorHandles = &gameGraphicsData.m_swapChainBlitDescHandle;
+    params.numDescriptorHandles = 1;
     gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, SHADERS_SPV_PATH "blit_vert_glsl.spv", SHADERS_SPV_PATH "blit_frag_glsl.spv", &params);
 }
 
@@ -158,10 +174,15 @@ void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
     gameGraphicsData.m_swapChainBlitDescHandle = DefaultDescHandle_Invalid;
 
-    platformFuncs->DestroyDescriptor(gameGraphicsData.m_modelMatrixDescHandle1);
-    gameGraphicsData.m_modelMatrixDescHandle1 = DefaultDescHandle_Invalid;
-    platformFuncs->DestroyResource(gameGraphicsData.m_modelMatrixBufferHandle1);
-    gameGraphicsData.m_modelMatrixBufferHandle1 = DefaultResHandle_Invalid;
+    platformFuncs->DestroyDescriptor(gameGraphicsData.m_DescData_Instance);
+    gameGraphicsData.m_DescData_Instance = DefaultDescHandle_Invalid;
+    platformFuncs->DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
+    gameGraphicsData.m_DescDataBufferHandle_Instance = DefaultResHandle_Invalid;
+
+    platformFuncs->DestroyDescriptor(gameGraphicsData.m_DescData_Global);
+    gameGraphicsData.m_DescData_Global = DefaultDescHandle_Invalid;
+    platformFuncs->DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Global);
+    gameGraphicsData.m_DescDataBufferHandle_Global = DefaultResHandle_Invalid;
 
     platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
 }
@@ -170,34 +191,46 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     // Swap chain blit
     Platform::DescriptorLayout blitDescriptorLayout = {};
-    Platform::InitDescLayout(&blitDescriptorLayout);
+    blitDescriptorLayout.InitInvalid();
     blitDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eSampledImage;
     blitDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
     gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(&blitDescriptorLayout);
 
     Platform::DescriptorSetDataHandles blitHandles = {};
+    blitHandles.InitInvalid();
     blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    platformFuncs->WriteDescriptor(&blitDescriptorLayout, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    platformFuncs->WriteDescriptor(&blitDescriptorLayout, &gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 
-    // Model matrix
+    // Descriptor data
     ResourceDesc desc;
     desc.resourceType = Platform::ResourceType::eBuffer1D;
-    desc.dims = v3ui(sizeof(DescriptorInstanceData), 0, 0);
+    desc.dims = v3ui(sizeof(DescriptorData_Instance), 0, 0);
     desc.bufferUsage = Platform::BufferUsage::eUniform;
-    gameGraphicsData.m_modelMatrixBufferHandle1 = platformFuncs->CreateResource(desc);
+    gameGraphicsData.m_DescDataBufferHandle_Instance = platformFuncs->CreateResource(desc);
+    desc.dims = v3ui(sizeof(DescriptorData_Global), 0, 0);
+    gameGraphicsData.m_DescDataBufferHandle_Global = platformFuncs->CreateResource(desc);
 
-    Platform::DescriptorLayout instanceDataDescriptorLayout = {};
-    Platform::InitDescLayout(&instanceDataDescriptorLayout);
-    instanceDataDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eBuffer;
-    instanceDataDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
+    Platform::DescriptorLayout DescriptorLayout = {};
+    DescriptorLayout.InitInvalid();
+    DescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eBuffer;
+    DescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
     // TODO: add the number of vertex attribute buffers here ^^
-    gameGraphicsData.m_modelMatrixDescHandle1 = platformFuncs->CreateDescriptor(&instanceDataDescriptorLayout);
 
-    Platform::DescriptorSetDataHandles modelMatrixHandles = {};
-    modelMatrixHandles.handles[0] = gameGraphicsData.m_modelMatrixBufferHandle1;
-    // TODO: populate handles with buffer handles. Need to bump up the limit and make sure that vk code works.
-    // TODO: then port over the shaders to use the uniform buffers and read from them
-    platformFuncs->WriteDescriptor(&instanceDataDescriptorLayout, gameGraphicsData.m_modelMatrixDescHandle1, &modelMatrixHandles);
+    DescriptorLayout.descriptorLayoutParams[1][0].type = Platform::DescriptorType::eBuffer;
+    DescriptorLayout.descriptorLayoutParams[1][0].amount = 1;
+
+    gameGraphicsData.m_DescData_Global = platformFuncs->CreateDescriptor(&DescriptorLayout);
+    gameGraphicsData.m_DescData_Instance = platformFuncs->CreateDescriptor(&DescriptorLayout);
+
+    Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    descDataHandles[0].InitInvalid();
+    descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
+    descDataHandles[1].InitInvalid();
+    descDataHandles[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
+
+    DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance };
+    platformFuncs->WriteDescriptor(&DescriptorLayout, &descHandles[0], &descDataHandles[0]);
+    platformFuncs->WriteDescriptor(&DescriptorLayout, &descHandles[1], &descDataHandles[1]);
 }
 
 void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -444,7 +477,7 @@ GAME_UPDATE(GameUpdate)
         CreateAllDescriptors(platformFuncs);
         LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
-        if (1)
+        if (0)
         {
             RaytraceTest(platformFuncs);
         }
@@ -534,7 +567,10 @@ GAME_UPDATE(GameUpdate)
     command->m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command->m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
-    Platform::InitDescSetDescHandles(command->m_descriptors);
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
+        command->m_descriptors[i].InitInvalid();
+    }
     command->m_descriptors[0].handles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
     ++graphicsCommandStream->m_numCommands;
     ++command;

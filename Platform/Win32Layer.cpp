@@ -506,7 +506,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
                     vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
                     numFragmentShaderBytes, blendState, depthState,
-                    viewportWidth, viewportHeight, framebufferHandle, descriptorHandle);
+                    viewportWidth, viewportHeight, framebufferHandle, descriptorHandles, numDescriptorHandles);
             //break;
         }
 
@@ -640,7 +640,7 @@ WRITE_DESCRIPTOR(WriteDescriptor)
     {
         case GraphicsAPI::eVulkan:
         {
-            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayout, descSetHandle, descSetDataHandles);
+            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayout, descSetHandles, descSetDataHandles);
             break;
         }
 

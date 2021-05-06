@@ -37,5 +37,10 @@ Platform::ShaderHandle LoadShader(const Platform::PlatformAPIFuncs* platformFunc
         platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
     }
 
-    return platformFuncs->CreateGraphicsPipeline(vertexShaderBuffer, vertexShaderFileSize, fragmentShaderBuffer, fragmentShaderFileSize, params->blendState, params->depthState, params->viewportWidth, params->viewportHeight, params->framebufferHandle, params->descriptorHandle);
+    return platformFuncs->CreateGraphicsPipeline(vertexShaderBuffer, vertexShaderFileSize,
+        fragmentShaderBuffer, fragmentShaderFileSize,
+        params->blendState, params->depthState,
+        params->viewportWidth, params->viewportHeight,
+        params->framebufferHandle,
+        params->descriptorHandles, params->numDescriptorHandles);
 }
