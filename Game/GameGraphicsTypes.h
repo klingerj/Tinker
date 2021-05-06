@@ -75,9 +75,14 @@ typedef struct game_graphics_data
     FramebufferHandle m_framebufferHandles[eRenderPass_Max];
 
     ShaderHandle m_shaderHandles[eRenderPass_Max];
-    DescriptorHandle m_modelMatrixDescHandle1;
-    ResourceHandle m_modelMatrixBufferHandle1;
-    void* m_modelMatrixBufferMemPtr1;
+
+    DescriptorHandle m_DescData_Instance;
+    ResourceHandle m_DescDataBufferHandle_Instance;
+    void* m_DescDataBufferMemPtr_Instance;
+
+    DescriptorHandle m_DescData_Global;
+    ResourceHandle m_DescDataBufferHandle_Global;
+    void* m_DescDataBufferMemPtr_Global;
 
     ShaderHandle m_blitShaderHandle;
     DescriptorHandle m_swapChainBlitDescHandle;

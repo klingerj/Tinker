@@ -228,7 +228,7 @@ struct DescriptorHandle
 };
 #define DefaultDescHandle_Invalid DescriptorHandle()
 
-#define MAX_DESCRIPTOR_SETS_PER_SHADER 1
+#define MAX_DESCRIPTOR_SETS_PER_SHADER 2
 #define MAX_DESCRIPTORS_PER_SET 1
 
 typedef struct descriptor_layout_params
@@ -240,39 +240,47 @@ typedef struct descriptor_layout_params
 typedef struct descriptor_layout
 {
     DescriptorLayoutParams descriptorLayoutParams[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET];
+
+    void InitInvalid()
+    {
+        for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+        {
+            for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+            {
+                descriptorLayoutParams[uiDescSet][uiDesc].type = DescriptorType::eMax;
+                descriptorLayoutParams[uiDescSet][uiDesc].amount = 0;
+            }
+        }
+    }
 } DescriptorLayout;
 
 // list of resource handles in a descriptor set
 typedef struct descriptor_set_data_handles
 {
     ResourceHandle handles[MAX_DESCRIPTORS_PER_SET];
+
+    void InitInvalid()
+    {
+        for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+        {
+            handles[uiDesc] = DefaultResHandle_Invalid;
+        }
+    }
 } DescriptorSetDataHandles;
 
 // list of descriptor handles to bind
 typedef struct descriptor_set_desc_handles
 {
     DescriptorHandle handles[MAX_DESCRIPTORS_PER_SET];
-} DescriptorSetDescHandles;
 
-inline void InitDescLayout(DescriptorLayout* layout)
-{
-    for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+    void InitInvalid()
     {
         for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
         {
-            layout->descriptorLayoutParams[uiDescSet][uiDesc].type = DescriptorType::eMax;
-            layout->descriptorLayoutParams[uiDescSet][uiDesc].amount = 0;
+            handles[uiDesc] = DefaultDescHandle_Invalid;
         }
     }
-}
-
-inline void InitDescSetDescHandles(DescriptorSetDescHandles* descSetDescHandles)
-{
-    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
-    {
-        descSetDescHandles->handles[uiDesc] = DefaultDescHandle_Invalid;
-    }
-}
+} DescriptorSetDescHandles;
 
 typedef struct graphics_command
 {
@@ -357,7 +365,8 @@ typedef struct graphics_pipeline_params
     uint32 viewportWidth;
     uint32 viewportHeight;
     FramebufferHandle framebufferHandle;
-    DescriptorHandle descriptorHandle;
+    DescriptorHandle* descriptorHandles;
+    uint32 numDescriptorHandles;
 } GraphicsPipelineParams;
 
 #define CREATE_RESOURCE(name) ResourceHandle name(const ResourceDesc& resDesc)
@@ -378,7 +387,7 @@ typedef CREATE_FRAMEBUFFER(create_framebuffer);
 #define DESTROY_FRAMEBUFFER(name) void name(FramebufferHandle handle)
 typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
 
-#define CREATE_GRAPHICS_PIPELINE(name) ShaderHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, FramebufferHandle framebufferHandle, DescriptorHandle descriptorHandle)
+#define CREATE_GRAPHICS_PIPELINE(name) ShaderHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, FramebufferHandle framebufferHandle, DescriptorHandle* descriptorHandles, uint32 numDescriptorHandles)
 typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
 #define DESTROY_GRAPHICS_PIPELINE(name) void name(ShaderHandle handle)
@@ -393,7 +402,7 @@ typedef DESTROY_DESCRIPTOR(destroy_descriptor);
 #define DESTROY_ALL_DESCRIPTORS(name) void name()
 typedef DESTROY_ALL_DESCRIPTORS(destroy_all_descriptors);
 
-#define WRITE_DESCRIPTOR(name) void name(DescriptorLayout* descLayout, DescriptorHandle descSetHandle, DescriptorSetDataHandles* descSetDataHandles)
+#define WRITE_DESCRIPTOR(name) void name(DescriptorLayout* descLayout, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
 typedef WRITE_DESCRIPTOR(write_descriptor);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
