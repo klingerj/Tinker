@@ -1,7 +1,6 @@
 #include "PlatformGameAPI.h"
 #include "Core/Allocators.h"
 #include "Core/Math/VectorTypes.h"
-#include "Core/Containers/RingBuffer.h"
 #include "Core/FileIO/FileLoading.h"
 #include "Core/Utilities/ScopedTimer.h"
 #include "GameGraphicsTypes.h"
@@ -10,6 +9,7 @@
 #include "AssetManager.h"
 #include "Camera.h"
 #include "GameRaytracing.h"
+#include "View.h"
 
 #ifdef _SCRIPTS_DIR
 #define SCRIPTS_PATH STRINGIFY(_SCRIPTS_DIR)
@@ -73,43 +73,9 @@ typedef struct input_state
 static InputState currentInputState = {};
 static InputState previousInputState = {};
 
-typedef struct descriptor_instance_data
-{
-    alignas(16) m4f modelMatrix;
-} DescriptorData_Instance;
-
-typedef struct descriptor_global_data
-{
-    alignas(16) m4f viewProj;
-} DescriptorData_Global;
-
 static VirtualCamera g_gameCamera = {};
 
-// TODO: remove me
-#include <chrono>
-void UpdateDescriptorState(const Platform::PlatformAPIFuncs* platformFuncs)
-{
-    // TODO: remove this, is just for testing
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
-    float scale = 1.0f;
-    DescriptorData_Instance instanceData = {};
-    instanceData.modelMatrix = m4f(scale);
-    instanceData.modelMatrix[3][3] = 1.0f;
-
-    DescriptorData_Global globalData = {};
-    globalData.viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
-
-    gameGraphicsData.m_DescDataBufferMemPtr_Instance = platformFuncs->MapResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
-    memcpy(gameGraphicsData.m_DescDataBufferMemPtr_Instance, &instanceData, sizeof(DescriptorData_Instance));
-    platformFuncs->UnmapResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
-
-    gameGraphicsData.m_DescDataBufferMemPtr_Global = platformFuncs->MapResource(gameGraphicsData.m_DescDataBufferHandle_Global);
-    memcpy(gameGraphicsData.m_DescDataBufferMemPtr_Global, &globalData, sizeof(DescriptorData_Global));
-    platformFuncs->UnmapResource(gameGraphicsData.m_DescDataBufferHandle_Global);
-}
+static View MainView;
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
@@ -134,18 +100,8 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.depthState = Platform::DepthState::eTestOnWriteOff; // Read depth buffer, don't write to it
     gameGraphicsData.m_shaderHandles[eRenderPass_MainView] = LoadShader(platformFuncs, SHADERS_SPV_PATH "basic_vert_glsl.spv", SHADERS_SPV_PATH "basic_frag_glsl.spv", &params);
 
-    // TODO: dont want to have to do this
-    // Set data for render pass
     gameRenderPasses[eRenderPass_ZPrePass].shader = gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass];
-    Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-    descriptors[0].InitInvalid();
-    descriptors[0].handles[0] = gameGraphicsData.m_DescData_Global;
-    descriptors[1].InitInvalid();
-    descriptors[1].handles[0] = gameGraphicsData.m_DescData_Instance;
-    memcpy(gameRenderPasses[eRenderPass_ZPrePass].descriptors, descriptors, sizeof(descriptors));
-
     gameRenderPasses[eRenderPass_MainView].shader = gameGraphicsData.m_shaderHandles[eRenderPass_MainView];
-    memcpy(gameRenderPasses[eRenderPass_MainView].descriptors, descriptors, sizeof(descriptors));
 
     params.blendState = Platform::BlendState::eAlphaBlend;
     params.depthState = Platform::DepthState::eOff;
@@ -236,7 +192,6 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     DestroyShaders(platformFuncs);
-    
     DestroyDescriptors(platformFuncs);
 
     CreateAllDescriptors(platformFuncs);
@@ -435,6 +390,61 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
     }
 }
 
+uint32 GameInit(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
+{
+    TIMED_SCOPED_BLOCK("Game Init");
+
+    g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
+    currentWindowWidth = windowWidth;
+    currentWindowHeight = windowHeight;
+    g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
+
+    // Init network connection if multiplayer
+    if (isMultiplayer)
+    {
+        int result = platformFuncs->InitNetworkConnection();
+        if (result != 0)
+        {
+            connectedToServer = false;
+            return 1;
+        }
+        else
+        {
+            connectedToServer = true;
+        }
+    }
+
+    {
+        TIMED_SCOPED_BLOCK("Load game assets");
+        g_AssetManager.LoadAllAssets(platformFuncs);
+        g_AssetManager.InitAssetGraphicsResources(platformFuncs, graphicsCommandStream);
+    }
+
+    CreateDefaultGeometry(platformFuncs, graphicsCommandStream);
+
+    CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
+
+    // Init view(s)
+    Init(&MainView);
+    uint32 instanceID;
+    instanceID = CreateInstance(&MainView, 0);
+    instanceID = CreateInstance(&MainView, 1);
+    instanceID = CreateInstance(&MainView, 2);
+    instanceID = CreateInstance(&MainView, 3);
+
+    CreateAllDescriptors(platformFuncs);
+    LoadAllShaders(platformFuncs, windowWidth, windowHeight);
+
+    if (0)
+    {
+        RaytraceTest(platformFuncs);
+    }
+
+    return 0;
+}
+
+// TODO: remove me
+#include <chrono>
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
@@ -442,51 +452,15 @@ GAME_UPDATE(GameUpdate)
 
     if (!isGameInitted)
     {
-        TIMED_SCOPED_BLOCK("Game Init");
-
-        g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
-        currentWindowWidth = windowWidth;
-        currentWindowHeight = windowHeight;
-        g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
-
-        // Init network connection if multiplayer
-        if (isMultiplayer)
+        uint32 initResult = GameInit(platformFuncs, graphicsCommandStream, windowWidth, windowHeight);
+        if (initResult != 0)
         {
-            int result = platformFuncs->InitNetworkConnection();
-            if (result != 0)
-            {
-                connectedToServer = false;
-                return 1;
-            }
-            else
-            {
-                connectedToServer = true;
-            }
+            return initResult;
         }
-
-        {
-            TIMED_SCOPED_BLOCK("Load game assets");
-            g_AssetManager.LoadAllAssets(platformFuncs);
-            g_AssetManager.InitAssetGraphicsResources(platformFuncs, graphicsCommandStream);
-        }
-
-        CreateDefaultGeometry(platformFuncs, graphicsCommandStream);
-
-        CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
-
-        CreateAllDescriptors(platformFuncs);
-        LoadAllShaders(platformFuncs, windowWidth, windowHeight);
-
-        if (0)
-        {
-            RaytraceTest(platformFuncs);
-        }
-
         isGameInitted = true;
     }
 
     // TODO: move this
-    // TODO: pass time data into this function
     // Animate camera
     static auto startTime = std::chrono::high_resolution_clock::now();
     auto currentTime = std::chrono::high_resolution_clock::now();
@@ -497,7 +471,19 @@ GAME_UPDATE(GameUpdate)
     currentWindowHeight = windowHeight;
 
     ProcessInputState(inputStateDeltas, platformFuncs);
-    UpdateDescriptorState(platformFuncs);
+
+    // Update view(s)
+    {
+        MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
+        MainView.m_projMatrix = g_projMat;
+
+        Platform::DescriptorSetDataHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        descriptors[0].InitInvalid();
+        descriptors[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
+        descriptors[1].InitInvalid();
+        descriptors[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
+        Update(&MainView, descriptors, platformFuncs);
+    }
 
     // Record buffer update commands
     // TODO: have dynamic assets?
@@ -511,6 +497,7 @@ GAME_UPDATE(GameUpdate)
         UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idx Buf");
     }*/
 
+    // Clear depth buffer
     {
         Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
@@ -541,10 +528,15 @@ GAME_UPDATE(GameUpdate)
         ++command;
     }
 
-    // Draw calls
-    for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
+    // Record render commands for view(s)
     {
-        RecordAllCommands(&gameRenderPasses[uiPass], platformFuncs, graphicsCommandStream);
+        Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        descriptors[0].InitInvalid();
+        descriptors[0].handles[0] = gameGraphicsData.m_DescData_Global;
+        descriptors[1].InitInvalid();
+        descriptors[1].handles[0] = gameGraphicsData.m_DescData_Instance;
+        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, descriptors);
+        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, descriptors);
     }
 
     // FINAL BLIT TO SCREEN

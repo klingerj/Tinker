@@ -42,7 +42,7 @@ typedef SEND_MESSAGE_TO_SERVER(send_message_to_server);
 typedef SYSTEM_COMMAND(system_command);
 
 // Platform api functions passed from platform layer to game
-typedef struct platform_api_functions
+struct PlatformAPIFuncs
 {
     enqueue_worker_thread_job* EnqueueWorkerThreadJob;
     read_entire_file* ReadEntireFile;
@@ -65,7 +65,7 @@ typedef struct platform_api_functions
     destroy_all_descriptors* DestroyAllDescriptors;
     write_descriptor* WriteDescriptor;
     submit_cmds_immediate* SubmitCmdsImmediate;
-} PlatformAPIFuncs;
+};
 
 // Game side
 #define GAME_UPDATE(name) uint32 name(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tinker::Platform::InputStateDeltas* inputStateDeltas)

@@ -351,12 +351,12 @@ typedef struct graphics_command
     };
 } GraphicsCommand;
 
-typedef struct graphics_command_stream
+struct GraphicsCommandStream
 {
     GraphicsCommand* m_graphicsCommands;
     uint32 m_numCommands;
     uint32 m_maxCommands;
-} GraphicsCommandStream;
+};
 
 typedef struct graphics_pipeline_params
 {

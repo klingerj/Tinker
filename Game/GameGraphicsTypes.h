@@ -6,6 +6,8 @@
 
 using namespace Tinker;
 using namespace Platform;
+using namespace Core;
+using namespace Math;
 
 // Buffer that has no persistent staging buffer
 // Meant to updated once with a staging buffer which should
@@ -87,6 +89,16 @@ typedef struct game_graphics_data
     ShaderHandle m_blitShaderHandle;
     DescriptorHandle m_swapChainBlitDescHandle;
 } GameGraphicsData;
+
+typedef struct descriptor_instance_data
+{
+    alignas(16) m4f modelMatrix;
+} DescriptorData_Instance;
+
+typedef struct descriptor_global_data
+{
+    alignas(16) m4f viewProj;
+} DescriptorData_Global;
 
 template <uint32 numPoints, uint32 numIndices>
 struct default_geometry

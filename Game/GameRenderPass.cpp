@@ -23,11 +23,10 @@ void DrawMeshDataCommand(Platform::GraphicsCommandStream* graphicsCommandStream,
     ++graphicsCommandStream->m_numCommands;
 }
 
-void RecordAllCommands(GameRenderPass* renderPass, const Platform::PlatformAPIFuncs* platformFuncs, Platform::GraphicsCommandStream* graphicsCommandStream)
+void StartRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* graphicsCommandStream)
 {
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    // Start render pass
     command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = renderPass->debugLabel;
     command->m_framebufferHandle = renderPass->framebuffer;
@@ -35,27 +34,14 @@ void RecordAllCommands(GameRenderPass* renderPass, const Platform::PlatformAPIFu
     command->m_renderHeight = renderPass->renderHeight;
     ++graphicsCommandStream->m_numCommands;
     ++command;
+}
 
-    // Draw calls
-    // TODO: for now this just draws every asset that the asset manager stores. This should later only draw assets that are meant for this render pass.
-    for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
-    {
-        StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
+void EndRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* graphicsCommandStream)
+{
+    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-        DrawMeshDataCommand(graphicsCommandStream,
-            meshData->m_numIndices,
-            meshData->m_indexBuffer.gpuBufferHandle,
-            meshData->m_positionBuffer.gpuBufferHandle,
-            meshData->m_uvBuffer.gpuBufferHandle,
-            meshData->m_normalBuffer.gpuBufferHandle,
-            renderPass->shader,
-            renderPass->descriptors,
-            "Draw asset");
-    }
-
-    command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-    // End render pass
     command->m_commandType = Platform::GraphicsCmd::eRenderPassEnd;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 }
+
