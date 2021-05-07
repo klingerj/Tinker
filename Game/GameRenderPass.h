@@ -3,15 +3,20 @@
 #include "PlatformGameAPI.h"
 
 using namespace Tinker;
+using namespace Platform;
 
-typedef struct game_render_pass
+struct GameRenderPass
 {
     Platform::FramebufferHandle framebuffer;
     Platform::ShaderHandle shader; // TODO: change this, pick shader perm or have asset manager store shaders
-    Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER]; // TODO: this shouldn't be owned by the render pass
     uint32 renderWidth;
     uint32 renderHeight;
     const char* debugLabel;
-} GameRenderPass;
+};
 
-void RecordAllCommands(GameRenderPass* renderPass, const Platform::PlatformAPIFuncs* platformFuncs, Platform::GraphicsCommandStream* graphicsCommandStream);
+void StartRenderPass(GameRenderPass* renderPass, GraphicsCommandStream* graphicsCommandStream);
+void EndRenderPass(GameRenderPass* renderPass, GraphicsCommandStream* graphicsCommandStream);
+void DrawMeshDataCommand(GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
+    ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
+    ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, DescriptorSetDescHandles* descriptors,
+    const char* debugLabel);
