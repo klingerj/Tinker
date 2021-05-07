@@ -17,54 +17,19 @@
 //#define SCRIPTS_PATH "..\\Scripts\\"
 #endif
 
-#include <cstring>
 #include <string.h>
 
 using namespace Tinker;
 using namespace Core;
 using namespace Math;
 
-/*static void Test_Thread_Func()
-{
-    Platform::PrintDebugString("I am from a thread.\n");
-}
-*/
-
-#define DEFAULT_QUAD_NUM_VERTICES 4
-#define DEFAULT_QUAD_NUM_INDICES 6
-DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {
-    // buffer handles
-    { DefaultResHandle_Invalid },
-    { DefaultResHandle_Invalid },
-    { DefaultResHandle_Invalid },
-    { DefaultResHandle_Invalid },
-    // positions
-    v4f(-1.0f, -1.0f, 0.0f, 1.0f),
-    v4f(1.0f, -1.0f, 0.0f, 1.0f),
-    v4f(-1.0f, 1.0f, 0.0f, 1.0f),
-    v4f(1.0f, 1.0f, 0.0f, 1.0f),
-    //uvs
-    v2f(0.0f, 0.0f),
-    v2f(0.0f, 1.0f),
-    v2f(0.0f, 1.0f),
-    v2f(1.0f, 1.0f),
-    // normals
-    v3f(0.0f, 0.0f, 1.0f),
-    v3f(0.0f, 0.0f, 1.0f),
-    v3f(0.0f, 0.0f, 1.0f),
-    v3f(0.0f, 0.0f, 1.0f),
-    // indices
-    0, 1, 2, 2, 1, 3
-};
-
-static GameGraphicsData gameGraphicsData = {};
-static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
-
 static bool isGameInitted = false;
 static const bool isMultiplayer = false;
 static bool connectedToServer = false;
+uint32 currentWindowWidth = 0, currentWindowHeight = 0;
 
-uint32 currentWindowWidth, currentWindowHeight;
+static GameGraphicsData gameGraphicsData = {};
+static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
 
 typedef struct input_state
 {
@@ -74,7 +39,6 @@ static InputState currentInputState = {};
 static InputState previousInputState = {};
 
 static VirtualCamera g_gameCamera = {};
-
 static View MainView;
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -84,7 +48,7 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     Platform::DescriptorLayout mainDrawDescriptorLayout = {};
     mainDrawDescriptorLayout.InitInvalid();
     Platform::GraphicsPipelineParams params;
-    params.blendState = Platform::BlendState::eInvalid; // no color attachment
+    params.blendState = Platform::BlendState::eInvalid; // No color attachment
     params.depthState = Platform::DepthState::eTestOnWriteOn; // Write to depth
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
@@ -198,114 +162,6 @@ void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 win
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
-void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Platform::GraphicsCommandStream* graphicsCommandStream)
-{
-    // Default Quad
-    {
-        ResourceDesc desc;
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
-
-        // Positions
-        desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eVertex;
-        defaultQuad.m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        ResourceHandle stagingBufferHandle_Pos = platformFuncs->CreateResource(desc);
-        void* stagingBufferMemPtr_Pos = platformFuncs->MapResource(stagingBufferHandle_Pos);
-
-        // UVs
-        desc.dims = v3ui(sizeof(defaultQuad.m_uvs), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eVertex;
-        defaultQuad.m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        ResourceHandle stagingBufferHandle_UV = platformFuncs->CreateResource(desc);
-        void* stagingBufferMemPtr_UV = platformFuncs->MapResource(stagingBufferHandle_UV);
-
-        // Normals
-        desc.dims = v3ui(sizeof(defaultQuad.m_normals), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eVertex;
-        defaultQuad.m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        ResourceHandle stagingBufferHandle_Norm = platformFuncs->CreateResource(desc);
-        void* stagingBufferMemPtr_Norm = platformFuncs->MapResource(stagingBufferHandle_Norm);
-
-        // Indices
-        desc.dims = v3ui(sizeof(defaultQuad.m_indices), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eIndex;
-        defaultQuad.m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
-
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        ResourceHandle stagingBufferHandle_Idx = platformFuncs->CreateResource(desc);
-        void* stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
-
-        // Memcpy into staging buffers
-        memcpy(stagingBufferMemPtr_Pos, defaultQuad.m_points, sizeof(defaultQuad.m_points));
-        memcpy(stagingBufferMemPtr_UV, defaultQuad.m_uvs, sizeof(defaultQuad.m_uvs));
-        memcpy(stagingBufferMemPtr_Norm, defaultQuad.m_normals, sizeof(defaultQuad.m_normals));
-        memcpy(stagingBufferMemPtr_Idx, defaultQuad.m_indices, sizeof(defaultQuad.m_indices));
-
-        // Do GPU buffer copies
-        Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx Pos Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_points);
-        command->m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_Pos;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
-
-        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx UV Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_uvs);
-        command->m_dstBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_UV;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
-
-        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx Norm Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_normals);
-        command->m_dstBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_Norm;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
-
-        command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx Idx Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_indices);
-        command->m_dstBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_Idx;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
-
-        platformFuncs->SubmitCmdsImmediate(graphicsCommandStream);
-        graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
-
-        // Unmap + destroy resources
-        platformFuncs->UnmapResource(stagingBufferHandle_Pos);
-        platformFuncs->UnmapResource(stagingBufferHandle_UV);
-        platformFuncs->UnmapResource(stagingBufferHandle_Norm);
-        platformFuncs->UnmapResource(stagingBufferHandle_Idx);
-
-        platformFuncs->DestroyResource(stagingBufferHandle_Pos);
-        platformFuncs->DestroyResource(stagingBufferHandle_UV);
-        platformFuncs->DestroyResource(stagingBufferHandle_Norm);
-        platformFuncs->DestroyResource(stagingBufferHandle_Idx);
-    }
-}
-
-void DestroyDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs)
-{
-    // Default quad
-    platformFuncs->DestroyResource(defaultQuad.m_positionBuffer.gpuBufferHandle);
-    platformFuncs->DestroyResource(defaultQuad.m_uvBuffer.gpuBufferHandle);
-    platformFuncs->DestroyResource(defaultQuad.m_normalBuffer.gpuBufferHandle);
-    platformFuncs->DestroyResource(defaultQuad.m_indexBuffer.gpuBufferHandle);
-}
-
 void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     ResourceDesc desc;
@@ -339,6 +195,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
 {
     previousInputState = currentInputState;
 
+    // Apply deltas to input state
     for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
     {
         if (inputStateDeltas->keyCodes[uiKeycode].numStateChanges > 0)
@@ -349,10 +206,23 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
         }
     }
 
+    // Process current state
     for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
     {
         switch (uiKeycode)
         {
+            case Platform::Keycode::eF9:
+            {
+                // Handle the initial downpress once and nothing more
+                if (currentInputState.keyCodes[uiKeycode].isDown && !previousInputState.keyCodes[uiKeycode].isDown)
+                {
+                    Platform::PrintDebugString("Running raytrace test...\n");
+                    RaytraceTest(platformFuncs);
+                    Platform::PrintDebugString("...Done.\n");
+                }
+                break;
+            }
+
             case Platform::Keycode::eF10:
             {
                 // Handle the initial downpress once and nothing more
@@ -434,11 +304,6 @@ uint32 GameInit(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker:
 
     CreateAllDescriptors(platformFuncs);
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
-
-    if (0)
-    {
-        RaytraceTest(platformFuncs);
-    }
 
     return 0;
 }
@@ -542,7 +407,6 @@ GAME_UPDATE(GameUpdate)
     // FINAL BLIT TO SCREEN
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    // Blit to screen
     command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
     command->m_framebufferHandle = DefaultFramebufferHandle_Invalid;
@@ -621,10 +485,11 @@ GAME_DESTROY(GameDestroy)
     if (isGameInitted)
     {
         DestroyWindowResizeDependentResources(platformFuncs);
-
         DestroyDefaultGeometry(platformFuncs);
 
         // Game graphics
+        // Destroy mesh data
+        // TODO: either move this to asset manager or move this stuff out of asset manager, probs
         for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
         {
             StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
@@ -635,6 +500,7 @@ GAME_DESTROY(GameDestroy)
             platformFuncs->DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
         }
 
+        // Destroy texture data
         for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numTextureAssets; ++uiAssetID)
         {
             ResourceHandle textureHandle = g_AssetManager.GetTextureGraphicsDataByID(uiAssetID);
@@ -654,3 +520,4 @@ GAME_DESTROY(GameDestroy)
     _CrtDumpMemoryLeaks();
     #endif
 }
+

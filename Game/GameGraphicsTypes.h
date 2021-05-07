@@ -113,7 +113,14 @@ struct default_geometry
     uint32 m_indices[numIndices];
 };
 
+// Default geometry
 template <uint32 numPoints, uint32 numIndices>
 using DefaultGeometry = struct default_geometry<numPoints, numIndices>;
 
-extern DefaultGeometry<4, 6> defaultQuad;
+#define DEFAULT_QUAD_NUM_VERTICES 4
+#define DEFAULT_QUAD_NUM_INDICES 6
+extern DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad;
+
+void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Platform::GraphicsCommandStream* graphicsCommandStream);
+void DestroyDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs);
+

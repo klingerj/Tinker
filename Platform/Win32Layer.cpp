@@ -877,6 +877,12 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
             break;
         }
 
+        case VK_F9:
+        {
+            gameKeyCode = Keycode::eF9;
+            break;
+        }
+
         case VK_F10:
         {
             gameKeyCode = Keycode::eF10;
