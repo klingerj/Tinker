@@ -29,6 +29,21 @@ void VectorBase::Reserve(uint32 numEles, uint32 eleSize)
     }
 }
 
+void VectorBase::Resize(uint32 numEles, uint32 eleSize)
+{
+    Reserve(numEles, eleSize);
+    if (m_size < numEles)
+    {
+        // Set new elements to 0
+        memset(m_data + m_size * eleSize, 0, eleSize * (numEles - m_size));
+        m_size = numEles;
+    }
+    else
+    {
+        m_size = numEles;
+    }
+}
+
 void VectorBase::Clear()
 {
     m_size = 0;
