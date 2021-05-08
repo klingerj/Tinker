@@ -3,10 +3,10 @@
 
 #include <string.h>
 
-void DrawMeshDataCommand(Platform::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
-    ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
-    ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, Platform::DescriptorSetDescHandles* descriptors,
-    const char* debugLabel)
+void DrawMeshDataCommand(GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
+    uint32 numInstances, ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle,
+    ResourceHandle uvBufferHandle, ResourceHandle normalBufferHandle, ShaderHandle shaderHandle,
+    DescriptorSetDescHandles* descriptors, const char* debugLabel)
 {
     Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
@@ -14,6 +14,7 @@ void DrawMeshDataCommand(Platform::GraphicsCommandStream* graphicsCommandStream,
     command->debugLabel = debugLabel;
 
     command->m_numIndices = numIndices;
+    command->m_numInstances = numInstances;
     command->m_indexBufferHandle = indexBufferHandle;
     command->m_positionBufferHandle = positionBufferHandle;
     command->m_uvBufferHandle = uvBufferHandle;

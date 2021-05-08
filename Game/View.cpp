@@ -9,18 +9,17 @@ using namespace Core;
 using namespace Math;
 using namespace Containers;
 
-void Init(View* view)
+void Init(View* view, uint32 maxInstances)
 {
     *view = {};
+    view->m_instances.Reserve(maxInstances);
+    view->m_instanceData.Reserve(maxInstances);
 }
 
 void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platform::PlatformAPIFuncs* platformFuncs)
 {
     DescriptorData_Global globalData = {};
     globalData.viewProj = view->m_projMatrix * view->m_viewMatrix;
-
-    // TODO: set the whole array of instance data
-    DescriptorData_Instance* instanceData = &view->m_instanceData[0];
 
     // Global
     Platform::ResourceHandle bufferHandle = descDataHandles[0].handles[0];
@@ -29,9 +28,11 @@ void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platfor
     platformFuncs->UnmapResource(bufferHandle);
 
     // Instance
+    DescriptorData_Instance* instanceData = &view->m_instanceData[0];
     bufferHandle = descDataHandles[1].handles[0];
+
     void* descDataBufferMemPtr_Instance = platformFuncs->MapResource(bufferHandle);
-    memcpy(descDataBufferMemPtr_Instance, instanceData, sizeof(DescriptorData_Instance));
+    memcpy(descDataBufferMemPtr_Instance, instanceData, sizeof(DescriptorData_Instance) * view->m_instances.Size());
     platformFuncs->UnmapResource(bufferHandle);
 }
 
@@ -67,6 +68,7 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tinker::Pl
 
         DrawMeshDataCommand(graphicsCommandStream,
             meshData->m_numIndices,
+            1,
             meshData->m_indexBuffer.gpuBufferHandle,
             meshData->m_positionBuffer.gpuBufferHandle,
             meshData->m_uvBuffer.gpuBufferHandle,

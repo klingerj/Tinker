@@ -95,10 +95,11 @@ void* VulkanMapResource(VulkanContextResources* vulkanContextResources, Resource
 void VulkanUnmapResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
 
 // Graphics command recording
+void VulkanRecordCommandPushConstant(VulkanContextResources* vulkanContextResources, uint8* data, uint32 sizeInBytes, ShaderHandle shaderHandle);
 void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
     ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
     ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
-    const char* debugLabel, bool immediateSubmit);
+    uint32 numInstances, const char* debugLabel, bool immediateSubmit);
 void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
     ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles,
     bool immediateSubmit);

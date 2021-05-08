@@ -1092,6 +1092,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
 
     uint32 newPipelineHandle = vulkanContextResources->resources->vulkanPipelineResourcePool.Alloc();
 
+    // Descriptor layouts
     VkDescriptorSetLayout descriptorSetLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     TINKER_ASSERT(numDescriptorHandles <= MAX_DESCRIPTOR_SETS_PER_SHADER);
     for (uint32 uiDesc = 0; uiDesc < numDescriptorHandles; ++uiDesc)
@@ -1103,12 +1104,19 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
         }
     }
 
+    // Push constants
+    VkPushConstantRange pushConstantRange = {};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = sizeof(uint32) * 4;
+    // TODO: use maximum available size, or get the size as a parameter somehow
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = numDescriptorHandles;
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = nullptr;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     VkPipelineLayout* pipelineLayout = &vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->pipelineLayout;
 
@@ -1397,7 +1405,7 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
 
         VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
         descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descLayoutInfo.bindingCount = 1;// descriptorCount;
+        descLayoutInfo.bindingCount = 1;// descriptorCount; // TODO: figure this out
         descLayoutInfo.pBindings = &descLayoutBinding[0][0];
 
         result = vkCreateDescriptorSetLayout(vulkanContextResources->resources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
@@ -1456,7 +1464,7 @@ void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, Descr
         uint32 descriptorCount = 0;
 
         // Desc set info data
-        VkDescriptorBufferInfo descBufferInfo = {};
+        VkDescriptorBufferInfo descBufferInfo = {}; // TODO: figure this out
         VkDescriptorImageInfo descImageInfo = {};
 
         for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
@@ -1674,6 +1682,7 @@ void EndVulkanCommandRecordingImmediate(VulkanContextResources* vulkanContextRes
     vkQueueWaitIdle(vulkanContextResources->resources->graphicsQueue);
 }
 
+// TODO: remove mystery bool param
 VkCommandBuffer ChooseAppropriateCommandBuffer(VulkanContextResources* vulkanContextResources, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = vulkanContextResources->resources->commandBuffer_Immediate;
@@ -1687,10 +1696,22 @@ VkCommandBuffer ChooseAppropriateCommandBuffer(VulkanContextResources* vulkanCon
     return commandBuffer;
 }
 
+void VulkanRecordCommandPushConstant(VulkanContextResources* vulkanContextResources, uint8* data, uint32 sizeInBytes, ShaderHandle shaderHandle)
+{
+    TINKER_ASSERT(data && sizeInBytes);
+    TINKER_ASSERT(shaderHandle != DefaultShaderHandle_Invalid);
+
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, false);
+    VulkanPipelineResource* pipelineResource = vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle.m_hShader);
+
+    vkCmdPushConstants(commandBuffer, pipelineResource->pipelineLayout,
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
+}
+
 void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
     ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
     ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
-    const char* debugLabel, bool immediateSubmit)
+    uint32 numInstances, const char* debugLabel, bool immediateSubmit)
 {
     TINKER_ASSERT(positionBufferHandle != DefaultResHandle_Invalid);
     TINKER_ASSERT(uvBufferHandle != DefaultResHandle_Invalid);
@@ -1745,7 +1766,7 @@ void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
     };
     vulkanContextResources->resources->pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
     #endif
-    vkCmdDrawIndexed(commandBuffer, numIndices, 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, 0, 0, 0);
 }
 
 void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,

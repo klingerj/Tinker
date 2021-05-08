@@ -293,6 +293,7 @@ typedef struct graphics_command
         struct
         {
             uint32 m_numIndices;
+            uint32 m_numInstances;
             ResourceHandle m_indexBufferHandle;
             ResourceHandle m_positionBufferHandle;
             ResourceHandle m_uvBufferHandle;

@@ -17,6 +17,6 @@ struct GameRenderPass
 void StartRenderPass(GameRenderPass* renderPass, GraphicsCommandStream* graphicsCommandStream);
 void EndRenderPass(GameRenderPass* renderPass, GraphicsCommandStream* graphicsCommandStream);
 void DrawMeshDataCommand(GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
-    ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
-    ResourceHandle normalBufferHandle, ShaderHandle shaderHandle, DescriptorSetDescHandles* descriptors,
-    const char* debugLabel);
+    uint32 numInstances, ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle,
+    ResourceHandle uvBufferHandle, ResourceHandle normalBufferHandle, ShaderHandle shaderHandle,
+    DescriptorSetDescHandles* descriptors, const char* debugLabel);
