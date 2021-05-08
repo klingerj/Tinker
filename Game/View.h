@@ -22,7 +22,7 @@ struct View
     alignas(CACHE_LINE) Vector<Instance> m_instances;
     Vector<DescriptorData_Instance> m_instanceData;
 };
-void Init(View* view);
+void Init(View* view, uint32 maxInstances);
 void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platform::PlatformAPIFuncs* platformFuncs);
 
 uint32 CreateInstance(View* view, uint32 assetID);

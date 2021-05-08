@@ -39,6 +39,7 @@ static InputState currentInputState = {};
 static InputState previousInputState = {};
 
 static VirtualCamera g_gameCamera = {};
+#define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
 
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -124,7 +125,7 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     // Descriptor data
     ResourceDesc desc;
     desc.resourceType = Platform::ResourceType::eBuffer1D;
-    desc.dims = v3ui(sizeof(DescriptorData_Instance), 0, 0);
+    desc.dims = v3ui(sizeof(DescriptorData_Instance) * MAX_INSTANCES_PER_VIEW, 0, 0);
     desc.bufferUsage = Platform::BufferUsage::eUniform;
     gameGraphicsData.m_DescDataBufferHandle_Instance = platformFuncs->CreateResource(desc);
     desc.dims = v3ui(sizeof(DescriptorData_Global), 0, 0);
@@ -295,12 +296,30 @@ uint32 GameInit(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker:
     CreateGameRenderingResources(platformFuncs, windowWidth, windowHeight);
 
     // Init view(s)
-    Init(&MainView);
+    DescriptorData_Instance data;
+    data.modelMatrix = m4f(1.0f);
+
+    Init(&MainView, MAX_INSTANCES_PER_VIEW);
     uint32 instanceID;
     instanceID = CreateInstance(&MainView, 0);
+    data.modelMatrix[3][0] = -8.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
     instanceID = CreateInstance(&MainView, 1);
+    data.modelMatrix[3][0] = 0.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
     instanceID = CreateInstance(&MainView, 2);
+    data.modelMatrix = m4f(0.5f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][0] = 8.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
     instanceID = CreateInstance(&MainView, 3);
+    data.modelMatrix = m4f(7.0f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][1] = 8.0f;
+    SetInstanceData(&MainView, instanceID, &data);
 
     CreateAllDescriptors(platformFuncs);
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
@@ -418,6 +437,7 @@ GAME_UPDATE(GameUpdate)
     command->m_commandType = Platform::GraphicsCmd::eDrawCall;
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
+    command->m_numInstances = 1;
     command->m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
     command->m_uvBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
     command->m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;

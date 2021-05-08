@@ -239,6 +239,9 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
     }
     else
     {
+        // Track number of instances for proper indexing into uniform buffer of instance data
+        uint32 instanceCount = 0;
+
         for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
         {
             TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < GraphicsCmd::eMax);
@@ -260,10 +263,16 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                                     currentCmd.m_shaderHandle, &currentCmd.m_descriptors[0], immediateSubmit);
                                 currentShader = currentCmd.m_shaderHandle;
                             }
+                            {
+                                uint32 data[4] = {};
+                                data[0] = instanceCount;
+                                Graphics::VulkanRecordCommandPushConstant(&vulkanContextResources, (uint8*)data, sizeof(uint32) * 4, currentShader);
+                            }
                             Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
                                 currentCmd.m_positionBufferHandle, currentCmd.m_uvBufferHandle,
                                 currentCmd.m_normalBufferHandle, currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
-                                currentCmd.debugLabel, immediateSubmit);
+                                currentCmd.m_numInstances, currentCmd.debugLabel, immediateSubmit);
+                            instanceCount += currentCmd.m_numInstances;
                             break;
                         }
 
@@ -305,6 +314,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         case GraphicsAPI::eVulkan:
                         {
+                            instanceCount = 0;
+
                             Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_framebufferHandle,
                                 currentCmd.m_renderWidth, currentCmd.m_renderHeight,
                                 currentCmd.debugLabel, immediateSubmit);
