@@ -25,6 +25,7 @@ protected:
     uint32 m_capacity;
 
     void Reserve(uint32 numEles, uint32 eleSize);
+    void Resize(uint32 numEles, uint32 eleSize);
     void Clear();
     void PushBackRaw(void* data, uint32 eleSize);
     uint32 Find(void* data, uint32 eleSize, CompareFunc Compare) const;
@@ -57,6 +58,11 @@ struct Vector : public VectorBase
     void Reserve(uint32 numEles)
     {
         VectorBase::Reserve(numEles, sizeof(T));
+    }
+
+    void Resize(uint32 numEles)
+    {
+        VectorBase::Resize(numEles, sizeof(T));
     }
 
     void Clear()

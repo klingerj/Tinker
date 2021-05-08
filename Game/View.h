@@ -11,7 +11,8 @@ using namespace Math;
 using namespace Containers;
 struct Instance
 {
-    uint32 assetID;
+    uint32 m_handleToSelf;
+    uint32 m_assetID;
 };
 
 struct View
@@ -21,6 +22,13 @@ struct View
     alignas(CACHE_LINE) m4f m_viewProjMatrix;
     alignas(CACHE_LINE) Vector<Instance> m_instances;
     Vector<DescriptorData_Instance> m_instanceData;
+
+    // Sorted copies of instance data
+    Vector<Instance> m_instances_sorted;
+    Vector<DescriptorData_Instance> m_instanceData_sorted;
+
+    uint32 m_maxInstances;
+    uint32 m_numInstances;
 };
 void Init(View* view, uint32 maxInstances);
 void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platform::PlatformAPIFuncs* platformFuncs);
