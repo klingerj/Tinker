@@ -122,6 +122,7 @@ void RaytraceTest(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
                 v3f interpNormal = meshNormals[isx.hitTri * 3] * isx.bary[0] +
                     meshNormals[isx.hitTri * 3 + 1] * isx.bary[1] +
                     meshNormals[isx.hitTri * 3 + 2] * isx.bary[2];
+                Normalize(interpNormal);
 
                 v3f lightDir = v3f(-1, -1, 1);
                 Normalize(lightDir);

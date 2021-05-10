@@ -32,6 +32,6 @@ void main()
 {
     mat4 modelMat = InstanceData.data[gl_InstanceIndex + pushConstants.instanceData[0]].modelMatrix;
     gl_Position = (GlobalData.viewProjMatrix * modelMat) * vec4(vertPosition.xyz, 1.0);
-    outNormal = (transpose(inverse(modelMat)) * vec4(vertNormal, 0)).xyz;
+    outNormal = normalize(transpose(inverse(modelMat)) * vec4(normalize(vertNormal), 0)).xyz;
     outUV = vertUV;
 }
