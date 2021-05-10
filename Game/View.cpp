@@ -22,9 +22,9 @@ void Init(View* view, uint32 maxInstances)
     view->m_instanceData_sorted.Resize(maxInstances);
 }
 
-bool CompareInstanceByAssetID_LessThan(const Instance& a, const Instance& b)
+CMP_LT_FUNC(CompareLessThan_InstanceByAssetID)
 {
-    return a.m_assetID < b.m_assetID;
+    return ((Instance*)A)->m_assetID < ((Instance*)B)->m_assetID;
 }
 
 void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platform::PlatformAPIFuncs* platformFuncs)
@@ -44,7 +44,7 @@ void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platfor
         // TODO: still need to handle destroyed instances
         // TODO: only copy the array over if the instance vector is dirty
         memcpy(&view->m_instances_sorted[0], view->m_instances.Data(), sizeof(Instance) * view->m_numInstances);
-        Core::MergeSort((Instance*)&view->m_instances_sorted[0], view->m_numInstances, CompareInstanceByAssetID_LessThan);
+        Core::MergeSort((Instance*)&view->m_instances_sorted[0], view->m_numInstances, CompareLessThan_InstanceByAssetID);
         for (uint32 uiInstance = 0; uiInstance < view->m_instances.Size(); ++uiInstance)
         {
             uint32 instanceOrigHandle = view->m_instances_sorted[uiInstance].m_handleToSelf;
