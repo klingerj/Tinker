@@ -71,7 +71,7 @@ uint32 CreateInstance(View* view, uint32 assetID)
     view->m_instances.PushBackRaw(newInstance);
     ++view->m_numInstances;
 
-    view->m_instanceData.PushBackRaw({}); // identity matrix
+    view->m_instanceData.PushBackRaw({});
     DescriptorData_Instance data = {};
     data.modelMatrix = m4f(1.0f);
     SetInstanceData(view, newInstanceID, &data);
@@ -89,21 +89,41 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tinker::Pl
 {
     StartRenderPass(renderPass, graphicsCommandStream);
 
-    for (uint32 uiInstance = 0; uiInstance < view->m_instances.Size(); ++uiInstance)
+    if (view->m_numInstances > 0)
     {
-        uint32 assetID = view->m_instances[uiInstance].m_assetID;
-        StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(assetID);
+        uint32 currentAssetID = view->m_instances[0].m_assetID;
+        uint32 currentNumInstances = 1;
+        uint32 uiInstance = 1;
+        while (uiInstance <= view->m_numInstances)
+        {
+            bool finalDrawCall = (uiInstance == view->m_numInstances);
+            // Scan for changes in asset id among instances, and batch draw calls
+            uint32 nextAssetID = TINKER_INVALID_HANDLE;
+            if (!finalDrawCall) nextAssetID = view->m_instances[uiInstance].m_assetID;
+            if (finalDrawCall || nextAssetID != currentAssetID)
+            {
+                StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
+                DrawMeshDataCommand(graphicsCommandStream,
+                        meshData->m_numIndices,
+                        currentNumInstances,
+                        meshData->m_indexBuffer.gpuBufferHandle,
+                        meshData->m_positionBuffer.gpuBufferHandle,
+                        meshData->m_uvBuffer.gpuBufferHandle,
+                        meshData->m_normalBuffer.gpuBufferHandle,
+                        renderPass->shader,
+                        descriptors,
+                        "Draw asset");
 
-        DrawMeshDataCommand(graphicsCommandStream,
-            meshData->m_numIndices,
-            1,
-            meshData->m_indexBuffer.gpuBufferHandle,
-            meshData->m_positionBuffer.gpuBufferHandle,
-            meshData->m_uvBuffer.gpuBufferHandle,
-            meshData->m_normalBuffer.gpuBufferHandle,
-            renderPass->shader,
-            descriptors,
-            "Draw asset");
+                currentNumInstances = 1;
+                currentAssetID = nextAssetID;
+            }
+            else
+            {
+                ++currentNumInstances;
+            }
+
+            ++uiInstance;
+        }
     }
 
     EndRenderPass(renderPass, graphicsCommandStream);

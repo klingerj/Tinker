@@ -314,11 +314,24 @@ uint32 GameInit(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker:
     data.modelMatrix[3][3] = 1.0f;
     data.modelMatrix[3][0] = 8.0f;
     SetInstanceData(&MainView, instanceID, &data);
+    
+    instanceID = CreateInstance(&MainView, 2);
+    data.modelMatrix = m4f(0.25f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][0] = 8.0f;
+    data.modelMatrix[3][2] = 6.0f;
+    SetInstanceData(&MainView, instanceID, &data);
 
     instanceID = CreateInstance(&MainView, 3);
     data.modelMatrix = m4f(7.0f);
     data.modelMatrix[3][3] = 1.0f;
     data.modelMatrix[3][1] = 8.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+    
+    instanceID = CreateInstance(&MainView, 3);
+    data.modelMatrix = m4f(7.0f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][1] = 10.0f;
     SetInstanceData(&MainView, instanceID, &data);
 
     CreateAllDescriptors(platformFuncs);
