@@ -4,7 +4,8 @@ Successor to the Joe Engine. Everything written from scratch.
 
 #### Rough list of features implemented currently:
 * Win32 Platform layer, loads game code as DLL
-* Relatively thin graphics layer
+* API-agnostic graphics layer
+* Draw call batching, instanced rendering
 * Simple unit testing and benchmarking framework
 * Small linear algebra library
 * Asset file loading
@@ -12,6 +13,8 @@ Successor to the Joe Engine. Everything written from scratch.
 * Simple thread-job system with lockless queue
 * Custom memory allocators
 * Custom data structures (vector, ring buffer)
+* SPIR-V virtual machine (WIP)
+* Simple CPU-side raytracing framework (Octree WIP)
 
 #### Roadmap of features to come:
 * More data structures (e.g. map)
@@ -22,7 +25,6 @@ Successor to the Joe Engine. Everything written from scratch.
 * PBR shaders
 * Compute shader support
 * Post processing, probably render graph
-* UI and Font Rendering
 * Support more platforms, probably Linux
 * Support more graphics APIs, OpenGL/DX12
 
