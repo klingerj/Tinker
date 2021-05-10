@@ -13,13 +13,13 @@ void Test_SortingIntegers()
     std::array<uint32, numUints> uintArr_StdSorted = {};
     for (uint32 i = 0; i < numUints; ++i)
     {
-        uintArr[i] = rand();
+        uintArr[i] = rand() % 16;
         uintArr_StdSorted[i] = uintArr[i];
     }
 
     memcpy(&uintArr_MergeSorted[0], &uintArr[0], sizeof(uint32) * numUints);
 
-    Core::MergeSort(&uintArr_MergeSorted[0], numUints, uint32_cmp_lt);
+    Core::MergeSort(&uintArr_MergeSorted[0], numUints, CompareLessThan_uint32);
     std::sort(uintArr_StdSorted.begin(), uintArr_StdSorted.end());
     
     for (uint32 i = 0; i < numUints; ++i)
