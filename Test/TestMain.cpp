@@ -4,6 +4,7 @@
 #include "ContainerTests/RingBufferTests.h"
 #include "ContainerTests/VectorTests.h"
 #include "MemoryTests/AllocatorTests.h"
+#include "AlgorithmTests/SortingTests.h"
 
 uint8 g_AssertFailedFlag = 0;
 
@@ -72,4 +73,10 @@ int main()
     TINKER_TEST("Vector Push Back Raw Multiple Resize", Test_VectorPushBackMultipleResize);
     TINKER_TEST("Vector Push Back Raw Multiple Clear", Test_VectorPushBackMultipleClear);
     TINKER_TEST("Vector Find Empty", Test_VectorFindEmpty);
+    TINKER_TEST("Vector Resize Up From Empty", Test_VectorResizeUpFromEmpty);
+    TINKER_TEST("Vector Resize Up From Non Empty", Test_VectorResizeUpFromNonEmpty);
+    TINKER_TEST("Vector Resize Down From Non Empty to Smaller", Test_VectorResizeDownFromNonEmptyToSmaller);
+
+    TINKER_TEST_PRINT_NAME("Sorting");
+    TINKER_TEST("MergeSort Integers", Test_SortingIntegers);
 }

@@ -8,6 +8,8 @@ namespace Tinker
 namespace Core
 {
 
+inline bool uint32_cmp_lt(const uint32& a, const uint32& b) { return a < b; }
+
 template <typename T, typename CompareLessThan>
 inline void Merge(T* left, uint32 numElesLeft, T* right, uint32 numElesRight, CompareLessThan Compare)
 {
@@ -21,10 +23,14 @@ inline void Merge(T* left, uint32 numElesLeft, T* right, uint32 numElesRight, Co
     while (1)
     {
         if (i + j == totalEles) break;
+        // TODO: probably add other conditions, e.g. i == numElesLeft or j == numElesRight
+        // also not sure that this condition is correct
 
         // Assuming that left and right are actually contiguous
         T* dstList = left + i + j;
-        if (Compare(tmpList[i], tmpList[numElesLeft + j]))
+        
+        // Copy over left's next ele if i is not done counting AND either j is done, or ith < jth ele
+        if ((Compare(tmpList[i], tmpList[numElesLeft + j]) || j >= numElesRight) && i < numElesLeft)
         {
             memcpy(dstList, &tmpList[i], sizeof(T));
             ++i;
@@ -33,20 +39,6 @@ inline void Merge(T* left, uint32 numElesLeft, T* right, uint32 numElesRight, Co
         {
             memcpy(dstList, &tmpList[numElesLeft + j], sizeof(T));
             ++j;
-        }
-
-        // Check if one counter finishes before the other
-        if (i == numElesLeft)
-        {
-            uint32 numRightRemaining = numElesRight - j;
-            memcpy(left + i + j, &tmpList[j], sizeof(T) * numRightRemaining);
-            break;
-        }
-        else if (j == numElesRight)
-        {
-            uint32 numLeftRemaining = numElesLeft - i;
-            memcpy(left + i + j, &tmpList[i], sizeof(T) * numLeftRemaining);
-            break;
         }
     }
     CoreFree(tmpList);
