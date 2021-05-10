@@ -334,6 +334,11 @@ uint32 GameInit(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker:
     data.modelMatrix[3][1] = 10.0f;
     SetInstanceData(&MainView, instanceID, &data);
 
+    /*for (int i = 0; i < (128 - 6); ++i)
+    {
+        CreateInstance(&MainView, 2);
+    }*/
+
     CreateAllDescriptors(platformFuncs);
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
@@ -369,8 +374,24 @@ GAME_UPDATE(GameUpdate)
 
     ProcessInputState(inputStateDeltas, platformFuncs);
 
+    // Temp test code for deletion of instances
+    if (0)
+    {
+        static uint32 frameCtr = 0;
+        static uint32 inst = 0;
+        if (frameCtr % 120 == 0)
+        {
+            DestroyInstance(&MainView, inst);
+            ++inst;
+            if (inst == 128) inst = 0;
+            //CreateInstance(&MainView, 1); // stuff slowly turns into cubes
+        }
+        ++frameCtr;
+    }
+
     // Update view(s)
     {
+        //TIMED_SCOPED_BLOCK("View update");
         MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
         MainView.m_projMatrix = g_projMat;
 
@@ -427,6 +448,7 @@ GAME_UPDATE(GameUpdate)
 
     // Record render commands for view(s)
     {
+        //TIMED_SCOPED_BLOCK("Record render pass commands");
         Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0].InitInvalid();
         descriptors[0].handles[0] = gameGraphicsData.m_DescData_Global;

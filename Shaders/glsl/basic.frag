@@ -10,7 +10,7 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    float lambert = dot(LIGHT_DIR, inNormal);
+    float lambert = dot(LIGHT_DIR, normalize(inNormal));
     vec3 finalColor = clamp(BASE_COLOR * lambert, AMBIENT, 1.0);
     outColor = vec4(finalColor, 1.0);
 }
