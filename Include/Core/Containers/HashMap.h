@@ -27,12 +27,7 @@ struct HashMapBase
     // TODO: assuming uint32 here
     enum : uint32 { eInvalidIndex = MAX_UINT32 };
     
-    ~HashMapBase()
-    {
-        CoreFree(m_data);
-        m_data = nullptr;
-        m_size = 0;
-    }
+    ~HashMapBase();
 
 private:
     uint32 ProbeFunc(uint32 index) const
@@ -44,72 +39,34 @@ protected:
     uint8* m_data;
     uint32 m_size;
 
-    void Reserve(uint32 numEles, uint32 eleSize)
-    {
-        if (numEles > m_size)
-        {
-            void* newData = CoreMalloc(numEles * eleSize);
-            memcpy(newData, m_data, m_size * eleSize);
-
-            CoreFree(m_data); // free old data
-            m_data = (uint8*)newData;
-
-            // Init all other elements to invalid
-            uint32 numRemainingEles = numEles - m_size;
-            memset(m_data + m_size * eleSize, 255, numRemainingEles * eleSize);
-
-            m_size = numEles;
-        }
-    }
-
-    uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare) const
-    {
-        uint32 currIndex = index;
-        do
-        {
-            void* dataKey  = m_data + currIndex * dataPairSize;
-            if (Compare(dataKey, key))
-            {
-                return currIndex;
-            }
-
-            currIndex = ProbeFunc(currIndex);
-        }
-        while (currIndex != index);
-
-        return eInvalidIndex;
-    }
-
-    void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const
-    {
-        TINKER_ASSERT(index < m_size);
-        return m_data + index * dataPairSize + dataValueOffset;
-    }
-
-    uint32 Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize)
-    {
-        void* keyToInsert = m_data + index * dataPairSize;
-        //TODO: don't hard code uint32 here
-        uint32 invalid = eInvalidIndex;
-        if (Compare(keyToInsert, &invalid) || Compare(keyToInsert, key)) // check if key is marked as invalid (unused) or matches the key
-        {
-            // found a slot
-            memcpy(keyToInsert, key, dataValueOffset); // write key - assumes that offset is the same as key size
-            memcpy((uint8*)keyToInsert + dataValueOffset, value, dataValueSize); // write value
-        }
-        else
-        {
-            // Do linear probing
-        }
-
-        return eInvalidIndex;
-    }
+    void Reserve(uint32 numEles, uint32 eleSize);
+    uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare) const;
+    void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const;
+    uint32 Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize);
 };
 
+
+// Good hash function discovered here: https://github.com/skeeto/hash-prospector 
+inline uint32 lowbias32(uint32 x)
+{
+    x ^= x >> 16;
+    x *= 0x7feb352d;
+    x ^= x >> 15;
+    x *= 0x846ca68b;
+    x ^= x >> 16;
+    return x;
+}
+
 template <typename T>
-uint32 Hash(T val, uint32 dataSizeMax)
+inline uint32 Hash(T val, uint32 dataSizeMax)
 {
     return val % dataSizeMax;
+}
+
+template <>
+inline uint32 Hash<uint32>(uint32 val, uint32 dataSizeMax)
+{
+    return lowbias32(val) % dataSizeMax;
 }
 
 template <typename tKey, typename tVal>
@@ -143,7 +100,7 @@ public:
 
     uint32 FindIndex(tKey key) const
     {
-        uint32 index = Hash(key, HashMapBase::eInvalidIndex - 1);
+        uint32 index = Hash(key, m_size);
         return HashMapBase::FindIndex(index, &key, ePairSize, CompareKeyFunc_uint32);
     }
 
