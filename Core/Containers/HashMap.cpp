@@ -37,6 +37,9 @@ void HashMapBase::Reserve(uint32 numEles, uint32 eleSize)
 
 uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare) const
 {
+    uint32 invalid = eInvalidIndex;
+    if (Compare(key, &invalid)) { return eInvalidIndex; }
+
     uint32 currIndex = index;
     do
     {
@@ -62,6 +65,7 @@ uint32 HashMapBase::Insert(uint32 index, void* key, void* value, CompareKeyFunc 
 {
     //TODO: don't hard code uint32 here
     uint32 invalid = eInvalidIndex;
+    if (Compare(key, &invalid)) { return eInvalidIndex; }
 
     uint32 currIndex = index;
     do

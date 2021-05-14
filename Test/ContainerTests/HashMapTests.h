@@ -70,3 +70,13 @@ void Test_HashMap_Basic()
     delete keys;
     delete vals;
 }
+
+void Test_HashMap_InvalidKey()
+{
+    HashMap<uint32, uint32> map;
+    map.Reserve(64);
+
+    uint32 index = map.FindIndex(HashMapBase::eInvalidIndex);
+    TINKER_ASSERT(index == HashMapBase::eInvalidIndex);
+}
+
