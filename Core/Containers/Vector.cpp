@@ -24,6 +24,8 @@ void VectorBase::Reserve(uint32 numEles, uint32 eleSize)
     {
         void* newData = CoreMalloc(numEles * eleSize);
         memcpy(newData, m_data, m_size * eleSize);
+
+        CoreFree(m_data); // free old data
         m_data = (uint8*)newData;
         m_capacity = numEles;
     }

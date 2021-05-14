@@ -21,9 +21,9 @@ void* CoreMalloc(size_t size)
 
 void CoreFree(void* ptr)
 {
-    Utility::RecordMemDealloc(ptr);
-    #if defined(MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
     free(ptr);
+    #if defined(MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
+    Utility::RecordMemDealloc(ptr);
     #endif
 }
 
