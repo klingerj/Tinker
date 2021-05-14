@@ -35,8 +35,8 @@ rem TinkerCore - static library
 set OBJDir=%cd%\obj_core_engine\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 
-set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp ../Core/Containers/Vector.cpp ../Core/Utilities/MemTracker.cpp ../Core/Mem.cpp ../Core/Raytracing/RayIntersection.cpp ../Core/Raytracing/AccelStructures/Octree.cpp
-set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj %OBJDir%Vector.obj %OBJDir%MemTracker.obj %OBJDir%Mem.obj %OBJDir%Octree.obj %OBJDir%RayIntersection.obj 
+set SourceListCore=../Core/Math/VectorTypes.cpp ../Core/FileIO/FileLoading.cpp ../Core/Containers/Vector.cpp ../Core/Containers/HashMap.cpp ../Core/Utilities/MemTracker.cpp ../Core/Mem.cpp ../Core/Raytracing/RayIntersection.cpp ../Core/Raytracing/AccelStructures/Octree.cpp
+set OBJListCore= %OBJDir%VectorTypes.obj %OBJDir%FileLoading.obj %OBJDir%Vector.obj %OBJDir%HashMap.obj %OBJDir%MemTracker.obj %OBJDir%Mem.obj %OBJDir%Octree.obj %OBJDir%RayIntersection.obj 
 set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (

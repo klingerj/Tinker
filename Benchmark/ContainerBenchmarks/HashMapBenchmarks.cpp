@@ -15,8 +15,8 @@ void BM_hm_Startup()
 {
     for (uint32 i = 0; i < g_numEles; ++i)
     {
-        keys[i] = rand() % UINT32_MAX;
-        vals[i] = rand() % UINT32_MAX;
+        keys[i] = rand();
+        vals[i] = rand();
     }
 }
 
