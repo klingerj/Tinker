@@ -1,9 +1,9 @@
 # Tinker Engine
 
-Successor to the Joe Engine. Everything written from scratch.
+Successor to the Joe Engine. Nearly everything written from scratch.
 
 #### Rough list of features implemented currently:
-* Win32 Platform layer, loads game code as DLL
+* Win32 Platform layer, hotloads game code as DLL
 * API-agnostic graphics layer
 * Draw call batching, instanced rendering
 * Simple unit testing and benchmarking framework
@@ -12,21 +12,22 @@ Successor to the Joe Engine. Everything written from scratch.
 * Shader hotloading on keypress
 * Simple thread-job system with lockless queue
 * Custom memory allocators
-* Custom data structures (vector, ring buffer)
+* Custom data structures
+  * Vector
+  * Hash map
+  * Ring buffer
 * SPIR-V virtual machine (WIP)
 * Simple CPU-side raytracing framework (Octree WIP)
 
 #### Roadmap of features to come:
-* More data structures (e.g. map)
 * Polish and expand graphics layer
-* Memory allocation tracking
 * Threading and benchmarking of file loading and parsing
-* PNG loading, LZ decompression
 * PBR shaders
 * Compute shader support
 * Post processing, probably render graph
 * Support more platforms, probably Linux
 * Support more graphics APIs, OpenGL/DX12
+* IMGUI integration
 
 #### Platforms supported currently:
 * Windows 10 / x86
