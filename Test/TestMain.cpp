@@ -3,6 +3,7 @@
 #include "MathTests/VectorTypeTests.h"
 #include "ContainerTests/RingBufferTests.h"
 #include "ContainerTests/VectorTests.h"
+#include "ContainerTests/HashMapTests.h"
 #include "MemoryTests/AllocatorTests.h"
 #include "AlgorithmTests/SortingTests.h"
 
@@ -79,4 +80,7 @@ int main()
 
     TINKER_TEST_PRINT_NAME("Sorting");
     TINKER_TEST("MergeSort Integers", Test_SortingIntegers);
+
+    TINKER_TEST_PRINT_NAME("HashMap");
+    TINKER_TEST("HashMap Basic", Test_HashMap_Basic);
 }
