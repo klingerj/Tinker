@@ -3,6 +3,8 @@
 #include "Core/CoreDefines.h"
 #include "Core/Mem.h"
 
+#include <string.h>
+
 #define CMP_KEY_FUNC(name) bool name(const void* A, const void* B)
 typedef CMP_KEY_FUNC(CompareKeyFunc);
 
@@ -11,6 +13,13 @@ inline CMP_KEY_FUNC(CompareKeyFunc_uint32)
 { 
     return *(uint32*)A == *(uint32*)B;
 }
+
+namespace Tinker
+{
+namespace Core
+{
+namespace Containers
+{
 
 // Open addressing hashmap
 struct HashMapBase
@@ -41,6 +50,8 @@ protected:
         {
             void* newData = CoreMalloc(numEles * eleSize);
             memcpy(newData, m_data, m_size * eleSize);
+
+            CoreFree(m_data); // free old data
             m_data = (uint8*)newData;
 
             // Init all other elements to invalid
@@ -144,8 +155,11 @@ public:
     uint32 Insert(tKey key, tVal value)
     {
         TINKER_ASSERT(key != eInvalidIndex);
-        uint32 index = Hash(key, HashMapBase::eInvalidIndex - 1);
+        uint32 index = Hash(key, m_size);
         return HashMapBase::Insert(index, &key, &value, CompareKeyFunc_uint32, ePairSize, ePairValOffset, ePairValSize);
     }
 };
 
+}
+}
+}
