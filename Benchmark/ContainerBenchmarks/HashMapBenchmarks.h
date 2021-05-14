@@ -1,6 +1,6 @@
-#include "Core/Math/VectorTypes.h"
+#include "Core/CoreDefines.h"
 
-// Vector benchmarks
+// Hashmap benchmarks
 void BM_hm_Startup();
 void BM_hm_Shutdown();
 uint32 BM_HMIns1M_fScalar();
