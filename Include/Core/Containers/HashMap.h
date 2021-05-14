@@ -111,7 +111,6 @@ public:
 
     uint32 Insert(tKey key, tVal value)
     {
-        TINKER_ASSERT(key != eInvalidIndex);
         uint32 index = Hash(key, m_size);
         return HashMapBase::Insert(index, &key, &value, CompareKeyFunc_uint32, ePairSize, ePairValOffset, ePairValSize);
     }

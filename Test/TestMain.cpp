@@ -83,4 +83,5 @@ int main()
 
     TINKER_TEST_PRINT_NAME("HashMap");
     TINKER_TEST("HashMap Basic", Test_HashMap_Basic);
+    TINKER_TEST("HashMap Invalid key", Test_HashMap_InvalidKey);
 }
