@@ -1,4 +1,6 @@
-namespace Tinker
+#pragma once
+
+namespace Tk
 {
 namespace Platform
 {

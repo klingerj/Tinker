@@ -1,7 +1,7 @@
 #include "Core/Math/VectorTypes.h"
 #include "TinkerTest.h"
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Core;
 using namespace Math;
 

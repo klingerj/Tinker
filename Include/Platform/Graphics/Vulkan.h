@@ -11,7 +11,7 @@
 // TODO: include other platform headers
 #endif
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

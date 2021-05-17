@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Core/Utilities/Logging.h"
+#include "Core/Utility/Logging.h"
 #include "VulkanTypes.h"
 
 #define MAX_GPU_ALLOCS 4096
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

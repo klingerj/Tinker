@@ -2,7 +2,7 @@
 
 #include <windows.h>
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

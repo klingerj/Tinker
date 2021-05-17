@@ -3,7 +3,7 @@
 #include "GameGraphicsTypes.h"
 #include "Core/Allocators.h"
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Core;
 using namespace Math;
 
@@ -42,9 +42,9 @@ public:
 
     void FreeMemory();
 
-    void LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platformFuncs);
-    void InitAssetGraphicsResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs,
-        Tinker::Platform::GraphicsCommandStream* graphicsCommandStream);
+    void LoadAllAssets(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+    void InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs,
+        Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
     // TODO: declare a mapping of ID to each asset file
     StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
     ResourceHandle GetTextureGraphicsDataByID(uint32 textureID);

@@ -1,6 +1,6 @@
 #include "Core/Math/VectorTypes.h"
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {
@@ -406,7 +406,7 @@ typedef DESTROY_ALL_DESCRIPTORS(destroy_all_descriptors);
 #define WRITE_DESCRIPTOR(name) void name(DescriptorLayout* descLayout, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
 typedef WRITE_DESCRIPTOR(write_descriptor);
 
-#define SUBMIT_CMDS_IMMEDIATE(name) void name(Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
+#define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
 typedef SUBMIT_CMDS_IMMEDIATE(submit_cmds_immediate);
 
 }

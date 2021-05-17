@@ -2,7 +2,7 @@
 
 #include "PlatformGameAPI.h"
 
-namespace Tinker
+namespace Tk
 {
 namespace Memory
 {

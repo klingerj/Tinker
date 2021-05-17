@@ -18,8 +18,7 @@
 #define VULKAN_MAX_SWAP_CHAIN_IMAGES 3
 #define VULKAN_MAX_FRAMES_IN_FLIGHT 2
 
-
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

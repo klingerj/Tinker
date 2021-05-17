@@ -3,7 +3,7 @@
 #include "Core/Allocators.h"
 #include "TinkerTest.h"
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Memory;
 
 // Linear allocator

@@ -12,7 +12,7 @@
 #define TIMER_MSG_SUFFIX " elapsed time in us: "
 #define TIMER_MSG_SUFFIX_LEN sizeof(TIMER_MSG_SUFFIX) - 1 // don't copy null byte
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {
@@ -59,7 +59,7 @@ public:
 
 // Don't compile any timers if we disable timing entirely
 #ifdef PERFORMANCE_TIMERS
-#define TIMED_SCOPED_BLOCK(msg) Tinker::Core::Utility::ScopedTimer __LINE__##timer(msg);
+#define TIMED_SCOPED_BLOCK(msg) Tk::Core::Utility::ScopedTimer __LINE__##timer(msg);
 #else
 #define TIMED_SCOPED_BLOCK(msg)
 #endif

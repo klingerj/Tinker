@@ -2,7 +2,7 @@
 #include "Core/Allocators.h"
 #include "Core/Math/VectorTypes.h"
 #include "Core/FileIO/FileLoading.h"
-#include "Core/Utilities/ScopedTimer.h"
+#include "Core/Utility/ScopedTimer.h"
 #include "GameGraphicsTypes.h"
 #include "ShaderLoading.h"
 #include "GameRenderPass.h"
@@ -19,7 +19,7 @@
 
 #include <string.h>
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Core;
 using namespace Math;
 
@@ -261,7 +261,7 @@ void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const
     }
 }
 
-uint32 GameInit(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
+uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
@@ -417,7 +417,7 @@ GAME_UPDATE(GameUpdate)
 
     // Clear depth buffer
     {
-        Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
         // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
         command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
@@ -459,7 +459,7 @@ GAME_UPDATE(GameUpdate)
     }
 
     // FINAL BLIT TO SCREEN
-    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";

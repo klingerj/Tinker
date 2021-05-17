@@ -5,7 +5,7 @@
 #include "Core/Containers/Vector.h"
 #include "GameGraphicsTypes.h"
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Core;
 using namespace Math;
 using namespace Containers;
@@ -45,5 +45,4 @@ void DestroyInstance(View* view, uint32 instanceID);
 void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instance* data);
 
 struct GameRenderPass;
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorSetDescHandles* descriptors);
-
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorSetDescHandles* descriptors);

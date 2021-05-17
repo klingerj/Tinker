@@ -1,6 +1,6 @@
 #include "Core/CoreDefines.h"
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

@@ -11,19 +11,19 @@ struct Buffer
 
     void Alloc(uint32 sizeInBytes)
     {
-        m_data = (uint8*)Tinker::Core::CoreMalloc(sizeInBytes);
+        m_data = (uint8*)Tk::Core::CoreMalloc(sizeInBytes);
         m_sizeInBytes = sizeInBytes;
     }
 
     void Dealloc()
     {
-        Tinker::Core::CoreFree(m_data);
+        Tk::Core::CoreFree(m_data);
         m_data = nullptr;
         m_sizeInBytes = 0;
     }
 };
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

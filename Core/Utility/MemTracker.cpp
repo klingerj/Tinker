@@ -1,9 +1,9 @@
-#include "Core/Utilities/MemTracker.h"
+#include "Core/Utility/MemTracker.h"
 #include "PlatformGameAPI.h"
 
 #include <string.h>
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

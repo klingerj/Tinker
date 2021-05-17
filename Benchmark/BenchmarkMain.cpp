@@ -2,7 +2,7 @@
 
 #include "MathBenchmarks/VectorTypeBenchmarks.h"
 #include "ContainerBenchmarks/HashMapBenchmarks.h"
-#include "Core/Utilities/ScopedTimer.h"
+#include "Core/Utility/ScopedTimer.h"
 
 #include <timeapi.h>
 

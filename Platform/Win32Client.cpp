@@ -3,7 +3,7 @@
 #endif
 
 #include "Platform/Win32Client.h"
-#include "Core/Utilities/Logging.h"
+#include "Core/Utility/Logging.h"
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -16,7 +16,7 @@
 SOCKET ConnectSocket = INVALID_SOCKET;
 struct addrinfo* infos;
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

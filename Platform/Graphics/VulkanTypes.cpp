@@ -1,10 +1,10 @@
 #include "Platform/Graphics/VulkanTypes.h"
 #include "Platform/Graphics/GPUMemAllocator.h"
-#include "Core/Utilities/Logging.h"
+#include "Core/Utility/Logging.h"
 
 #include <cstring>
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

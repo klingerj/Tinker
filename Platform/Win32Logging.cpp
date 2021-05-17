@@ -1,8 +1,8 @@
-#include "Core/Utilities/Logging.h"
+#include "Core/Utility/Logging.h"
 
 #include <windows.h>
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

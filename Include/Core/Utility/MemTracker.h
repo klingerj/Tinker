@@ -4,7 +4,7 @@
 
 #define MAX_RECORDS MAX_UINT16
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

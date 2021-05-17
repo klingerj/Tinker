@@ -2,7 +2,7 @@
 
 #include "Win32WorkerThreadPool.cpp"
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Platform;
 using namespace Core;
 using namespace Math;

@@ -4,7 +4,7 @@
 #include "Core/Math/VectorTypes.h"
 #include "PlatformGameAPI.h"
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Platform;
 using namespace Core;
 using namespace Math;

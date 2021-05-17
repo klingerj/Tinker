@@ -1,7 +1,7 @@
-#include "Core/Utilities/MemTracker.h"
+#include "Core/Utility/MemTracker.h"
 #include "Core/Mem.h"
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

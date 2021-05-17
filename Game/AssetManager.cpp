@@ -1,5 +1,5 @@
 #include "AssetManager.h"
-#include "Core/Utilities/Logging.h"
+#include "Core/Utility/Logging.h"
 #include "Core/FileIO/FileLoading.h"
 
 #include <string.h>
@@ -11,7 +11,7 @@ void AssetManager::FreeMemory()
     m_meshBufferAllocator.ExplicitFree();
 }
 
-void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void AssetManager::LoadAllAssets(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
     // Meshes
     const uint32 numMeshAssets = 4;
@@ -304,8 +304,8 @@ void AssetManager::LoadAllAssets(const Tinker::Platform::PlatformAPIFuncs* platf
     delete textureFileDataBuffer;
 }
 
-void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAPIFuncs* platformFuncs,
-    Tinker::Platform::GraphicsCommandStream* graphicsCommandStream)
+void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs,
+    Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
 {
     // Meshes
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
@@ -375,7 +375,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
         // Create, submit, and execute the buffer copy commands
         {
             // Graphics command to copy from staging buffer to gpu local buffer
-            Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+            Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
             // Position buffer copy
             command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
@@ -459,7 +459,7 @@ void AssetManager::InitAssetGraphicsResources(const Tinker::Platform::PlatformAP
     }
 
     // Graphics command to copy from staging buffer to gpu local buffer
-    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     // Create, submit, and execute the buffer copy commands
     for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)

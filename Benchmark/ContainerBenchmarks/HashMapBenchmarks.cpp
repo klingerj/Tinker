@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Core;
 using namespace Containers;
 

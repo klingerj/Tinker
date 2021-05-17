@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Math/VectorTypes.h"
-using namespace Tinker;
+using namespace Tk;
 using namespace Core;
 using namespace Math;
 
