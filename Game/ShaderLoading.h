@@ -2,7 +2,7 @@
 
 #include "PlatformGameAPI.h"
 
-using namespace Tinker;
+using namespace Tk;
 
 #ifdef _SHADERS_SPV_DIR
 #define SHADERS_SPV_PATH STRINGIFY(_SHADERS_SPV_DIR)

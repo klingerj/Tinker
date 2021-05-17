@@ -1,7 +1,7 @@
 #include "Platform/Graphics/Vulkan.h"
 #include "Platform/Graphics/VulkanTypes.h"
 #include "PlatformGameAPI.h"
-#include "Core/Utilities/Logging.h"
+#include "Core/Utility/Logging.h"
 
 #include <iostream>
 // TODO: move this to be a compile define
@@ -13,7 +13,7 @@
 // in RenderDoc for some reason. To debug with RenderDoc, you should turn on this #define.
 #define WORK_WITH_RENDERDOC
 
-namespace Tinker
+namespace Tk
 {
 namespace Platform
 {

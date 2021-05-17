@@ -4,7 +4,7 @@
 #include "Core/Raytracing/AccelStructures/Octree.h"
 #include "GameGraphicsTypes.h"
 #include "Camera.h"
-#include "Core/Utilities/ScopedTimer.h"
+#include "Core/Utility/ScopedTimer.h"
 #include "AssetManager.h"
 
 #include <string.h>
@@ -28,7 +28,7 @@ void RayMeshIntersectNaive(const Raytracing::Ray& ray, v3f* triData, uint32 numT
     }
 }
 
-void RaytraceTest(const Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+void RaytraceTest(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
     TIMED_SCOPED_BLOCK("Raytrace test");
 

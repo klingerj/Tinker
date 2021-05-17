@@ -6,7 +6,7 @@
 #include <atomic>
 #include <xmmintrin.h>
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Core;
 using namespace Math;
 using namespace Containers;
@@ -123,7 +123,7 @@ void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instanc
     memcpy(&view->m_instanceData[instanceID], data, sizeof(DescriptorData_Instance));
 }
 
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorSetDescHandles* descriptors)
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorSetDescHandles* descriptors)
 {
     StartRenderPass(renderPass, graphicsCommandStream);
 

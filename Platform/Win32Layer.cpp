@@ -1,7 +1,7 @@
 #include "PlatformGameAPI.h"
 #include "Platform/Graphics/Vulkan.h"
-#include "Core/Utilities/Logging.h"
-#include "Core/Utilities/ScopedTimer.h"
+#include "Core/Utility/Logging.h"
+#include "Core/Utility/ScopedTimer.h"
 #include "Platform/Win32Client.h"
 #include "Win32WorkerThreadPool.cpp"
 
@@ -16,7 +16,7 @@
 #define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
 #endif
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Platform;
 
 static GAME_UPDATE(GameUpdateStub) { return 0; }

@@ -5,7 +5,7 @@
 #include "PlatformGameGraphicsAPI.h"
 #include "PlatformGameInputHandingAPI.h"
 
-namespace Tinker
+namespace Tk
 {
 
 namespace Platform
@@ -68,13 +68,13 @@ struct PlatformAPIFuncs
 };
 
 // Game side
-#define GAME_UPDATE(name) uint32 name(const Tinker::Platform::PlatformAPIFuncs* platformFuncs, Tinker::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tinker::Platform::InputStateDeltas* inputStateDeltas)
+#define GAME_UPDATE(name) uint32 name(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)
 typedef GAME_UPDATE(game_update);
 
-#define GAME_DESTROY(name) void name(Tinker::Platform::PlatformAPIFuncs* platformFuncs)
+#define GAME_DESTROY(name) void name(Tk::Platform::PlatformAPIFuncs* platformFuncs)
 typedef GAME_DESTROY(game_destroy);
 
-#define GAME_WINDOW_RESIZE(name) void name(Tinker::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)
+#define GAME_WINDOW_RESIZE(name) void name(Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)
 typedef GAME_WINDOW_RESIZE(game_window_resize);
 
 }

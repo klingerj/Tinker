@@ -2,7 +2,7 @@
 
 #include "Core/Math/VectorTypes.h"
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

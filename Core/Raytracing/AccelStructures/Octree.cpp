@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

@@ -1,7 +1,6 @@
 #include "Core/Raytracing/RayIntersection.h"
 
-
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {

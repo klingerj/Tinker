@@ -2,7 +2,7 @@
 
 #include "PlatformGameAPI.h"
 
-using namespace Tinker;
+using namespace Tk;
 using namespace Platform;
 
 struct GameRenderPass

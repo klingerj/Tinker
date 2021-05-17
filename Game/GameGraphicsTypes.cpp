@@ -3,11 +3,11 @@
 #include <string.h>
 
 /*
-void CopyStagingBufferToGPUBufferCommand(Tinker::Platform::GraphicsCommandStream* graphicsCommandStream,
+void CopyStagingBufferToGPUBufferCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStream,
     ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
     const char* debugLabel)
 {
-    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
     command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
     command->debugLabel = debugLabel;
     command->m_sizeInBytes = bufferSizeInBytes;
@@ -67,7 +67,7 @@ void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Plat
         memcpy(stagingBufferMemPtr_Idx, defaultQuad.m_indices, sizeof(defaultQuad.m_indices));
 
         // Do GPU buffer copies
-        Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
         command->m_commandType = (uint32)Platform::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Pos Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_points);

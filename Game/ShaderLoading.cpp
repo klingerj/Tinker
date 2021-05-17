@@ -4,7 +4,7 @@
 static Memory::LinearAllocator shaderBytecodeAllocator;
 const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
 
-using namespace Tinker;
+using namespace Tk;
 
 void FreeShaderBytecodeMemory()
 {

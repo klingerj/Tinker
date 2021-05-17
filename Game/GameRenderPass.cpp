@@ -8,7 +8,7 @@ void DrawMeshDataCommand(GraphicsCommandStream* graphicsCommandStream, uint32 nu
     ResourceHandle uvBufferHandle, ResourceHandle normalBufferHandle, ShaderHandle shaderHandle,
     DescriptorSetDescHandles* descriptors, const char* debugLabel)
 {
-    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     command->m_commandType = Platform::GraphicsCmd::eDrawCall;
     command->debugLabel = debugLabel;
@@ -26,7 +26,7 @@ void DrawMeshDataCommand(GraphicsCommandStream* graphicsCommandStream, uint32 nu
 
 void StartRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* graphicsCommandStream)
 {
-    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = renderPass->debugLabel;
@@ -39,7 +39,7 @@ void StartRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream
 
 void EndRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* graphicsCommandStream)
 {
-    Tinker::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     command->m_commandType = Platform::GraphicsCmd::eRenderPassEnd;
     ++graphicsCommandStream->m_numCommands;

@@ -14,7 +14,7 @@ inline CMP_KEY_FUNC(CompareKeyFunc_uint32)
     return *(uint32*)A == *(uint32*)B;
 }
 
-namespace Tinker
+namespace Tk
 {
 namespace Core
 {
