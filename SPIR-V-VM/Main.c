@@ -53,7 +53,7 @@ void WriteBMP(uint8* imageData)
     bmpinfoheader[10] = (unsigned char)(h >> 16);
     bmpinfoheader[11] = (unsigned char)(h >> 24);
 
-    fopen_s(&f, "img.bmp", "wb");
+    fopen_s(&f, "../Output/TestImages/spirv_output.bmp", "wb");
     fwrite(bmpfileheader, 1, 14, f);
     fwrite(bmpinfoheader, 1, 40, f);
     for (int i = 0; i < h; i++)
@@ -136,7 +136,7 @@ int main()
                         AddStateInputData(context, state, 1, inNormal, sizeof(float) * 3);
 
                         //printf("\n\nExecuting the shader...\n");
-                        uint8 error = CallEntryPointByName(context, state, "main");
+                        uint8 error = 0;// CallEntryPointByName(context, state, "main");
                         if (!error)
                         {
                             //printf("\n\n...Executed the shader.\n");
