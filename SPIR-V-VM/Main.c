@@ -136,7 +136,7 @@ int main()
                         AddStateInputData(context, state, 1, inNormal, sizeof(float) * 3);
 
                         //printf("\n\nExecuting the shader...\n");
-                        uint8 error = 0;// CallEntryPointByName(context, state, "main");
+                        uint8 error = CallEntryPointByName(context, state, "main");
                         if (!error)
                         {
                             //printf("\n\n...Executed the shader.\n");
