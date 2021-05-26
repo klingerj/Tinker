@@ -10,7 +10,8 @@ namespace Platform
 class /*alignas(CACHE_LINE)*/ WorkerJob
 {
 public:
-    volatile bool m_done = false;
+    alignas(CACHE_LINE) volatile bool m_done = false;
+    uint8 pad[CACHE_LINE - sizeof(bool)];
     virtual ~WorkerJob() {}
 
     virtual void operator()() = 0;
@@ -20,10 +21,10 @@ template <typename T>
 class JobFunc : public WorkerJob
 {
 public:
-    T m_t;
+    alignas(CACHE_LINE) T m_func;
 
-    JobFunc(T t) : m_t(t) {}
-    virtual void operator()() override { m_t(); };
+    JobFunc(T func) : m_func(func) {}
+    void operator()() override { m_func(); };
 };
 
 inline void WaitOnJob(WorkerJob* job)
@@ -35,9 +36,9 @@ class WorkerJobList
 {
 public:
     uint32 m_numJobs;
-    WorkerJob** m_jobs = {};
+    WorkerJob** m_jobs;
 
-    WorkerJobList() : m_numJobs(0) {}
+    WorkerJobList() : m_numJobs(0), m_jobs(nullptr) {}
     ~WorkerJobList() {}
 
     void Init(uint32 numJobs)

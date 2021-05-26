@@ -7,7 +7,7 @@ using namespace Platform;
 using namespace Core;
 using namespace Math;
 
-const uint32 threadCount = 8;
+const uint32 threadCount = 1;
 WorkerThreadPool g_threadpool;
 
 const uint32 numJobs = threadCount;
@@ -16,9 +16,9 @@ WorkerJob* jobs[numJobs];
 v2f* g_v2s = nullptr;
 v4f* g_v4s = nullptr;
 v4f* g_v4s_dst = nullptr;
-const uint32 jobSize = (2 << 16);
+const uint32 jobSize = (2 << 5);
 const uint32 numVectors = numJobs * jobSize;
-const uint32 numIters = 25;
+const uint32 numIters = 10000;
 
 void BM_v2_Startup()
 {
@@ -182,6 +182,8 @@ void BM_m4MulV4_fScalar_MT()
 {
     for (uint32 i = 0; i < numJobs; ++i)
     {
+        uint32 jobOffset = i * jobSize;
+
         jobs[i] = CreateNewThreadJob([=]() {
             alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
@@ -189,7 +191,7 @@ void BM_m4MulV4_fScalar_MT()
             {
                 for (uint32 j = 0; j < jobSize; ++j)
                 {
-                    uint32 index = j + i * jobSize;
+                    uint32 index = j + jobOffset;
                     g_v4s_dst[index] = m * g_v4s[index];
                 }
             }
@@ -216,14 +218,17 @@ void BM_m4MulV4_fVectorized_MT()
 {
     for (uint32 i = 0; i < numJobs; ++i)
     {
+        uint32 jobOffset = i * jobSize;
+
         jobs[i] = CreateNewThreadJob([=]() {
+
             alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
             for (uint32 iter = 0; iter < numIters; ++iter)
             {
                 for (uint32 j = 0; j < jobSize; ++j)
                 {
-                    uint32 index = j + i * jobSize;
+                    uint32 index = j + jobOffset;
                     VectorOps::Mul_SIMD(&g_v4s[index], &m, &g_v4s_dst[index]);
                 }
             }
@@ -254,13 +259,12 @@ void BM_v4_MT_Shutdown()
 
 void BM_m4MulV4_fScalar()
 {
-    m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+    const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
     for (uint32 iter = 0; iter < numIters; ++iter)
     {
         for (uint32 i = 0; i < numVectors; ++i)
         {
-            //m.m_data[i % 16] = (float)i;
             g_v4s_dst[i] = m * g_v4s[i];
         }
     }
@@ -268,13 +272,12 @@ void BM_m4MulV4_fScalar()
 
 void BM_m4MulV4_fVectorized()
 {
-    alignas(16) m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
+    alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
     for (uint32 iter = 0; iter < numIters; ++iter)
     {
         for (uint32 i = 0; i < numVectors; ++i)
         {
-            //m.m_data[i % 16] = (float)i;
             VectorOps::Mul_SIMD(&g_v4s[i], &m, &g_v4s_dst[i]);
         }
     }
