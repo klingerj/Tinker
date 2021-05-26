@@ -1038,7 +1038,7 @@ public:
 };
 
 template <typename T>
-vec4<T> operator*(const mat4<T>& m, const vec4<T>& v)
+__forceinline vec4<T> operator*(const mat4<T>& m, const vec4<T>& v)
 {
     return {
         m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z + m[3][0] * v.w,
@@ -1200,12 +1200,12 @@ namespace VectorOps
         *out = *m * *v;
     }
 
-    inline void Mul_SIMD(const v4f* RESTRICT v, const m4f* m, v4f* RESTRICT out)
+    __forceinline void Mul_SIMD(const v4f* RESTRICT v, const m4f* m, v4f* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
-        TINKER_ASSERT(!(((size_t)v) & 15));
-        TINKER_ASSERT(!(((size_t)m) & 15));
-        TINKER_ASSERT(!(((size_t)out) & 15));
+        //TINKER_ASSERT(!(((size_t)v) & 15));
+        //TINKER_ASSERT(!(((size_t)m) & 15));
+        //TINKER_ASSERT(!(((size_t)out) & 15));
 
         __m128 vec = _mm_load_ps((v->m_data));
         __m128 vx = _mm_shuffle_ps(vec, vec, _MM_SHUFFLE(0, 0, 0, 0));
