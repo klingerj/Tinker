@@ -1,6 +1,9 @@
-#include "GameGraphicsTypes.h"
+#include "GraphicsTypes.h"
 
 #include <string.h>
+
+using namespace Tk;
+using namespace Platform;
 
 /*
 void CopyStagingBufferToGPUBufferCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStream,
@@ -17,7 +20,7 @@ void CopyStagingBufferToGPUBufferCommand(Tk::Platform::GraphicsCommandStream* gr
 }
 */
 
-void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Platform::GraphicsCommandStream* graphicsCommandStream)
+void CreateDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
 {
     // Default Quad
     {
@@ -116,7 +119,7 @@ void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Plat
     }
 }
 
-void DestroyDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs)
+void DestroyDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
     // Default quad
     platformFuncs->DestroyResource(defaultQuad.m_positionBuffer.gpuBufferHandle);

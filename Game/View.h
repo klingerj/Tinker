@@ -3,12 +3,7 @@
 #include "PlatformGameAPI.h"
 #include "Core/Math/VectorTypes.h"
 #include "Core/Containers/Vector.h"
-#include "GameGraphicsTypes.h"
-
-using namespace Tk;
-using namespace Core;
-using namespace Math;
-using namespace Containers;
+#include "GraphicsTypes.h"
 
 struct Instance
 {
@@ -26,23 +21,23 @@ struct View
     alignas(CACHE_LINE) m4f m_viewMatrix;
     alignas(CACHE_LINE) m4f m_projMatrix;
     alignas(CACHE_LINE) m4f m_viewProjMatrix;
-    alignas(CACHE_LINE) Vector<Instance> m_instances;
-    Vector<DescriptorData_Instance> m_instanceData;
+    alignas(CACHE_LINE) Tk::Core::Containers::Vector<Instance> m_instances;
+    Tk::Core::Containers::Vector<DescriptorData_Instance> m_instanceData;
 
     // Sorted copies of instance data
-    Vector<Instance> m_instances_sorted;
-    Vector<DescriptorData_Instance> m_instanceData_sorted;
+    Tk::Core::Containers::Vector<Instance> m_instances_sorted;
+    Tk::Core::Containers::Vector<DescriptorData_Instance> m_instanceData_sorted;
 
     uint32 m_maxInstances;
     uint32 m_numInstances;
     uint8 m_instanceListDirty;
 };
 void Init(View* view, uint32 maxInstances);
-void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platform::PlatformAPIFuncs* platformFuncs);
+void Update(View* view, Tk::Platform::DescriptorSetDataHandles* descDataHandles, const Tk::Platform::PlatformAPIFuncs* platformFuncs);
 
 uint32 CreateInstance(View* view, uint32 assetID);
 void DestroyInstance(View* view, uint32 instanceID);
 void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instance* data);
 
 struct GameRenderPass;
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorSetDescHandles* descriptors);
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Tk::Platform::DescriptorSetDescHandles* descriptors);

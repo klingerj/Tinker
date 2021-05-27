@@ -4,25 +4,20 @@
 #include "Core/Math/VectorTypes.h"
 #include "PlatformGameAPI.h"
 
-using namespace Tk;
-using namespace Platform;
-using namespace Core;
-using namespace Math;
-
 // Buffer that has no persistent staging buffer
 // Meant to updated once with a staging buffer which should
 // then be destroyed.
 typedef struct static_buffer_data
 {
-    ResourceHandle gpuBufferHandle;
+    Tk::Platform::ResourceHandle gpuBufferHandle;
 } StaticBuffer;
 
 // Buffer that has a constantly mapped staging buffer
 // Likely is updated frame-to-frame
 typedef struct dynamic_buffer_data
 {
-    ResourceHandle gpuBufferHandle;
-    ResourceHandle stagingBufferHandle;
+    Tk::Platform::ResourceHandle gpuBufferHandle;
+    Tk::Platform::ResourceHandle stagingBufferHandle;
     void* stagingBufferMemPtr;
 } DynamicBuffer;
 
@@ -58,7 +53,7 @@ typedef struct mesh_attribute_data
 
 typedef struct texture_metadata
 {
-    Core::Math::v3ui m_dims;
+    v3ui m_dims;
     uint16 m_bitsPerPixel;
     // TODO: file type/ext?
 } TextureMetadata;
@@ -72,22 +67,22 @@ enum
 
 typedef struct game_graphics_data
 {
-    ResourceHandle m_rtColorHandle;
-    ResourceHandle m_rtDepthHandle;
-    FramebufferHandle m_framebufferHandles[eRenderPass_Max];
+    Tk::Platform::ResourceHandle m_rtColorHandle;
+    Tk::Platform::ResourceHandle m_rtDepthHandle;
+    Tk::Platform::FramebufferHandle m_framebufferHandles[eRenderPass_Max];
 
-    ShaderHandle m_shaderHandles[eRenderPass_Max];
+    Tk::Platform::ShaderHandle m_shaderHandles[eRenderPass_Max];
 
-    DescriptorHandle m_DescData_Instance;
-    ResourceHandle m_DescDataBufferHandle_Instance;
+    Tk::Platform::DescriptorHandle m_DescData_Instance;
+    Tk::Platform::ResourceHandle m_DescDataBufferHandle_Instance;
     void* m_DescDataBufferMemPtr_Instance;
 
-    DescriptorHandle m_DescData_Global;
-    ResourceHandle m_DescDataBufferHandle_Global;
+    Tk::Platform::DescriptorHandle m_DescData_Global;
+    Tk::Platform::ResourceHandle m_DescDataBufferHandle_Global;
     void* m_DescDataBufferMemPtr_Global;
 
-    ShaderHandle m_blitShaderHandle;
-    DescriptorHandle m_swapChainBlitDescHandle;
+    Tk::Platform::ShaderHandle m_blitShaderHandle;
+    Tk::Platform::DescriptorHandle m_swapChainBlitDescHandle;
 } GameGraphicsData;
 
 typedef struct descriptor_instance_data
@@ -107,9 +102,9 @@ struct default_geometry
     StaticBuffer m_uvBuffer;
     StaticBuffer m_normalBuffer;
     StaticBuffer m_indexBuffer;
-    Core::Math::v4f m_points[numPoints];
-    Core::Math::v2f m_uvs[numPoints];
-    Core::Math::v3f m_normals[numPoints];
+    v4f m_points[numPoints];
+    v2f m_uvs[numPoints];
+    v3f m_normals[numPoints];
     uint32 m_indices[numIndices];
 };
 
@@ -121,6 +116,6 @@ using DefaultGeometry = struct default_geometry<numPoints, numIndices>;
 #define DEFAULT_QUAD_NUM_INDICES 6
 extern DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad;
 
-void CreateDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs, Platform::GraphicsCommandStream* graphicsCommandStream);
-void DestroyDefaultGeometry(const Platform::PlatformAPIFuncs* platformFuncs);
+void CreateDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
+void DestroyDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
 

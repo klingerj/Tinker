@@ -2076,7 +2076,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 }
 
 void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResources, ResourceHandle imageHandle,
-    const Core::Math::v4f& clearValue, const char* debugLabel, bool immediateSubmit)
+    const v4f& clearValue, const char* debugLabel, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
 

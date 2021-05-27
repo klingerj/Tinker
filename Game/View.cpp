@@ -1,13 +1,13 @@
 #include "View.h"
 #include "AssetManager.h"
-#include "GameRenderPass.h"
+#include "RenderPass.h"
 #include "Core/Sorting.h"
 
 #include <string.h>
 
 using namespace Tk;
+using namespace Platform;
 using namespace Core;
-using namespace Math;
 using namespace Containers;
 
 void Init(View* view, uint32 maxInstances)
