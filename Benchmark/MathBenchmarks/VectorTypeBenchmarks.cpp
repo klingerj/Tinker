@@ -18,7 +18,7 @@ v4f* g_v4s = nullptr;
 v4f* g_v4s_dst = nullptr;
 const uint32 jobSize = (2 << 5);
 const uint32 numVectors = numJobs * jobSize;
-const uint32 numIters = 10000;
+const uint32 numIters = 100000;
 
 void BM_v2_Startup()
 {

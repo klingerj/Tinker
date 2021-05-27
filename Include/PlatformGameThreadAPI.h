@@ -11,7 +11,6 @@ class /*alignas(CACHE_LINE)*/ WorkerJob
 {
 public:
     alignas(CACHE_LINE) volatile bool m_done = false;
-    uint8 pad[CACHE_LINE - sizeof(bool)];
     virtual ~WorkerJob() {}
 
     virtual void operator()() = 0;
