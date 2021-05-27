@@ -28,17 +28,17 @@ struct VulkanContextResources
 
 typedef struct vulkan_vertex_position
 {
-    Core::Math::v4f position;
+    v4f position;
 } VulkanVertexPosition;
 
 typedef struct vulkan_vertex_uv
 {
-    Core::Math::v2f uv;
+    v2f uv;
 } VulkanVertexUV;
 
 typedef struct vulkan_vertex_normal
 {
-    Core::Math::v3f normal;
+    v3f normal;
 } VulkanVertexNormal;
 
 typedef struct platform_window_handles
@@ -113,7 +113,7 @@ void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResou
 void VulkanRecordCommandTransitionLayout(VulkanContextResources*  vulkanContextResources, ResourceHandle imageHandle,
     uint32 startLayout, uint32 endLayout, const char* debugLabel, bool immediateSubmit);
 void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResources, ResourceHandle imageHandle,
-    const Core::Math::v4f& clearValue, const char* debugLabel, bool immediateSubmit);
+    const v4f& clearValue, const char* debugLabel, bool immediateSubmit);
 
 }
 }

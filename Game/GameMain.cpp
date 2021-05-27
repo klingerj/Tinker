@@ -3,12 +3,12 @@
 #include "Core/Math/VectorTypes.h"
 #include "Core/FileIO/FileLoading.h"
 #include "Core/Utility/ScopedTimer.h"
-#include "GameGraphicsTypes.h"
+#include "GraphicsTypes.h"
 #include "ShaderLoading.h"
-#include "GameRenderPass.h"
+#include "RenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
-#include "GameRaytracing.h"
+#include "Raytracing.h"
 #include "View.h"
 
 #ifdef _SCRIPTS_DIR
@@ -38,7 +38,7 @@ typedef struct input_state
 static InputState currentInputState = {};
 static InputState previousInputState = {};
 
-static VirtualCamera g_gameCamera = {};
+static Camera g_gameCamera = {};
 #define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
 
@@ -55,7 +55,7 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.viewportHeight = windowHeight;
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
 
-    DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance};
+    Platform::DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance};
     params.descriptorHandles = descHandles;
     params.numDescriptorHandles = 2;
     gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, SHADERS_SPV_PATH "basic_vert_glsl.spv", nullptr, &params);
@@ -72,7 +72,7 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.depthState = Platform::DepthState::eOff;
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
-    params.framebufferHandle = DefaultFramebufferHandle_Invalid;
+    params.framebufferHandle = Platform::DefaultFramebufferHandle_Invalid;
     params.descriptorHandles = &gameGraphicsData.m_swapChainBlitDescHandle;
     params.numDescriptorHandles = 1;
     gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, SHADERS_SPV_PATH "blit_vert_glsl.spv", SHADERS_SPV_PATH "blit_frag_glsl.spv", &params);
@@ -83,27 +83,27 @@ void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
     for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
     {
         platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_shaderHandles[uiPass]);
-        gameGraphicsData.m_shaderHandles[uiPass] = DefaultShaderHandle_Invalid;
+        gameGraphicsData.m_shaderHandles[uiPass] = Platform::DefaultShaderHandle_Invalid;
     }
 
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_blitShaderHandle);
-    gameGraphicsData.m_blitShaderHandle = DefaultShaderHandle_Invalid;
+    gameGraphicsData.m_blitShaderHandle = Platform::DefaultShaderHandle_Invalid;
 }
 
 void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
-    gameGraphicsData.m_swapChainBlitDescHandle = DefaultDescHandle_Invalid;
+    gameGraphicsData.m_swapChainBlitDescHandle = Platform::DefaultDescHandle_Invalid;
 
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_DescData_Instance);
-    gameGraphicsData.m_DescData_Instance = DefaultDescHandle_Invalid;
+    gameGraphicsData.m_DescData_Instance = Platform::DefaultDescHandle_Invalid;
     platformFuncs->DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
-    gameGraphicsData.m_DescDataBufferHandle_Instance = DefaultResHandle_Invalid;
+    gameGraphicsData.m_DescDataBufferHandle_Instance = Platform::DefaultResHandle_Invalid;
 
     platformFuncs->DestroyDescriptor(gameGraphicsData.m_DescData_Global);
-    gameGraphicsData.m_DescData_Global = DefaultDescHandle_Invalid;
+    gameGraphicsData.m_DescData_Global = Platform::DefaultDescHandle_Invalid;
     platformFuncs->DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Global);
-    gameGraphicsData.m_DescDataBufferHandle_Global = DefaultResHandle_Invalid;
+    gameGraphicsData.m_DescDataBufferHandle_Global = Platform::DefaultResHandle_Invalid;
 
     platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
 }
@@ -123,7 +123,7 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->WriteDescriptor(&blitDescriptorLayout, &gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 
     // Descriptor data
-    ResourceDesc desc;
+    Platform::ResourceDesc desc;
     desc.resourceType = Platform::ResourceType::eBuffer1D;
     desc.dims = v3ui(sizeof(DescriptorData_Instance) * MAX_INSTANCES_PER_VIEW, 0, 0);
     desc.bufferUsage = Platform::BufferUsage::eUniform;
@@ -149,7 +149,7 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     descDataHandles[1].InitInvalid();
     descDataHandles[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
 
-    DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance };
+    Platform::DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance };
     platformFuncs->WriteDescriptor(&DescriptorLayout, &descHandles[0], &descDataHandles[0]);
     platformFuncs->WriteDescriptor(&DescriptorLayout, &descHandles[1], &descDataHandles[1]);
 }
@@ -165,7 +165,7 @@ void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 win
 
 void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
-    ResourceDesc desc;
+    Platform::ResourceDesc desc;
     desc.resourceType = Platform::ResourceType::eImage2D;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB;
@@ -463,7 +463,7 @@ GAME_UPDATE(GameUpdate)
 
     command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
-    command->m_framebufferHandle = DefaultFramebufferHandle_Invalid;
+    command->m_framebufferHandle = Platform::DefaultFramebufferHandle_Invalid;
     command->m_renderWidth = 0;
     command->m_renderHeight = 0;
     ++graphicsCommandStream->m_numCommands;
@@ -558,7 +558,7 @@ GAME_DESTROY(GameDestroy)
         // Destroy texture data
         for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numTextureAssets; ++uiAssetID)
         {
-            ResourceHandle textureHandle = g_AssetManager.GetTextureGraphicsDataByID(uiAssetID);
+            Platform::ResourceHandle textureHandle = g_AssetManager.GetTextureGraphicsDataByID(uiAssetID);
             platformFuncs->DestroyResource(textureHandle);
         }
 

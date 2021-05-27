@@ -131,7 +131,7 @@ struct ResourceHandle
 
 typedef struct graphics_resource_description
 {
-    Core::Math::v3ui dims;
+    v3ui dims;
     uint32 resourceType;
 
     union
@@ -336,7 +336,7 @@ typedef struct graphics_command
         struct
         {
             ResourceHandle m_imageHandle;
-            Core::Math::v4f m_clearValue;
+            v4f m_clearValue;
         };
 
         // Image copy

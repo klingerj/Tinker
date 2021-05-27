@@ -4,6 +4,10 @@
 
 #include <string.h>
 
+using namespace Tk;
+using namespace Platform;
+using namespace Core;
+
 AssetManager g_AssetManager;
 
 void AssetManager::FreeMemory()

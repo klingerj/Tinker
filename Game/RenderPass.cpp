@@ -1,7 +1,10 @@
-#include "GameRenderPass.h"
+#include "RenderPass.h"
 #include "AssetManager.h"
 
 #include <string.h>
+
+using namespace Tk;
+using namespace Platform;
 
 void DrawMeshDataCommand(GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
     uint32 numInstances, ResourceHandle indexBufferHandle, ResourceHandle positionBufferHandle,
@@ -45,4 +48,3 @@ void EndRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* 
     ++graphicsCommandStream->m_numCommands;
     ++command;
 }
-

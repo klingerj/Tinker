@@ -3,6 +3,7 @@
 #include "Core/CoreDefines.h"
 
 #include <float.h>
+#include <string.h>
 
 namespace Tk
 {
@@ -1071,35 +1072,14 @@ bool operator!=(const mat4<T>& lhs, const mat4<T>& rhs)
     return !(lhs == rhs);
 }
 
-typedef vec2<uint32> v2ui;
-typedef vec3<uint32> v3ui;
-typedef vec4<uint32> v4ui;
-typedef vec2<int32>  v2i;
-typedef vec3<int32>  v3i;
-typedef vec4<int32>  v4i;
-typedef vec2<float>  v2f;
-typedef vec3<float>  v3f;
-typedef vec4<float>  v4f;
-
-typedef mat2<uint32> m2ui;
-typedef mat3<uint32> m3ui;
-typedef mat4<uint32> m4ui;
-typedef mat2<int32>  m2i;
-typedef mat3<int32>  m3i;
-typedef mat4<int32>  m4i;
-typedef mat2<float>  m2f;
-typedef mat3<float>  m3f;
-typedef mat4<float>  m4f;
-
-template<typename T>
-inline T Length(const vec3<T>& v)
+inline float Length(const vec3<float>& v)
 {
-    T len2 = v.x * v.x + v.y * v.y + v.z * v.z;
+    float len2 = v.x * v.x + v.y * v.y + v.z * v.z;
     // TODO: custom sqrt impl
     return sqrtf(len2);
 }
 
-inline void Normalize(v3f& v)
+inline void Normalize(vec3<float>& v)
 {
     float denom = Length(v);
     v /= denom;
@@ -1107,8 +1087,8 @@ inline void Normalize(v3f& v)
 
 struct AABB3D
 {
-    v3f minExt;
-    v3f maxExt;
+    vec3<float> minExt;
+    vec3<float> maxExt;
 
     void InitInvalidMinMax()
     {
@@ -1116,7 +1096,7 @@ struct AABB3D
         for (uint32 i = 0; i < 3; ++i) { maxExt[i] = -FLT_MAX; }
     }
 
-    void ExpandTo(const v3f& point)
+    void ExpandTo(const vec3<float>& point)
     {
         for (uint32 i = 0; i < 3; ++i) { minExt[i] = min(minExt[i], point[i]); }
         for (uint32 i = 0; i < 3; ++i) { maxExt[i] = max(maxExt[i], point[i]); }
@@ -1137,7 +1117,7 @@ struct AABB3D
 
 namespace VectorOps
 {
-    inline void Mul_SIMD(const v2f* RESTRICT v, const m2f* RESTRICT m, v2f* RESTRICT out)
+    inline void Mul_SIMD(const vec2<float>* RESTRICT v, const mat2<float>* RESTRICT m, vec2<float>* RESTRICT out)
     {
         // NOTE: mm_stream for __m64 type is not available on AMD.
         // We probably don't need a SIMD mul for v2f * m2f. We could write one that multiplies
@@ -1160,7 +1140,7 @@ namespace VectorOps
         *out = *m * *v;
     }
 
-    inline void Mul_SIMD(const v2i* RESTRICT v, const m2i* RESTRICT m, v2i* RESTRICT out)
+    inline void Mul_SIMD(const vec2<int32>* RESTRICT v, const mat2<int32>* RESTRICT m, vec2<int32>* RESTRICT out)
     {
         TINKER_ASSERT(!(((size_t)v) & 15));
         TINKER_ASSERT(!(((size_t)m) & 15));
@@ -1180,7 +1160,7 @@ namespace VectorOps
         *out = *m * *v;
     }
 
-    inline void Mul_SIMD(const v2ui* RESTRICT v, const m2ui* RESTRICT m, v2ui* RESTRICT out)
+    inline void Mul_SIMD(const vec2<uint32>* RESTRICT v, const mat2<uint32>* RESTRICT m, vec2<uint32>* RESTRICT out)
     {
         TINKER_ASSERT(!(((size_t)v) & 15));
         TINKER_ASSERT(!(((size_t)m) & 15));
@@ -1200,7 +1180,7 @@ namespace VectorOps
         *out = *m * *v;
     }
 
-    inline void Mul_SIMD(const v4f* RESTRICT v, const m4f* m, v4f* RESTRICT out)
+    inline void Mul_SIMD(const vec4<float>* RESTRICT v, const mat4<float>* m, vec4<float>* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
         TINKER_ASSERT(!(((size_t)v) & 15));
@@ -1230,7 +1210,7 @@ namespace VectorOps
         _mm_stream_ps((float*)out, sum);
     }
 
-    inline void Mul_SIMD(const v4i* RESTRICT v, const m4i* m, v4i* RESTRICT out)
+    inline void Mul_SIMD(const vec4<int32>* RESTRICT v, const mat4<int32>* m, vec4<int32>* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
         TINKER_ASSERT(!(((size_t)v) & 15));
@@ -1260,7 +1240,7 @@ namespace VectorOps
         _mm_stream_si128((__m128i*)out, sum);
     }
 
-    inline void Mul_SIMD(const v4ui* RESTRICT v, const m4ui* m, v4ui* RESTRICT out)
+    inline void Mul_SIMD(const vec4<uint32>* RESTRICT v, const mat4<uint32>* m, vec4<uint32>* RESTRICT out)
     {
         // All parameters must be 16-byte aligned
         TINKER_ASSERT(!(((size_t)v) & 15));
@@ -1295,3 +1275,22 @@ namespace VectorOps
 }
 }
 
+typedef Tk::Core::Math::vec2<uint32> v2ui;
+typedef Tk::Core::Math::vec3<uint32> v3ui;
+typedef Tk::Core::Math::vec4<uint32> v4ui;
+typedef Tk::Core::Math::vec2<int32>  v2i;
+typedef Tk::Core::Math::vec3<int32>  v3i;
+typedef Tk::Core::Math::vec4<int32>  v4i;
+typedef Tk::Core::Math::vec2<float>  v2f;
+typedef Tk::Core::Math::vec3<float>  v3f;
+typedef Tk::Core::Math::vec4<float>  v4f;
+
+typedef Tk::Core::Math::mat2<uint32> m2ui;
+typedef Tk::Core::Math::mat3<uint32> m3ui;
+typedef Tk::Core::Math::mat4<uint32> m4ui;
+typedef Tk::Core::Math::mat2<int32>  m2i;
+typedef Tk::Core::Math::mat3<int32>  m3i;
+typedef Tk::Core::Math::mat4<int32>  m4i;
+typedef Tk::Core::Math::mat2<float>  m2f;
+typedef Tk::Core::Math::mat3<float>  m3f;
+typedef Tk::Core::Math::mat4<float>  m4f;

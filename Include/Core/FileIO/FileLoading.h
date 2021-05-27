@@ -29,9 +29,6 @@ namespace Core
 {
 namespace FileLoading
 {
-
-using namespace Math;
-
 // This implementation of OBJ loading is only set up to properly load OBJ files exported from Autodesk Maya.
 // It only loads positions, normals, UVs, and indices.
 // It also assumes the mesh has been triangulated already!
