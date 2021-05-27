@@ -10,9 +10,9 @@
 
 int main()
 {
-    SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
+    //SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
     //timeBeginPeriod(1);
-    TINKER_BENCHMARK_HEADER;
+    //TINKER_BENCHMARK_HEADER;
     
     // Vector benchmarks
     //TINKER_BENCHMARK("VectorType - V2 Add, Scalar", BM_v2Add_Scalar);
