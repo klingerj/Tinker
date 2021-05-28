@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "Raytracing.h"
 #include "View.h"
+#include "InputManager.h"
 
 #ifdef _SCRIPTS_DIR
 #define SCRIPTS_PATH STRINGIFY(_SCRIPTS_DIR)
@@ -30,13 +31,6 @@ uint32 currentWindowWidth = 0, currentWindowHeight = 0;
 
 static GameGraphicsData gameGraphicsData = {};
 static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
-
-typedef struct input_state
-{
-    Platform::KeycodeState keyCodes[Platform::Keycode::eMax];
-} InputState;
-static InputState currentInputState = {};
-static InputState previousInputState = {};
 
 static Camera g_gameCamera = {};
 #define MAX_INSTANCES_PER_VIEW 128
@@ -192,75 +186,6 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
 }
 
-void ProcessInputState(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
-{
-    previousInputState = currentInputState;
-
-    // Apply deltas to input state
-    for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
-    {
-        if (inputStateDeltas->keyCodes[uiKeycode].numStateChanges > 0)
-        {
-            currentInputState.keyCodes[uiKeycode].isDown = inputStateDeltas->keyCodes[uiKeycode].isDown;
-            currentInputState.keyCodes[uiKeycode].numStateChanges += inputStateDeltas->keyCodes[uiKeycode].numStateChanges;
-            // TODO: reset number of state changes at some point, every second or every several frames or something
-        }
-    }
-
-    // Process current state
-    for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
-    {
-        switch (uiKeycode)
-        {
-            case Platform::Keycode::eF9:
-            {
-                // Handle the initial downpress once and nothing more
-                if (currentInputState.keyCodes[uiKeycode].isDown && !previousInputState.keyCodes[uiKeycode].isDown)
-                {
-                    Platform::PrintDebugString("Running raytrace test...\n");
-                    RaytraceTest(platformFuncs);
-                    Platform::PrintDebugString("...Done.\n");
-                }
-                break;
-            }
-
-            case Platform::Keycode::eF10:
-            {
-                // Handle the initial downpress once and nothing more
-                if (currentInputState.keyCodes[uiKeycode].isDown && !previousInputState.keyCodes[uiKeycode].isDown)
-                {
-                    Platform::PrintDebugString("Attempting to hotload shaders...\n");
-
-                    // Recompile shaders via script
-                    const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
-                    if (platformFuncs->SystemCommand(shaderCompileCommand) != 0)
-                    {
-                        Platform::PrintDebugString("Failed to create shader compile process! Shaders will not be compiled.\n");
-                    }
-                    else
-                    {
-                        // Recreate gpu resources
-                        RecreateShaders(platformFuncs, currentWindowWidth, currentWindowHeight);
-                        Platform::PrintDebugString("...Done.\n");
-                    }
-                }
-
-                // Handle as long as the key is down
-                if (currentInputState.keyCodes[uiKeycode].isDown)
-                {
-                }
-                
-                break;
-            }
-
-            default:
-            {
-                break;
-            }
-        }
-    }
-}
-
 uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
@@ -372,7 +297,7 @@ GAME_UPDATE(GameUpdate)
     currentWindowWidth = windowWidth;
     currentWindowHeight = windowHeight;
 
-    ProcessInputState(inputStateDeltas, platformFuncs);
+    g_InputManager.UpdateAndDoCallbacks(inputStateDeltas, platformFuncs);
 
     // Temp test code for deletion of instances
     if (0)
