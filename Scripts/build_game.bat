@@ -39,7 +39,7 @@ set CompileIncludePaths=/I ../Include
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
-set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Game/GameMain.cpp ../Game/GraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/ShaderLoading.cpp ../Game/RenderPass.cpp ../Game/Raytracing.cpp ../Game/View.cpp ../Game/Camera.cpp
+set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Game/GameMain.cpp ../Game/GraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/ShaderLoading.cpp ../Game/RenderPass.cpp ../Game/Raytracing.cpp ../Game/View.cpp ../Game/Camera.cpp ../Game/InputManager.cpp
 set CompileDefines=/D_ASSETS_DIR=..\\Assets\\ /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ 
 
 if "%TIME:~0,1%" == " " (

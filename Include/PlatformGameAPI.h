@@ -3,7 +3,7 @@
 #include "Core/CoreDefines.h"
 #include "PlatformGameThreadAPI.h"
 #include "PlatformGameGraphicsAPI.h"
-#include "PlatformGameInputHandingAPI.h"
+#include "PlatformGameInputHandlingAPI.h"
 
 namespace Tk
 {
