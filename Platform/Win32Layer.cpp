@@ -32,6 +32,8 @@ typedef struct win32_game_code
 } Win32GameCode;
 
 volatile bool runGame = true;
+HWND g_windowHandle = NULL;
+HCURSOR g_cursor = NULL;
 PlatformAPIFuncs g_platformAPIFuncs;
 GraphicsCommandStream g_graphicsCommandStream;
 Win32GameCode g_GameCode;
@@ -39,6 +41,7 @@ const char* GameDllStr = "TinkerGame.dll";
 InputStateDeltas g_inputStateDeltas;
 Graphics::VulkanContextResources vulkanContextResources;
 bool g_windowResized = false;
+static bool g_cursorLocked = false;
 
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
 WorkerThreadPool g_ThreadPool;
@@ -767,6 +770,37 @@ SYSTEM_COMMAND(SystemCommand)
     return exitCode;
 }
 
+static void LockCursor(HWND windowHandle)
+{
+    RECT rc;
+    GetClientRect(windowHandle, &rc);
+
+    // Create a single pixel/coordinate rectangle at the center of the screen
+    POINT center = { (rc.right - rc.left) / 2, (rc.bottom - rc.top) / 2 };
+    ClientToScreen(windowHandle, &center); // Convert to screen coordinates
+    SetRect(&rc, center.x, center.y, center.x, center.y);
+
+    ClipCursor(&rc); // Confine the cursor
+}
+
+static void UnlockCursor()
+{
+    ClipCursor(NULL);
+}
+
+static void ToggleCursorLocked()
+{
+    if (g_cursorLocked)
+    {
+        UnlockCursor();
+    }
+    else
+    {
+        LockCursor(g_windowHandle);
+    }
+    g_cursorLocked = !g_cursorLocked;
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd,
     UINT uMsg,
     WPARAM wParam,
@@ -843,8 +877,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                     Core::Utility::LogMsg("Platform", "NORMAL", Core::Utility::LogSeverity::eInfo);
                 }
             }
+
+            if (g_cursorLocked)
+            {
+                LockCursor(g_windowHandle);
+            }
+
             break;
         }
+
+        case WM_SETCURSOR:
+        {
+            SetCursor(g_cursor);
+
+        }
+
         default:
         {
             result = DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -906,21 +953,31 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
             break;
         }
 
+        case VK_ESCAPE:
+        {
+            // TODO: support pressing escape in game
+            if (isDown)
+            {
+                ToggleCursorLocked();
+            }
+            break;
+        }
+
         default:
         {
-            //TINKER_ASSERT(0);
             return;
-            //break;
         }
     }
  
-    g_inputStateDeltas.keyCodes[gameKeyCode].isDown = isDown;
-    ++g_inputStateDeltas.keyCodes[gameKeyCode].numStateChanges;
+    if (gameKeyCode < Keycode::eMax)
+    {
+        g_inputStateDeltas.keyCodes[gameKeyCode].isDown = isDown;
+        ++g_inputStateDeltas.keyCodes[gameKeyCode].numStateChanges;
+    }
 }
 
 static void ProcessWindowMessages()
 {
-
     g_inputStateDeltas = {};
 
     MSG msg = {};
@@ -976,12 +1033,15 @@ wWinMain(HINSTANCE hInstance,
         g_SystemInfo = {};
         GetSystemInfo(&g_SystemInfo);
 
+        g_cursor = LoadCursor(NULL, IDC_ARROW);
+
         // Setup window
         WNDCLASS windowClass = {};
         windowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
         windowClass.lpfnWndProc = WindowProc;
         windowClass.hInstance = hInstance;
-        //WindowClass.hIcon = ;
+        //windowClass.hIcon = ;
+        windowClass.hCursor = g_cursor;
         windowClass.lpszClassName = "Tinker Platform Window";
         if (!RegisterClass(&windowClass))
         {
@@ -992,7 +1052,7 @@ wWinMain(HINSTANCE hInstance,
         RECT windowDims = { 0, 0, (LONG)g_GlobalAppParams.m_windowWidth, (LONG)g_GlobalAppParams.m_windowHeight };
         AdjustWindowRect(&windowDims, WS_OVERLAPPEDWINDOW | WS_VISIBLE, FALSE);
 
-        HWND windowHandle =
+        g_windowHandle =
             CreateWindowEx(0,
                 windowClass.lpszClassName,
                 "Tinker",
@@ -1006,7 +1066,7 @@ wWinMain(HINSTANCE hInstance,
                 hInstance,
                 0);
 
-        if (!windowHandle)
+        if (!g_windowHandle)
         {
             Core::Utility::LogMsg("Platform", "Failed to create window!", Core::Utility::LogSeverity::eCritical);
             return 1;
@@ -1014,7 +1074,7 @@ wWinMain(HINSTANCE hInstance,
 
         g_platformWindowHandles = {};
         g_platformWindowHandles.instance = hInstance;
-        g_platformWindowHandles.windowHandle = windowHandle;
+        g_platformWindowHandles.windowHandle = g_windowHandle;
 
         switch (g_GlobalAppParams.m_graphicsAPI)
         {
@@ -1073,7 +1133,10 @@ wWinMain(HINSTANCE hInstance,
         g_GameCode = {};
         bool reloaded = ReloadGameCode(&g_GameCode, GameDllStr);
 
+        // Input handling
         g_inputStateDeltas = {};
+        g_cursorLocked = false;
+        ToggleCursorLocked();
     }
 
     // Main loop
