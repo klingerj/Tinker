@@ -4,21 +4,18 @@ using namespace Tk;
 
 InputManager g_InputManager;
 
-void InputManager::RegisterKeycodeCallback(uint32 keycode, keycode_callback_func callback)
+void InputManager::BindKeycodeCallback_KeyDown(uint32 keycode, keycode_callback_func callback)
 {
     TINKER_ASSERT(keycode < Tk::Platform::Keycode::eMax); // valid keycode
     TINKER_ASSERT(callback); // non-null function pointer
-    TINKER_ASSERT(m_callbackCounts[keycode] < (uint32)eMaxCallbacksPerKey); // haven't hit max number of callbacks yet
-
-    m_callbacks[keycode][m_callbackCounts[keycode]++] = callback;
+    m_callbacks_keyDown[keycode] = callback;
 }
 
-void InputManager::CallAllCallbacksForKeycode(uint32 keycode, const Platform::PlatformAPIFuncs* platformFuncs)
+void InputManager::BindKeycodeCallback_KeyDownRepeat(uint32 keycode, keycode_callback_func callback)
 {
-    for (uint8 i = 0; i < m_callbackCounts[keycode]; ++i)
-    {
-        m_callbacks[keycode][i](platformFuncs);
-    }
+    TINKER_ASSERT(keycode < Tk::Platform::Keycode::eMax); // valid keycode
+    TINKER_ASSERT(callback); // non-null function pointer
+    m_callbacks_keyDownRepeat[keycode] = callback;
 }
 
 void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
@@ -39,16 +36,27 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
     // Process current state
     for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
     {
+        // Initial downpress
         if (m_currentInputState.keyCodes[uiKeycode].isDown && !m_previousInputState.keyCodes[uiKeycode].isDown)
         {
-            CallAllCallbacksForKeycode(uiKeycode, platformFuncs);
+            keycode_callback_func* cbFunc = m_callbacks_keyDown[uiKeycode];
+            if (cbFunc)
+            {
+                cbFunc(platformFuncs);
+            }
         }
-
-        /* TODO:
-        // Handle as long as the key is down
-        if (m_currentInputState.keyCodes[uiKeycode].isDown)
+        else
         {
+            // As long as the key is down
+            if (m_currentInputState.keyCodes[uiKeycode].isDown)
+            {
+                keycode_callback_func* cbFunc = m_callbacks_keyDownRepeat[uiKeycode];
+                if (cbFunc)
+                {
+                    cbFunc(platformFuncs);
+                }
+            }
         }
-        */
+        // TODO: key up callbacks
     }
 }

@@ -33,10 +33,28 @@ static GameGraphicsData gameGraphicsData = {};
 static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
 
 static Camera g_gameCamera = {};
+static const float cameraPanSensitivity = 0.1f;
+KEYCODE_CALLBACK(GameCameraPanForwardCallback)
+{
+    PanCameraAlongForward(&g_gameCamera, cameraPanSensitivity);
+}
+KEYCODE_CALLBACK(GameCameraPanBackwardCallback)
+{
+    PanCameraAlongForward(&g_gameCamera, -cameraPanSensitivity);
+}
+KEYCODE_CALLBACK(GameCameraPanRightCallback)
+{
+    PanCameraAlongRight(&g_gameCamera, cameraPanSensitivity);
+}
+KEYCODE_CALLBACK(GameCameraPanLeftCallback)
+{
+    PanCameraAlongRight(&g_gameCamera, -cameraPanSensitivity);
+}
+
 #define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
 
-void RaytraceTestCallback(const Platform::PlatformAPIFuncs* platformFuncs)
+KEYCODE_CALLBACK(RaytraceTestCallback)
 {
     Platform::PrintDebugString("Running raytrace test...\n");
     RaytraceTest(platformFuncs);
@@ -164,7 +182,7 @@ void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 win
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
-void ShaderHotloadCallback(const Platform::PlatformAPIFuncs* platformFuncs)
+KEYCODE_CALLBACK(ShaderHotloadCallback)
 {
     Platform::PrintDebugString("Attempting to hotload shaders...\n");
 
@@ -215,10 +233,18 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
-    g_InputManager.RegisterKeycodeCallback(Platform::Keycode::eF9, RaytraceTestCallback);
-    g_InputManager.RegisterKeycodeCallback(Platform::Keycode::eF10, ShaderHotloadCallback);
+    // Camera controls
+    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eW, GameCameraPanForwardCallback);
+    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eA, GameCameraPanLeftCallback);
+    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eS, GameCameraPanBackwardCallback);
+    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eD, GameCameraPanRightCallback);
+
+    // Hotkeys
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF10, ShaderHotloadCallback);
 
     g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
+    g_gameCamera.m_eye = v3f(27.0f, 27.0f, 27.0f);
     currentWindowWidth = windowWidth;
     currentWindowHeight = windowHeight;
     g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
@@ -298,8 +324,6 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     return 0;
 }
 
-// TODO: remove me
-#include <chrono>
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
@@ -315,12 +339,7 @@ GAME_UPDATE(GameUpdate)
         isGameInitted = true;
     }
 
-    // TODO: move this
-    // Animate camera
-    static auto startTime = std::chrono::high_resolution_clock::now();
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-    g_gameCamera.m_eye = v3f(cosf(time) * 27.0f, sinf(time) * 27.0f, 27.0f);
+    UpdateAxisVectors(&g_gameCamera);
 
     currentWindowWidth = windowWidth;
     currentWindowHeight = windowHeight;
