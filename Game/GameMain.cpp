@@ -36,6 +36,13 @@ static Camera g_gameCamera = {};
 #define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
 
+void RaytraceTestCallback(const Platform::PlatformAPIFuncs* platformFuncs)
+{
+    Platform::PrintDebugString("Running raytrace test...\n");
+    RaytraceTest(platformFuncs);
+    Platform::PrintDebugString("...Done.\n");
+}
+
 void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     ResetShaderBytecodeAllocator();
@@ -157,6 +164,24 @@ void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 win
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
+void ShaderHotloadCallback(const Platform::PlatformAPIFuncs* platformFuncs)
+{
+    Platform::PrintDebugString("Attempting to hotload shaders...\n");
+
+    // Recompile shaders via script
+    const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
+    if (platformFuncs->SystemCommand(shaderCompileCommand) != 0)
+    {
+        Platform::PrintDebugString("Failed to create shader compile process! Shaders will not be compiled.\n");
+    }
+    else
+    {
+        // Recreate gpu resources
+        RecreateShaders(platformFuncs, currentWindowWidth, currentWindowHeight);
+        Platform::PrintDebugString("...Done.\n");
+    }
+}
+
 void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     Platform::ResourceDesc desc;
@@ -189,6 +214,9 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
 uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
+
+    g_InputManager.RegisterKeycodeCallback(Platform::Keycode::eF9, RaytraceTestCallback);
+    g_InputManager.RegisterKeycodeCallback(Platform::Keycode::eF10, ShaderHotloadCallback);
 
     g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
     currentWindowWidth = windowWidth;

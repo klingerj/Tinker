@@ -6,6 +6,19 @@ InputManager g_InputManager;
 
 void InputManager::RegisterKeycodeCallback(uint32 keycode, keycode_callback_func callback)
 {
+    TINKER_ASSERT(keycode < Tk::Platform::Keycode::eMax); // valid keycode
+    TINKER_ASSERT(callback); // non-null function pointer
+    TINKER_ASSERT(m_callbackCounts[keycode] < (uint32)eMaxCallbacksPerKey); // haven't hit max number of callbacks yet
+
+    m_callbacks[keycode][m_callbackCounts[keycode]++] = callback;
+}
+
+void InputManager::CallAllCallbacksForKeycode(uint32 keycode, const Platform::PlatformAPIFuncs* platformFuncs)
+{
+    for (uint8 i = 0; i < m_callbackCounts[keycode]; ++i)
+    {
+        m_callbacks[keycode][i](platformFuncs);
+    }
 }
 
 void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
@@ -19,65 +32,23 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
         {
             m_currentInputState.keyCodes[uiKeycode].isDown = inputStateDeltas->keyCodes[uiKeycode].isDown;
             m_currentInputState.keyCodes[uiKeycode].numStateChanges += inputStateDeltas->keyCodes[uiKeycode].numStateChanges;
-            // TODO: reset number of state changes at some point, every second or every several frames or something
+            // TODO: reset number of state changes at some point, every second or every several frames or something?
         }
     }
-
+    
     // Process current state
     for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
     {
-        switch (uiKeycode)
+        if (m_currentInputState.keyCodes[uiKeycode].isDown && !m_previousInputState.keyCodes[uiKeycode].isDown)
         {
-            case Platform::Keycode::eF9:
-            {
-                // Handle the initial downpress once and nothing more
-                if (m_currentInputState.keyCodes[uiKeycode].isDown && !m_previousInputState.keyCodes[uiKeycode].isDown)
-                {
-                    /*
-                    Platform::PrintDebugString("Running raytrace test...\n");
-                    RaytraceTest(platformFuncs);
-                    Platform::PrintDebugString("...Done.\n");
-                    */
-                }
-                break;
-            }
-
-            case Platform::Keycode::eF10:
-            {
-                // Handle the initial downpress once and nothing more
-                if (m_currentInputState.keyCodes[uiKeycode].isDown && !m_previousInputState.keyCodes[uiKeycode].isDown)
-                {
-                    /*
-                    Platform::PrintDebugString("Attempting to hotload shaders...\n");
-
-                    // Recompile shaders via script
-                    const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
-                    if (platformFuncs->SystemCommand(shaderCompileCommand) != 0)
-                    {
-                        Platform::PrintDebugString("Failed to create shader compile process! Shaders will not be compiled.\n");
-                    }
-                    else
-                    {
-                        // Recreate gpu resources
-                        RecreateShaders(platformFuncs, currentWindowWidth, currentWindowHeight);
-                        Platform::PrintDebugString("...Done.\n");
-                    }
-                    */
-                }
-
-                // Handle as long as the key is down
-                if (m_currentInputState.keyCodes[uiKeycode].isDown)
-                {
-                }
-                
-                break;
-            }
-
-            default:
-            {
-                break;
-            }
+            CallAllCallbacksForKeycode(uiKeycode, platformFuncs);
         }
+
+        /* TODO:
+        // Handle as long as the key is down
+        if (m_currentInputState.keyCodes[uiKeycode].isDown)
+        {
+        }
+        */
     }
 }
-
