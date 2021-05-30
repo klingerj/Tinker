@@ -6,9 +6,9 @@ namespace Tk
 {
 namespace Platform
 {
+
 namespace Keycode
 {
-
 enum : uint32
 {
     eA = 0,
@@ -61,7 +61,17 @@ enum : uint32
     eF12,
     eMax
 };
+}
 
+namespace Mousecode
+{
+enum : uint32
+{
+    eMouseMoveVertical = 0,
+    eMouseMoveHorizontal,
+    // TODO: other mouse controls, e.g. click
+    eMax
+};
 }
 
 typedef struct keycode_state
@@ -70,12 +80,25 @@ typedef struct keycode_state
     uint8 numStateChanges; // number of times the key went up/down
 } KeycodeState;
 
+typedef struct mousecode_state
+{
+    union
+    {
+        int32 displacement; // in pixels, for mouse movement
+        // TODO: add mouse click state data, probably similar to keycode state data
+        // - maybe refactor that into a more general button state, we will probably use it for game pad input too
+    };
+} MousecodeState;
+
 typedef struct input_state_delta
 {
     // TODO: gamepad input
 
     // Keyboard input
     KeycodeState keyCodes[Keycode::eMax];
+
+    // Mouse input
+    MousecodeState mouseCodes[Mousecode::eMax];
 } InputStateDeltas;
 
 }

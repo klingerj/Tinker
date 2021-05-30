@@ -73,6 +73,7 @@ void RotateCameraAboutForward(Camera* camera, float rads)
 
 void RotateCameraAboutUp(Camera* camera, float rads)
 {
+    m3f rotMat;
     // TODO: rotate look and right about up. also update m_ref
 }
 
