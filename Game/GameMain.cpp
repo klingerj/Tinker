@@ -34,27 +34,32 @@ static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
 
 static Camera g_gameCamera = {};
 static const float cameraPanSensitivity = 0.1f;
-KEYCODE_CALLBACK(GameCameraPanForwardCallback)
+static const float cameraRotSensitivity = 0.02f;
+INPUT_CALLBACK(GameCameraPanForwardCallback)
 {
     PanCameraAlongForward(&g_gameCamera, cameraPanSensitivity);
 }
-KEYCODE_CALLBACK(GameCameraPanBackwardCallback)
+INPUT_CALLBACK(GameCameraPanBackwardCallback)
 {
     PanCameraAlongForward(&g_gameCamera, -cameraPanSensitivity);
 }
-KEYCODE_CALLBACK(GameCameraPanRightCallback)
+INPUT_CALLBACK(GameCameraPanRightCallback)
 {
     PanCameraAlongRight(&g_gameCamera, cameraPanSensitivity);
 }
-KEYCODE_CALLBACK(GameCameraPanLeftCallback)
+INPUT_CALLBACK(GameCameraPanLeftCallback)
 {
     PanCameraAlongRight(&g_gameCamera, -cameraPanSensitivity);
+}
+INPUT_CALLBACK(GameCameraRotateHorizontalCallback)
+{
+    RotateCameraAboutUp(&g_gameCamera, cameraRotSensitivity);
 }
 
 #define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
 
-KEYCODE_CALLBACK(RaytraceTestCallback)
+INPUT_CALLBACK(RaytraceTestCallback)
 {
     Platform::PrintDebugString("Running raytrace test...\n");
     RaytraceTest(platformFuncs);
@@ -182,7 +187,7 @@ void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 win
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
-KEYCODE_CALLBACK(ShaderHotloadCallback)
+INPUT_CALLBACK(ShaderHotloadCallback)
 {
     Platform::PrintDebugString("Attempting to hotload shaders...\n");
 
@@ -238,6 +243,7 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eA, GameCameraPanLeftCallback);
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eS, GameCameraPanBackwardCallback);
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eD, GameCameraPanRightCallback);
+    g_InputManager.BindMousecodeCallback(Platform::Mousecode::eMouseMoveHorizontal, GameCameraRotateHorizontalCallback);
 
     // Hotkeys
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);

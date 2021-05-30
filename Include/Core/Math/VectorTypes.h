@@ -1085,6 +1085,20 @@ inline void Normalize(vec3<float>& v)
     v /= denom;
 }
 
+template <typename T>
+inline m4f RotationMatrix_AxisAngle(const vec3<T>& axis, float angleRads)
+{
+    float cosT = cosf(angle);
+    float sinT = sinf(angle);
+    float oneMinusCosT = 1 - cosT;
+
+    m4f mat;
+    mat[0][0] = ; mat[1][0] = ; mat[2][0] = ;
+    mat[0][1] = ; mat[1][1] = ; mat[2][1] = ;
+    mat[0][2] = ; mat[1][2] = ; mat[2][2] = ;
+    return mat;
+}
+
 struct AABB3D
 {
     vec3<float> minExt;

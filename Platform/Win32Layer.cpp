@@ -6,6 +6,7 @@
 #include "Win32WorkerThreadPool.cpp"
 
 #include <windows.h>
+#include <Windowsx.h>
 
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
@@ -801,6 +802,110 @@ static void ToggleCursorLocked()
     g_cursorLocked = !g_cursorLocked;
 }
 
+
+static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
+{
+    uint8 wasDown = (win32Flags & (1 << 30)) == 1;
+    uint8 isDown = (win32Flags & (1 << 31)) == 0;
+
+    uint8 gameKeyCode = Keycode::eMax;
+
+    switch (win32Keycode)
+    {
+        case 'W':
+        {
+            gameKeyCode = Keycode::eW;
+            break;
+        }
+
+        case 'A':
+        {
+            gameKeyCode = Keycode::eA;
+            break;
+        }
+
+        case 'S':
+        {
+            gameKeyCode = Keycode::eS;
+            break;
+        }
+
+        case 'D':
+        {
+            gameKeyCode = Keycode::eD;
+            break;
+        }
+
+        case VK_F9:
+        {
+            gameKeyCode = Keycode::eF9;
+            break;
+        }
+
+        case VK_F10:
+        {
+            gameKeyCode = Keycode::eF10;
+            break;
+        }
+
+        case VK_F11:
+        {
+            gameKeyCode = Keycode::eF11;
+            break;
+        }
+
+        case VK_ESCAPE:
+        {
+            // TODO: support pressing escape in game
+            if (isDown)
+            {
+                ToggleCursorLocked();
+            }
+            break;
+        }
+
+        default:
+        {
+            return;
+        }
+    }
+ 
+    if (gameKeyCode < Keycode::eMax)
+    {
+        g_inputStateDeltas.keyCodes[gameKeyCode].isDown = isDown;
+        ++g_inputStateDeltas.keyCodes[gameKeyCode].numStateChanges;
+    }
+}
+
+static void HandleMouseInput(uint32 mouseCode, int displacement)
+{
+    POINT screenCenter = { (LONG)g_GlobalAppParams.m_windowWidth / 2, (LONG)g_GlobalAppParams.m_windowHeight / 2 };
+    int pxDisp = 0;
+
+    switch (mouseCode)
+    {
+        case Mousecode::eMouseMoveVertical:
+        {
+            pxDisp = displacement - screenCenter.y;
+            break;
+        }
+
+        case Mousecode::eMouseMoveHorizontal:
+        {
+            pxDisp = displacement - screenCenter.x;
+            break;
+        }
+
+        default:
+        {
+            break;
+        }
+    }
+
+    g_inputStateDeltas.mouseCodes[mouseCode].displacement = pxDisp;
+}
+
+#include <iostream>
 LRESULT CALLBACK WindowProc(HWND hwnd,
     UINT uMsg,
     WPARAM wParam,
@@ -889,7 +994,22 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         case WM_SETCURSOR:
         {
             SetCursor(g_cursor);
+            break;
+        }
 
+        case WM_MOUSEMOVE:
+        {
+            if (g_cursorLocked)
+            {
+                int xPos = GET_X_LPARAM(lParam);
+                int yPos = GET_Y_LPARAM(lParam);
+                HandleMouseInput(Mousecode::eMouseMoveVertical, yPos);
+                HandleMouseInput(Mousecode::eMouseMoveHorizontal, xPos);
+                std::cout << "X: " << xPos << std::endl;
+                std::cout << "Y: " << yPos << std::endl;
+                std::cout << std::endl;
+            }
+            break;
         }
 
         default:
@@ -900,80 +1020,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     }
 
     return result;
-}
-
-static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
-{
-    uint8 wasDown = (win32Flags & (1 << 30)) == 1;
-    uint8 isDown = (win32Flags & (1 << 31)) == 0;
-
-    uint8 gameKeyCode = Keycode::eMax;
-
-    switch (win32Keycode)
-    {
-        case 'W':
-        {
-            gameKeyCode = Keycode::eW;
-            break;
-        }
-
-        case 'A':
-        {
-            gameKeyCode = Keycode::eA;
-            break;
-        }
-
-        case 'S':
-        {
-            gameKeyCode = Keycode::eS;
-            break;
-        }
-
-        case 'D':
-        {
-            gameKeyCode = Keycode::eD;
-            break;
-        }
-
-        case VK_F9:
-        {
-            gameKeyCode = Keycode::eF9;
-            break;
-        }
-
-        case VK_F10:
-        {
-            gameKeyCode = Keycode::eF10;
-            break;
-        }
-
-        case VK_F11:
-        {
-            gameKeyCode = Keycode::eF11;
-            break;
-        }
-
-        case VK_ESCAPE:
-        {
-            // TODO: support pressing escape in game
-            if (isDown)
-            {
-                ToggleCursorLocked();
-            }
-            break;
-        }
-
-        default:
-        {
-            return;
-        }
-    }
- 
-    if (gameKeyCode < Keycode::eMax)
-    {
-        g_inputStateDeltas.keyCodes[gameKeyCode].isDown = isDown;
-        ++g_inputStateDeltas.keyCodes[gameKeyCode].numStateChanges;
-    }
 }
 
 static void ProcessWindowMessages()
