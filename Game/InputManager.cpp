@@ -56,7 +56,7 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
             input_callback_func* cbFunc = m_callbacks_keyDown[uiKeycode];
             if (cbFunc)
             {
-                cbFunc(platformFuncs);
+                cbFunc(platformFuncs, m_currentInputState.keyCodes[uiKeycode].numStateChanges % 2);
             }
         }
         else
@@ -67,19 +67,24 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
                 input_callback_func* cbFunc = m_callbacks_keyDownRepeat[uiKeycode];
                 if (cbFunc)
                 {
-                    cbFunc(platformFuncs);
+                    cbFunc(platformFuncs, m_currentInputState.keyCodes[uiKeycode].numStateChanges % 2);
                 }
             }
         }
-        // TODO: key up callbacks
+        // TODO: key upstroke callbacks
     }
 
     for (uint32 uiMousecode = 0; uiMousecode < Platform::Mousecode::eMax; ++uiMousecode)
     {
-        input_callback_func* cbFunc = m_callbacks_mouse[uiMousecode];
-        if (cbFunc)
+        bool mouseMove = uiMousecode == Platform::Mousecode::eMouseMoveVertical || uiMousecode == Platform::Mousecode::eMouseMoveHorizontal;
+        int32 disp = m_currentInputState.mouseCodes[uiMousecode].displacement;
+        if (mouseMove && disp != 0)
         {
-            cbFunc(platformFuncs);
+            input_callback_func* cbFunc = m_callbacks_mouse[uiMousecode];
+            if (cbFunc)
+            {
+                cbFunc(platformFuncs, (uint32)disp);
+            }
         }
     }
 }

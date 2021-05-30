@@ -464,6 +464,11 @@ public:
         z /= other.z;
         w /= other.w;
     }
+
+    vec3<T> xyz() const
+    {
+        return { x, y, z };
+    }
 };
 
 template <typename T>
@@ -1086,16 +1091,17 @@ inline void Normalize(vec3<float>& v)
 }
 
 template <typename T>
-inline m4f RotationMatrix_AxisAngle(const vec3<T>& axis, float angleRads)
+inline mat4<T> RotationMatrix_AxisAngle(const vec3<T>& axis, float angleRads)
 {
-    float cosT = cosf(angle);
-    float sinT = sinf(angle);
+    float cosT = cosf(angleRads);
+    float sinT = sinf(angleRads);
     float oneMinusCosT = 1 - cosT;
 
     m4f mat;
-    mat[0][0] = ; mat[1][0] = ; mat[2][0] = ;
-    mat[0][1] = ; mat[1][1] = ; mat[2][1] = ;
-    mat[0][2] = ; mat[1][2] = ; mat[2][2] = ;
+    mat[0][0] = cosT + axis.x * axis.x * oneMinusCosT;          mat[1][0] = axis.x * axis.y * oneMinusCosT - axis.z * sinT; mat[2][0] = axis.x * axis.z * oneMinusCosT + axis.y * sinT; mat[3][0] = 0;
+    mat[0][1] = axis.y * axis.x * oneMinusCosT + axis.z * sinT; mat[1][1] = cosT + axis.y * axis.y * oneMinusCosT;          mat[2][1] = axis.y * axis.z * oneMinusCosT - axis.x * sinT; mat[3][1] = 0;
+    mat[0][2] = axis.z * axis.x * oneMinusCosT - axis.y * sinT; mat[1][2] = axis.z * axis.y * oneMinusCosT + axis.x * sinT; mat[2][2] = cosT + axis.z * axis.z * oneMinusCosT;          mat[3][2] = 0;
+    mat[0][3] = 0;                                              mat[1][3] = 0;                                              mat[2][3] = 0;                                              mat[3][3] = 1;
     return mat;
 }
 

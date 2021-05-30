@@ -73,12 +73,18 @@ void RotateCameraAboutForward(Camera* camera, float rads)
 
 void RotateCameraAboutUp(Camera* camera, float rads)
 {
-    m3f rotMat;
-    // TODO: rotate look and right about up. also update m_ref
+    const m4f rotMat = RotationMatrix_AxisAngle(camera->m_up, rads);
+    camera->m_forward = (rotMat * v4f(camera->m_forward, 0)).xyz();
+    camera->m_right   = (rotMat * v4f(camera->m_right, 0)).xyz();
+    float refPtDist = Length(camera->m_eye - camera->m_ref);
+    camera->m_ref = camera->m_eye + camera->m_forward * refPtDist;
 }
 
 void RotateCameraAboutRight(Camera* camera, float rads)
 {
-    // TODO: rotate look and up about right. also update m_ref
+    const m4f rotMat = RotationMatrix_AxisAngle(camera->m_right, rads);
+    camera->m_forward = (rotMat * v4f(camera->m_forward, 0)).xyz();
+    camera->m_up = (rotMat * v4f(camera->m_up, 0)).xyz();
+    float refPtDist = Length(camera->m_eye - camera->m_ref);
+    camera->m_ref = camera->m_eye + camera->m_forward * refPtDist;
 }
-
