@@ -10,7 +10,7 @@ namespace Tk
     }
 }
 
-#define INPUT_CALLBACK(name) void name(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+#define INPUT_CALLBACK(name) void name(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 param)
 typedef INPUT_CALLBACK(input_callback_func);
 
 struct InputManager

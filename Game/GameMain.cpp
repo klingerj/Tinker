@@ -33,27 +33,32 @@ static GameGraphicsData gameGraphicsData = {};
 static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
 
 static Camera g_gameCamera = {};
-static const float cameraPanSensitivity = 0.1f;
-static const float cameraRotSensitivity = 0.02f;
+static const float cameraPanSensitivity = 0.25f;
+static const float cameraRotSensitivityHorz = 0.001f;
+static const float cameraRotSensitivityVert = 0.002f;
 INPUT_CALLBACK(GameCameraPanForwardCallback)
 {
-    PanCameraAlongForward(&g_gameCamera, cameraPanSensitivity);
+    PanCameraAlongForward(&g_gameCamera, cameraPanSensitivity * param);
 }
 INPUT_CALLBACK(GameCameraPanBackwardCallback)
 {
-    PanCameraAlongForward(&g_gameCamera, -cameraPanSensitivity);
+    PanCameraAlongForward(&g_gameCamera, -cameraPanSensitivity * param);
 }
 INPUT_CALLBACK(GameCameraPanRightCallback)
 {
-    PanCameraAlongRight(&g_gameCamera, cameraPanSensitivity);
+    PanCameraAlongRight(&g_gameCamera, cameraPanSensitivity * param);
 }
 INPUT_CALLBACK(GameCameraPanLeftCallback)
 {
-    PanCameraAlongRight(&g_gameCamera, -cameraPanSensitivity);
+    PanCameraAlongRight(&g_gameCamera, -cameraPanSensitivity * param);
 }
 INPUT_CALLBACK(GameCameraRotateHorizontalCallback)
 {
-    RotateCameraAboutUp(&g_gameCamera, cameraRotSensitivity);
+    RotateCameraAboutUp(&g_gameCamera, cameraRotSensitivityHorz * -(int32)param);
+}
+INPUT_CALLBACK(GameCameraRotateVerticalCallback)
+{
+    RotateCameraAboutRight(&g_gameCamera, cameraRotSensitivityVert * -(int32)param);
 }
 
 #define MAX_INSTANCES_PER_VIEW 128
@@ -244,6 +249,7 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eS, GameCameraPanBackwardCallback);
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eD, GameCameraPanRightCallback);
     g_InputManager.BindMousecodeCallback(Platform::Mousecode::eMouseMoveHorizontal, GameCameraRotateHorizontalCallback);
+    g_InputManager.BindMousecodeCallback(Platform::Mousecode::eMouseMoveVertical, GameCameraRotateVerticalCallback);
 
     // Hotkeys
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);

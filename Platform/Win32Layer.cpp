@@ -42,7 +42,7 @@ const char* GameDllStr = "TinkerGame.dll";
 InputStateDeltas g_inputStateDeltas;
 Graphics::VulkanContextResources vulkanContextResources;
 bool g_windowResized = false;
-static bool g_cursorLocked = false;
+bool g_cursorLocked = false;
 
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
 WorkerThreadPool g_ThreadPool;
@@ -773,35 +773,20 @@ SYSTEM_COMMAND(SystemCommand)
 
 static void LockCursor(HWND windowHandle)
 {
-    RECT rc;
-    GetClientRect(windowHandle, &rc);
-
-    // Create a single pixel/coordinate rectangle at the center of the screen
-    POINT center = { (rc.right - rc.left) / 2, (rc.bottom - rc.top) / 2 };
-    ClientToScreen(windowHandle, &center); // Convert to screen coordinates
-    SetRect(&rc, center.x, center.y, center.x, center.y);
-
-    ClipCursor(&rc); // Confine the cursor
-}
-
-static void UnlockCursor()
-{
-    ClipCursor(NULL);
+    POINT screenCenter = { (LONG)g_GlobalAppParams.m_windowWidth / 2, (LONG)g_GlobalAppParams.m_windowHeight / 2 };
+    ClientToScreen(windowHandle, &screenCenter);
+    SetCursorPos(screenCenter.x, screenCenter.y);
 }
 
 static void ToggleCursorLocked()
 {
+    g_cursorLocked = !g_cursorLocked;
     if (g_cursorLocked)
-    {
-        UnlockCursor();
-    }
-    else
     {
         LockCursor(g_windowHandle);
     }
-    g_cursorLocked = !g_cursorLocked;
+    ShowCursor(!g_cursorLocked);
 }
-
 
 static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
 {
@@ -905,7 +890,6 @@ static void HandleMouseInput(uint32 mouseCode, int displacement)
     g_inputStateDeltas.mouseCodes[mouseCode].displacement = pxDisp;
 }
 
-#include <iostream>
 LRESULT CALLBACK WindowProc(HWND hwnd,
     UINT uMsg,
     WPARAM wParam,
@@ -986,6 +970,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
             if (g_cursorLocked)
             {
                 LockCursor(g_windowHandle);
+                SetCursorPos((int)g_GlobalAppParams.m_windowWidth / 2, (int)g_GlobalAppParams.m_windowHeight / 2);
             }
 
             break;
@@ -996,7 +981,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
             SetCursor(g_cursor);
             break;
         }
-
+        
         case WM_MOUSEMOVE:
         {
             if (g_cursorLocked)
@@ -1005,9 +990,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                 int yPos = GET_Y_LPARAM(lParam);
                 HandleMouseInput(Mousecode::eMouseMoveVertical, yPos);
                 HandleMouseInput(Mousecode::eMouseMoveHorizontal, xPos);
-                std::cout << "X: " << xPos << std::endl;
-                std::cout << "Y: " << yPos << std::endl;
-                std::cout << std::endl;
+                LockCursor(g_windowHandle);
             }
             break;
         }
@@ -1181,8 +1164,8 @@ wWinMain(HINSTANCE hInstance,
 
         // Input handling
         g_inputStateDeltas = {};
-        g_cursorLocked = false;
-        ToggleCursorLocked();
+        g_cursorLocked = true;
+        ShowCursor(FALSE);
     }
 
     // Main loop
