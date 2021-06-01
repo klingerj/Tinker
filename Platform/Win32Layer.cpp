@@ -857,8 +857,11 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
  
     if (gameKeyCode < Keycode::eMax)
     {
+        if (!isDown || (isDown && !wasDown))
+        {
+            ++g_inputStateDeltas.keyCodes[gameKeyCode].numStateChanges;
+        }
         g_inputStateDeltas.keyCodes[gameKeyCode].isDown = isDown;
-        ++g_inputStateDeltas.keyCodes[gameKeyCode].numStateChanges;
     }
 }
 

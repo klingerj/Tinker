@@ -76,8 +76,8 @@ enum : uint32
 
 typedef struct keycode_state
 {
-    uint8 isDown; // is the key currently down
-    uint8 numStateChanges; // number of times the key went up/down
+    uint32 isDown = false; // is the key currently down
+    uint32 numStateChanges = 0; // number of times the key went up/down
 } KeycodeState;
 
 typedef struct mousecode_state

@@ -33,7 +33,7 @@ static GameGraphicsData gameGraphicsData = {};
 static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
 
 static Camera g_gameCamera = {};
-static const float cameraPanSensitivity = 0.25f;
+static const float cameraPanSensitivity = 0.1f;
 static const float cameraRotSensitivityHorz = 0.001f;
 static const float cameraRotSensitivityVert = 0.002f;
 INPUT_CALLBACK(GameCameraPanForwardCallback)
@@ -244,6 +244,10 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     TIMED_SCOPED_BLOCK("Game Init");
 
     // Camera controls
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eW, GameCameraPanForwardCallback);
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eA, GameCameraPanLeftCallback);
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eS, GameCameraPanBackwardCallback);
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eD, GameCameraPanRightCallback);
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eW, GameCameraPanForwardCallback);
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eA, GameCameraPanLeftCallback);
     g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eS, GameCameraPanBackwardCallback);
@@ -356,7 +360,10 @@ GAME_UPDATE(GameUpdate)
     currentWindowWidth = windowWidth;
     currentWindowHeight = windowHeight;
 
-    g_InputManager.UpdateAndDoCallbacks(inputStateDeltas, platformFuncs);
+    {
+        //TIMED_SCOPED_BLOCK("Input manager update - kb/mouse callbacks");
+        g_InputManager.UpdateAndDoCallbacks(inputStateDeltas, platformFuncs);
+    }
 
     // Temp test code for deletion of instances
     if (0)
