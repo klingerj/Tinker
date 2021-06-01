@@ -45,7 +45,7 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
     {
         m_currentInputState.mouseCodes[uiMousecode].displacement = inputStateDeltas->mouseCodes[uiMousecode].displacement;
     }
-    
+
     // Process current state
 
     for (uint32 uiKeycode = 0; uiKeycode < Platform::Keycode::eMax; ++uiKeycode)
@@ -56,7 +56,7 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
             input_callback_func* cbFunc = m_callbacks_keyDown[uiKeycode];
             if (cbFunc)
             {
-                cbFunc(platformFuncs, m_currentInputState.keyCodes[uiKeycode].numStateChanges % 2);
+                cbFunc(platformFuncs, 1); // TODO: figure out how/if to handle multiple state changes in a frame?
             }
         }
         else
@@ -67,7 +67,7 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
                 input_callback_func* cbFunc = m_callbacks_keyDownRepeat[uiKeycode];
                 if (cbFunc)
                 {
-                    cbFunc(platformFuncs, m_currentInputState.keyCodes[uiKeycode].numStateChanges % 2);
+                    cbFunc(platformFuncs, 1);
                 }
             }
         }
