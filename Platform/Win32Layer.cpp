@@ -841,7 +841,6 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
 
         case VK_ESCAPE:
         {
-            // TODO: support pressing escape in game
             if (isDown)
             {
                 ToggleCursorLocked();
