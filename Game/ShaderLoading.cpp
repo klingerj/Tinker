@@ -4,7 +4,7 @@
 using namespace Tk;
 
 static Memory::LinearAllocator shaderBytecodeAllocator;
-const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 10;
+const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 1024 * 10;
 
 void FreeShaderBytecodeMemory()
 {
@@ -27,6 +27,7 @@ Platform::ShaderHandle LoadShader(const Platform::PlatformAPIFuncs* platformFunc
     {
         vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
         vertexShaderBuffer = shaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
+        TINKER_ASSERT(vertexShaderBuffer);
         platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
     }
 
@@ -34,6 +35,7 @@ Platform::ShaderHandle LoadShader(const Platform::PlatformAPIFuncs* platformFunc
     {
         fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
         fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
+        TINKER_ASSERT(fragmentShaderBuffer);
         platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
     }
 

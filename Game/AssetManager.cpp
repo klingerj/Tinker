@@ -340,7 +340,7 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
         stagingBufferMemPtr_UV = platformFuncs->MapResource(stagingBufferHandle_UV);
 
         // Normals
-        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v3f), 0, 0);
+        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
         desc.bufferUsage = Platform::BufferUsage::eVertex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
@@ -358,7 +358,9 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
         stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
 
         m_allStaticMeshGraphicsHandles[uiAsset].m_numIndices = m_allMeshData[uiAsset].m_numVertices;
-        //-----
+
+        // Descriptor
+        CreateVertexBufferDescriptor(uiAsset, platformFuncs);
 
         // Memcpy data into staging buffer
         uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
@@ -372,7 +374,12 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
         uint32* indexBuffer = (uint32*)((uint8*)normalBuffer + numNormalBytes);
         memcpy(stagingBufferMemPtr_Pos, positionBuffer, numPositionBytes);
         memcpy(stagingBufferMemPtr_UV, uvBuffer, numUVBytes);
-        memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
+        //memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
+        for (uint32 i = 0; i < m_allMeshData[uiAsset].m_numVertices; ++i)
+        {
+            memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, normalBuffer + i, sizeof(v3f));
+            memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, 1);
+        }
         memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
         //-----
 
@@ -402,7 +409,7 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
             // Normal buffer copy
             command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx Norm Buf";
-            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
+            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
             command->m_srcBufferHandle = stagingBufferHandle_Norm;
             command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle;
             ++graphicsCommandStream->m_numCommands;
@@ -503,6 +510,39 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
     }
 
     m_textureBufferAllocator.ExplicitFree();
+}
+
+void AssetManager::DestroyVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
+    platformFuncs->DestroyDescriptor(data->m_descriptor);
+    data->m_descriptor = Platform::DefaultDescHandle_Invalid;
+}
+
+void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    DescriptorLayout descriptorLayout = {};
+    descriptorLayout.InitInvalid();
+    descriptorLayout.descriptorLayoutParams[2][0].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.descriptorLayoutParams[2][0].amount = 1;
+    descriptorLayout.descriptorLayoutParams[2][1].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.descriptorLayoutParams[2][1].amount = 1;
+    descriptorLayout.descriptorLayoutParams[2][2].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.descriptorLayoutParams[2][2].amount = 1;
+
+    StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
+    data->m_descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
+
+    Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    descDataHandles[0].InitInvalid();
+    descDataHandles[1].InitInvalid();
+    descDataHandles[2].InitInvalid();
+    descDataHandles[2].handles[0] = data->m_positionBuffer.gpuBufferHandle;
+    descDataHandles[2].handles[1] = data->m_uvBuffer.gpuBufferHandle;
+    descDataHandles[2].handles[2] = data->m_normalBuffer.gpuBufferHandle;
+
+    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { DefaultDescHandle_Invalid, DefaultDescHandle_Invalid, data->m_descriptor };
+    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

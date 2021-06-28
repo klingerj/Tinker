@@ -123,7 +123,7 @@ void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instanc
     memcpy(&view->m_instanceData[instanceID], data, sizeof(DescriptorData_Instance));
 }
 
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorSetDescHandles* descriptors)
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorHandle* descriptors)
 {
     StartRenderPass(renderPass, graphicsCommandStream);
 
@@ -140,14 +140,14 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platfo
             if (!finalDrawCall) nextAssetID = view->m_instances_sorted[uiInstance].m_assetID;
             if (finalDrawCall || nextAssetID != currentAssetID)
             {
+                // TODO: hard-coded index
+                descriptors[2] = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID)->m_descriptor;
+
                 StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
                 DrawMeshDataCommand(graphicsCommandStream,
                         meshData->m_numIndices,
                         currentNumInstances,
                         meshData->m_indexBuffer.gpuBufferHandle,
-                        meshData->m_positionBuffer.gpuBufferHandle,
-                        meshData->m_uvBuffer.gpuBufferHandle,
-                        meshData->m_normalBuffer.gpuBufferHandle,
                         renderPass->shader,
                         descriptors,
                         "Draw asset");

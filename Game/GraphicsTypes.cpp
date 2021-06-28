@@ -5,21 +5,6 @@
 using namespace Tk;
 using namespace Platform;
 
-/*
-void CopyStagingBufferToGPUBufferCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStream,
-    ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
-    const char* debugLabel)
-{
-    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-    command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
-    command->debugLabel = debugLabel;
-    command->m_sizeInBytes = bufferSizeInBytes;
-    command->m_srcBufferHandle = stagingBufferHandle;
-    command->m_dstBufferHandle = gpuBufferHandle;
-    ++graphicsCommandStream->m_numCommands;
-}
-*/
-
 void CreateDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
 {
     // Default Quad
@@ -62,6 +47,9 @@ void CreateDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs, 
         desc.bufferUsage = Platform::BufferUsage::eStaging;
         ResourceHandle stagingBufferHandle_Idx = platformFuncs->CreateResource(desc);
         void* stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
+
+        // Descriptor
+        CreateDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
 
         // Memcpy into staging buffers
         memcpy(stagingBufferMemPtr_Pos, defaultQuad.m_points, sizeof(defaultQuad.m_points));
@@ -123,9 +111,15 @@ void DestroyDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
     // Default quad
     platformFuncs->DestroyResource(defaultQuad.m_positionBuffer.gpuBufferHandle);
+    defaultQuad.m_positionBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
     platformFuncs->DestroyResource(defaultQuad.m_uvBuffer.gpuBufferHandle);
+    defaultQuad.m_uvBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
     platformFuncs->DestroyResource(defaultQuad.m_normalBuffer.gpuBufferHandle);
+    defaultQuad.m_normalBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
     platformFuncs->DestroyResource(defaultQuad.m_indexBuffer.gpuBufferHandle);
+    defaultQuad.m_indexBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+
+    //DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
 }
 
 DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {
@@ -134,6 +128,8 @@ DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad
     { DefaultResHandle_Invalid },
     { DefaultResHandle_Invalid },
     { DefaultResHandle_Invalid },
+    // descriptor
+    { DefaultDescHandle_Invalid },
     // positions
     v4f(-1.0f, -1.0f, 0.0f, 1.0f),
     v4f(1.0f, -1.0f, 0.0f, 1.0f),
@@ -145,10 +141,10 @@ DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad
     v2f(0.0f, 1.0f),
     v2f(1.0f, 1.0f),
     // normals
-    v3f(0.0f, 0.0f, 1.0f),
-    v3f(0.0f, 0.0f, 1.0f),
-    v3f(0.0f, 0.0f, 1.0f),
-    v3f(0.0f, 0.0f, 1.0f),
+    v4f(0.0f, 0.0f, 1.0f, 0.0f),
+    v4f(0.0f, 0.0f, 1.0f, 0.0f),
+    v4f(0.0f, 0.0f, 1.0f, 0.0f),
+    v4f(0.0f, 0.0f, 1.0f, 0.0f),
     // indices
     0, 1, 2, 2, 1, 3
 };
