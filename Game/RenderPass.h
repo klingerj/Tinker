@@ -14,6 +14,5 @@ struct GameRenderPass
 void StartRenderPass(GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
 void EndRenderPass(GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
 void DrawMeshDataCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
-    uint32 numInstances, Tk::Platform::ResourceHandle indexBufferHandle, Tk::Platform::ResourceHandle positionBufferHandle,
-    Tk::Platform::ResourceHandle uvBufferHandle, Tk::Platform::ResourceHandle normalBufferHandle, Tk::Platform::ShaderHandle shaderHandle,
-    Tk::Platform::DescriptorSetDescHandles* descriptors, const char* debugLabel);
+    uint32 numInstances, Tk::Platform::ResourceHandle indexBufferHandle, Tk::Platform::ShaderHandle shaderHandle,
+    Tk::Platform::DescriptorHandle* descriptors, const char* debugLabel);

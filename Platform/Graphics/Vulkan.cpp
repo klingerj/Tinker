@@ -131,6 +131,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
 
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    VulkanDescriptorTypes[DescriptorType::eSSBO] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -955,47 +956,14 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     shaderStages[1].pName = "main";
 
     // Fixed function
-    const uint32 numBindings = 3;
-    const uint32 vertPositionBinding = 0;
-    const uint32 vertUVBinding = 1;
-    const uint32 vertNormalBinding = 2;
-    VkVertexInputBindingDescription vertexInputBindDescs[numBindings] = {};
-    vertexInputBindDescs[0].binding = vertPositionBinding;
-    vertexInputBindDescs[0].stride = sizeof(VulkanVertexPosition);
-    vertexInputBindDescs[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    vertexInputBindDescs[1].binding = vertUVBinding;
-    vertexInputBindDescs[1].stride = sizeof(VulkanVertexUV);
-    vertexInputBindDescs[1].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    vertexInputBindDescs[2].binding = vertNormalBinding;
-    vertexInputBindDescs[2].stride = sizeof(VulkanVertexNormal);
-    vertexInputBindDescs[2].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-    const uint32 numAttributes = 3;
-    uint32 locationCounter = 0;
-    VkVertexInputAttributeDescription vertexInputAttrDescs[numAttributes] = {};
-    vertexInputAttrDescs[0].binding = vertPositionBinding;
-    vertexInputAttrDescs[0].location = locationCounter++;
-    vertexInputAttrDescs[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    vertexInputAttrDescs[0].offset = 0;
-
-    vertexInputAttrDescs[1].binding = vertUVBinding;
-    vertexInputAttrDescs[1].location = locationCounter++;
-    vertexInputAttrDescs[1].format = VK_FORMAT_R32G32_SFLOAT;
-    vertexInputAttrDescs[1].offset = 0;
-
-    vertexInputAttrDescs[2].binding = vertNormalBinding;
-    vertexInputAttrDescs[2].location = locationCounter++;
-    vertexInputAttrDescs[2].format = VK_FORMAT_R32G32B32_SFLOAT;
-    vertexInputAttrDescs[2].offset = 0;
-
+    // NOTE: no vertex buffers
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = numBindings;
-    vertexInputInfo.pVertexBindingDescriptions = vertexInputBindDescs;
-    vertexInputInfo.vertexAttributeDescriptionCount = numAttributes;
-    vertexInputInfo.pVertexAttributeDescriptions = vertexInputAttrDescs;
+    vertexInputInfo.vertexBindingDescriptionCount = 0;
+    vertexInputInfo.pVertexBindingDescriptions = nullptr;
+    vertexInputInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputInfo.pVertexAttributeDescriptions = nullptr;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -1079,7 +1047,8 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
         colorBlending.pAttachments = &colorBlendAttachment;
     }
 
-    VkDynamicState dynamicStates[] =
+    const uint32 numDynamicStates = 2;
+    VkDynamicState dynamicStates[numDynamicStates] =
     {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_LINE_WIDTH
@@ -1087,24 +1056,27 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
 
     VkPipelineDynamicStateCreateInfo dynamicState = {};
     dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicState.dynamicStateCount = 2;
+    dynamicState.dynamicStateCount = numDynamicStates;
     dynamicState.pDynamicStates = dynamicStates;
 
     uint32 newPipelineHandle = vulkanContextResources->resources->vulkanPipelineResourcePool.Alloc();
 
     // Descriptor layouts
-    VkDescriptorSetLayout descriptorSetLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     TINKER_ASSERT(numDescriptorHandles <= MAX_DESCRIPTOR_SETS_PER_SHADER);
-    for (uint32 uiDesc = 0; uiDesc < numDescriptorHandles; ++uiDesc)
+
+    VkDescriptorSetLayout descriptorSetLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    uint32 numValidLayouts = 0;
+    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
     {
         DescriptorHandle descHandle = descriptorHandles[uiDesc];
         if (descHandle != DefaultDescHandle_Invalid)
         {
-            descriptorSetLayouts[uiDesc] = vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[0].descriptorLayout;
+            descriptorSetLayouts[numValidLayouts++] = vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[0].descriptorLayout;
         }
     }
 
     // Push constants
+    const uint32 numPushConstants = 1;
     VkPushConstantRange pushConstantRange = {};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
@@ -1115,7 +1087,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = numDescriptorHandles;
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pushConstantRangeCount = numPushConstants;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
     VkPipelineLayout* pipelineLayout = &vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->pipelineLayout;
@@ -1301,17 +1273,15 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
         {
             case BufferUsage::eVertex:
             {
-                oneBufferOnly = true;
-                perSwapChainSize = true;
-                usageFlags = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vertex buffers are actually SSBOs for now
                 propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
                 break;
             }
 
             case BufferUsage::eIndex:
             {
-                oneBufferOnly = true;
-                perSwapChainSize = true;
+                //oneBufferOnly = true;
+                //perSwapChainSize = true;
                 usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
                 break;
@@ -1365,29 +1335,28 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
     }
     
     // Descriptor layout
-    VkDescriptorSetLayoutBinding descLayoutBinding[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET] = {};
-    uint32 descriptorCount = 0;
+    VkDescriptorSetLayoutBinding descLayoutBinding[MAX_DESCRIPTORS_PER_SET] = {};
+    uint32 numBindings = 0;
 
     for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
     {
         for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
         {
-            if (descLayout->descriptorLayoutParams[uiDescSet][uiDesc].type < DescriptorType::eMax)
+            uint32 type = descLayout->descriptorLayoutParams[uiDescSet][uiDesc].type;
+            if (type < DescriptorType::eMax)
             {
-                descLayoutBinding[uiDescSet][uiDesc].descriptorType = GetVkDescriptorType(descLayout->descriptorLayoutParams[uiDescSet][uiDesc].type);
-                descLayoutBinding[uiDescSet][uiDesc].descriptorCount = descLayout->descriptorLayoutParams[uiDescSet][uiDesc].amount;
-                descLayoutBinding[uiDescSet][uiDesc].binding = uiDesc;// +uiDescSet * MAX_DESCRIPTORS_PER_SET;
-                descLayoutBinding[uiDescSet][uiDesc].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-                descLayoutBinding[uiDescSet][uiDesc].pImmutableSamplers = nullptr;
-                ++descriptorCount;
+                descLayoutBinding[numBindings].descriptorType = GetVkDescriptorType(type);
+                descLayoutBinding[numBindings].descriptorCount = descLayout->descriptorLayoutParams[uiDescSet][uiDesc].amount;
+                descLayoutBinding[numBindings].binding = uiDesc;
+                descLayoutBinding[numBindings].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+                descLayoutBinding[numBindings].pImmutableSamplers = nullptr;
+                ++numBindings;
             }
         }
     }
 
     uint32 newDescriptorHandle = TINKER_INVALID_HANDLE;
-
-    VkResult result = VK_ERROR_UNKNOWN;
-    if (descriptorCount)
+    if (numBindings > 0)
     {
         newDescriptorHandle = vulkanContextResources->resources->vulkanDescriptorResourcePool.Alloc();
     }
@@ -1405,10 +1374,10 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
 
         VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
         descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descLayoutInfo.bindingCount = 1;// descriptorCount; // TODO: figure this out
-        descLayoutInfo.pBindings = &descLayoutBinding[0][0];
+        descLayoutInfo.bindingCount = numBindings;
+        descLayoutInfo.pBindings = &descLayoutBinding[0];
 
-        result = vkCreateDescriptorSetLayout(vulkanContextResources->resources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
+        VkResult result = vkCreateDescriptorSetLayout(vulkanContextResources->resources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
         if (result != VK_SUCCESS)
         {
             Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set layout!", Core::Utility::LogSeverity::eCritical);
@@ -1459,71 +1428,82 @@ void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, Descr
 {
     for (uint32 uiImage = 0; uiImage < vulkanContextResources->resources->numSwapChainImages; ++uiImage)
     {
-        // Descriptor layout
-        VkWriteDescriptorSet descSetWrites[MAX_DESCRIPTORS_PER_SET] = {};
-        uint32 descriptorCount = 0;
-
-        // Desc set info data
-        VkDescriptorBufferInfo descBufferInfo = {}; // TODO: figure this out
-        VkDescriptorImageInfo descImageInfo = {};
-
-        for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+        for (uint32 uiSet = 0; uiSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiSet)
         {
-            if (descSetHandles[uiDesc] == DefaultDescHandle_Invalid) continue;
+            if (descSetHandles[uiSet] == DefaultDescHandle_Invalid) continue;
             VkDescriptorSet* descriptorSet =
-                &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandles[uiDesc].m_hDesc)->resourceChain[uiImage].descriptorSet;
+                &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandles[uiSet].m_hDesc)->resourceChain[uiImage].descriptorSet;
 
-            descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            // Descriptor layout
+            VkWriteDescriptorSet descSetWrites[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {};
+            uint32 descriptorCount = 0;
 
-            if (descLayout->descriptorLayoutParams[uiDesc][uiDesc].type != TINKER_INVALID_HANDLE)
+            // Desc set info data
+            VkDescriptorBufferInfo descBufferInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {}; // TODO: figure this out
+            VkDescriptorImageInfo descImageInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {};
+
+            for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
             {
-                switch (descLayout->descriptorLayoutParams[uiDesc][uiDesc].type)
+                descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+                uint32 type = descLayout->descriptorLayoutParams[uiSet][uiDesc].type;
+                if (type != DescriptorType::eMax)
                 {
-                    case DescriptorType::eBuffer:
+                    VulkanMemResource* res = &vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetDataHandles[uiSet].handles[uiDesc].m_hRes)->resourceChain[uiImage];
+
+                    switch (type)
                     {
-                        VkBuffer* buffer = &vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes)->resourceChain[uiImage].buffer;
+                        case DescriptorType::eBuffer:
+                        case DescriptorType::eSSBO:
+                        {
+                            VkBuffer* buffer = &res->buffer;
 
-                        descBufferInfo.buffer = *buffer;
-                        descBufferInfo.offset = 0;
-                        descBufferInfo.range = VK_WHOLE_SIZE;
+                            descBufferInfo[descriptorCount].buffer = *buffer;
+                            descBufferInfo[descriptorCount].offset = 0;
+                            descBufferInfo[descriptorCount].range = VK_WHOLE_SIZE;
 
-                        descSetWrites[uiDesc].dstSet = *descriptorSet;
-                        descSetWrites[uiDesc].dstBinding = descriptorCount;
-                        descSetWrites[uiDesc].dstArrayElement = 0;
-                        descSetWrites[uiDesc].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                        descSetWrites[uiDesc].descriptorCount = 1;
-                        descSetWrites[uiDesc].pBufferInfo = &descBufferInfo;
-                        break;
+                            descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                            descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                            descSetWrites[descriptorCount].dstArrayElement = 0;
+                            descSetWrites[descriptorCount].descriptorType = VulkanDescriptorTypes[type];
+                            descSetWrites[descriptorCount].descriptorCount = 1;
+                            descSetWrites[descriptorCount].pBufferInfo = &descBufferInfo[descriptorCount];
+                            break;
+                        }
+
+                        case DescriptorType::eSampledImage:
+                        {
+                            VkImageView* imageView = &res->imageView;
+
+                            descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                            descImageInfo[descriptorCount].imageView = *imageView;
+                            descImageInfo[descriptorCount].sampler = vulkanContextResources->resources->linearSampler;
+
+                            descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                            descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                            descSetWrites[descriptorCount].dstArrayElement = 0;
+                            descSetWrites[descriptorCount].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                            descSetWrites[descriptorCount].descriptorCount = 1;
+                            descSetWrites[descriptorCount].pImageInfo = &descImageInfo[descriptorCount];
+                            break;
+                        }
+
+                        default:
+                        {
+                            break;
+                        }
                     }
+                    ++descriptorCount;
+                } // if
+            } // for
 
-                    case DescriptorType::eSampledImage:
-                    {
-                        VkImageView imageView = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes)->resourceChain[uiImage].imageView;
-
-                        descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                        descImageInfo.imageView = imageView;
-                        descImageInfo.sampler = vulkanContextResources->resources->linearSampler;
-
-                        descSetWrites[uiDesc].dstSet = *descriptorSet;
-                        descSetWrites[uiDesc].dstBinding = descriptorCount;
-                        descSetWrites[uiDesc].dstArrayElement = 0;
-                        descSetWrites[uiDesc].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                        descSetWrites[uiDesc].descriptorCount = 1;
-                        descSetWrites[uiDesc].pImageInfo = &descImageInfo;
-                        break;
-                    }
-
-                    default:
-                    {
-                        break;
-                    }
-                }
-                ++descriptorCount;
+            if (descriptorCount > 0)
+            {
+                vkUpdateDescriptorSets(vulkanContextResources->resources->device, descriptorCount, descSetWrites, 0, nullptr);
             }
-        }
 
-        vkUpdateDescriptorSets(vulkanContextResources->resources->device, descriptorCount, descSetWrites, 0, nullptr);
-    }
+        } // for
+    } // for
 }
 
 void InitDescriptorPool(VulkanContextResources* vulkanContextResources)
@@ -1534,6 +1514,8 @@ void InitDescriptorPool(VulkanContextResources* vulkanContextResources)
     descPoolSizes[0].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS;
     descPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     descPoolSizes[1].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
+    descPoolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descPoolSizes[2].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS;
 
     VkDescriptorPoolCreateInfo descPoolCreateInfo = {};
     descPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1709,52 +1691,22 @@ void VulkanRecordCommandPushConstant(VulkanContextResources* vulkanContextResour
 }
 
 void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
-    ResourceHandle positionBufferHandle, ResourceHandle uvBufferHandle,
-    ResourceHandle normalBufferHandle, ResourceHandle indexBufferHandle, uint32 numIndices,
+    ResourceHandle indexBufferHandle, uint32 numIndices,
     uint32 numInstances, const char* debugLabel, bool immediateSubmit)
 {
-    TINKER_ASSERT(positionBufferHandle != DefaultResHandle_Invalid);
-    TINKER_ASSERT(uvBufferHandle != DefaultResHandle_Invalid);
-    TINKER_ASSERT(normalBufferHandle != DefaultResHandle_Invalid);
+    TINKER_ASSERT(indexBufferHandle != DefaultResHandle_Invalid);
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
 
     uint32 numSwapChainImages = vulkanContextResources->resources->numSwapChainImages;
     uint32 currentSwapChainImage = vulkanContextResources->resources->currentSwapChainImage;
 
-    // Vertex buffers
-    const uint32 numVertexBufferBindings = 3;
-    VulkanMemResourceChain* vertexBufferResources[numVertexBufferBindings] = {};
-    vertexBufferResources[0] = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(positionBufferHandle.m_hRes);
-    vertexBufferResources[1] = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(uvBufferHandle.m_hRes);
-    vertexBufferResources[2] = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(normalBufferHandle.m_hRes);
-
-    uint32 vertexBufferSizes[numVertexBufferBindings] = {};
-    for (uint32 uiBuf = 0; uiBuf < numVertexBufferBindings; ++uiBuf)
-    {
-        vertexBufferSizes[uiBuf] = vertexBufferResources[uiBuf]->resDesc.dims.x;
-    }
-
-    VkBuffer vertexBuffers[numVertexBufferBindings] =
-    {
-        //TODO: bad indexing
-        vertexBufferResources[0]->resourceChain[0/*currentSwapChainImage*/].buffer,
-        vertexBufferResources[1]->resourceChain[0/*currentSwapChainImage*/].buffer,
-        vertexBufferResources[2]->resourceChain[0/*currentSwapChainImage*/].buffer
-    };
-    VkDeviceSize offsets[numVertexBufferBindings] = {};
-    for (uint32 uiBuf = 0; uiBuf < numVertexBufferBindings; ++uiBuf)
-    {
-        offsets[uiBuf] = vertexBufferSizes[uiBuf] * currentSwapChainImage; // offset into the buffer based on current swap chain image
-    }
-    vkCmdBindVertexBuffers(commandBuffer, 0, numVertexBufferBindings, vertexBuffers, offsets);
-
     // Index buffer
     VulkanMemResourceChain* indexBufferResource = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
-    uint32 indexBufferSize = indexBufferResource->resDesc.dims.x;
+    //uint32 indexBufferSize = indexBufferResource->resDesc.dims.x;
     //TODO: bad indexing
-    VkBuffer& indexBuffer = indexBufferResource->resourceChain[0/*vulkanContextResources->resources->currentSwapChainImage*/].buffer;
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, indexBufferSize * currentSwapChainImage, VK_INDEX_TYPE_UINT32);
+    VkBuffer& indexBuffer = indexBufferResource->resourceChain[vulkanContextResources->resources->currentSwapChainImage].buffer;
+    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
     #if defined(ENABLE_VULKAN_DEBUG_LABELS)
     VkDebugUtilsLabelEXT label =
@@ -1770,7 +1722,7 @@ void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
 }
 
 void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-    ShaderHandle shaderHandle, const DescriptorSetDescHandles* descSetHandles, bool immediateSubmit)
+    ShaderHandle shaderHandle, const DescriptorHandle* descSetHandles, bool immediateSubmit)
 {
     TINKER_ASSERT(shaderHandle != DefaultShaderHandle_Invalid);
 
@@ -1782,11 +1734,12 @@ void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResource
 
     for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
     {
-        DescriptorHandle descHandle = descSetHandles[uiDesc].handles[0];
+        DescriptorHandle descHandle = descSetHandles[uiDesc];
         if (descHandle != DefaultDescHandle_Invalid)
         {
             VkDescriptorSet* descSet =
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[vulkanContextResources->resources->currentSwapChainImage].descriptorSet;
+
             vkCmdBindDescriptorSets(vulkanContextResources->resources->commandBuffers[vulkanContextResources->resources->currentSwapChainImage], VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipelineResource->pipelineLayout, uiDesc, 1, descSet, 0, nullptr);
         }
@@ -1817,19 +1770,19 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
     {
         case ResourceType::eBuffer1D:
         {
-            VkBufferCopy bufferCopies[VULKAN_MAX_SWAP_CHAIN_IMAGES] = {};
+            VkBufferCopy bufferCopy = {};
 
             for (uint32 uiBuf = 0; uiBuf < vulkanContextResources->resources->numSwapChainImages; ++uiBuf)
             {
-                bufferCopies[uiBuf].srcOffset = 0; // TODO: make this a function param?
-                bufferCopies[uiBuf].size = sizeInBytes;
+                bufferCopy.srcOffset = 0; // TODO: make this a function param?
+                bufferCopy.size = sizeInBytes;
+                bufferCopy.dstOffset = 0;
 
-                bufferCopies[uiBuf].dstOffset = sizeInBytes * uiBuf;
+                // TODO:bad indexing, assumes staging buffers are only one copy
+                VkBuffer srcBuffer = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
+                VkBuffer dstBuffer = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[uiBuf].buffer;
+                vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
             }
-
-            VkBuffer srcBuffer = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
-            VkBuffer dstBuffer = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[0].buffer;
-            vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, vulkanContextResources->resources->numSwapChainImages, bufferCopies);
 
             break;
         }

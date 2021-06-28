@@ -12,6 +12,7 @@ namespace DescriptorType
     {
         eBuffer = 0,
         eSampledImage,
+        eSSBO,
         eMax
     };
 }
@@ -228,8 +229,8 @@ struct DescriptorHandle
 };
 #define DefaultDescHandle_Invalid DescriptorHandle()
 
-#define MAX_DESCRIPTOR_SETS_PER_SHADER 2
-#define MAX_DESCRIPTORS_PER_SET 1
+#define MAX_DESCRIPTOR_SETS_PER_SHADER 3
+#define MAX_DESCRIPTORS_PER_SET 3
 
 typedef struct descriptor_layout_params
 {
@@ -268,20 +269,6 @@ typedef struct descriptor_set_data_handles
     }
 } DescriptorSetDataHandles;
 
-// list of descriptor handles to bind
-typedef struct descriptor_set_desc_handles
-{
-    DescriptorHandle handles[MAX_DESCRIPTORS_PER_SET];
-
-    void InitInvalid()
-    {
-        for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
-        {
-            handles[uiDesc] = DefaultDescHandle_Invalid;
-        }
-    }
-} DescriptorSetDescHandles;
-
 typedef struct graphics_command
 {
     const char* debugLabel = "Default Label";
@@ -295,19 +282,16 @@ typedef struct graphics_command
             uint32 m_numIndices;
             uint32 m_numInstances;
             ResourceHandle m_indexBufferHandle;
-            ResourceHandle m_positionBufferHandle;
-            ResourceHandle m_uvBufferHandle;
-            ResourceHandle m_normalBufferHandle;
             ShaderHandle m_shaderHandle;
-            DescriptorSetDescHandles m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+            DescriptorHandle m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         };
 
         // Memory transfer
         struct
         {
             uint32 m_sizeInBytes;
-            ResourceHandle m_srcBufferHandle; // src
-            ResourceHandle m_dstBufferHandle; // dst
+            ResourceHandle m_srcBufferHandle;
+            ResourceHandle m_dstBufferHandle;
         };
 
         // Begin render pass

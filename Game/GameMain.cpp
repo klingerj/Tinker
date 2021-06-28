@@ -84,9 +84,10 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.viewportHeight = windowHeight;
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
 
-    Platform::DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance};
+    const uint32 numDescriptorsPerShader = 3;
+    Platform::DescriptorHandle descHandles[numDescriptorsPerShader] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance, g_AssetManager.GetMeshGraphicsDataByID(0)->m_descriptor }; // TODO: bad
     params.descriptorHandles = descHandles;
-    params.numDescriptorHandles = 2;
+    params.numDescriptorHandles = numDescriptorsPerShader;
     gameGraphicsData.m_shaderHandles[eRenderPass_ZPrePass] = LoadShader(platformFuncs, SHADERS_SPV_PATH "basic_vert_glsl.spv", nullptr, &params);
 
     params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
@@ -102,8 +103,10 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.viewportWidth = windowWidth;
     params.viewportHeight = windowHeight;
     params.framebufferHandle = Platform::DefaultFramebufferHandle_Invalid;
-    params.descriptorHandles = &gameGraphicsData.m_swapChainBlitDescHandle;
-    params.numDescriptorHandles = 1;
+    descHandles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
+    descHandles[1] = g_AssetManager.GetMeshGraphicsDataByID(0)->m_descriptor;
+    descHandles[2] = Platform::DefaultDescHandle_Invalid;
+    params.numDescriptorHandles = 2;
     gameGraphicsData.m_blitShaderHandle = LoadShader(platformFuncs, SHADERS_SPV_PATH "blit_vert_glsl.spv", SHADERS_SPV_PATH "blit_frag_glsl.spv", &params);
 }
 
@@ -134,6 +137,11 @@ void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Global);
     gameGraphicsData.m_DescDataBufferHandle_Global = Platform::DefaultResHandle_Invalid;
 
+    for (uint32 uiAsset = 0; uiAsset < g_AssetManager.m_numMeshAssets; ++uiAsset)
+    {
+        g_AssetManager.DestroyVertexBufferDescriptor(uiAsset, platformFuncs);
+    }
+
     platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
 }
 
@@ -160,35 +168,47 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     desc.dims = v3ui(sizeof(DescriptorData_Global), 0, 0);
     gameGraphicsData.m_DescDataBufferHandle_Global = platformFuncs->CreateResource(desc);
 
-    Platform::DescriptorLayout DescriptorLayout = {};
-    DescriptorLayout.InitInvalid();
-    DescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eBuffer;
-    DescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
-    // TODO: add the number of vertex attribute buffers here ^^
+    Platform::DescriptorLayout descriptorLayout = {};
+    descriptorLayout.InitInvalid();
+    descriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eBuffer;
+    descriptorLayout.descriptorLayoutParams[0][0].amount = 1;
+    gameGraphicsData.m_DescData_Global = platformFuncs->CreateDescriptor(&descriptorLayout);
 
-    DescriptorLayout.descriptorLayoutParams[1][0].type = Platform::DescriptorType::eBuffer;
-    DescriptorLayout.descriptorLayoutParams[1][0].amount = 1;
-
-    gameGraphicsData.m_DescData_Global = platformFuncs->CreateDescriptor(&DescriptorLayout);
-    gameGraphicsData.m_DescData_Instance = platformFuncs->CreateDescriptor(&DescriptorLayout);
+    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { gameGraphicsData.m_DescData_Global, Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid };
 
     Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
     descDataHandles[1].InitInvalid();
-    descDataHandles[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
+    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
 
-    Platform::DescriptorHandle descHandles[2] = { gameGraphicsData.m_DescData_Global, gameGraphicsData.m_DescData_Instance };
-    platformFuncs->WriteDescriptor(&DescriptorLayout, &descHandles[0], &descDataHandles[0]);
-    platformFuncs->WriteDescriptor(&DescriptorLayout, &descHandles[1], &descDataHandles[1]);
+    descriptorLayout.InitInvalid();
+    descriptorLayout.descriptorLayoutParams[1][0].type = Platform::DescriptorType::eBuffer;
+    descriptorLayout.descriptorLayoutParams[1][0].amount = 1;
+    gameGraphicsData.m_DescData_Instance = platformFuncs->CreateDescriptor(&descriptorLayout);
+
+    descHandles[0] = Platform::DefaultDescHandle_Invalid;
+    descHandles[1] = gameGraphicsData.m_DescData_Instance;
+
+    descDataHandles[0].InitInvalid();
+    descDataHandles[1].InitInvalid();
+    descDataHandles[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
+    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
 }
 
 void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     DestroyShaders(platformFuncs);
     DestroyDescriptors(platformFuncs);
+    DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
 
     CreateAllDescriptors(platformFuncs);
+    for (uint32 uiAsset = 0; uiAsset < g_AssetManager.m_numMeshAssets; ++uiAsset)
+    {
+        g_AssetManager.CreateVertexBufferDescriptor(uiAsset, platformFuncs);
+    }
+    CreateDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
+
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
@@ -440,11 +460,9 @@ GAME_UPDATE(GameUpdate)
     // Record render commands for view(s)
     {
         //TIMED_SCOPED_BLOCK("Record render pass commands");
-        Platform::DescriptorSetDescHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-        descriptors[0].InitInvalid();
-        descriptors[0].handles[0] = gameGraphicsData.m_DescData_Global;
-        descriptors[1].InitInvalid();
-        descriptors[1].handles[0] = gameGraphicsData.m_DescData_Instance;
+        Platform::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        descriptors[0] = gameGraphicsData.m_DescData_Global;
+        descriptors[1] = gameGraphicsData.m_DescData_Instance;
         RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, descriptors);
         RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, descriptors);
     }
@@ -464,16 +482,14 @@ GAME_UPDATE(GameUpdate)
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_numInstances = 1;
-    command->m_positionBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
-    command->m_uvBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
-    command->m_normalBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command->m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
-        command->m_descriptors[i].InitInvalid();
+        command->m_descriptors[i] = Platform::DefaultDescHandle_Invalid;
     }
-    command->m_descriptors[0].handles[0] = gameGraphicsData.m_swapChainBlitDescHandle;
+    command->m_descriptors[0] = gameGraphicsData.m_swapChainBlitDescHandle;
+    command->m_descriptors[1] = defaultQuad.m_descriptor;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
@@ -508,6 +524,7 @@ void DestroyWindowResizeDependentResources(const Platform::PlatformAPIFuncs* pla
 
     DestroyShaders(platformFuncs);
     DestroyDescriptors(platformFuncs);
+    DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
 }
 
 extern "C"
@@ -522,6 +539,12 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 
     CreateGameRenderingResources(platformFuncs, newWindowWidth, newWindowHeight);
     CreateAllDescriptors(platformFuncs);
+    for (uint32 uiAsset = 0; uiAsset < g_AssetManager.m_numMeshAssets; ++uiAsset)
+    {
+        g_AssetManager.CreateVertexBufferDescriptor(uiAsset, platformFuncs);
+    }
+    CreateDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
+    
     LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
 }
 
@@ -533,7 +556,6 @@ GAME_DESTROY(GameDestroy)
         DestroyWindowResizeDependentResources(platformFuncs);
         DestroyDefaultGeometry(platformFuncs);
 
-        // Game graphics
         // Destroy mesh data
         // TODO: either move this to asset manager or move this stuff out of asset manager, probs
         for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
@@ -544,6 +566,7 @@ GAME_DESTROY(GameDestroy)
             platformFuncs->DestroyResource(meshData->m_uvBuffer.gpuBufferHandle);
             platformFuncs->DestroyResource(meshData->m_normalBuffer.gpuBufferHandle);
             platformFuncs->DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
+            //platformFuncs->DestroyDescriptor(meshData->m_descriptor);
         }
 
         // Destroy texture data

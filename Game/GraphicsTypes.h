@@ -23,6 +23,7 @@ typedef struct dynamic_buffer_data
 
 typedef struct static_mesh_data
 {
+    Tk::Platform::DescriptorHandle m_descriptor;
     StaticBuffer m_positionBuffer;
     StaticBuffer m_uvBuffer;
     StaticBuffer m_normalBuffer;
@@ -102,9 +103,10 @@ struct default_geometry
     StaticBuffer m_uvBuffer;
     StaticBuffer m_normalBuffer;
     StaticBuffer m_indexBuffer;
+    Tk::Platform::DescriptorHandle m_descriptor;
     v4f m_points[numPoints];
     v2f m_uvs[numPoints];
-    v3f m_normals[numPoints];
+    v4f m_normals[numPoints];
     uint32 m_indices[numIndices];
 };
 
@@ -118,4 +120,37 @@ extern DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defa
 
 void CreateDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
 void DestroyDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+
+template <typename DefGeom>
+void DestroyDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    platformFuncs->DestroyDescriptor(geom.m_descriptor);
+    geom.m_descriptor = Platform::DefaultDescHandle_Invalid;
+}
+
+template <typename DefGeom>
+void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    Platform::DescriptorLayout descriptorLayout = {};
+    descriptorLayout.InitInvalid();
+    descriptorLayout.descriptorLayoutParams[1][0].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.descriptorLayoutParams[1][0].amount = 1;
+    descriptorLayout.descriptorLayoutParams[1][1].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.descriptorLayoutParams[1][1].amount = 1;
+    descriptorLayout.descriptorLayoutParams[1][2].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.descriptorLayoutParams[1][2].amount = 1;
+
+    geom.m_descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
+
+    Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    descDataHandles[0].InitInvalid();
+    descDataHandles[1].InitInvalid();
+    descDataHandles[1].handles[0] = geom.m_positionBuffer.gpuBufferHandle;
+    descDataHandles[1].handles[1] = geom.m_uvBuffer.gpuBufferHandle;
+    descDataHandles[1].handles[2] = geom.m_normalBuffer.gpuBufferHandle;
+    descDataHandles[2].InitInvalid();
+
+    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { Platform::DefaultDescHandle_Invalid, geom.m_descriptor, Platform::DefaultDescHandle_Invalid };
+    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
+}
 

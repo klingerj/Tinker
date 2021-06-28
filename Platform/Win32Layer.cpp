@@ -273,8 +273,7 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                                 Graphics::VulkanRecordCommandPushConstant(&vulkanContextResources, (uint8*)data, sizeof(uint32) * 4, currentShader);
                             }
                             Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
-                                currentCmd.m_positionBufferHandle, currentCmd.m_uvBufferHandle,
-                                currentCmd.m_normalBufferHandle, currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
+                                currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
                                 currentCmd.m_numInstances, currentCmd.debugLabel, immediateSubmit);
                             instanceCount += currentCmd.m_numInstances;
                             break;
