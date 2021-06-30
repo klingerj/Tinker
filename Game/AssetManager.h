@@ -45,8 +45,8 @@ public:
     void DestroyVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs);
     // TODO: declare a mapping of ID to each asset file
     StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
-    Tk::Platform::ResourceHandle GetTextureGraphicsDataByID(uint32 textureID);
-    const MeshAttributeData& GetMeshAttrDataByID(uint32 meshID);
+    Tk::Platform::ResourceHandle GetTextureGraphicsDataByID(uint32 textureID) const;
+    const MeshAttributeData& GetMeshAttrDataByID(uint32 meshID) const;
 };
 
 extern AssetManager g_AssetManager;
