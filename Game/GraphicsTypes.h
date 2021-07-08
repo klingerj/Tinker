@@ -12,15 +12,6 @@ typedef struct static_buffer_data
     Tk::Platform::ResourceHandle gpuBufferHandle;
 } StaticBuffer;
 
-// Buffer that has a constantly mapped staging buffer
-// Likely is updated frame-to-frame
-typedef struct dynamic_buffer_data
-{
-    Tk::Platform::ResourceHandle gpuBufferHandle;
-    Tk::Platform::ResourceHandle stagingBufferHandle;
-    void* stagingBufferMemPtr;
-} DynamicBuffer;
-
 typedef struct static_mesh_data
 {
     Tk::Platform::DescriptorHandle m_descriptor;
@@ -30,21 +21,6 @@ typedef struct static_mesh_data
     StaticBuffer m_indexBuffer;
     uint32 m_numIndices;
 } StaticMeshData;
-
-typedef struct dynamic_mesh_data
-{
-    DynamicBuffer m_positionBuffer;
-    DynamicBuffer m_uvBuffer;
-    DynamicBuffer m_normalBuffer;
-    DynamicBuffer m_indexBuffer;
-    uint32 m_numIndices;
-} DynamicMeshData;
-
-/*
-void CopyStagingBufferToGPUBufferCommand(std::vector<Platform::GraphicsCommand>& graphicsCommands,
-    ResourceHandle stagingBufferHandle, ResourceHandle gpuBufferHandle, uint32 bufferSizeInBytes,
-    const char* debugLabel);
-*/
 
 typedef struct mesh_attribute_data
 {
@@ -66,6 +42,14 @@ enum
     eRenderPass_Max
 };
 
+struct TransientPrim
+{
+    Tk::Platform::ResourceHandle indexBufferHandle;
+    Tk::Platform::ResourceHandle vertexBufferHandle;
+    Tk::Platform::DescriptorHandle descriptor;
+    uint32 numVertices;
+};
+
 typedef struct game_graphics_data
 {
     Tk::Platform::ResourceHandle m_rtColorHandle;
@@ -84,6 +68,9 @@ typedef struct game_graphics_data
 
     Tk::Platform::ShaderHandle m_blitShaderHandle;
     Tk::Platform::DescriptorHandle m_swapChainBlitDescHandle;
+
+    TransientPrim m_animatedPolygon;
+    Tk::Platform::ShaderHandle m_animatedPolygonShaderHandle;
 } GameGraphicsData;
 
 typedef struct descriptor_instance_data

@@ -23,6 +23,8 @@ namespace BufferUsage
     {
         eVertex = 0,
         eIndex,
+        eTransientVertex,
+        eTransientIndex,
         eStaging,
         eUniform,
         eMax
@@ -44,7 +46,7 @@ namespace BlendState
     enum : uint32
     {
         eAlphaBlend = 0,
-        eInvalid,
+        eInvalid, // TODO: remove me? am i just opaque/solid?
         eMax
     };
 }
