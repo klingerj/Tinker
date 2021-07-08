@@ -357,7 +357,7 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
         Platform::ResourceDesc desc;
         desc.resourceType = Platform::ResourceType::eBuffer1D;
 
-        gameGraphicsData.m_animatedPolygon.numVertices = 25;
+        gameGraphicsData.m_animatedPolygon.numVertices = 150;
 
         desc.dims = v3ui(gameGraphicsData.m_animatedPolygon.numVertices * sizeof(v4f), 0, 0);
         desc.bufferUsage = Platform::BufferUsage::eTransientVertex;
@@ -517,7 +517,6 @@ GAME_UPDATE(GameUpdate)
 
                 static uint32 frameCtr = 0;
                 ++frameCtr;
-                const float scale = 2.0f * cosf((float)frameCtr * 0.01f);
                 for (uint32 vtx = 0; vtx < gameGraphicsData.m_animatedPolygon.numVertices; ++vtx)
                 {
                     if (vtx == 0)
@@ -526,7 +525,9 @@ GAME_UPDATE(GameUpdate)
                     }
                     else
                     {
-                        const float amt = ((float)(vtx - 1) / (gameGraphicsData.m_animatedPolygon.numVertices - 1)) * (3.14159f * 2.0f);
+                        const float f = ((float)(vtx - 1) / (gameGraphicsData.m_animatedPolygon.numVertices - 1));
+                        const float amt = f * (3.14159f * 2.0f);
+                        const float scale = 2.0f * (cosf((float)frameCtr * 0.2f * f) * 0.5f + 0.5f);
                         ((v4f*)vertexBuf)[vtx] = v4f(cosf(amt) * scale, sinf(amt) * scale, 0.0f, 1.0f);
                     }
                 }
