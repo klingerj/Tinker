@@ -137,12 +137,20 @@ void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Global);
     gameGraphicsData.m_DescDataBufferHandle_Global = Platform::DefaultResHandle_Invalid;
 
-    for (uint32 uiAsset = 0; uiAsset < g_AssetManager.m_numMeshAssets; ++uiAsset)
-    {
-        g_AssetManager.DestroyVertexBufferDescriptor(uiAsset, platformFuncs);
-    }
+    platformFuncs->DestroyAllDescriptors(); // destroys descriptor pool
+}
 
-    platformFuncs->DestroyAllDescriptors(); // TODO: this is not a good API and should be per-pool or something
+void WriteSwapChainBlitResources(const Platform::PlatformAPIFuncs* platformFuncs)
+{
+    Platform::DescriptorLayout blitDescriptorLayout = {};
+    blitDescriptorLayout.InitInvalid();
+    blitDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eSampledImage;
+    blitDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
+
+    Platform::DescriptorSetDataHandles blitHandles = {};
+    blitHandles.InitInvalid();
+    blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
+    platformFuncs->WriteDescriptor(&blitDescriptorLayout, &gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 }
 
 void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
@@ -154,10 +162,7 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     blitDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
     gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(&blitDescriptorLayout);
 
-    Platform::DescriptorSetDataHandles blitHandles = {};
-    blitHandles.InitInvalid();
-    blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    platformFuncs->WriteDescriptor(&blitDescriptorLayout, &gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    WriteSwapChainBlitResources(platformFuncs);
 
     // Descriptor data
     Platform::ResourceDesc desc;
@@ -199,16 +204,6 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     DestroyShaders(platformFuncs);
-    DestroyDescriptors(platformFuncs);
-    DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
-
-    CreateAllDescriptors(platformFuncs);
-    for (uint32 uiAsset = 0; uiAsset < g_AssetManager.m_numMeshAssets; ++uiAsset)
-    {
-        g_AssetManager.CreateVertexBufferDescriptor(uiAsset, platformFuncs);
-    }
-    CreateDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
-
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
@@ -523,8 +518,6 @@ void DestroyWindowResizeDependentResources(const Platform::PlatformAPIFuncs* pla
     platformFuncs->DestroyResource(gameGraphicsData.m_rtDepthHandle);
 
     DestroyShaders(platformFuncs);
-    DestroyDescriptors(platformFuncs);
-    DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
 }
 
 extern "C"
@@ -538,13 +531,8 @@ GAME_WINDOW_RESIZE(GameWindowResize)
     g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
     CreateGameRenderingResources(platformFuncs, newWindowWidth, newWindowHeight);
-    CreateAllDescriptors(platformFuncs);
-    for (uint32 uiAsset = 0; uiAsset < g_AssetManager.m_numMeshAssets; ++uiAsset)
-    {
-        g_AssetManager.CreateVertexBufferDescriptor(uiAsset, platformFuncs);
-    }
-    CreateDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
-    
+    WriteSwapChainBlitResources(platformFuncs);
+
     LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
 }
 
@@ -554,27 +542,14 @@ GAME_DESTROY(GameDestroy)
     if (isGameInitted)
     {
         DestroyWindowResizeDependentResources(platformFuncs);
+        DestroyDescriptors(platformFuncs);
+
         DestroyDefaultGeometry(platformFuncs);
+        DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
 
-        // Destroy mesh data
-        // TODO: either move this to asset manager or move this stuff out of asset manager, probs
-        for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
-        {
-            StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
-
-            platformFuncs->DestroyResource(meshData->m_positionBuffer.gpuBufferHandle);
-            platformFuncs->DestroyResource(meshData->m_uvBuffer.gpuBufferHandle);
-            platformFuncs->DestroyResource(meshData->m_normalBuffer.gpuBufferHandle);
-            platformFuncs->DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
-            //platformFuncs->DestroyDescriptor(meshData->m_descriptor);
-        }
-
-        // Destroy texture data
-        for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numTextureAssets; ++uiAssetID)
-        {
-            Platform::ResourceHandle textureHandle = g_AssetManager.GetTextureGraphicsDataByID(uiAssetID);
-            platformFuncs->DestroyResource(textureHandle);
-        }
+        // Destroy assets
+        g_AssetManager.DestroyAllMeshData(platformFuncs);
+        g_AssetManager.DestroyAllTextureData(platformFuncs);
 
         if (isMultiplayer && connectedToServer)
         {
@@ -589,4 +564,3 @@ GAME_DESTROY(GameDestroy)
     _CrtDumpMemoryLeaks();
     #endif
 }
-

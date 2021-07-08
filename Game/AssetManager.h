@@ -29,6 +29,8 @@ private:
     TextureMetadata m_allTextureMetadata[TINKER_MAX_TEXTURES];
     Tk::Platform::ResourceHandle m_allTextureGraphicsHandles[TINKER_MAX_TEXTURES];
 
+    void CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+
 public:
     uint32 m_numMeshAssets = 0;
     uint32 m_numTextureAssets = 0;
@@ -41,8 +43,8 @@ public:
     void LoadAllAssets(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
     void InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs,
         Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
-    void CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs);
-    void DestroyVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+    void DestroyAllMeshData(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+    void DestroyAllTextureData(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
     // TODO: declare a mapping of ID to each asset file
     StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
     Tk::Platform::ResourceHandle GetTextureGraphicsDataByID(uint32 textureID) const;
