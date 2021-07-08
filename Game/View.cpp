@@ -125,8 +125,6 @@ void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instanc
 
 void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorHandle* descriptors)
 {
-    StartRenderPass(renderPass, graphicsCommandStream);
-
     if (view->m_numInstances > 0)
     {
         uint32 currentAssetID = view->m_instances_sorted[0].m_assetID;
@@ -163,7 +161,5 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platfo
             ++uiInstance;
         }
     }
-
-    EndRenderPass(renderPass, graphicsCommandStream);
 }
 

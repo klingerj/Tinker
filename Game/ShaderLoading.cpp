@@ -4,7 +4,7 @@
 using namespace Tk;
 
 static Memory::LinearAllocator shaderBytecodeAllocator;
-const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 1024 * 10;
+const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 1024 * 100;
 
 void FreeShaderBytecodeMemory()
 {

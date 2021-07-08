@@ -1287,19 +1287,33 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
                 break;
             }
 
+            case BufferUsage::eTransientVertex:
+            {
+                usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // vertex buffers are actually SSBOs for now
+                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+                break;
+            }
+
+            case BufferUsage::eTransientIndex:
+            {
+                usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+                break;
+            }
+
             case BufferUsage::eStaging:
             {
                 oneBufferOnly = true;
                 perSwapChainSize = false;
                 usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-                propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
                 break;
             }
 
             case BufferUsage::eUniform:
             {
                 usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-                propertyFlags = (VkMemoryPropertyFlagBits)(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
                 break;
             }
 

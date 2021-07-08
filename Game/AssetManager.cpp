@@ -543,7 +543,7 @@ void AssetManager::DestroyAllTextureData(const Tk::Platform::PlatformAPIFuncs* p
 
 void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
-    DescriptorLayout descriptorLayout = {};
+    Platform::DescriptorLayout descriptorLayout = {};
     descriptorLayout.InitInvalid();
     descriptorLayout.descriptorLayoutParams[2][0].type = Platform::DescriptorType::eSSBO;
     descriptorLayout.descriptorLayoutParams[2][0].amount = 1;
@@ -563,7 +563,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platfor
     descDataHandles[2].handles[1] = data->m_uvBuffer.gpuBufferHandle;
     descDataHandles[2].handles[2] = data->m_normalBuffer.gpuBufferHandle;
 
-    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { DefaultDescHandle_Invalid, DefaultDescHandle_Invalid, data->m_descriptor };
+    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid, data->m_descriptor };
     platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
 }
 

@@ -316,7 +316,7 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     SetInstanceData(&MainView, instanceID, &data);
 
     instanceID = CreateInstance(&MainView, 1);
-    data.modelMatrix[3][0] = 0.0f;
+    data.modelMatrix[3][0] = -2.5f;
     SetInstanceData(&MainView, instanceID, &data);
 
     instanceID = CreateInstance(&MainView, 2);
@@ -351,6 +351,51 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
 
     CreateAllDescriptors(platformFuncs);
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
+
+    //CreateAnimatedPolygon();
+    {
+        Platform::ResourceDesc desc;
+        desc.resourceType = Platform::ResourceType::eBuffer1D;
+
+        gameGraphicsData.m_animatedPolygon.numVertices = 25;
+
+        desc.dims = v3ui(gameGraphicsData.m_animatedPolygon.numVertices * sizeof(v4f), 0, 0);
+        desc.bufferUsage = Platform::BufferUsage::eTransientVertex;
+        gameGraphicsData.m_animatedPolygon.vertexBufferHandle = platformFuncs->CreateResource(desc);
+        desc.bufferUsage = Platform::BufferUsage::eTransientIndex;
+        desc.dims = v3ui((gameGraphicsData.m_animatedPolygon.numVertices - 1) * 3 * sizeof(uint32), 0, 0);
+        gameGraphicsData.m_animatedPolygon.indexBufferHandle = platformFuncs->CreateResource(desc);
+
+        // Descriptor - vertex buffer
+        Platform::DescriptorLayout descriptorLayout = {};
+        descriptorLayout.InitInvalid();
+        descriptorLayout.descriptorLayoutParams[1][0].type = Platform::DescriptorType::eSSBO;
+        descriptorLayout.descriptorLayoutParams[1][0].amount = 1;
+
+        gameGraphicsData.m_animatedPolygon.descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
+
+        Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+        descDataHandles[0].InitInvalid();
+        descDataHandles[1].InitInvalid();
+        descDataHandles[1].handles[0] = gameGraphicsData.m_animatedPolygon.vertexBufferHandle;
+        descDataHandles[2].InitInvalid();        
+
+        Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { Platform::DefaultDescHandle_Invalid, gameGraphicsData.m_animatedPolygon.descriptor, Platform::DefaultDescHandle_Invalid };
+        platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
+
+        Platform::GraphicsPipelineParams params;
+        params.blendState = Platform::BlendState::eAlphaBlend;
+        params.depthState = Platform::DepthState::eTestOnWriteOn;
+        params.viewportWidth = windowWidth;
+        params.viewportHeight = windowHeight;
+        params.framebufferHandle = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
+        descHandles[0] = gameGraphicsData.m_DescData_Global;
+        descHandles[1] = gameGraphicsData.m_animatedPolygon.descriptor;
+        descHandles[2] = Platform::DefaultDescHandle_Invalid;
+        params.descriptorHandles = descHandles;
+        params.numDescriptorHandles = 2;
+        gameGraphicsData.m_animatedPolygonShaderHandle = LoadShader(platformFuncs, SHADERS_SPV_PATH "animpoly_vert_glsl.spv", SHADERS_SPV_PATH "animpoly_frag_glsl.spv", &params);
+    }
 
     return 0;
 }
@@ -409,18 +454,6 @@ GAME_UPDATE(GameUpdate)
         Update(&MainView, descriptors, platformFuncs);
     }
 
-    // Record buffer update commands
-    // TODO: have dynamic assets?
-    /*for (uint32 uiAssetID = 0; uiAssetID < g_AssetManager.m_numMeshAssets; ++uiAssetID)
-    {
-        DynamicMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(uiAssetID);
-
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_positionBuffer, meshData->m_numIndices * sizeof(v4f), "Update Asset Vtx Pos Buf");
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_uvBuffer, meshData->m_numIndices * sizeof(v2f), "Update Asset Vtx Uv Buf");
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_normalBuffer, meshData->m_numIndices * sizeof(v3f), "Update Asset Vtx Norm Buf");
-        UpdateDynamicBufferCommand(graphicsCommands, &meshData->m_indexBuffer, meshData->m_numIndices * sizeof(uint32), "Update Asset Vtx Idx Buf");
-    }*/
-
     // Clear depth buffer
     {
         Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
@@ -458,8 +491,70 @@ GAME_UPDATE(GameUpdate)
         Platform::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
+
+        StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
         RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, descriptors);
+        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
+
+        StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
         RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, descriptors);
+        // Draw animated polygon with transient buffers
+        {
+            // Update animated polygon
+            {
+                // Map
+                void* indexBuf = platformFuncs->MapResource(gameGraphicsData.m_animatedPolygon.indexBufferHandle);
+                void* vertexBuf = platformFuncs->MapResource(gameGraphicsData.m_animatedPolygon.vertexBufferHandle);
+
+                // Update
+                const uint32 numIndices = ((gameGraphicsData.m_animatedPolygon.numVertices - 1) * 3);
+                for (uint32 idx = 0; idx < numIndices; idx += 3)
+                {
+                    ((uint32*)indexBuf)[idx + 0] = 0;
+                    ((uint32*)indexBuf)[idx + 1] = idx / 3 + 1;
+                    ((uint32*)indexBuf)[idx + 2] = idx < numIndices - 3 ? idx / 3 + 2 : 1;
+                }
+
+                static uint32 frameCtr = 0;
+                ++frameCtr;
+                const float scale = 2.0f * cosf((float)frameCtr * 0.01f);
+                for (uint32 vtx = 0; vtx < gameGraphicsData.m_animatedPolygon.numVertices; ++vtx)
+                {
+                    if (vtx == 0)
+                    {
+                        ((v4f*)vertexBuf)[vtx] = v4f(0.0f, 0.0f, 0.0f, 1.0f);
+                    }
+                    else
+                    {
+                        const float amt = ((float)(vtx - 1) / (gameGraphicsData.m_animatedPolygon.numVertices - 1)) * (3.14159f * 2.0f);
+                        ((v4f*)vertexBuf)[vtx] = v4f(cosf(amt) * scale, sinf(amt) * scale, 0.0f, 1.0f);
+                    }
+                }
+
+                // Unmap
+                platformFuncs->UnmapResource(gameGraphicsData.m_animatedPolygon.indexBufferHandle);
+                platformFuncs->UnmapResource(gameGraphicsData.m_animatedPolygon.vertexBufferHandle);
+            }
+
+            // Draw call
+            Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
+            command->m_commandType = Platform::GraphicsCmd::eDrawCall;
+            command->debugLabel = "Draw anim poly";
+            command->m_numIndices = (gameGraphicsData.m_animatedPolygon.numVertices - 1) * 3;
+            command->m_numInstances = 1;
+            command->m_indexBufferHandle = gameGraphicsData.m_animatedPolygon.indexBufferHandle;
+            command->m_shaderHandle = gameGraphicsData.m_animatedPolygonShaderHandle;
+
+            for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+            {
+                command->m_descriptors[i] = Platform::DefaultDescHandle_Invalid;
+            }
+            command->m_descriptors[0] = gameGraphicsData.m_DescData_Global;
+            command->m_descriptors[1] = gameGraphicsData.m_animatedPolygon.descriptor;
+            ++graphicsCommandStream->m_numCommands;
+        }
+        EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
 
     // FINAL BLIT TO SCREEN
