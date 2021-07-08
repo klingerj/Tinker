@@ -50,6 +50,11 @@ struct TransientPrim
     uint32 numVertices;
 };
 
+void CreateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
+void DestroyAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
+void UpdateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
+void DrawAnimatedPoly(TransientPrim* prim, Tk::Platform::DescriptorHandle, Tk::Platform::ShaderHandle shaderHandle, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
+
 typedef struct game_graphics_data
 {
     Tk::Platform::ResourceHandle m_rtColorHandle;
