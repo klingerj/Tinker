@@ -512,11 +512,33 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
     m_textureBufferAllocator.ExplicitFree();
 }
 
-void AssetManager::DestroyVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+void AssetManager::DestroyAllMeshData(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
-    StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
-    platformFuncs->DestroyDescriptor(data->m_descriptor);
-    data->m_descriptor = Platform::DefaultDescHandle_Invalid;
+    for (uint32 uiAssetID = 0; uiAssetID < m_numMeshAssets; ++uiAssetID)
+    {
+        StaticMeshData* meshData = GetMeshGraphicsDataByID(uiAssetID);
+
+        platformFuncs->DestroyResource(meshData->m_positionBuffer.gpuBufferHandle);
+        meshData->m_positionBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+        platformFuncs->DestroyResource(meshData->m_uvBuffer.gpuBufferHandle);
+        meshData->m_uvBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+        platformFuncs->DestroyResource(meshData->m_normalBuffer.gpuBufferHandle);
+        meshData->m_normalBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+        platformFuncs->DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
+        meshData->m_indexBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+
+        platformFuncs->DestroyDescriptor(meshData->m_descriptor);
+        meshData->m_descriptor = Platform::DefaultDescHandle_Invalid;
+    }
+}
+
+void AssetManager::DestroyAllTextureData(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    for (uint32 uiAssetID = 0; uiAssetID < m_numTextureAssets; ++uiAssetID)
+    {
+        Platform::ResourceHandle textureHandle = GetTextureGraphicsDataByID(uiAssetID);
+        platformFuncs->DestroyResource(textureHandle);
+    }
 }
 
 void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
