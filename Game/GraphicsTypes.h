@@ -53,15 +53,13 @@ struct TransientPrim
 void CreateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
 void DestroyAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
 void UpdateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
-void DrawAnimatedPoly(TransientPrim* prim, Tk::Platform::DescriptorHandle, Tk::Platform::ShaderHandle shaderHandle, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
+void DrawAnimatedPoly(TransientPrim* prim, Tk::Platform::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
 
 typedef struct game_graphics_data
 {
     Tk::Platform::ResourceHandle m_rtColorHandle;
     Tk::Platform::ResourceHandle m_rtDepthHandle;
     Tk::Platform::FramebufferHandle m_framebufferHandles[eRenderPass_Max];
-
-    Tk::Platform::ShaderHandle m_shaderHandles[eRenderPass_Max];
 
     Tk::Platform::DescriptorHandle m_DescData_Instance;
     Tk::Platform::ResourceHandle m_DescDataBufferHandle_Instance;
@@ -71,11 +69,9 @@ typedef struct game_graphics_data
     Tk::Platform::ResourceHandle m_DescDataBufferHandle_Global;
     void* m_DescDataBufferMemPtr_Global;
 
-    Tk::Platform::ShaderHandle m_blitShaderHandle;
     Tk::Platform::DescriptorHandle m_swapChainBlitDescHandle;
 
     TransientPrim m_animatedPolygon;
-    Tk::Platform::ShaderHandle m_animatedPolygonShaderHandle;
 } GameGraphicsData;
 
 typedef struct descriptor_instance_data
@@ -125,12 +121,12 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platfo
 {
     Platform::DescriptorLayout descriptorLayout = {};
     descriptorLayout.InitInvalid();
-    descriptorLayout.descriptorLayoutParams[1][0].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[1][0].amount = 1;
-    descriptorLayout.descriptorLayoutParams[1][1].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[1][1].amount = 1;
-    descriptorLayout.descriptorLayoutParams[1][2].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[1][2].amount = 1;
+    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
+    descriptorLayout.params[1].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[1].amount = 1;
+    descriptorLayout.params[2].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[2].amount = 1;
 
     geom.m_descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
 
@@ -142,7 +138,7 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platfo
     descDataHandles[1].handles[2] = geom.m_normalBuffer.gpuBufferHandle;
     descDataHandles[2].InitInvalid();
 
-    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { Platform::DefaultDescHandle_Invalid, geom.m_descriptor, Platform::DefaultDescHandle_Invalid };
+    Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { Platform::DefaultDescHandle_Invalid, geom.m_descriptor, Platform::DefaultDescHandle_Invalid };
     platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
 }
 

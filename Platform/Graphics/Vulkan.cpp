@@ -78,7 +78,6 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     vulkanContextResources->resources = new VkResources{};
 
     vulkanContextResources->resources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
-    vulkanContextResources->resources->vulkanPipelineResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     vulkanContextResources->resources->vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     vulkanContextResources->resources->vulkanFramebufferResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
 
@@ -132,6 +131,23 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     VulkanDescriptorTypes[DescriptorType::eSSBO] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+    // Shader pso permutations
+    for (uint32 sid = 0; sid < VkResources::eMaxShaders; ++sid)
+    {
+        VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[sid];
+        pipelineLayout = VK_NULL_HANDLE;
+
+        for (uint32 bs = 0; bs < VkResources::eMaxBlendStates; ++bs)
+        {
+            for (uint32 ds = 0; ds < VkResources::eMaxDepthStates; ++ds)
+            {
+                VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[sid][bs][ds];
+                graphicsPipeline = VK_NULL_HANDLE;
+            }
+        }
+    }
+    //-----
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -1059,7 +1075,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     dynamicState.dynamicStateCount = numDynamicStates;
     dynamicState.pDynamicStates = dynamicStates;
 
-    uint32 newPipelineHandle = vulkanContextResources->resources->vulkanPipelineResourcePool.Alloc();
+    //uint32 newPipelineHandle = vulkanContextResources->resources->vulkanPipelineResourcePool.Alloc();
 
     // Descriptor layouts
     TINKER_ASSERT(numDescriptorHandles <= MAX_DESCRIPTOR_SETS_PER_SHADER);
@@ -1090,7 +1106,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     pipelineLayoutInfo.pushConstantRangeCount = numPushConstants;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    VkPipelineLayout* pipelineLayout = &vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->pipelineLayout;
+    //VkPipelineLayout* pipelineLayout = &vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->pipelineLayout;
 
     VkResult result = vkCreatePipelineLayout(vulkanContextResources->resources->device,
         &pipelineLayoutInfo,
@@ -1148,6 +1164,98 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     vkDestroyShaderModule(vulkanContextResources->resources->device, fragmentShaderModule, nullptr);
 
     return ShaderHandle(newPipelineHandle);
+}
+
+void VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorID, const Platform::DescriptorLayout* descriptorLayout)
+{
+    if (vulkanContextResources->resources->descriptorPool == VK_NULL_HANDLE)
+    {
+        // Allocate the descriptor pool
+        InitDescriptorPool(vulkanContextResources);
+    }
+    
+    // Descriptor layout
+    VkDescriptorSetLayoutBinding descLayoutBinding[MAX_BINDINGS_PER_SET] = {};
+    uint32 numBindings = 0;
+
+    for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+    {
+        uint32 type = descLayout->params[uiDesc].type;
+        if (type < DescriptorType::eMax)
+        {
+            descLayoutBinding[numBindings].descriptorType = GetVkDescriptorType(type);
+            descLayoutBinding[numBindings].descriptorCount = descLayout->params[uiDesc].amount;
+            descLayoutBinding[numBindings].binding = uiDesc;
+            descLayoutBinding[numBindings].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            descLayoutBinding[numBindings].pImmutableSamplers = nullptr;
+            ++numBindings;
+        }
+    }
+
+    uint32 newDescriptorHandle = TINKER_INVALID_HANDLE;
+    if (numBindings > 0)
+    {
+        newDescriptorHandle = vulkanContextResources->resources->vulkanDescriptorResourcePool.Alloc();
+    }
+    else
+    {
+        Core::Utility::LogMsg("Platform", "No descriptors passed to VulkanCreateDescriptor()!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    VulkanDescriptorLayout* descriptorSetLayout = &vulkanContextResources->descLayouts[descriptorID];
+    descriptorSetLayout->layout = VK_NULL_HANDLE;
+
+    VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
+    descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descLayoutInfo.bindingCount = numBindings;
+    descLayoutInfo.pBindings = &descLayoutBinding[0];
+
+    VkResult result = vkCreateDescriptorSetLayout(vulkanContextResources->resources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set layout!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    memcpy(&vulkanContextResources->descLayouts[descriptorID].bindings, &descriptorLayout->params[0], sizeof(Platform::DescriptorLayout));
+}
+
+void CreatePSOPerm(VulkanContextResources* vulkanContextResources, uint32 shaderID, uint32 blendState, uint32 depthState, uint8* vertexBytecode, uint32 vertexBytecodeSize, uint8* fragmentBytecode, uint32 fragmentBytecodeSize)
+{
+    VkPipeline& graphicsPipeline     = vulkanContextResources->resources->psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
+    VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[shaderID][blendState][depthState];
+
+    // Create the graphics pipeline
+
+    if (pipelineLayout == VK_NULL_HANDLE)
+    {
+        // Create it, otherwise don't
+    }
+}
+
+void DestroyAllPSOPerms(VulkanContextResources* vulkanContextResources)
+{
+    vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
+
+    for (uint32 sid = 0; sid < VkResources::eMaxShaders; ++sid)
+    {
+        VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[sid];
+        vkDestroyPipelineLayout(vulkanContextResources->resources->device, pipelineLayout, nullptr);
+        pipelineLayout = VK_NULL_HANDLE;
+
+        for (uint32 bs = 0; bs < VkResources::eMaxBlendStates; ++bs)
+        {
+            for (uint32 ds = 0; ds < VkResources::eMaxDepthStates; ++ds)
+            {
+                VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[sid][bs][ds];
+
+                vkDestroyPipeline(vulkanContextResources->resources->device, graphicsPipeline, nullptr);
+
+                graphicsPipeline = VK_NULL_HANDLE;
+            }
+        }
+    }
 }
 
 void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources)
@@ -1349,12 +1457,12 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
     }
     
     // Descriptor layout
-    VkDescriptorSetLayoutBinding descLayoutBinding[MAX_DESCRIPTORS_PER_SET] = {};
+    VkDescriptorSetLayoutBinding descLayoutBinding[MAX_BINDINGS_PER_SET] = {};
     uint32 numBindings = 0;
 
     for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
     {
-        for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
         {
             uint32 type = descLayout->descriptorLayoutParams[uiDescSet][uiDesc].type;
             if (type < DescriptorType::eMax)
@@ -1449,14 +1557,14 @@ void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, Descr
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandles[uiSet].m_hDesc)->resourceChain[uiImage].descriptorSet;
 
             // Descriptor layout
-            VkWriteDescriptorSet descSetWrites[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {};
+            VkWriteDescriptorSet descSetWrites[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_BINDINGS_PER_SET] = {};
             uint32 descriptorCount = 0;
 
             // Desc set info data
-            VkDescriptorBufferInfo descBufferInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {}; // TODO: figure this out
-            VkDescriptorImageInfo descImageInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {};
+            VkDescriptorBufferInfo descBufferInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_BINDINGS_PER_SET] = {}; // TODO: figure this out
+            VkDescriptorImageInfo descImageInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_BINDINGS_PER_SET] = {};
 
-            for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+            for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
             {
                 descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 

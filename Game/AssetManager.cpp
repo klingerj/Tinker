@@ -25,7 +25,6 @@ void AssetManager::LoadAllAssets(const Tk::Platform::PlatformAPIFuncs* platformF
 
     const char* meshFilePaths[numMeshAssets] =
     {
-        // TODO: get assets dir via compile define
         ASSETS_PATH "UnitSphere\\sphere.obj",
         ASSETS_PATH "UnitCube\\cube.obj",
         ASSETS_PATH "FireElemental\\fire_elemental.obj",
@@ -545,12 +544,12 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platfor
 {
     Platform::DescriptorLayout descriptorLayout = {};
     descriptorLayout.InitInvalid();
-    descriptorLayout.descriptorLayoutParams[2][0].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[2][0].amount = 1;
-    descriptorLayout.descriptorLayoutParams[2][1].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[2][1].amount = 1;
-    descriptorLayout.descriptorLayoutParams[2][2].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[2][2].amount = 1;
+    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
+    descriptorLayout.params[1].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[1].amount = 1;
+    descriptorLayout.params[2].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[2].amount = 1;
 
     StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
     data->m_descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
@@ -563,7 +562,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platfor
     descDataHandles[2].handles[1] = data->m_uvBuffer.gpuBufferHandle;
     descDataHandles[2].handles[2] = data->m_normalBuffer.gpuBufferHandle;
 
-    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid, data->m_descriptor };
+    Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid, data->m_descriptor };
     platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
 }
 

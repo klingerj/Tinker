@@ -58,13 +58,14 @@ struct PlatformAPIFuncs
     unmap_resource* UnmapResource;
     create_framebuffer* CreateFramebuffer;
     destroy_framebuffer* DestroyFramebuffer;
-    create_graphics_pipeline* CreateGraphicsPipeline;
-    destroy_graphics_pipeline* DestroyGraphicsPipeline;
+    //create_graphics_pipeline* CreateGraphicsPipeline;
+    //destroy_graphics_pipeline* DestroyGraphicsPipeline;
     create_descriptor* CreateDescriptor;
     destroy_descriptor* DestroyDescriptor;
     destroy_all_descriptors* DestroyAllDescriptors;
     write_descriptor* WriteDescriptor;
     submit_cmds_immediate* SubmitCmdsImmediate;
+    create_descriptor_layout* CreateDescriptorLayout;
 };
 
 // Game side

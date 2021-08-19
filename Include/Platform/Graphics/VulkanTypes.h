@@ -2,6 +2,7 @@
 
 #include "Core/CoreDefines.h"
 #include "Core/Allocators.h"
+#include "PlatformGameGraphicsAPI.h"
 
 #include <vulkan/vulkan.h>
 
@@ -51,15 +52,9 @@ typedef struct vulkan_framebuffer_resource
     uint32 numClearValues;
 } VulkanFramebufferResource;
 
-typedef struct vulkan_pipeline_resource
-{
-    VkPipeline graphicsPipeline;
-    VkPipelineLayout pipelineLayout;
-} VulkanPipelineResource;
-
 typedef struct vulkan_descriptor_resource
 {
-    VkDescriptorSetLayout descriptorLayout;
+    //VkDescriptorSetLayout descriptorLayout;
     VkDescriptorSet descriptorSet;
 } VulkanDescriptorResource;
 
@@ -79,6 +74,12 @@ typedef struct
 {
     VulkanDescriptorResource resourceChain[VULKAN_MAX_SWAP_CHAIN_IMAGES];
 } VulkanDescriptorChain;
+
+typedef struct
+{
+    VkDescriptorLayout layout;
+    Platform::DescriptorLayout bindings;
+} VulkanDescriptorLayout;
 
 struct VkResources
 {
@@ -109,7 +110,6 @@ struct VkResources
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     VkSampler linearSampler = VK_NULL_HANDLE;
     Memory::PoolAllocator<VulkanMemResourceChain> vulkanMemResourcePool;
-    Memory::PoolAllocator<VulkanPipelineResource> vulkanPipelineResourcePool;
     Memory::PoolAllocator<VulkanDescriptorChain> vulkanDescriptorResourcePool;
     Memory::PoolAllocator<VulkanFramebufferResourceChain> vulkanFramebufferResourcePool;
     VkFence fences[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
@@ -120,6 +120,20 @@ struct VkResources
     VkCommandBuffer* threaded_secondaryCommandBuffers = nullptr;
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;
+
+    enum
+    {
+        eMaxShaders = SHADER_ID_MAX,
+        eMaxBlendStates = BlendState::eMax,
+        eMaxDepthStates = DepthState::eMax,
+        eMaxDescLayouts = DESCLAYOUT_ID_MAX;
+    };
+    struct PSOPerms
+    {
+        VkPipeline       graphicsPipeline[eMaxShaders][eMaxBlendStates][eMaxDepthStates];
+        VkPipelineLayout pipelineLayout[eMaxShaders];
+    } psoPermutations;
+    VkDescriptorSetLayout descLayouts[eMaxDescLayouts];
 };
 
 // Helpers

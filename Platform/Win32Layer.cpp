@@ -511,7 +511,7 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
     }
 }
 
-CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
+/*CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
@@ -531,7 +531,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             return DefaultShaderHandle_Invalid;
         }
     }
-}
+}*/
 
 CREATE_DESCRIPTOR(CreateDescriptor)
 {
@@ -549,6 +549,23 @@ CREATE_DESCRIPTOR(CreateDescriptor)
             runGame = false;
             return DefaultDescHandle_Invalid;
             //break;
+        }
+    }
+}
+
+CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case GraphicsAPI::eVulkan:
+        {
+            Graphics::VulkanCreateDescriptor(&vulkanContextResources, descLayoutID, descLayout);
+        }
+
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
+            runGame = false;
         }
     }
 }
@@ -591,7 +608,7 @@ DESTROY_FRAMEBUFFER(DestroyFramebuffer)
     }
 }
 
-DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
+/*DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
@@ -608,7 +625,7 @@ DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
             break;
         }
     }
-}
+}*/
 
 DESTROY_DESCRIPTOR(DestroyDescriptor)
 {
@@ -1143,13 +1160,14 @@ wWinMain(HINSTANCE hInstance,
         g_platformAPIFuncs.UnmapResource = UnmapResource;
         g_platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
         g_platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
-        g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
-        g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
+        //g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
+        //g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
         g_platformAPIFuncs.CreateDescriptor = CreateDescriptor;
         g_platformAPIFuncs.DestroyAllDescriptors = DestroyAllDescriptors;
         g_platformAPIFuncs.DestroyDescriptor = DestroyDescriptor;
         g_platformAPIFuncs.WriteDescriptor = WriteDescriptor;
         g_platformAPIFuncs.SubmitCmdsImmediate = SubmitCmdsImmediate;
+        g_platformAPIFuncs.CreateDescriptorLayout = CreateDescriptorLayout;
 
         g_graphicsCommandStream = {};
         g_graphicsCommandStream.m_numCommands = 0;

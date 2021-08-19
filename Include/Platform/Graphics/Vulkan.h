@@ -3,6 +3,7 @@
 #include "Core/CoreDefines.h"
 #include "Core/Math/VectorTypes.h"
 #include "PlatformGameAPI.h"
+#include "Platform/ShaderManager.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -76,11 +77,13 @@ FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextR
     uint32 colorEndLayout, uint32 width, uint32 height);
 void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, FramebufferHandle handle);
 
-ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
+/*ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources, void* vertexShaderCode,
     uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes,
     uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight,
     FramebufferHandle framebufferHandle, DescriptorHandle* descriptorHandles, uint32 numDescriptorHandles);
-void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ShaderHandle handle);
+void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ShaderHandle handle);*/
+void CreatePSOPerm(VulkanContextResources* vulkanContextResources, uint32 shaderID, uint32 blendState, uint32 depthState, uint8* vertexBytecode, uint32 vertexBytecodeSize, uint8* fragmentBytecode, uint32 fragmentBytecodeSize);
+void DestroyAllPSOPerms(VulkanContextResources* vulkanContextResources);
 
 DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout);
 void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, DescriptorHandle handle);

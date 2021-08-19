@@ -4,7 +4,6 @@
 #include "Core/FileIO/FileLoading.h"
 #include "Core/Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
-#include "ShaderLoading.h"
 #include "RenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
@@ -71,7 +70,7 @@ INPUT_CALLBACK(RaytraceTestCallback)
     Platform::PrintDebugString("...Done.\n");
 }
 
-void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+/*void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     ResetShaderBytecodeAllocator();
 
@@ -120,9 +119,9 @@ void LoadAllShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 wind
     params.descriptorHandles = descHandles;
     params.numDescriptorHandles = 2;
     gameGraphicsData.m_animatedPolygonShaderHandle = LoadShader(platformFuncs, SHADERS_SPV_PATH "animpoly_vert_glsl.spv", SHADERS_SPV_PATH "animpoly_frag_glsl.spv", &params);
-}
+}*/
 
-void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
+/*void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
     {
@@ -135,7 +134,7 @@ void DestroyShaders(const Platform::PlatformAPIFuncs* platformFuncs)
 
     platformFuncs->DestroyGraphicsPipeline(gameGraphicsData.m_animatedPolygonShaderHandle);
     gameGraphicsData.m_animatedPolygonShaderHandle = Platform::DefaultShaderHandle_Invalid;
-}
+}*/
 
 void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 {
@@ -157,7 +156,7 @@ void DestroyDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 
 void WriteSwapChainBlitResources(const Platform::PlatformAPIFuncs* platformFuncs)
 {
-    Platform::DescriptorLayout blitDescriptorLayout = {};
+    /*Platform::DescriptorLayout blitDescriptorLayout = {};
     blitDescriptorLayout.InitInvalid();
     blitDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eSampledImage;
     blitDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
@@ -165,13 +164,13 @@ void WriteSwapChainBlitResources(const Platform::PlatformAPIFuncs* platformFuncs
     Platform::DescriptorSetDataHandles blitHandles = {};
     blitHandles.InitInvalid();
     blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    platformFuncs->WriteDescriptor(&blitDescriptorLayout, &gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    platformFuncs->WriteDescriptor(&blitDescriptorLayout, &gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);*/
 }
 
 void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     // Swap chain blit
-    Platform::DescriptorLayout blitDescriptorLayout = {};
+    /*Platform::DescriptorLayout blitDescriptorLayout = {};
     blitDescriptorLayout.InitInvalid();
     blitDescriptorLayout.descriptorLayoutParams[0][0].type = Platform::DescriptorType::eSampledImage;
     blitDescriptorLayout.descriptorLayoutParams[0][0].amount = 1;
@@ -213,13 +212,13 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     descDataHandles[0].InitInvalid();
     descDataHandles[1].InitInvalid();
     descDataHandles[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
-    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
+    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);*/
 }
 
 void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
-    DestroyShaders(platformFuncs);
-    LoadAllShaders(platformFuncs, windowWidth, windowHeight);
+    //DestroyShaders(platformFuncs);
+    //LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }
 
 INPUT_CALLBACK(ShaderHotloadCallback)
@@ -367,7 +366,7 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     CreateAnimatedPoly(platformFuncs, &gameGraphicsData.m_animatedPolygon);
 
     CreateAllDescriptors(platformFuncs);
-    LoadAllShaders(platformFuncs, windowWidth, windowHeight);
+    //LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
     return 0;
 }
@@ -465,14 +464,14 @@ GAME_UPDATE(GameUpdate)
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
         StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, descriptors);
+        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, SHADER_ID_BASIC_ZPrepass, Platform::BlendState::eInvalid, Platform::DepthState::eTestOnWriteOn, descriptors);
         EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
 
         StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, descriptors);
+        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, SHADER_ID_BASIC_MainView, Platform::BlendState::eAlphaBlend, Platform::DepthState::eTestOnWriteOn, descriptors);
 
         UpdateAnimatedPoly(platformFuncs, &gameGraphicsData.m_animatedPolygon);
-        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, gameGraphicsData.m_animatedPolygonShaderHandle, graphicsCommandStream);
+        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, SHADER_ID_ANIMATEDPOLY_MainView, Platform::BlendState::eAlphaBlend, Platform::DepthState::eTestOnWriteOn, graphicsCommandStream);
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
 
@@ -492,7 +491,7 @@ GAME_UPDATE(GameUpdate)
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_numInstances = 1;
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
-    command->m_shaderHandle = gameGraphicsData.m_blitShaderHandle;
+    command->m_shader = SHADER_ID_SWAP_CHAIN_BLIT;
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
         command->m_descriptors[i] = Platform::DefaultDescHandle_Invalid;
@@ -531,7 +530,7 @@ void DestroyWindowResizeDependentResources(const Platform::PlatformAPIFuncs* pla
     platformFuncs->DestroyResource(gameGraphicsData.m_rtColorHandle);
     platformFuncs->DestroyResource(gameGraphicsData.m_rtDepthHandle);
 
-    DestroyShaders(platformFuncs);
+    //DestroyShaders(platformFuncs);
 }
 
 extern "C"
@@ -547,7 +546,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
     CreateGameRenderingResources(platformFuncs, newWindowWidth, newWindowHeight);
     WriteSwapChainBlitResources(platformFuncs);
 
-    LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
+    //LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
 }
 
 extern "C"
@@ -573,7 +572,7 @@ GAME_DESTROY(GameDestroy)
         }
 
         g_AssetManager.FreeMemory();
-        FreeShaderBytecodeMemory();
+        //FreeShaderBytecodeMemory();
     }
 
     #if defined(MEM_TRACKING)
