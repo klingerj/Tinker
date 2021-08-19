@@ -166,8 +166,8 @@ void CreateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tra
     // Descriptor - vertex buffer
     Platform::DescriptorLayout descriptorLayout = {};
     descriptorLayout.InitInvalid();
-    descriptorLayout.descriptorLayoutParams[1][0].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[1][0].amount = 1;
+    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
 
     prim->descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
 
@@ -177,7 +177,7 @@ void CreateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tra
     descDataHandles[1].handles[0] = prim->vertexBufferHandle;
     descDataHandles[2].InitInvalid();
 
-    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { Platform::DefaultDescHandle_Invalid, prim->descriptor, Platform::DefaultDescHandle_Invalid };
+    Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { Platform::DefaultDescHandle_Invalid, prim->descriptor, Platform::DefaultDescHandle_Invalid };
     platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
 }
 
@@ -229,7 +229,7 @@ void UpdateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tra
     platformFuncs->UnmapResource(prim->vertexBufferHandle);
 }
 
-void DrawAnimatedPoly(TransientPrim* prim, Tk::Platform::DescriptorHandle globalData, Tk::Platform::ShaderHandle shaderHandle, Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
+void DrawAnimatedPoly(TransientPrim* prim, Tk::Platform::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
 {
     Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
@@ -238,7 +238,9 @@ void DrawAnimatedPoly(TransientPrim* prim, Tk::Platform::DescriptorHandle global
     command->m_numIndices = (prim->numVertices - 1) * 3;
     command->m_numInstances = 1;
     command->m_indexBufferHandle = prim->indexBufferHandle;
-    command->m_shaderHandle = shaderHandle;
+    command->m_shader = shaderID;
+    command->m_blendState = blendState;
+    command->m_depthState = depthState;
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Core/CoreDefines.h"
 
 namespace Tk

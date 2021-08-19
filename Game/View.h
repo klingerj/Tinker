@@ -40,4 +40,5 @@ void DestroyInstance(View* view, uint32 instanceID);
 void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instance* data);
 
 struct GameRenderPass;
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Tk::Platform::DescriptorHandle* descriptors);
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream,
+    uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Platform::DescriptorHandle* descriptors);
