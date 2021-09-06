@@ -84,6 +84,7 @@ namespace ImageLayout
         eShaderRead,
         eTransferDst,
         eDepthOptimal,
+        ePresent,
         eMax
     };
 }
@@ -319,36 +320,35 @@ struct GraphicsCommandStream
     uint32 m_maxCommands;
 };
 
-typedef struct graphics_pipeline_params
-{
-    uint32 blendState;
-    uint32 depthState;
-    uint32 viewportWidth;
-    uint32 viewportHeight;
-    FramebufferHandle framebufferHandle;
-    uint32* descLayouts;
-    uint32 numDescLayouts;
-} GraphicsPipelineParams;
 
 // TODO: move all this, and also autogenerate this eventually?
-
 // IDs must be uniquely named and have their id ascend monotonically from 0
-enum {
-    SHADER_ID_SWAP_CHAIN_BLIT = 0,
-    SHADER_ID_BASIC_ZPrepass = 1,
-    SHADER_ID_BASIC_MainView = 2,
-    SHADER_ID_ANIMATEDPOLY_MainView = 3,
-    SHADER_ID_MAX = 4,
+enum
+{
+    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX = 0,
+    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS,
+    DESCLAYOUT_ID_VIEW_GLOBAL,
+    DESCLAYOUT_ID_ASSET_INSTANCE,
+    DESCLAYOUT_ID_ASSET_VBS,
+    DESCLAYOUT_ID_ANIMPOLY_VBS,
+    DESCLAYOUT_ID_MAX,
 };
 
-enum {
-    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX = 0,
-    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS = 1,
-    DESCLAYOUT_ID_VIEW_GLOBAL = 2,
-    DESCLAYOUT_ID_ASSET_INSTANCE = 3,
-    DESCLAYOUT_ID_ASSET_VBS = 4,
-    DESCLAYOUT_ID_ANIMPOLY_VBS = 5,
-    DESCLAYOUT_ID_MAX = 6,
+enum
+{
+    RENDERPASS_ID_SWAP_CHAIN_BLIT = 0,
+    RENDERPASS_ID_ZPrepass,
+    RENDERPASS_ID_MainView,
+    RENDERPASS_ID_MAX
+};
+
+enum
+{
+    SHADER_ID_SWAP_CHAIN_BLIT = 0,
+    SHADER_ID_BASIC_ZPrepass,
+    SHADER_ID_BASIC_MainView,
+    SHADER_ID_ANIMATEDPOLY_MainView,
+    SHADER_ID_MAX,
 };
 //-----
 
@@ -370,13 +370,10 @@ typedef CREATE_FRAMEBUFFER(create_framebuffer);
 #define DESTROY_FRAMEBUFFER(name) void name(FramebufferHandle handle)
 typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
 
-//#define CREATE_GRAPHICS_PIPELINE(name) ShaderHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, FramebufferHandle framebufferHandle, DescriptorHandle* descriptorHandles, uint32 numDescriptorHandles)
-//typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
+#define CREATE_GRAPHICS_PIPELINE(name) bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID, uint32* descriptorHandles, uint32 numDescriptorHandles)
+typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
-//#define DESTROY_GRAPHICS_PIPELINE(name) void name(ShaderHandle handle)
-//typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
-
-#define CREATE_DESCRIPTOR(name) DescriptorHandle name(DescriptorLayout* descLayout)
+#define CREATE_DESCRIPTOR(name) DescriptorHandle name(uint32 descLayoutID)
 typedef CREATE_DESCRIPTOR(create_descriptor);
 
 #define DESTROY_DESCRIPTOR(name) void name(DescriptorHandle handle)
@@ -385,15 +382,18 @@ typedef DESTROY_DESCRIPTOR(destroy_descriptor);
 #define DESTROY_ALL_DESCRIPTORS(name) void name()
 typedef DESTROY_ALL_DESCRIPTORS(destroy_all_descriptors);
 
-#define WRITE_DESCRIPTOR(name) void name(DescriptorLayout* descLayout, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
+#define WRITE_DESCRIPTOR(name) void name(uint32 descLayoutID, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
 typedef WRITE_DESCRIPTOR(write_descriptor);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
 typedef SUBMIT_CMDS_IMMEDIATE(submit_cmds_immediate);
 
 // Not meant for the user
-#define CREATE_DESCRIPTOR_LAYOUT(name) void name(uint32 descLayoutID, const Platform::DescriptorLayout* descLayout)
+#define CREATE_DESCRIPTOR_LAYOUT(name) bool name(uint32 descLayoutID, const Platform::DescriptorLayout* descLayout)
 typedef CREATE_DESCRIPTOR_LAYOUT(create_descriptor_layout);
+
+#define CREATE_RENDERPASS(name) bool name(uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
+typedef CREATE_RENDERPASS(create_renderpass);
 
 }
 }

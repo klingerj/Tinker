@@ -251,7 +251,9 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
             TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < GraphicsCmd::eMax);
 
             const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
-            ShaderHandle currentShader = DefaultShaderHandle_Invalid;
+            uint32 currentShaderID = SHADER_ID_MAX;
+            uint32 currentBlendState = BlendState::eMax;
+            uint32 currentDepthState = DepthState::eMax;
 
             switch (currentCmd.m_commandType)
             {
@@ -261,16 +263,24 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         case GraphicsAPI::eVulkan:
                         {
-                            if (currentShader != currentCmd.m_shaderHandle)
+                            if (currentShaderID   != currentCmd.m_shader ||
+                                currentBlendState != currentCmd.m_blendState || 
+                                currentDepthState != currentCmd.m_depthState)
                             {
+                                currentShaderID   = currentCmd.m_shader;
+                                currentBlendState = currentCmd.m_blendState;
+                                currentDepthState = currentCmd.m_depthState;
+
                                 Graphics::VulkanRecordCommandBindShader(&vulkanContextResources,
-                                    currentCmd.m_shaderHandle, &currentCmd.m_descriptors[0], immediateSubmit);
-                                currentShader = currentCmd.m_shaderHandle;
+                                    currentShaderID, currentBlendState, currentDepthState,
+                                    &currentCmd.m_descriptors[0], immediateSubmit);
                             }
+
+                            // Push constant
                             {
                                 uint32 data[4] = {};
                                 data[0] = instanceCount;
-                                Graphics::VulkanRecordCommandPushConstant(&vulkanContextResources, (uint8*)data, sizeof(uint32) * 4, currentShader);
+                                Graphics::VulkanRecordCommandPushConstant(&vulkanContextResources, (uint8*)data, sizeof(uint32) * 4, currentShaderID, currentBlendState, currentDepthState);
                             }
                             Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
                                 currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
@@ -477,7 +487,6 @@ CREATE_RESOURCE(CreateResource)
         case GraphicsAPI::eVulkan:
         {
             return Graphics::VulkanCreateResource(&vulkanContextResources, resDesc);
-            //break;
         }
 
         default:
@@ -499,7 +508,6 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
             return Graphics::VulkanCreateFramebuffer(&vulkanContextResources,
                 rtColorHandles, numRTColorHandles, rtDepthHandle,
                 colorEndLayout, width, height);
-            //break;
         }
 
         default:
@@ -511,27 +519,25 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
     }
 }
 
-/*CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
+CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     switch (g_GlobalAppParams.m_graphicsAPI)
     {
         case GraphicsAPI::eVulkan:
         {
             return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
-                    vertexShaderCode, numVertexShaderBytes, fragmentShaderCode,
-                    numFragmentShaderBytes, blendState, depthState,
-                    viewportWidth, viewportHeight, framebufferHandle, descriptorHandles, numDescriptorHandles);
-            //break;
+                    vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
+                    shaderID, viewportWidth, viewportHeight, renderPassID, descriptorHandles, numDescriptorHandles);
         }
 
         default:
         {
             Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
             runGame = false;
-            return DefaultShaderHandle_Invalid;
+            return false;
         }
     }
-}*/
+}
 
 CREATE_DESCRIPTOR(CreateDescriptor)
 {
@@ -539,8 +545,7 @@ CREATE_DESCRIPTOR(CreateDescriptor)
     {
         case GraphicsAPI::eVulkan:
         {
-            return Graphics::VulkanCreateDescriptor(&vulkanContextResources, descLayout);
-            //break;
+            return Graphics::VulkanCreateDescriptor(&vulkanContextResources, descLayoutID);
         }
 
         default:
@@ -548,7 +553,6 @@ CREATE_DESCRIPTOR(CreateDescriptor)
             Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
             runGame = false;
             return DefaultDescHandle_Invalid;
-            //break;
         }
     }
 }
@@ -559,13 +563,32 @@ CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
     {
         case GraphicsAPI::eVulkan:
         {
-            Graphics::VulkanCreateDescriptor(&vulkanContextResources, descLayoutID, descLayout);
+            return Graphics::VulkanCreateDescriptorLayout(&vulkanContextResources, descLayoutID, descLayout);
         }
 
         default:
         {
             Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
             runGame = false;
+            return false;
+        }
+    }
+}
+
+CREATE_RENDERPASS(CreateRenderPass)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case GraphicsAPI::eVulkan:
+        {
+            return Graphics::VulkanCreateRenderPass(&vulkanContextResources, renderPassID, numColorRTs, colorFormat, startLayout, endLayout, depthFormat);
+        }
+
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
+            runGame = false;
+            return false;
         }
     }
 }
@@ -607,25 +630,6 @@ DESTROY_FRAMEBUFFER(DestroyFramebuffer)
         }
     }
 }
-
-/*DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanDestroyGraphicsPipeline(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            break;
-        }
-    }
-}*/
 
 DESTROY_DESCRIPTOR(DestroyDescriptor)
 {
@@ -671,7 +675,7 @@ WRITE_DESCRIPTOR(WriteDescriptor)
     {
         case GraphicsAPI::eVulkan:
         {
-            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayout, descSetHandles, descSetDataHandles);
+            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayoutID, descSetHandles, descSetDataHandles);
             break;
         }
 
@@ -691,7 +695,6 @@ MAP_RESOURCE(MapResource)
         case GraphicsAPI::eVulkan:
         {
             return Graphics::VulkanMapResource(&vulkanContextResources, handle);
-            //break;
         }
 
         default:
@@ -699,7 +702,6 @@ MAP_RESOURCE(MapResource)
             Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
             runGame = false;
             return nullptr;
-            //break;
         }
     }
 }
@@ -1146,27 +1148,29 @@ wWinMain(HINSTANCE hInstance,
 
         g_platformAPIFuncs = {};
         g_platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
-        g_platformAPIFuncs.ReadEntireFile = ReadEntireFile;
-        g_platformAPIFuncs.WriteEntireFile = WriteEntireFile;
-        g_platformAPIFuncs.GetFileSize = GetFileSize;
-        g_platformAPIFuncs.InitNetworkConnection = InitNetworkConnection;
-        g_platformAPIFuncs.EndNetworkConnection = EndNetworkConnection;
-        g_platformAPIFuncs.SendMessageToServer = SendMessageToServer;
-        g_platformAPIFuncs.SystemCommand = SystemCommand;
+        // Generic OS
+        g_platformAPIFuncs.ReadEntireFile         = ReadEntireFile;
+        g_platformAPIFuncs.WriteEntireFile        = WriteEntireFile;
+        g_platformAPIFuncs.GetFileSize            = GetFileSize;
+        g_platformAPIFuncs.SystemCommand          = SystemCommand;
+        // Network
+        g_platformAPIFuncs.InitNetworkConnection  = InitNetworkConnection;
+        g_platformAPIFuncs.EndNetworkConnection   = EndNetworkConnection;
+        g_platformAPIFuncs.SendMessageToServer    = SendMessageToServer;
         // Graphics
-        g_platformAPIFuncs.CreateResource = CreateResource;
-        g_platformAPIFuncs.DestroyResource = DestroyResource;
-        g_platformAPIFuncs.MapResource = MapResource;
-        g_platformAPIFuncs.UnmapResource = UnmapResource;
-        g_platformAPIFuncs.CreateFramebuffer = CreateFramebuffer;
-        g_platformAPIFuncs.DestroyFramebuffer = DestroyFramebuffer;
-        //g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
-        //g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
-        g_platformAPIFuncs.CreateDescriptor = CreateDescriptor;
-        g_platformAPIFuncs.DestroyAllDescriptors = DestroyAllDescriptors;
-        g_platformAPIFuncs.DestroyDescriptor = DestroyDescriptor;
-        g_platformAPIFuncs.WriteDescriptor = WriteDescriptor;
-        g_platformAPIFuncs.SubmitCmdsImmediate = SubmitCmdsImmediate;
+        g_platformAPIFuncs.CreateResource         = CreateResource;
+        g_platformAPIFuncs.DestroyResource        = DestroyResource;
+        g_platformAPIFuncs.MapResource            = MapResource;
+        g_platformAPIFuncs.UnmapResource          = UnmapResource;
+        g_platformAPIFuncs.CreateFramebuffer      = CreateFramebuffer;
+        g_platformAPIFuncs.DestroyFramebuffer     = DestroyFramebuffer;
+        g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
+        g_platformAPIFuncs.CreateDescriptor       = CreateDescriptor;
+        g_platformAPIFuncs.DestroyAllDescriptors  = DestroyAllDescriptors;
+        g_platformAPIFuncs.CreateRenderPass       = CreateRenderPass;
+        g_platformAPIFuncs.DestroyDescriptor      = DestroyDescriptor;
+        g_platformAPIFuncs.WriteDescriptor        = WriteDescriptor;
+        g_platformAPIFuncs.SubmitCmdsImmediate    = SubmitCmdsImmediate;
         g_platformAPIFuncs.CreateDescriptorLayout = CreateDescriptorLayout;
 
         g_graphicsCommandStream = {};
@@ -1177,6 +1181,9 @@ wWinMain(HINSTANCE hInstance,
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
         #endif
+
+        g_ShaderManager.Startup();
+        g_ShaderManager.LoadAllShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
         g_GameCode = {};
         bool reloaded = ReloadGameCode(&g_GameCode, GameDllStr);
@@ -1294,6 +1301,8 @@ wWinMain(HINSTANCE hInstance,
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     g_ThreadPool.Shutdown();
     #endif
+
+    g_ShaderManager.Shutdown();
 
     _aligned_free(g_graphicsCommandStream.m_graphicsCommands);
 

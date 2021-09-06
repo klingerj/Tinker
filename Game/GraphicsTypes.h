@@ -119,16 +119,7 @@ void DestroyDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platf
 template <typename DefGeom>
 void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
-    Platform::DescriptorLayout descriptorLayout = {};
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.params[0].amount = 1;
-    descriptorLayout.params[1].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.params[1].amount = 1;
-    descriptorLayout.params[2].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.params[2].amount = 1;
-
-    geom.m_descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
+    geom.m_descriptor = platformFuncs->CreateDescriptor(DESCLAYOUT_ID_ASSET_VBS);
 
     Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
@@ -139,6 +130,6 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platfo
     descDataHandles[2].InitInvalid();
 
     Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { Platform::DefaultDescHandle_Invalid, geom.m_descriptor, Platform::DefaultDescHandle_Invalid };
-    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
+    platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], &descDataHandles[0]);
 }
 

@@ -164,12 +164,7 @@ void CreateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tra
     prim->indexBufferHandle = platformFuncs->CreateResource(desc);
 
     // Descriptor - vertex buffer
-    Platform::DescriptorLayout descriptorLayout = {};
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.params[0].amount = 1;
-
-    prim->descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
+    prim->descriptor = platformFuncs->CreateDescriptor(DESCLAYOUT_ID_ANIMPOLY_VBS);
 
     Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
@@ -178,7 +173,7 @@ void CreateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tra
     descDataHandles[2].InitInvalid();
 
     Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { Platform::DefaultDescHandle_Invalid, prim->descriptor, Platform::DefaultDescHandle_Invalid };
-    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
+    platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ANIMPOLY_VBS, &descHandles[0], &descDataHandles[0]);
 }
 
 void DestroyAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim)
