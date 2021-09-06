@@ -17,17 +17,18 @@ public:
     void Startup();
     void Shutdown();
 
+    void LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight);
+
 private:
-    void LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
-    bool LoadShader(const Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Platform::GraphicsPipelineParams* params);
+    bool LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFuncs,
+        const char* vertexShaderFileName, const char* fragmentShaderFileName,
+        uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
+        uint32* descLayouts, uint32 numDescLayouts);
 
     Tk::Memory::LinearAllocator<> shaderBytecodeAllocator;
-
 };
 
 extern ShaderManager g_ShaderManager;
 
 }
 }
-
-

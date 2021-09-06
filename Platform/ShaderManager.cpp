@@ -13,6 +13,8 @@ namespace Tk
 namespace Platform
 {
 
+ShaderManager g_ShaderManager = {};
+
 void ShaderManager::Startup()
 {
     shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
@@ -23,7 +25,10 @@ void ShaderManager::Shutdown()
     shaderBytecodeAllocator.ExplicitFree();
 }
 
-bool ShaderManager::LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFuncs, const char* vertexShaderFileName, const char* fragmentShaderFileName, Tk::Platform::GraphicsPipelineParams* params)
+bool ShaderManager::LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFuncs,
+    const char* vertexShaderFileName, const char* fragmentShaderFileName,
+    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
+    uint32* descLayouts, uint32 numDescLayouts)
 {
     uint8* vertexShaderBuffer = nullptr;
     uint8* fragmentShaderBuffer = nullptr;
@@ -45,18 +50,16 @@ bool ShaderManager::LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFun
         platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
     }
 
-    /*const bool created = platformFuncs->CreateGraphicsPipeline(vertexShaderBuffer, vertexShaderFileSize,
-        fragmentShaderBuffer, fragmentShaderFileSize,
-        params->blendState, params->depthState,
-        params->viewportWidth, params->viewportHeight,
-        params->framebufferHandle);
-    return created;*/
-    return false;
+    const bool created = platformFuncs->CreateGraphicsPipeline(
+        vertexShaderBuffer, vertexShaderFileSize,
+        fragmentShaderBuffer, fragmentShaderFileSize, shaderID,
+        viewportWidth, viewportHeight, renderPassID, descLayouts, numDescLayouts);
+    return created;
 }
 
-void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
-    bool bOk = true;
+    bool bOk = false;
 
     // Descriptor layouts
     Platform::DescriptorLayout descriptorLayout = {};
@@ -64,8 +67,8 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Platform::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
-    platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, &descriptorLayout);
-    //TINKER_ASSERT(bOk);
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, &descriptorLayout);
+    TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
@@ -74,30 +77,36 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descriptorLayout.params[1].amount = 1;
     descriptorLayout.params[2].type = Platform::DescriptorType::eSSBO;
     descriptorLayout.params[2].amount = 1;
-    platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &descriptorLayout);
-    //TINKER_ASSERT(bOk);
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &descriptorLayout);
+    TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Platform::DescriptorType::eBuffer;
     descriptorLayout.params[0].amount = 1;
-    platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_VIEW_GLOBAL, &descriptorLayout);
-    //TINKER_ASSERT(bOk);
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_VIEW_GLOBAL, &descriptorLayout);
+    TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Platform::DescriptorType::eBuffer;
     descriptorLayout.params[0].amount = 1;
-    platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ASSET_INSTANCE, &descriptorLayout);
-    //TINKER_ASSERT(bOk);
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ASSET_INSTANCE, &descriptorLayout);
+    TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    // TODO: populate bindings
-    platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ASSET_VBS, &descriptorLayout);
-    //TINKER_ASSERT(bOk);
+    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
+    descriptorLayout.params[1].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[1].amount = 1;
+    descriptorLayout.params[2].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[2].amount = 1;
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ASSET_VBS, &descriptorLayout);
+    TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    // TODO: populate bindings
-    platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ANIMPOLY_VBS, &descriptorLayout);
-    //TINKER_ASSERT(bOk);
+    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ANIMPOLY_VBS, &descriptorLayout);
+    TINKER_ASSERT(bOk);
     //-----
 
     // Shaders
@@ -112,22 +121,56 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
         SHADERS_SPV_PATH "animpoly_frag_glsl.spv",
     };
 
-    bool bOk = false;
+    // TODO: make this more controllable by the app
+    // color, no depth
+    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
+    TINKER_ASSERT(bOk);
+
+    // depth, no color
+    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_ZPrepass,        0, ImageFormat::Invalid, ImageLayout::eUndefined, ImageLayout::eUndefined, ImageFormat::Depth_32F);
+    TINKER_ASSERT(bOk);
+
+    // color, depth
+    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_MainView,        1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::eShaderRead, ImageFormat::Depth_32F);
+    TINKER_ASSERT(bOk);
+
+    uint32 descLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        descLayouts[i] = DESCLAYOUT_ID_MAX;
 
     // Swap chain blit
-    bOk = LoadShader(platformFuncs, shaderFilePaths[0], shaderFilePaths[1], &params);
+    descLayouts[0] = DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX;
+    descLayouts[1] = DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[0], shaderFilePaths[1], SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, RENDERPASS_ID_SWAP_CHAIN_BLIT, descLayouts, 2);
+    
     TINKER_ASSERT(bOk);
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        descLayouts[i] = DESCLAYOUT_ID_MAX;
 
     // ZPrepass
-    bOk = LoadShader(platformFuncs, shaderFilePaths[2], nullptr, &params);
+    descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[1] = DESCLAYOUT_ID_ASSET_INSTANCE;
+    descLayouts[2] = DESCLAYOUT_ID_ASSET_VBS;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[2], nullptr, SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, RENDERPASS_ID_ZPrepass, descLayouts, 3);
+    
     TINKER_ASSERT(bOk);
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        descLayouts[i] = DESCLAYOUT_ID_MAX;
 
     // Main view
-    bOk = LoadShader(platformFuncs, shaderFilePaths[2], shaderFilePaths[3], &params);
+    descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[1] = DESCLAYOUT_ID_ASSET_INSTANCE;
+    descLayouts[2] = DESCLAYOUT_ID_ASSET_VBS;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[2], shaderFilePaths[3], SHADER_ID_BASIC_MainView, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 3);
+    
     TINKER_ASSERT(bOk);
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        descLayouts[i] = DESCLAYOUT_ID_MAX;
 
     // Animated poly
-    bOk = LoadShader(platformFuncs, shaderFilePaths[4], shaderFilePaths[5], &params);
+    descLayouts[0] = DESCLAYOUT_ID_ANIMPOLY_VBS;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[4], shaderFilePaths[5], SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 1);
+    
     TINKER_ASSERT(bOk);
 }
 

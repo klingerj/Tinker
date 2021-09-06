@@ -542,17 +542,8 @@ void AssetManager::DestroyAllTextureData(const Tk::Platform::PlatformAPIFuncs* p
 
 void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
-    Platform::DescriptorLayout descriptorLayout = {};
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.params[0].amount = 1;
-    descriptorLayout.params[1].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.params[1].amount = 1;
-    descriptorLayout.params[2].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.params[2].amount = 1;
-
     StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
-    data->m_descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
+    data->m_descriptor = platformFuncs->CreateDescriptor(DESCLAYOUT_ID_ASSET_VBS);
 
     Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
@@ -563,7 +554,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platfor
     descDataHandles[2].handles[2] = data->m_normalBuffer.gpuBufferHandle;
 
     Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid, data->m_descriptor };
-    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
+    platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], &descDataHandles[0]);
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

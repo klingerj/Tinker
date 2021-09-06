@@ -54,7 +54,6 @@ typedef struct vulkan_framebuffer_resource
 
 typedef struct vulkan_descriptor_resource
 {
-    //VkDescriptorSetLayout descriptorLayout;
     VkDescriptorSet descriptorSet;
 } VulkanDescriptorResource;
 
@@ -77,7 +76,7 @@ typedef struct
 
 typedef struct
 {
-    VkDescriptorLayout layout;
+    VkDescriptorSetLayout layout;
     Platform::DescriptorLayout bindings;
 } VulkanDescriptorLayout;
 
@@ -123,17 +122,19 @@ struct VkResources
 
     enum
     {
-        eMaxShaders = SHADER_ID_MAX,
+        eMaxShaders     = SHADER_ID_MAX,
         eMaxBlendStates = BlendState::eMax,
         eMaxDepthStates = DepthState::eMax,
-        eMaxDescLayouts = DESCLAYOUT_ID_MAX;
+        eMaxDescLayouts = DESCLAYOUT_ID_MAX,
     };
     struct PSOPerms
     {
         VkPipeline       graphicsPipeline[eMaxShaders][eMaxBlendStates][eMaxDepthStates];
         VkPipelineLayout pipelineLayout[eMaxShaders];
     } psoPermutations;
-    VkDescriptorSetLayout descLayouts[eMaxDescLayouts];
+    VulkanDescriptorLayout descLayouts[eMaxDescLayouts];
+
+    VkRenderPass renderPasses[RENDERPASS_ID_MAX];
 };
 
 // Helpers
@@ -146,6 +147,7 @@ void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspect
 void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRTs, VkImageView depthRT,
     uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* frameBuffer);
 void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colorFormat, VkImageLayout startLayout, VkImageLayout endLayout, VkFormat depthFormat, VkRenderPass* renderPass);
+VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VkDevice device);
 
 }
 }

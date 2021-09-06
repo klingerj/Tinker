@@ -219,6 +219,23 @@ void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colo
     }
 }
 
+VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VkDevice device)
+{
+    VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
+    shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    shaderModuleCreateInfo.codeSize = numShaderCodeBytes;
+    shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode);
+
+    VkShaderModule shaderModule;
+    VkResult result = vkCreateShaderModule(device, &shaderModuleCreateInfo, nullptr, &shaderModule);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan shader module!", Core::Utility::LogSeverity::eCritical);
+        return VK_NULL_HANDLE;
+    }
+    return shaderModule;
+}
+
 }
 }
 }
