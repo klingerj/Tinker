@@ -33,6 +33,7 @@ void StartRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream
     command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = renderPass->debugLabel;
     command->m_framebufferHandle = renderPass->framebuffer;
+    command->m_renderPassID = renderPass->renderPassID;
     command->m_renderWidth = renderPass->renderWidth;
     command->m_renderHeight = renderPass->renderHeight;
     ++graphicsCommandStream->m_numCommands;
@@ -44,6 +45,7 @@ void EndRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* 
     Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     command->m_commandType = Platform::GraphicsCmd::eRenderPassEnd;
+    command->debugLabel = renderPass->debugLabel;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 }

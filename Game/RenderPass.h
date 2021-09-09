@@ -5,6 +5,7 @@
 struct GameRenderPass
 {
     Tk::Platform::FramebufferHandle framebuffer;
+    uint32 renderPassID;
     uint32 renderWidth;
     uint32 renderHeight;
     const char* debugLabel;

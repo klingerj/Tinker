@@ -94,7 +94,14 @@ void WriteSwapChainBlitResources(const Platform::PlatformAPIFuncs* platformFuncs
     Platform::DescriptorSetDataHandles blitHandles = {};
     blitHandles.InitInvalid();
     blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    platformFuncs->WriteDescriptor(Tk::Platform::SHADER_ID_SWAP_CHAIN_BLIT, &gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    platformFuncs->WriteDescriptor(Tk::Platform::SHADER_ID_SWAP_CHAIN_BLIT, &gameGraphicsData.m_swapChainBlitDescHandle, 1, &blitHandles, 1);
+
+    Platform::DescriptorSetDataHandles vbHandles = {};
+    vbHandles.InitInvalid();
+    vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
+    vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
+    vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
+    platformFuncs->WriteDescriptor(Tk::Platform::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &defaultQuad.m_descriptor, 1, &vbHandles, 1);
 }
 
 void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
@@ -119,17 +126,17 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descDataHandles[i].InitInvalid();
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
-    platformFuncs->WriteDescriptor(Tk::Platform::DESCLAYOUT_ID_VIEW_GLOBAL, &descHandles[0], &descDataHandles[0]);
+    platformFuncs->WriteDescriptor(Tk::Platform::DESCLAYOUT_ID_VIEW_GLOBAL, &descHandles[0], 1, &descDataHandles[0], 1);
 
     gameGraphicsData.m_DescData_Instance = platformFuncs->CreateDescriptor(Tk::Platform::DESCLAYOUT_ID_ASSET_INSTANCE);
-    descHandles[0] = Platform::DefaultDescHandle_Invalid;
-    descHandles[1] = gameGraphicsData.m_DescData_Instance;
+    descHandles[0] = gameGraphicsData.m_DescData_Instance;
+    descHandles[1] = Platform::DefaultDescHandle_Invalid;
     descHandles[2] = Platform::DefaultDescHandle_Invalid;;
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descDataHandles[i].InitInvalid();
-    descDataHandles[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
-    platformFuncs->WriteDescriptor(Tk::Platform::DESCLAYOUT_ID_ASSET_INSTANCE, &descHandles[0], &descDataHandles[0]);
+    descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
+    platformFuncs->WriteDescriptor(Tk::Platform::DESCLAYOUT_ID_ASSET_INSTANCE, &descHandles[0], 1, &descDataHandles[0], 1);
 }
 
 void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
@@ -167,19 +174,21 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
     gameGraphicsData.m_rtDepthHandle = platformFuncs->CreateResource(desc);
 
     // Depth-only pass
-    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = platformFuncs->CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, Platform::ImageLayout::eUndefined, windowWidth, windowHeight);
+    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = platformFuncs->CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Platform::RENDERPASS_ID_ZPrepass);
 
     // Color and depth
-    gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, Platform::ImageLayout::eShaderRead, windowWidth, windowHeight);
+    gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = platformFuncs->CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Platform::RENDERPASS_ID_MainView);
 
     gameRenderPasses[eRenderPass_ZPrePass] = {};
     gameRenderPasses[eRenderPass_ZPrePass].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
+    gameRenderPasses[eRenderPass_ZPrePass].renderPassID = Platform::RENDERPASS_ID_ZPrepass;
     gameRenderPasses[eRenderPass_ZPrePass].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_ZPrePass].renderHeight = windowHeight;
     gameRenderPasses[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
 
     gameRenderPasses[eRenderPass_MainView] = {};
     gameRenderPasses[eRenderPass_MainView].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
+    gameRenderPasses[eRenderPass_MainView].renderPassID = Platform::RENDERPASS_ID_MainView;
     gameRenderPasses[eRenderPass_MainView].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_MainView].renderHeight = windowHeight;
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
@@ -381,7 +390,7 @@ GAME_UPDATE(GameUpdate)
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
         StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Tk::Platform::SHADER_ID_BASIC_ZPrepass, Platform::BlendState::eInvalid, Platform::DepthState::eTestOnWriteOn, descriptors);
+        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Tk::Platform::SHADER_ID_BASIC_ZPrepass, Platform::BlendState::eNoColorAttachment, Platform::DepthState::eTestOnWriteOn, descriptors);
         EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
 
         StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
@@ -398,6 +407,7 @@ GAME_UPDATE(GameUpdate)
     command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
     command->m_framebufferHandle = Platform::DefaultFramebufferHandle_Invalid;
+    command->m_renderPassID = Platform::RENDERPASS_ID_SWAP_CHAIN_BLIT;
     command->m_renderWidth = 0;
     command->m_renderHeight = 0;
     ++graphicsCommandStream->m_numCommands;
@@ -409,6 +419,8 @@ GAME_UPDATE(GameUpdate)
     command->m_numInstances = 1;
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command->m_shader = Tk::Platform::SHADER_ID_SWAP_CHAIN_BLIT;
+    command->m_blendState = Platform::BlendState::eReplace;
+    command->m_depthState = Platform::DepthState::eOff;
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
         command->m_descriptors[i] = Platform::DefaultDescHandle_Invalid;

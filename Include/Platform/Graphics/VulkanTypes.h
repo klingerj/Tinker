@@ -47,7 +47,6 @@ typedef struct vulkan_mem_resource
 typedef struct vulkan_framebuffer_resource
 {
     VkFramebuffer framebuffer;
-    VkRenderPass renderPass;
     VkClearValue clearValues[VULKAN_MAX_RENDERTARGETS_WITH_DEPTH]; // + 1 for depth
     uint32 numClearValues;
 } VulkanFramebufferResource;
@@ -79,6 +78,13 @@ typedef struct
     VkDescriptorSetLayout layout;
     Platform::DescriptorLayout bindings;
 } VulkanDescriptorLayout;
+
+typedef struct
+{
+    VkRenderPass renderPassVk;
+    uint32 numColorRTs;
+    bool hasDepth;
+} VulkanRenderPass;
 
 struct VkResources
 {
@@ -134,7 +140,7 @@ struct VkResources
     } psoPermutations;
     VulkanDescriptorLayout descLayouts[eMaxDescLayouts];
 
-    VkRenderPass renderPasses[RENDERPASS_ID_MAX];
+    VulkanRenderPass renderPasses[RENDERPASS_ID_MAX];
 };
 
 // Helpers
