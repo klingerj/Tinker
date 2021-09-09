@@ -74,7 +74,7 @@ void VulkanDestroyResource(VulkanContextResources* vulkanContextResources, Resou
 
 FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
     ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle,
-    uint32 colorEndLayout, uint32 width, uint32 height);
+    uint32 width, uint32 height, uint32 renderPassID);
 void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, FramebufferHandle handle);
 
 bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources,
@@ -89,7 +89,7 @@ bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources
 DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID);
 void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, DescriptorHandle handle);
 void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources);
-void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles);
+void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount);
 void InitDescriptorPool(VulkanContextResources* vulkanContextResources);
 bool VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat);
 
@@ -111,7 +111,7 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
     uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
     const char* debugLabel, bool immediateSubmit);
 void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-    FramebufferHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
+    FramebufferHandle framebufferHandle, uint32 renderPassID, uint32 renderWidth, uint32 renderHeight,
     const char* debugLabel, bool immediateSubmit);
 void VulkanRecordCommandRenderPassEnd(VulkanContextResources* vulkanContextResources, bool immediateSubmit);
 void VulkanRecordCommandTransitionLayout(VulkanContextResources*  vulkanContextResources, ResourceHandle imageHandle,

@@ -547,14 +547,14 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platfor
 
     Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
+    descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
+    descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;
+    descDataHandles[0].handles[2] = data->m_normalBuffer.gpuBufferHandle;
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
-    descDataHandles[2].handles[0] = data->m_positionBuffer.gpuBufferHandle;
-    descDataHandles[2].handles[1] = data->m_uvBuffer.gpuBufferHandle;
-    descDataHandles[2].handles[2] = data->m_normalBuffer.gpuBufferHandle;
 
-    Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid, data->m_descriptor };
-    platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], &descDataHandles[0]);
+    Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { data->m_descriptor, Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid };
+    platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], 1, &descDataHandles[0], 1);
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

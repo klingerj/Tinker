@@ -245,15 +245,15 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
     {
         // Track number of instances for proper indexing into uniform buffer of instance data
         uint32 instanceCount = 0;
+        uint32 currentShaderID = SHADER_ID_MAX;
+        uint32 currentBlendState = BlendState::eMax;
+        uint32 currentDepthState = DepthState::eMax;
 
         for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
         {
             TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < GraphicsCmd::eMax);
 
             const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
-            uint32 currentShaderID = SHADER_ID_MAX;
-            uint32 currentBlendState = BlendState::eMax;
-            uint32 currentDepthState = DepthState::eMax;
 
             switch (currentCmd.m_commandType)
             {
@@ -329,7 +329,8 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                         {
                             instanceCount = 0;
 
-                            Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources, currentCmd.m_framebufferHandle,
+                            Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources,
+                                currentCmd.m_framebufferHandle, currentCmd.m_renderPassID,
                                 currentCmd.m_renderWidth, currentCmd.m_renderHeight,
                                 currentCmd.debugLabel, immediateSubmit);
                             break;
@@ -507,7 +508,7 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
         {
             return Graphics::VulkanCreateFramebuffer(&vulkanContextResources,
                 rtColorHandles, numRTColorHandles, rtDepthHandle,
-                colorEndLayout, width, height);
+                width, height, renderPassID);
         }
 
         default:
@@ -675,7 +676,7 @@ WRITE_DESCRIPTOR(WriteDescriptor)
     {
         case GraphicsAPI::eVulkan:
         {
-            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayoutID, descSetHandles, descSetDataHandles);
+            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayoutID, descSetHandles, descSetCount, descSetDataHandles, descSetDataCount);
             break;
         }
 

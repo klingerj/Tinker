@@ -123,8 +123,8 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
 
     // TODO: make this more controllable by the app
     // color, no depth
-    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
-    TINKER_ASSERT(bOk);
+    /*bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
+    TINKER_ASSERT(bOk);*/
 
     // depth, no color
     bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_ZPrepass,        0, ImageFormat::Invalid, ImageLayout::eUndefined, ImageLayout::eUndefined, ImageFormat::Depth_32F);
@@ -168,8 +168,9 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
         descLayouts[i] = DESCLAYOUT_ID_MAX;
 
     // Animated poly
-    descLayouts[0] = DESCLAYOUT_ID_ANIMPOLY_VBS;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[4], shaderFilePaths[5], SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 1);
+    descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[1] = DESCLAYOUT_ID_ANIMPOLY_VBS;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[4], shaderFilePaths[5], SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 2);
     
     TINKER_ASSERT(bOk);
 }

@@ -48,7 +48,8 @@ namespace BlendState
     enum : uint32
     {
         eAlphaBlend = 0,
-        eInvalid,
+        eReplace,
+        eNoColorAttachment,
         eMax
     };
 }
@@ -275,6 +276,7 @@ typedef struct graphics_command
         struct
         {
             FramebufferHandle m_framebufferHandle;
+            uint32 m_renderPassID;
             uint32 m_renderWidth;
             uint32 m_renderHeight;
         };
@@ -364,7 +366,7 @@ typedef MAP_RESOURCE(map_resource);
 #define UNMAP_RESOURCE(name) void name(ResourceHandle handle)
 typedef UNMAP_RESOURCE(unmap_resource);
 
-#define CREATE_FRAMEBUFFER(name) FramebufferHandle name(ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle, uint32 colorEndLayout, uint32 width, uint32 height)
+#define CREATE_FRAMEBUFFER(name) FramebufferHandle name(ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle, uint32 width, uint32 height, uint32 renderPassID)
 typedef CREATE_FRAMEBUFFER(create_framebuffer);
 
 #define DESTROY_FRAMEBUFFER(name) void name(FramebufferHandle handle)
@@ -382,7 +384,7 @@ typedef DESTROY_DESCRIPTOR(destroy_descriptor);
 #define DESTROY_ALL_DESCRIPTORS(name) void name()
 typedef DESTROY_ALL_DESCRIPTORS(destroy_all_descriptors);
 
-#define WRITE_DESCRIPTOR(name) void name(uint32 descLayoutID, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
+#define WRITE_DESCRIPTOR(name) void name(uint32 descLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
 typedef WRITE_DESCRIPTOR(write_descriptor);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Platform::GraphicsCommandStream* graphicsCommandStream)

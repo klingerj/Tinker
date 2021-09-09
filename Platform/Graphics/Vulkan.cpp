@@ -84,7 +84,6 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     vulkanContextResources->resources->windowWidth = width;
     vulkanContextResources->resources->windowHeight = height;
 
-    VulkanBlendStates[BlendState::eInvalid] = {};
     VkPipelineColorBlendAttachmentState blendStateProperties = {};
     blendStateProperties.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
         VK_COLOR_COMPONENT_G_BIT |
@@ -98,6 +97,9 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     blendStateProperties.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     blendStateProperties.alphaBlendOp = VK_BLEND_OP_ADD;
     VulkanBlendStates[BlendState::eAlphaBlend] = blendStateProperties;
+    blendStateProperties.blendEnable = VK_FALSE;
+    VulkanBlendStates[BlendState::eReplace] = blendStateProperties;
+    VulkanBlendStates[BlendState::eNoColorAttachment] = {};
 
     VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
     depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -877,28 +879,24 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
         VulkanFramebufferResource* newFramebuffer =
             &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiFramebuffer];
 
-        // Render pass
         const uint32 numColorRTs = 1; // TODO: support multiple RTs
-        if (uiFramebuffer == 0)
-        {
-            const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
-            CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, depthFormat, &newFramebuffer->renderPass);
-        }
-        else
-        {
-            newFramebuffer->renderPass = vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[0].renderPass;
-        }
-        
         for (uint32 i = 0; i < numColorRTs; ++i)
         {
             newFramebuffer->clearValues[i] = { 0.0f, 0.0f, 0.0f, 1.0f };
         }
         newFramebuffer->numClearValues = numColorRTs;
 
+        // Render pass
+        VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT];
+        renderPass.numColorRTs = 1;
+        renderPass.hasDepth = false;
+        const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
+        CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, depthFormat, &renderPass.renderPassVk);
+
         // Framebuffer
         const VkImageView depthImageView = VK_NULL_HANDLE; // no depth buffer for swap chain
         CreateFramebuffer(vulkanContextResources->resources->device, &vulkanContextResources->resources->swapChainImageViews[uiFramebuffer], 1, depthImageView,
-            vulkanContextResources->resources->swapChainExtent.width, vulkanContextResources->resources->swapChainExtent.height, newFramebuffer->renderPass, &newFramebuffer->framebuffer);
+            vulkanContextResources->resources->swapChainExtent.width, vulkanContextResources->resources->swapChainExtent.height, vulkanContextResources->resources->renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT].renderPassVk, &newFramebuffer->framebuffer);
     }
 
     vulkanContextResources->isSwapChainValid = true;
@@ -1081,6 +1079,7 @@ bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources
         TINKER_ASSERT(0);
     }
 
+    const VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[renderPassID];
     for (uint32 blendState = 0; blendState < VkResources::eMaxBlendStates; ++blendState)
     {
         for (uint32 depthState = 0; depthState < VkResources::eMaxDepthStates; ++depthState)
@@ -1090,8 +1089,10 @@ bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources
             VkPipelineDepthStencilStateCreateInfo depthStencilState = GetVkDepthState(depthState);
             VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
-            if (blendState == BlendState::eInvalid)
+            if (blendState == BlendState::eNoColorAttachment)
             {
+                if (renderPass.numColorRTs > 0)
+                    continue;
                 colorBlending.attachmentCount = 0;
                 colorBlending.pAttachments = nullptr;
             }
@@ -1116,17 +1117,7 @@ bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources
             pipelineCreateInfo.pDynamicState = nullptr;
             pipelineCreateInfo.layout = pipelineLayout;
 
-            /*if (framebufferHandle == DefaultFramebufferHandle_Invalid)
-            {
-                pipelineCreateInfo.renderPass =
-                    vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(vulkanContextResources->resources->swapChainFramebufferHandle.m_hFramebuffer)->resourceChain[0].renderPass; // All swap chain images have the same render pass data
-            }
-            else
-            {
-                pipelineCreateInfo.renderPass =
-                    vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(framebufferHandle.m_hFramebuffer)->resourceChain[0].renderPass; // All swap chain images have the same render pass data
-            }*/
-            pipelineCreateInfo.renderPass = vulkanContextResources->resources->renderPasses[renderPassID];
+            pipelineCreateInfo.renderPass = renderPass.renderPassVk;
             pipelineCreateInfo.subpass = 0;
             pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
             pipelineCreateInfo.basePipelineIndex = -1;
@@ -1486,25 +1477,28 @@ void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources)
     vulkanContextResources->resources->descriptorPool = VK_NULL_HANDLE;
 }
 
-void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
+void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
 {
+    TINKER_ASSERT(descSetCount <= MAX_DESCRIPTOR_SETS_PER_SHADER);
+    TINKER_ASSERT(descSetDataCount <= MAX_BINDINGS_PER_SET);
+
     DescriptorLayout* descLayout = &vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings;
 
     for (uint32 uiImage = 0; uiImage < vulkanContextResources->resources->numSwapChainImages; ++uiImage)
     {
-        for (uint32 uiSet = 0; uiSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiSet)
+        for (uint32 uiSet = 0; uiSet < descSetCount; ++uiSet)
         {
             if (descSetHandles[uiSet] == DefaultDescHandle_Invalid) continue;
             VkDescriptorSet* descriptorSet =
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandles[uiSet].m_hDesc)->resourceChain[uiImage].descriptorSet;
 
             // Descriptor layout
-            VkWriteDescriptorSet descSetWrites[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_BINDINGS_PER_SET] = {};
+            VkWriteDescriptorSet descSetWrites[MAX_BINDINGS_PER_SET] = {};
             uint32 descriptorCount = 0;
 
             // Desc set info data
-            VkDescriptorBufferInfo descBufferInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_BINDINGS_PER_SET] = {}; // TODO: figure this out
-            VkDescriptorImageInfo descImageInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_BINDINGS_PER_SET] = {};
+            VkDescriptorBufferInfo descBufferInfo[MAX_BINDINGS_PER_SET] = {}; // TODO: figure this out
+            VkDescriptorImageInfo descImageInfo[MAX_BINDINGS_PER_SET] = {};
 
             for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
             {
@@ -1898,7 +1892,7 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
 }
 
 void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-    FramebufferHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
+    FramebufferHandle framebufferHandle, uint32 renderPassID, uint32 renderWidth, uint32 renderHeight,
     const char* debugLabel, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
@@ -1916,7 +1910,7 @@ void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextRes
     VulkanFramebufferResource* framebufferPtr =
         &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer)->resourceChain[vulkanContextResources->resources->currentSwapChainImage];
     renderPassBeginInfo.framebuffer = framebufferPtr->framebuffer;
-    renderPassBeginInfo.renderPass = framebufferPtr->renderPass;
+    renderPassBeginInfo.renderPass = vulkanContextResources->resources->renderPasses[renderPassID].renderPassVk;
 
     renderPassBeginInfo.clearValueCount = framebufferPtr->numClearValues;
     renderPassBeginInfo.pClearValues = framebufferPtr->clearValues;
@@ -2178,13 +2172,16 @@ void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResource
 
 bool VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
 {
-    CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, GetVkImageFormat(colorFormat), GetVkImageLayout(startLayout), GetVkImageLayout(endLayout), GetVkImageFormat(depthFormat), &vulkanContextResources->resources->renderPasses[renderPassID]);
+    VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[renderPassID];
+    CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, GetVkImageFormat(colorFormat), GetVkImageLayout(startLayout), GetVkImageLayout(endLayout), GetVkImageFormat(depthFormat), &renderPass.renderPassVk);
+    renderPass.numColorRTs = numColorRTs;
+    renderPass.hasDepth = (depthFormat != ImageFormat::Invalid);
     return true;
 }
 
 FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
     ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle,
-    uint32 colorEndLayout, uint32 width, uint32 height)
+    uint32 width, uint32 height, uint32 renderPassID)
 {
     TINKER_ASSERT(numRTColorHandles <= VULKAN_MAX_RENDERTARGETS);
 
@@ -2205,29 +2202,6 @@ FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextR
         VulkanFramebufferResource* newFramebuffer =
             &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiImage];
 
-        // Create render pass
-        uint32 colorFormat = ImageFormat::Invalid;
-        if (numRTColorHandles > 0)
-        {
-            // TODO: multiple RTs here
-            colorFormat = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtColorHandles[0].m_hRes)->resDesc.imageFormat;
-        }
-        uint32 depthFormat = ImageFormat::Invalid;
-        if (hasDepth)
-        {
-            depthFormat = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resDesc.imageFormat;
-        }
-
-        if (uiImage == 0)
-        {
-            // TODO: multiple RTs here
-            CreateRenderPass(vulkanContextResources->resources->device, numRTColorHandles, GetVkImageFormat(colorFormat), VK_IMAGE_LAYOUT_UNDEFINED, GetVkImageLayout(colorEndLayout), GetVkImageFormat(depthFormat), &newFramebuffer->renderPass);
-        }
-        else
-        {
-            newFramebuffer->renderPass = vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[0].renderPass;
-        }
-
         // Create framebuffer
         for (uint32 uiImageView = 0; uiImageView < numRTColorHandles; ++uiImageView)
         {
@@ -2241,7 +2215,7 @@ FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextR
             depthImageView = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resourceChain[uiImage].imageView;
         }
 
-        CreateFramebuffer(vulkanContextResources->resources->device, attachments, numRTColorHandles, depthImageView, width, height, newFramebuffer->renderPass, &newFramebuffer->framebuffer);
+        CreateFramebuffer(vulkanContextResources->resources->device, attachments, numRTColorHandles, depthImageView, width, height, vulkanContextResources->resources->renderPasses[renderPassID].renderPassVk, &newFramebuffer->framebuffer);
 
         for (uint32 uiRT = 0; uiRT < numRTColorHandles; ++uiRT)
         {
@@ -2415,11 +2389,6 @@ void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, Fr
     {
         VulkanFramebufferResource* framebuffer = &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(handle.m_hFramebuffer)->resourceChain[uiImage];
         vkDestroyFramebuffer(vulkanContextResources->resources->device, framebuffer->framebuffer, nullptr);
-
-        if (uiImage == 0)
-        {
-            vkDestroyRenderPass(vulkanContextResources->resources->device, framebuffer->renderPass, nullptr);
-        }
     }
     
     vulkanContextResources->resources->vulkanFramebufferResourcePool.Dealloc(handle.m_hFramebuffer);
