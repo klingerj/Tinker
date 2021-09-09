@@ -397,5 +397,8 @@ typedef CREATE_DESCRIPTOR_LAYOUT(create_descriptor_layout);
 #define CREATE_RENDERPASS(name) bool name(uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
 typedef CREATE_RENDERPASS(create_renderpass);
 
+#define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 shaderID)
+typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
+
 }
 }
