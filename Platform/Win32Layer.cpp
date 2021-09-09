@@ -263,9 +263,10 @@ static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandS
                     {
                         case GraphicsAPI::eVulkan:
                         {
-                            if (currentShaderID   != currentCmd.m_shader ||
+                            // TODO: only need this to bind descriptors, need to bind those in a diff cmd.
+                            /*if (currentShaderID   != currentCmd.m_shader ||
                                 currentBlendState != currentCmd.m_blendState || 
-                                currentDepthState != currentCmd.m_depthState)
+                                currentDepthState != currentCmd.m_depthState)*/
                             {
                                 currentShaderID   = currentCmd.m_shader;
                                 currentBlendState = currentCmd.m_blendState;
@@ -536,6 +537,24 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
             Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
             runGame = false;
             return false;
+        }
+    }
+}
+
+DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
+{
+    switch (g_GlobalAppParams.m_graphicsAPI)
+    {
+        case GraphicsAPI::eVulkan:
+        {
+            Graphics::DestroyPSOPerms(&vulkanContextResources, shaderID);
+            break;
+        }
+
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
+            runGame = false;
         }
     }
 }
@@ -1148,31 +1167,32 @@ wWinMain(HINSTANCE hInstance,
         }
 
         g_platformAPIFuncs = {};
-        g_platformAPIFuncs.EnqueueWorkerThreadJob = EnqueueWorkerThreadJob;
+        g_platformAPIFuncs.EnqueueWorkerThreadJob  = EnqueueWorkerThreadJob;
         // Generic OS
-        g_platformAPIFuncs.ReadEntireFile         = ReadEntireFile;
-        g_platformAPIFuncs.WriteEntireFile        = WriteEntireFile;
-        g_platformAPIFuncs.GetFileSize            = GetFileSize;
-        g_platformAPIFuncs.SystemCommand          = SystemCommand;
+        g_platformAPIFuncs.ReadEntireFile          = ReadEntireFile;
+        g_platformAPIFuncs.WriteEntireFile         = WriteEntireFile;
+        g_platformAPIFuncs.GetFileSize             = GetFileSize;
+        g_platformAPIFuncs.SystemCommand           = SystemCommand;
         // Network
-        g_platformAPIFuncs.InitNetworkConnection  = InitNetworkConnection;
-        g_platformAPIFuncs.EndNetworkConnection   = EndNetworkConnection;
-        g_platformAPIFuncs.SendMessageToServer    = SendMessageToServer;
+        g_platformAPIFuncs.InitNetworkConnection   = InitNetworkConnection;
+        g_platformAPIFuncs.EndNetworkConnection    = EndNetworkConnection;
+        g_platformAPIFuncs.SendMessageToServer     = SendMessageToServer;
         // Graphics
-        g_platformAPIFuncs.CreateResource         = CreateResource;
-        g_platformAPIFuncs.DestroyResource        = DestroyResource;
-        g_platformAPIFuncs.MapResource            = MapResource;
-        g_platformAPIFuncs.UnmapResource          = UnmapResource;
-        g_platformAPIFuncs.CreateFramebuffer      = CreateFramebuffer;
-        g_platformAPIFuncs.DestroyFramebuffer     = DestroyFramebuffer;
-        g_platformAPIFuncs.CreateGraphicsPipeline = CreateGraphicsPipeline;
-        g_platformAPIFuncs.CreateDescriptor       = CreateDescriptor;
-        g_platformAPIFuncs.DestroyAllDescriptors  = DestroyAllDescriptors;
-        g_platformAPIFuncs.CreateRenderPass       = CreateRenderPass;
-        g_platformAPIFuncs.DestroyDescriptor      = DestroyDescriptor;
-        g_platformAPIFuncs.WriteDescriptor        = WriteDescriptor;
-        g_platformAPIFuncs.SubmitCmdsImmediate    = SubmitCmdsImmediate;
-        g_platformAPIFuncs.CreateDescriptorLayout = CreateDescriptorLayout;
+        g_platformAPIFuncs.CreateResource          = CreateResource;
+        g_platformAPIFuncs.DestroyResource         = DestroyResource;
+        g_platformAPIFuncs.MapResource             = MapResource;
+        g_platformAPIFuncs.UnmapResource           = UnmapResource;
+        g_platformAPIFuncs.CreateFramebuffer       = CreateFramebuffer;
+        g_platformAPIFuncs.DestroyFramebuffer      = DestroyFramebuffer;
+        g_platformAPIFuncs.CreateGraphicsPipeline  = CreateGraphicsPipeline;
+        g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
+        g_platformAPIFuncs.CreateDescriptor        = CreateDescriptor;
+        g_platformAPIFuncs.DestroyAllDescriptors   = DestroyAllDescriptors;
+        g_platformAPIFuncs.CreateRenderPass        = CreateRenderPass;
+        g_platformAPIFuncs.DestroyDescriptor       = DestroyDescriptor;
+        g_platformAPIFuncs.WriteDescriptor         = WriteDescriptor;
+        g_platformAPIFuncs.SubmitCmdsImmediate     = SubmitCmdsImmediate;
+        g_platformAPIFuncs.CreateDescriptorLayout  = CreateDescriptorLayout;
 
         g_graphicsCommandStream = {};
         g_graphicsCommandStream.m_numCommands = 0;
@@ -1184,7 +1204,7 @@ wWinMain(HINSTANCE hInstance,
         #endif
 
         g_ShaderManager.Startup();
-        g_ShaderManager.LoadAllShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+        g_ShaderManager.LoadAllShaderResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
         g_GameCode = {};
         bool reloaded = ReloadGameCode(&g_GameCode, GameDllStr);
@@ -1220,6 +1240,7 @@ wWinMain(HINSTANCE hInstance,
                             VulkanDestroySwapChain(&vulkanContextResources);
                             VulkanCreateSwapChain(&vulkanContextResources);
 
+                            g_ShaderManager.RecreateWindowDependentResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                             g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
                             g_windowResized = false;

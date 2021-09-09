@@ -59,7 +59,7 @@ struct PlatformAPIFuncs
     create_framebuffer* CreateFramebuffer;
     destroy_framebuffer* DestroyFramebuffer;
     create_graphics_pipeline* CreateGraphicsPipeline;
-    //destroy_graphics_pipeline* DestroyGraphicsPipeline;
+    destroy_graphics_pipeline* DestroyGraphicsPipeline;
     create_descriptor* CreateDescriptor;
     destroy_descriptor* DestroyDescriptor;
     destroy_all_descriptors* DestroyAllDescriptors;

@@ -1208,6 +1208,27 @@ void CreatePSOPerm(VulkanContextResources* vulkanContextResources, uint32 shader
     }
 }
 
+void DestroyPSOPerms(VulkanContextResources* vulkanContextResources, uint32 shaderID)
+{
+    vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
+
+    VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[shaderID];
+    vkDestroyPipelineLayout(vulkanContextResources->resources->device, pipelineLayout, nullptr);
+    pipelineLayout = VK_NULL_HANDLE;
+
+    for (uint32 bs = 0; bs < VkResources::eMaxBlendStates; ++bs)
+    {
+        for (uint32 ds = 0; ds < VkResources::eMaxDepthStates; ++ds)
+        {
+            VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[shaderID][bs][ds];
+
+            vkDestroyPipeline(vulkanContextResources->resources->device, graphicsPipeline, nullptr);
+
+            graphicsPipeline = VK_NULL_HANDLE;
+        }
+    }
+}
+
 void DestroyAllPSOPerms(VulkanContextResources* vulkanContextResources)
 {
     vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
@@ -1215,19 +1236,49 @@ void DestroyAllPSOPerms(VulkanContextResources* vulkanContextResources)
     for (uint32 sid = 0; sid < VkResources::eMaxShaders; ++sid)
     {
         VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[sid];
-        vkDestroyPipelineLayout(vulkanContextResources->resources->device, pipelineLayout, nullptr);
-        pipelineLayout = VK_NULL_HANDLE;
+        if (pipelineLayout != VK_NULL_HANDLE)
+        {
+            vkDestroyPipelineLayout(vulkanContextResources->resources->device, pipelineLayout, nullptr);
+            pipelineLayout = VK_NULL_HANDLE;
+        }
 
         for (uint32 bs = 0; bs < VkResources::eMaxBlendStates; ++bs)
         {
             for (uint32 ds = 0; ds < VkResources::eMaxDepthStates; ++ds)
             {
                 VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[sid][bs][ds];
-
-                vkDestroyPipeline(vulkanContextResources->resources->device, graphicsPipeline, nullptr);
-
-                graphicsPipeline = VK_NULL_HANDLE;
+                if (graphicsPipeline != VK_NULL_HANDLE)
+                {
+                    vkDestroyPipeline(vulkanContextResources->resources->device, graphicsPipeline, nullptr);
+                    graphicsPipeline = VK_NULL_HANDLE;
+                }
             }
+        }
+    }
+}
+
+void DestroyAllDescLayouts(VulkanContextResources* vulkanContextResources)
+{
+    for (uint32 desc = 0; desc < VkResources::eMaxDescLayouts; ++desc)
+    {
+        VkDescriptorSetLayout& descLayout = vulkanContextResources->resources->descLayouts[desc].layout;
+        if (descLayout != VK_NULL_HANDLE)
+        {
+            vkDestroyDescriptorSetLayout(vulkanContextResources->resources->device, descLayout, nullptr);
+            descLayout = VK_NULL_HANDLE;
+        }
+    }
+}
+
+void DestroyAllRenderPasses(VulkanContextResources* vulkanContextResources)
+{
+    for (uint32 rp = 0; rp < VkResources::eMaxRenderPasses; ++rp)
+    {
+        VkRenderPass& renderPass = vulkanContextResources->resources->renderPasses[rp].renderPassVk;
+        if (renderPass != VK_NULL_HANDLE)
+        {
+            vkDestroyRenderPass(vulkanContextResources->resources->device, renderPass, nullptr);
+            renderPass = VK_NULL_HANDLE;
         }
     }
 }
@@ -1464,9 +1515,7 @@ void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, Des
     vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
     for (uint32 uiImage = 0; uiImage < vulkanContextResources->resources->numSwapChainImages; ++uiImage)
     {
-        //VkDescriptorSetLayout* descSetLayout = &vulkanContextResources->resources->descLayouts[0];
-            //&vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(handle.m_hDesc)->resourceChain[uiImage].descriptorLayout;
-        //vkDestroyDescriptorSetLayout(vulkanContextResources->resources->device, *descSetLayout, nullptr);
+        // TODO: destroy something?
     }
     vulkanContextResources->resources->vulkanDescriptorResourcePool.Dealloc(handle.m_hDesc);
 }
@@ -2457,6 +2506,10 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources)
     vulkanContextResources->resources->commandBuffers = nullptr;
     delete vulkanContextResources->resources->threaded_secondaryCommandBuffers;
     vulkanContextResources->resources->threaded_secondaryCommandBuffers = nullptr;
+
+    DestroyAllPSOPerms(vulkanContextResources);
+    DestroyAllDescLayouts(vulkanContextResources);
+    DestroyAllRenderPasses(vulkanContextResources);
 
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {

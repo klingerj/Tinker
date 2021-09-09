@@ -83,7 +83,10 @@ bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources
     uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
     uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles);
 void CreatePSOPerm(VulkanContextResources* vulkanContextResources, uint32 shaderID, uint32 blendState, uint32 depthState, uint8* vertexBytecode, uint32 vertexBytecodeSize, uint8* fragmentBytecode, uint32 fragmentBytecodeSize);
+void DestroyPSOPerms(VulkanContextResources* vulkanContextResources, uint32 shaderID);
 void DestroyAllPSOPerms(VulkanContextResources* vulkanContextResources);
+void DestroyAllDescLayouts(VulkanContextResources* vulkanContextResources);
+void DestroyAllRenderPasses(VulkanContextResources* vulkanContextResources);
 
 bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const Platform::DescriptorLayout* descriptorLayout);
 DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID);

@@ -128,10 +128,11 @@ struct VkResources
 
     enum
     {
-        eMaxShaders     = SHADER_ID_MAX,
-        eMaxBlendStates = BlendState::eMax,
-        eMaxDepthStates = DepthState::eMax,
-        eMaxDescLayouts = DESCLAYOUT_ID_MAX,
+        eMaxShaders      = SHADER_ID_MAX,
+        eMaxBlendStates  = BlendState::eMax,
+        eMaxDepthStates  = DepthState::eMax,
+        eMaxDescLayouts  = DESCLAYOUT_ID_MAX,
+        eMaxRenderPasses = RENDERPASS_ID_MAX,
     };
     struct PSOPerms
     {
@@ -140,7 +141,7 @@ struct VkResources
     } psoPermutations;
     VulkanDescriptorLayout descLayouts[eMaxDescLayouts];
 
-    VulkanRenderPass renderPasses[RENDERPASS_ID_MAX];
+    VulkanRenderPass renderPasses[eMaxRenderPasses];
 };
 
 // Helpers
