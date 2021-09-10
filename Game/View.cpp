@@ -123,7 +123,8 @@ void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instanc
     memcpy(&view->m_instanceData[instanceID], data, sizeof(DescriptorData_Instance));
 }
 
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, Platform::DescriptorHandle* descriptors)
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream,
+    uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Platform::DescriptorHandle* descriptors)
 {
     if (view->m_numInstances > 0)
     {
@@ -146,7 +147,9 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platfo
                         meshData->m_numIndices,
                         currentNumInstances,
                         meshData->m_indexBuffer.gpuBufferHandle,
-                        renderPass->shader,
+                        shaderID,
+                        blendState,
+                        depthState,
                         descriptors,
                         "Draw asset");
 

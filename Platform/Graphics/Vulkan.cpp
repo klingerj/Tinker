@@ -78,14 +78,12 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     vulkanContextResources->resources = new VkResources{};
 
     vulkanContextResources->resources->vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
-    vulkanContextResources->resources->vulkanPipelineResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     vulkanContextResources->resources->vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     vulkanContextResources->resources->vulkanFramebufferResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
 
     vulkanContextResources->resources->windowWidth = width;
     vulkanContextResources->resources->windowHeight = height;
 
-    VulkanBlendStates[BlendState::eInvalid] = {};
     VkPipelineColorBlendAttachmentState blendStateProperties = {};
     blendStateProperties.colorWriteMask = VK_COLOR_COMPONENT_R_BIT |
         VK_COLOR_COMPONENT_G_BIT |
@@ -99,6 +97,9 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     blendStateProperties.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     blendStateProperties.alphaBlendOp = VK_BLEND_OP_ADD;
     VulkanBlendStates[BlendState::eAlphaBlend] = blendStateProperties;
+    blendStateProperties.blendEnable = VK_FALSE;
+    VulkanBlendStates[BlendState::eReplace] = blendStateProperties;
+    VulkanBlendStates[BlendState::eNoColorAttachment] = {};
 
     VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
     depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -123,6 +124,7 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     VulkanImageLayouts[ImageLayout::eShaderRead] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     VulkanImageLayouts[ImageLayout::eTransferDst] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     VulkanImageLayouts[ImageLayout::eDepthOptimal] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    VulkanImageLayouts[ImageLayout::ePresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VulkanImageFormats[ImageFormat::BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
     VulkanImageFormats[ImageFormat::RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
@@ -132,6 +134,23 @@ int InitVulkan(VulkanContextResources* vulkanContextResources,
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     VulkanDescriptorTypes[DescriptorType::eSSBO] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+    // Shader pso permutations
+    for (uint32 sid = 0; sid < VkResources::eMaxShaders; ++sid)
+    {
+        VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[sid];
+        pipelineLayout = VK_NULL_HANDLE;
+
+        for (uint32 bs = 0; bs < VkResources::eMaxBlendStates; ++bs)
+        {
+            for (uint32 ds = 0; ds < VkResources::eMaxDepthStates; ++ds)
+            {
+                VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[sid][bs][ds];
+                graphicsPipeline = VK_NULL_HANDLE;
+            }
+        }
+    }
+    //-----
 
     VkApplicationInfo applicationInfo = {};
     applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -851,6 +870,15 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
     }
 
     // Swap chain framebuffers
+    const uint32 numColorRTs = 1; // TODO: support multiple RTs
+
+    // Render pass
+    VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT];
+    renderPass.numColorRTs = 1;
+    renderPass.hasDepth = false;
+    const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
+    CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, depthFormat, &renderPass.renderPassVk);
+
     uint32 newFramebufferHandle = vulkanContextResources->resources->vulkanFramebufferResourcePool.Alloc();
     TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
     vulkanContextResources->resources->swapChainFramebufferHandle = FramebufferHandle(newFramebufferHandle);
@@ -860,18 +888,6 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
         VulkanFramebufferResource* newFramebuffer =
             &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiFramebuffer];
 
-        // Render pass
-        const uint32 numColorRTs = 1; // TODO: support multiple RTs
-        if (uiFramebuffer == 0)
-        {
-            const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
-            CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, depthFormat, &newFramebuffer->renderPass);
-        }
-        else
-        {
-            newFramebuffer->renderPass = vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[0].renderPass;
-        }
-        
         for (uint32 i = 0; i < numColorRTs; ++i)
         {
             newFramebuffer->clearValues[i] = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -881,7 +897,7 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
         // Framebuffer
         const VkImageView depthImageView = VK_NULL_HANDLE; // no depth buffer for swap chain
         CreateFramebuffer(vulkanContextResources->resources->device, &vulkanContextResources->resources->swapChainImageViews[uiFramebuffer], 1, depthImageView,
-            vulkanContextResources->resources->swapChainExtent.width, vulkanContextResources->resources->swapChainExtent.height, newFramebuffer->renderPass, &newFramebuffer->framebuffer);
+            vulkanContextResources->resources->swapChainExtent.width, vulkanContextResources->resources->swapChainExtent.height, vulkanContextResources->resources->renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT].renderPassVk, &newFramebuffer->framebuffer);
     }
 
     vulkanContextResources->isSwapChainValid = true;
@@ -904,28 +920,11 @@ void VulkanDestroySwapChain(VulkanContextResources* vulkanContextResources)
     vkDestroySwapchainKHR(vulkanContextResources->resources->device, vulkanContextResources->resources->swapChain, nullptr);
 }
 
-VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VulkanContextResources* vulkanContextResources)
-{
-    VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
-    shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shaderModuleCreateInfo.codeSize = numShaderCodeBytes;
-    shaderModuleCreateInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode);
-
-    VkShaderModule shaderModule;
-    VkResult result = vkCreateShaderModule(vulkanContextResources->resources->device, &shaderModuleCreateInfo, nullptr, &shaderModule);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan shader module!", Core::Utility::LogSeverity::eCritical);
-        return VK_NULL_HANDLE;
-    }
-    return shaderModule;
-}
-
-ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources,
+bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources,
     void* vertexShaderCode, uint32 numVertexShaderBytes,
     void* fragmentShaderCode, uint32 numFragmentShaderBytes,
-    uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight,
-    FramebufferHandle framebufferHandle, DescriptorHandle* descriptorHandles, uint32 numDescriptorHandles)
+    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
+    uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles)
 {
     VkShaderModule vertexShaderModule = VK_NULL_HANDLE;
     VkShaderModule fragmentShaderModule = VK_NULL_HANDLE;
@@ -933,12 +932,12 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     uint32 numStages = 0;
     if (numVertexShaderBytes > 0)
     {
-        vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources);
+        vertexShaderModule = CreateShaderModule((const char*)vertexShaderCode, numVertexShaderBytes, vulkanContextResources->resources->device);
         ++numStages;
     }
     if (numFragmentShaderBytes > 0)
     {
-        fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources);
+        fragmentShaderModule = CreateShaderModule((const char*)fragmentShaderCode, numFragmentShaderBytes, vulkanContextResources->resources->device);
         ++numStages;
     }
     
@@ -974,7 +973,7 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
 
     #ifdef WORK_WITH_RENDERDOC
     viewport.y = 0.0f;
-    viewport.height = (float)vulkanContextResources->resources->swapChainExtent.height;
+    viewport.height = (float)vulkanContextResources->resources->swapChainExtent.height; //TODO: this looks wrong, doesnt use the params
     #else
     viewport.y = (float)vulkanContextResources->resources->swapChainExtent.height;
     viewport.height = -(float)vulkanContextResources->resources->swapChainExtent.height;
@@ -1013,8 +1012,6 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     rasterizer.depthBiasClamp = 0.0f;
     rasterizer.depthBiasSlopeFactor = 0.0f;
 
-    VkPipelineDepthStencilStateCreateInfo depthStencilState = GetVkDepthState(depthState);
-
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
@@ -1033,20 +1030,6 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
 
-    VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
-
-    if (blendState == BlendState::eInvalid)
-    {
-        colorBlending.attachmentCount = 0;
-        colorBlending.pAttachments = nullptr;
-    }
-    else
-    {
-        // TODO: support multiple RTs here too
-        colorBlending.attachmentCount = 1;
-        colorBlending.pAttachments = &colorBlendAttachment;
-    }
-
     const uint32 numDynamicStates = 2;
     VkDynamicState dynamicStates[numDynamicStates] =
     {
@@ -1059,20 +1042,15 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     dynamicState.dynamicStateCount = numDynamicStates;
     dynamicState.pDynamicStates = dynamicStates;
 
-    uint32 newPipelineHandle = vulkanContextResources->resources->vulkanPipelineResourcePool.Alloc();
-
     // Descriptor layouts
-    TINKER_ASSERT(numDescriptorHandles <= MAX_DESCRIPTOR_SETS_PER_SHADER);
+    TINKER_ASSERT(numDescriptorLayoutHandles <= MAX_DESCRIPTOR_SETS_PER_SHADER);
 
     VkDescriptorSetLayout descriptorSetLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
-    uint32 numValidLayouts = 0;
-    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
+    for (uint32 uiDesc = 0; uiDesc < numDescriptorLayoutHandles; ++uiDesc)
     {
-        DescriptorHandle descHandle = descriptorHandles[uiDesc];
-        if (descHandle != DefaultDescHandle_Invalid)
-        {
-            descriptorSetLayouts[numValidLayouts++] = vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[0].descriptorLayout;
-        }
+        uint32 descLayoutID = descriptorLayoutHandles[uiDesc];
+        if (descLayoutID != DESCLAYOUT_ID_MAX)
+            descriptorSetLayouts[uiDesc] = vulkanContextResources->resources->descLayouts[descLayoutID].layout;
     }
 
     // Push constants
@@ -1081,21 +1059,20 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
     pushConstantRange.size = sizeof(uint32) * 4;
-    // TODO: use maximum available size, or get the size as a parameter somehow
+    // TODO: use maximum available size, or get the size as a parameter
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = numDescriptorHandles;
+    pipelineLayoutInfo.setLayoutCount = numDescriptorLayoutHandles;
     pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
     pipelineLayoutInfo.pushConstantRangeCount = numPushConstants;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    VkPipelineLayout* pipelineLayout = &vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->pipelineLayout;
-
+    VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[shaderID];
     VkResult result = vkCreatePipelineLayout(vulkanContextResources->resources->device,
         &pipelineLayoutInfo,
         nullptr,
-        pipelineLayout);
+        &pipelineLayout);
 
     if (result != VK_SUCCESS)
     {
@@ -1103,51 +1080,195 @@ ShaderHandle VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextR
         TINKER_ASSERT(0);
     }
 
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineCreateInfo.stageCount = numStages;
-    pipelineCreateInfo.pStages = shaderStages;
-    pipelineCreateInfo.pVertexInputState = &vertexInputInfo;
-    pipelineCreateInfo.pInputAssemblyState = &inputAssembly;
-    pipelineCreateInfo.pViewportState = &viewportState;
-    pipelineCreateInfo.pRasterizationState = &rasterizer;
-    pipelineCreateInfo.pMultisampleState = &multisampling;
-    pipelineCreateInfo.pDepthStencilState = &depthStencilState;
-    pipelineCreateInfo.pColorBlendState = &colorBlending;
-    pipelineCreateInfo.pDynamicState = nullptr;
-    pipelineCreateInfo.layout = *pipelineLayout;
-
-    if (framebufferHandle == DefaultFramebufferHandle_Invalid)
+    const VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[renderPassID];
+    for (uint32 blendState = 0; blendState < VkResources::eMaxBlendStates; ++blendState)
     {
-        pipelineCreateInfo.renderPass =
-            vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(vulkanContextResources->resources->swapChainFramebufferHandle.m_hFramebuffer)->resourceChain[0].renderPass; // All swap chain images have the same render pass data
-    }
-    else
-    {
-        pipelineCreateInfo.renderPass =
-            vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(framebufferHandle.m_hFramebuffer)->resourceChain[0].renderPass; // All swap chain images have the same render pass data
-    }
-    pipelineCreateInfo.subpass = 0;
-    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineCreateInfo.basePipelineIndex = -1;
+        for (uint32 depthState = 0; depthState < VkResources::eMaxDepthStates; ++depthState)
+        {
+            VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
 
-    result = vkCreateGraphicsPipelines(vulkanContextResources->resources->device,
-        VK_NULL_HANDLE,
-        1,
-        &pipelineCreateInfo,
-        nullptr,
-        &vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(newPipelineHandle)->graphicsPipeline);
+            VkPipelineDepthStencilStateCreateInfo depthStencilState = GetVkDepthState(depthState);
+            VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
+            if (blendState == BlendState::eNoColorAttachment)
+            {
+                if (renderPass.numColorRTs > 0)
+                    continue;
+                colorBlending.attachmentCount = 0;
+                colorBlending.pAttachments = nullptr;
+            }
+            else
+            {
+                // TODO: support multiple RTs here too
+                colorBlending.attachmentCount = 1;
+                colorBlending.pAttachments = &colorBlendAttachment;
+            }
+
+            VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+            pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+            pipelineCreateInfo.stageCount = numStages;
+            pipelineCreateInfo.pStages = shaderStages;
+            pipelineCreateInfo.pVertexInputState = &vertexInputInfo;
+            pipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+            pipelineCreateInfo.pViewportState = &viewportState;
+            pipelineCreateInfo.pRasterizationState = &rasterizer;
+            pipelineCreateInfo.pMultisampleState = &multisampling;
+            pipelineCreateInfo.pDepthStencilState = &depthStencilState;
+            pipelineCreateInfo.pColorBlendState = &colorBlending;
+            pipelineCreateInfo.pDynamicState = nullptr;
+            pipelineCreateInfo.layout = pipelineLayout;
+
+            pipelineCreateInfo.renderPass = renderPass.renderPassVk;
+            pipelineCreateInfo.subpass = 0;
+            pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+            pipelineCreateInfo.basePipelineIndex = -1;
+
+            result = vkCreateGraphicsPipelines(vulkanContextResources->resources->device,
+                VK_NULL_HANDLE,
+                1,
+                &pipelineCreateInfo,
+                nullptr,
+                &graphicsPipeline);
+
+            if (result != VK_SUCCESS)
+            {
+                Core::Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline!", Core::Utility::LogSeverity::eCritical);
+                TINKER_ASSERT(0);
+            }
+        }
     }
 
     vkDestroyShaderModule(vulkanContextResources->resources->device, vertexShaderModule, nullptr);
     vkDestroyShaderModule(vulkanContextResources->resources->device, fragmentShaderModule, nullptr);
 
-    return ShaderHandle(newPipelineHandle);
+    return true;
+}
+
+bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const Platform::DescriptorLayout* descriptorLayout)
+{
+    // Descriptor layout
+    VkDescriptorSetLayoutBinding descLayoutBinding[MAX_BINDINGS_PER_SET] = {};
+    uint32 numBindings = 0;
+
+    for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+    {
+        uint32 type = descriptorLayout->params[uiDesc].type;
+        if (type < DescriptorType::eMax)
+        {
+            descLayoutBinding[numBindings].descriptorType = GetVkDescriptorType(type);
+            descLayoutBinding[numBindings].descriptorCount = descriptorLayout->params[uiDesc].amount;
+            descLayoutBinding[numBindings].binding = uiDesc;
+            descLayoutBinding[numBindings].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            descLayoutBinding[numBindings].pImmutableSamplers = nullptr;
+            ++numBindings;
+        }
+        else
+            break;
+    }
+
+    uint32 newDescriptorHandle = TINKER_INVALID_HANDLE;
+    if (numBindings > 0)
+    {
+        newDescriptorHandle = vulkanContextResources->resources->vulkanDescriptorResourcePool.Alloc();
+    }
+    else
+    {
+        Core::Utility::LogMsg("Platform", "No descriptors passed to VulkanCreateDescriptorLayout()!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    VkDescriptorSetLayout* descriptorSetLayout = &vulkanContextResources->resources->descLayouts[descriptorLayoutID].layout;
+    *descriptorSetLayout = VK_NULL_HANDLE;
+    
+    VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
+    descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    descLayoutInfo.bindingCount = numBindings;
+    descLayoutInfo.pBindings = &descLayoutBinding[0];
+
+    VkResult result = vkCreateDescriptorSetLayout(vulkanContextResources->resources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set layout!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    memcpy(&vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings, &descriptorLayout->params[0], sizeof(Platform::DescriptorLayout));
+    return true;
+}
+
+void DestroyPSOPerms(VulkanContextResources* vulkanContextResources, uint32 shaderID)
+{
+    vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
+
+    VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[shaderID];
+    vkDestroyPipelineLayout(vulkanContextResources->resources->device, pipelineLayout, nullptr);
+    pipelineLayout = VK_NULL_HANDLE;
+
+    for (uint32 bs = 0; bs < VkResources::eMaxBlendStates; ++bs)
+    {
+        for (uint32 ds = 0; ds < VkResources::eMaxDepthStates; ++ds)
+        {
+            VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[shaderID][bs][ds];
+
+            vkDestroyPipeline(vulkanContextResources->resources->device, graphicsPipeline, nullptr);
+
+            graphicsPipeline = VK_NULL_HANDLE;
+        }
+    }
+}
+
+void VulkanDestroyAllPSOPerms(VulkanContextResources* vulkanContextResources)
+{
+    vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
+
+    for (uint32 sid = 0; sid < VkResources::eMaxShaders; ++sid)
+    {
+        VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[sid];
+        if (pipelineLayout != VK_NULL_HANDLE)
+        {
+            vkDestroyPipelineLayout(vulkanContextResources->resources->device, pipelineLayout, nullptr);
+            pipelineLayout = VK_NULL_HANDLE;
+        }
+
+        for (uint32 bs = 0; bs < VkResources::eMaxBlendStates; ++bs)
+        {
+            for (uint32 ds = 0; ds < VkResources::eMaxDepthStates; ++ds)
+            {
+                VkPipeline& graphicsPipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[sid][bs][ds];
+                if (graphicsPipeline != VK_NULL_HANDLE)
+                {
+                    vkDestroyPipeline(vulkanContextResources->resources->device, graphicsPipeline, nullptr);
+                    graphicsPipeline = VK_NULL_HANDLE;
+                }
+            }
+        }
+    }
+}
+
+void DestroyAllDescLayouts(VulkanContextResources* vulkanContextResources)
+{
+    for (uint32 desc = 0; desc < VkResources::eMaxDescLayouts; ++desc)
+    {
+        VkDescriptorSetLayout& descLayout = vulkanContextResources->resources->descLayouts[desc].layout;
+        if (descLayout != VK_NULL_HANDLE)
+        {
+            vkDestroyDescriptorSetLayout(vulkanContextResources->resources->device, descLayout, nullptr);
+            descLayout = VK_NULL_HANDLE;
+        }
+    }
+}
+
+void VulkanDestroyAllRenderPasses(VulkanContextResources* vulkanContextResources)
+{
+    for (uint32 rp = 0; rp < VkResources::eMaxRenderPasses; ++rp)
+    {
+        VkRenderPass& renderPass = vulkanContextResources->resources->renderPasses[rp].renderPassVk;
+        if (renderPass != VK_NULL_HANDLE)
+        {
+            vkDestroyRenderPass(vulkanContextResources->resources->device, renderPass, nullptr);
+            renderPass = VK_NULL_HANDLE;
+        }
+    }
 }
 
 void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources)
@@ -1340,7 +1461,7 @@ ResourceHandle VulkanCreateBuffer(VulkanContextResources* vulkanContextResources
     return ResourceHandle(newResourceHandle);
 }
 
-DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout)
+DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID)
 {
     if (vulkanContextResources->resources->descriptorPool == VK_NULL_HANDLE)
     {
@@ -1348,55 +1469,12 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
         InitDescriptorPool(vulkanContextResources);
     }
     
-    // Descriptor layout
-    VkDescriptorSetLayoutBinding descLayoutBinding[MAX_DESCRIPTORS_PER_SET] = {};
-    uint32 numBindings = 0;
+    uint32 newDescriptorHandle = vulkanContextResources->resources->vulkanDescriptorResourcePool.Alloc();
 
-    for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
-    {
-        for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
-        {
-            uint32 type = descLayout->descriptorLayoutParams[uiDescSet][uiDesc].type;
-            if (type < DescriptorType::eMax)
-            {
-                descLayoutBinding[numBindings].descriptorType = GetVkDescriptorType(type);
-                descLayoutBinding[numBindings].descriptorCount = descLayout->descriptorLayoutParams[uiDescSet][uiDesc].amount;
-                descLayoutBinding[numBindings].binding = uiDesc;
-                descLayoutBinding[numBindings].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-                descLayoutBinding[numBindings].pImmutableSamplers = nullptr;
-                ++numBindings;
-            }
-        }
-    }
-
-    uint32 newDescriptorHandle = TINKER_INVALID_HANDLE;
-    if (numBindings > 0)
-    {
-        newDescriptorHandle = vulkanContextResources->resources->vulkanDescriptorResourcePool.Alloc();
-    }
-    else
-    {
-        Core::Utility::LogMsg("Platform", "No descriptors passed to VulkanCreateDescriptor()!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-
-    VkDescriptorSetLayout* descriptorSetLayout = nullptr;
     for (uint32 uiImage = 0; uiImage < vulkanContextResources->resources->numSwapChainImages; ++uiImage)
     {
-        descriptorSetLayout = &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiImage].descriptorLayout;
-        *descriptorSetLayout = VK_NULL_HANDLE;
-
-        VkDescriptorSetLayoutCreateInfo descLayoutInfo = {};
-        descLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        descLayoutInfo.bindingCount = numBindings;
-        descLayoutInfo.pBindings = &descLayoutBinding[0];
-
-        VkResult result = vkCreateDescriptorSetLayout(vulkanContextResources->resources->device, &descLayoutInfo, nullptr, descriptorSetLayout);
-        if (result != VK_SUCCESS)
-        {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set layout!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-        }
+        const VkDescriptorSetLayout& descriptorSetLayout = vulkanContextResources->resources->descLayouts[descriptorLayoutID].layout;
+        TINKER_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
 
         if (descriptorSetLayout != VK_NULL_HANDLE)
         {
@@ -1404,9 +1482,9 @@ DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextRes
             descSetAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
             descSetAllocInfo.descriptorPool = vulkanContextResources->resources->descriptorPool;
             descSetAllocInfo.descriptorSetCount = 1;
-            descSetAllocInfo.pSetLayouts = descriptorSetLayout;
+            descSetAllocInfo.pSetLayouts = &descriptorSetLayout;
 
-            result = vkAllocateDescriptorSets(vulkanContextResources->resources->device,
+            VkResult result = vkAllocateDescriptorSets(vulkanContextResources->resources->device,
                 &descSetAllocInfo,
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiImage].descriptorSet);
             if (result != VK_SUCCESS)
@@ -1425,9 +1503,7 @@ void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, Des
     vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
     for (uint32 uiImage = 0; uiImage < vulkanContextResources->resources->numSwapChainImages; ++uiImage)
     {
-        VkDescriptorSetLayout* descSetLayout =
-            &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(handle.m_hDesc)->resourceChain[uiImage].descriptorLayout;
-        vkDestroyDescriptorSetLayout(vulkanContextResources->resources->device, *descSetLayout, nullptr);
+        // TODO: destroy something?
     }
     vulkanContextResources->resources->vulkanDescriptorResourcePool.Dealloc(handle.m_hDesc);
 }
@@ -1438,29 +1514,34 @@ void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources)
     vulkanContextResources->resources->descriptorPool = VK_NULL_HANDLE;
 }
 
-void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, DescriptorLayout* descLayout, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
+void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
 {
+    TINKER_ASSERT(descSetCount <= MAX_DESCRIPTOR_SETS_PER_SHADER);
+    TINKER_ASSERT(descSetDataCount <= MAX_BINDINGS_PER_SET);
+
+    DescriptorLayout* descLayout = &vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings;
+
     for (uint32 uiImage = 0; uiImage < vulkanContextResources->resources->numSwapChainImages; ++uiImage)
     {
-        for (uint32 uiSet = 0; uiSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiSet)
+        for (uint32 uiSet = 0; uiSet < descSetCount; ++uiSet)
         {
             if (descSetHandles[uiSet] == DefaultDescHandle_Invalid) continue;
             VkDescriptorSet* descriptorSet =
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandles[uiSet].m_hDesc)->resourceChain[uiImage].descriptorSet;
 
             // Descriptor layout
-            VkWriteDescriptorSet descSetWrites[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {};
+            VkWriteDescriptorSet descSetWrites[MAX_BINDINGS_PER_SET] = {};
             uint32 descriptorCount = 0;
 
             // Desc set info data
-            VkDescriptorBufferInfo descBufferInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {}; // TODO: figure this out
-            VkDescriptorImageInfo descImageInfo[MAX_DESCRIPTOR_SETS_PER_SHADER * MAX_DESCRIPTORS_PER_SET] = {};
+            VkDescriptorBufferInfo descBufferInfo[MAX_BINDINGS_PER_SET] = {}; // TODO: figure this out
+            VkDescriptorImageInfo descImageInfo[MAX_BINDINGS_PER_SET] = {};
 
-            for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+            for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
             {
                 descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
-                uint32 type = descLayout->descriptorLayoutParams[uiSet][uiDesc].type;
+                uint32 type = descLayout->params[uiDesc].type;
                 if (type != DescriptorType::eMax)
                 {
                     VulkanMemResource* res = &vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetDataHandles[uiSet].handles[uiDesc].m_hRes)->resourceChain[uiImage];
@@ -1508,16 +1589,16 @@ void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, Descr
                         }
                     }
                     ++descriptorCount;
-                } // if
-            } // for
+                }
+            }
 
             if (descriptorCount > 0)
             {
                 vkUpdateDescriptorSets(vulkanContextResources->resources->device, descriptorCount, descSetWrites, 0, nullptr);
             }
 
-        } // for
-    } // for
+        }
+    }
 }
 
 void InitDescriptorPool(VulkanContextResources* vulkanContextResources)
@@ -1692,16 +1773,15 @@ VkCommandBuffer ChooseAppropriateCommandBuffer(VulkanContextResources* vulkanCon
     return commandBuffer;
 }
 
-void VulkanRecordCommandPushConstant(VulkanContextResources* vulkanContextResources, uint8* data, uint32 sizeInBytes, ShaderHandle shaderHandle)
+void VulkanRecordCommandPushConstant(VulkanContextResources* vulkanContextResources, uint8* data, uint32 sizeInBytes, uint32 shaderID, uint32 blendState, uint32 depthState)
 {
     TINKER_ASSERT(data && sizeInBytes);
-    TINKER_ASSERT(shaderHandle != DefaultShaderHandle_Invalid);
-
+    
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, false);
-    VulkanPipelineResource* pipelineResource = vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle.m_hShader);
+    const VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[shaderID];
+    TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
-    vkCmdPushConstants(commandBuffer, pipelineResource->pipelineLayout,
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
+    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
 }
 
 void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
@@ -1736,15 +1816,17 @@ void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
 }
 
 void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResources,
-    ShaderHandle shaderHandle, const DescriptorHandle* descSetHandles, bool immediateSubmit)
+    uint32 shaderID, uint32 blendState, uint32 depthState,
+    const DescriptorHandle* descSetHandles, bool immediateSubmit)
 {
-    TINKER_ASSERT(shaderHandle != DefaultShaderHandle_Invalid);
+    const VkPipeline& pipeline = vulkanContextResources->resources->psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
+    TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
+    const VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[shaderID];
+    TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
 
-    VulkanPipelineResource* pipelineResource = vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(shaderHandle.m_hShader);
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineResource->graphicsPipeline);
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
     {
@@ -1754,8 +1836,9 @@ void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResource
             VkDescriptorSet* descSet =
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[vulkanContextResources->resources->currentSwapChainImage].descriptorSet;
 
-            vkCmdBindDescriptorSets(vulkanContextResources->resources->commandBuffers[vulkanContextResources->resources->currentSwapChainImage], VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipelineResource->pipelineLayout, uiDesc, 1, descSet, 0, nullptr);
+            vkCmdBindDescriptorSets(vulkanContextResources->resources->commandBuffers[vulkanContextResources->resources->currentSwapChainImage], // TODO: use cmd buffer chosen?
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                pipelineLayout, uiDesc, 1, descSet, 0, nullptr);
         }
     }
 }
@@ -1846,7 +1929,7 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
 }
 
 void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextResources,
-    FramebufferHandle framebufferHandle, uint32 renderWidth, uint32 renderHeight,
+    FramebufferHandle framebufferHandle, uint32 renderPassID, uint32 renderWidth, uint32 renderHeight,
     const char* debugLabel, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
@@ -1864,7 +1947,7 @@ void VulkanRecordCommandRenderPassBegin(VulkanContextResources* vulkanContextRes
     VulkanFramebufferResource* framebufferPtr =
         &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer)->resourceChain[vulkanContextResources->resources->currentSwapChainImage];
     renderPassBeginInfo.framebuffer = framebufferPtr->framebuffer;
-    renderPassBeginInfo.renderPass = framebufferPtr->renderPass;
+    renderPassBeginInfo.renderPass = vulkanContextResources->resources->renderPasses[renderPassID].renderPassVk;
 
     renderPassBeginInfo.clearValueCount = framebufferPtr->numClearValues;
     renderPassBeginInfo.pClearValues = framebufferPtr->clearValues;
@@ -2124,9 +2207,18 @@ void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResource
     }
 }
 
+bool VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
+{
+    VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[renderPassID];
+    CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, GetVkImageFormat(colorFormat), GetVkImageLayout(startLayout), GetVkImageLayout(endLayout), GetVkImageFormat(depthFormat), &renderPass.renderPassVk);
+    renderPass.numColorRTs = numColorRTs;
+    renderPass.hasDepth = (depthFormat != ImageFormat::Invalid);
+    return true;
+}
+
 FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextResources,
     ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle,
-    uint32 colorEndLayout, uint32 width, uint32 height)
+    uint32 width, uint32 height, uint32 renderPassID)
 {
     TINKER_ASSERT(numRTColorHandles <= VULKAN_MAX_RENDERTARGETS);
 
@@ -2147,29 +2239,6 @@ FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextR
         VulkanFramebufferResource* newFramebuffer =
             &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiImage];
 
-        // Create render pass
-        uint32 colorFormat = ImageFormat::Invalid;
-        if (numRTColorHandles > 0)
-        {
-            // TODO: multiple RTs here
-            colorFormat = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtColorHandles[0].m_hRes)->resDesc.imageFormat;
-        }
-        uint32 depthFormat = ImageFormat::Invalid;
-        if (hasDepth)
-        {
-            depthFormat = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resDesc.imageFormat;
-        }
-
-        if (uiImage == 0)
-        {
-            // TODO: multiple RTs here
-            CreateRenderPass(vulkanContextResources->resources->device, numRTColorHandles, GetVkImageFormat(colorFormat), VK_IMAGE_LAYOUT_UNDEFINED, GetVkImageLayout(colorEndLayout), GetVkImageFormat(depthFormat), &newFramebuffer->renderPass);
-        }
-        else
-        {
-            newFramebuffer->renderPass = vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[0].renderPass;
-        }
-
         // Create framebuffer
         for (uint32 uiImageView = 0; uiImageView < numRTColorHandles; ++uiImageView)
         {
@@ -2183,7 +2252,7 @@ FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextR
             depthImageView = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resourceChain[uiImage].imageView;
         }
 
-        CreateFramebuffer(vulkanContextResources->resources->device, attachments, numRTColorHandles, depthImageView, width, height, newFramebuffer->renderPass, &newFramebuffer->framebuffer);
+        CreateFramebuffer(vulkanContextResources->resources->device, attachments, numRTColorHandles, depthImageView, width, height, vulkanContextResources->resources->renderPasses[renderPassID].renderPassVk, &newFramebuffer->framebuffer);
 
         for (uint32 uiRT = 0; uiRT < numRTColorHandles; ++uiRT)
         {
@@ -2334,17 +2403,6 @@ ResourceHandle VulkanCreateResource(VulkanContextResources* vulkanContextResourc
     return newHandle;
 }
 
-void VulkanDestroyGraphicsPipeline(VulkanContextResources* vulkanContextResources, ShaderHandle handle)
-{
-    vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
-
-    VulkanPipelineResource* pipelineResource = vulkanContextResources->resources->vulkanPipelineResourcePool.PtrFromHandle(handle.m_hShader);
-    vkDestroyPipeline(vulkanContextResources->resources->device, pipelineResource->graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(vulkanContextResources->resources->device, pipelineResource->pipelineLayout, nullptr);
-
-    vulkanContextResources->resources->vulkanPipelineResourcePool.Dealloc(handle.m_hShader);
-}
-
 void VulkanDestroyImageResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle)
 {
     vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
@@ -2368,11 +2426,6 @@ void VulkanDestroyFramebuffer(VulkanContextResources* vulkanContextResources, Fr
     {
         VulkanFramebufferResource* framebuffer = &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(handle.m_hFramebuffer)->resourceChain[uiImage];
         vkDestroyFramebuffer(vulkanContextResources->resources->device, framebuffer->framebuffer, nullptr);
-
-        if (uiImage == 0)
-        {
-            vkDestroyRenderPass(vulkanContextResources->resources->device, framebuffer->renderPass, nullptr);
-        }
     }
     
     vulkanContextResources->resources->vulkanFramebufferResourcePool.Dealloc(handle.m_hFramebuffer);
@@ -2442,6 +2495,10 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources)
     delete vulkanContextResources->resources->threaded_secondaryCommandBuffers;
     vulkanContextResources->resources->threaded_secondaryCommandBuffers = nullptr;
 
+    VulkanDestroyAllPSOPerms(vulkanContextResources);
+    DestroyAllDescLayouts(vulkanContextResources);
+    VulkanDestroyAllRenderPasses(vulkanContextResources);
+
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         vkDestroySemaphore(vulkanContextResources->resources->device, vulkanContextResources->resources->renderCompleteSemaphores[uiImage], nullptr);
@@ -2473,7 +2530,6 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources)
     vkDestroyInstance(vulkanContextResources->resources->instance, nullptr);
 
     vulkanContextResources->resources->vulkanMemResourcePool.ExplicitFree();
-    vulkanContextResources->resources->vulkanPipelineResourcePool.ExplicitFree();
     vulkanContextResources->resources->vulkanDescriptorResourcePool.ExplicitFree();
     vulkanContextResources->resources->vulkanFramebufferResourcePool.ExplicitFree();
 

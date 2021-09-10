@@ -5,6 +5,16 @@ layout(set = 1, binding = 0) readonly buffer DescMesh_Position
     vec4 Buffer[];
 } PositionData;
 
+layout(set = 1, binding = 1) readonly buffer DescMesh_UV
+{
+    vec2 Buffer[];
+} UVData;
+
+layout(set = 1, binding = 2) readonly buffer DescMesh_Normal
+{
+    vec4 Buffer[];
+} NormalData;
+
 layout(location = 0) out vec2 outUV;
 
 void main()
