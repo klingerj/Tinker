@@ -25,7 +25,6 @@ void AssetManager::LoadAllAssets(const Tk::Platform::PlatformAPIFuncs* platformF
 
     const char* meshFilePaths[numMeshAssets] =
     {
-        // TODO: get assets dir via compile define
         ASSETS_PATH "UnitSphere\\sphere.obj",
         ASSETS_PATH "UnitCube\\cube.obj",
         ASSETS_PATH "FireElemental\\fire_elemental.obj",
@@ -543,28 +542,19 @@ void AssetManager::DestroyAllTextureData(const Tk::Platform::PlatformAPIFuncs* p
 
 void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 {
-    Platform::DescriptorLayout descriptorLayout = {};
-    descriptorLayout.InitInvalid();
-    descriptorLayout.descriptorLayoutParams[2][0].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[2][0].amount = 1;
-    descriptorLayout.descriptorLayoutParams[2][1].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[2][1].amount = 1;
-    descriptorLayout.descriptorLayoutParams[2][2].type = Platform::DescriptorType::eSSBO;
-    descriptorLayout.descriptorLayoutParams[2][2].amount = 1;
-
     StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
-    data->m_descriptor = platformFuncs->CreateDescriptor(&descriptorLayout);
+    data->m_descriptor = platformFuncs->CreateDescriptor(DESCLAYOUT_ID_ASSET_VBS);
 
     Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
+    descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
+    descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;
+    descDataHandles[0].handles[2] = data->m_normalBuffer.gpuBufferHandle;
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
-    descDataHandles[2].handles[0] = data->m_positionBuffer.gpuBufferHandle;
-    descDataHandles[2].handles[1] = data->m_uvBuffer.gpuBufferHandle;
-    descDataHandles[2].handles[2] = data->m_normalBuffer.gpuBufferHandle;
 
-    Platform::DescriptorHandle descHandles[MAX_DESCRIPTORS_PER_SET] = { Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid, data->m_descriptor };
-    platformFuncs->WriteDescriptor(&descriptorLayout, &descHandles[0], &descDataHandles[0]);
+    Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { data->m_descriptor, Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid };
+    platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], 1, &descDataHandles[0], 1);
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

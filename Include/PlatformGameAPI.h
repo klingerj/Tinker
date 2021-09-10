@@ -48,10 +48,10 @@ struct PlatformAPIFuncs
     read_entire_file* ReadEntireFile;
     write_entire_file* WriteEntireFile;
     get_file_size* GetFileSize;
+    system_command* SystemCommand;
     init_network_connection* InitNetworkConnection;
     end_network_connection* EndNetworkConnection;
     send_message_to_server* SendMessageToServer;
-    system_command* SystemCommand;
     create_resource* CreateResource;
     destroy_resource* DestroyResource;
     map_resource* MapResource;
@@ -63,8 +63,10 @@ struct PlatformAPIFuncs
     create_descriptor* CreateDescriptor;
     destroy_descriptor* DestroyDescriptor;
     destroy_all_descriptors* DestroyAllDescriptors;
+    create_renderpass* CreateRenderPass;
     write_descriptor* WriteDescriptor;
     submit_cmds_immediate* SubmitCmdsImmediate;
+    create_descriptor_layout* CreateDescriptorLayout;
 };
 
 // Game side

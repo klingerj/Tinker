@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Core/Math/VectorTypes.h"
 
 namespace Tk
@@ -46,7 +48,8 @@ namespace BlendState
     enum : uint32
     {
         eAlphaBlend = 0,
-        eInvalid, // TODO: remove me? am i just opaque/solid?
+        eReplace,
+        eNoColorAttachment,
         eMax
     };
 }
@@ -82,6 +85,7 @@ namespace ImageLayout
         eShaderRead,
         eTransferDst,
         eDepthOptimal,
+        ePresent,
         eMax
     };
 }
@@ -150,33 +154,6 @@ typedef struct graphics_resource_description
     };
 } ResourceDesc;
 
-struct ShaderHandle
-{
-    uint32 m_hShader;
-
-    ShaderHandle()
-    {
-        m_hShader = TINKER_INVALID_HANDLE;
-    }
-
-    // Warning: probably don't pass around handles as uint32 willy-nilly
-    explicit ShaderHandle(uint32 h)
-    {
-        m_hShader = h;
-    }
-
-    inline bool operator==(const ShaderHandle& other) const
-    {
-        return m_hShader == other.m_hShader;
-    }
-
-    inline bool operator!=(const ShaderHandle& other) const
-    {
-        return m_hShader != other.m_hShader;
-    }
-};
-#define DefaultShaderHandle_Invalid ShaderHandle()
-
 struct FramebufferHandle
 {
     uint32 m_hFramebuffer;
@@ -232,7 +209,7 @@ struct DescriptorHandle
 #define DefaultDescHandle_Invalid DescriptorHandle()
 
 #define MAX_DESCRIPTOR_SETS_PER_SHADER 3
-#define MAX_DESCRIPTORS_PER_SET 3
+#define MAX_BINDINGS_PER_SET 3
 
 typedef struct descriptor_layout_params
 {
@@ -242,17 +219,14 @@ typedef struct descriptor_layout_params
 
 typedef struct descriptor_layout
 {
-    DescriptorLayoutParams descriptorLayoutParams[MAX_DESCRIPTOR_SETS_PER_SHADER][MAX_DESCRIPTORS_PER_SET];
+    DescriptorLayoutParams params[MAX_BINDINGS_PER_SET];
 
     void InitInvalid()
     {
-        for (uint32 uiDescSet = 0; uiDescSet < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDescSet)
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
         {
-            for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
-            {
-                descriptorLayoutParams[uiDescSet][uiDesc].type = DescriptorType::eMax;
-                descriptorLayoutParams[uiDescSet][uiDesc].amount = 0;
-            }
+            params[uiDesc].type = DescriptorType::eMax;
+            params[uiDesc].amount = 0;
         }
     }
 } DescriptorLayout;
@@ -260,11 +234,11 @@ typedef struct descriptor_layout
 // list of resource handles in a descriptor set
 typedef struct descriptor_set_data_handles
 {
-    ResourceHandle handles[MAX_DESCRIPTORS_PER_SET];
+    ResourceHandle handles[MAX_BINDINGS_PER_SET];
 
     void InitInvalid()
     {
-        for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTORS_PER_SET; ++uiDesc)
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
         {
             handles[uiDesc] = DefaultResHandle_Invalid;
         }
@@ -284,7 +258,9 @@ typedef struct graphics_command
             uint32 m_numIndices;
             uint32 m_numInstances;
             ResourceHandle m_indexBufferHandle;
-            ShaderHandle m_shaderHandle;
+            uint32 m_shader;
+            uint32 m_blendState;
+            uint32 m_depthState;
             DescriptorHandle m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         };
 
@@ -300,6 +276,7 @@ typedef struct graphics_command
         struct
         {
             FramebufferHandle m_framebufferHandle;
+            uint32 m_renderPassID;
             uint32 m_renderWidth;
             uint32 m_renderHeight;
         };
@@ -345,16 +322,37 @@ struct GraphicsCommandStream
     uint32 m_maxCommands;
 };
 
-typedef struct graphics_pipeline_params
+
+// TODO: move all this, and also autogenerate this eventually?
+// IDs must be uniquely named and have their id ascend monotonically from 0
+enum
 {
-    uint32 blendState;
-    uint32 depthState;
-    uint32 viewportWidth;
-    uint32 viewportHeight;
-    FramebufferHandle framebufferHandle;
-    DescriptorHandle* descriptorHandles;
-    uint32 numDescriptorHandles;
-} GraphicsPipelineParams;
+    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX = 0,
+    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS,
+    DESCLAYOUT_ID_VIEW_GLOBAL,
+    DESCLAYOUT_ID_ASSET_INSTANCE,
+    DESCLAYOUT_ID_ASSET_VBS,
+    DESCLAYOUT_ID_ANIMPOLY_VBS,
+    DESCLAYOUT_ID_MAX,
+};
+
+enum
+{
+    RENDERPASS_ID_SWAP_CHAIN_BLIT = 0,
+    RENDERPASS_ID_ZPrepass,
+    RENDERPASS_ID_MainView,
+    RENDERPASS_ID_MAX
+};
+
+enum
+{
+    SHADER_ID_SWAP_CHAIN_BLIT = 0,
+    SHADER_ID_BASIC_ZPrepass,
+    SHADER_ID_BASIC_MainView,
+    SHADER_ID_ANIMATEDPOLY_MainView,
+    SHADER_ID_MAX,
+};
+//-----
 
 #define CREATE_RESOURCE(name) ResourceHandle name(const ResourceDesc& resDesc)
 typedef CREATE_RESOURCE(create_resource);
@@ -368,19 +366,16 @@ typedef MAP_RESOURCE(map_resource);
 #define UNMAP_RESOURCE(name) void name(ResourceHandle handle)
 typedef UNMAP_RESOURCE(unmap_resource);
 
-#define CREATE_FRAMEBUFFER(name) FramebufferHandle name(ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle, uint32 colorEndLayout, uint32 width, uint32 height)
+#define CREATE_FRAMEBUFFER(name) FramebufferHandle name(ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle, uint32 width, uint32 height, uint32 renderPassID)
 typedef CREATE_FRAMEBUFFER(create_framebuffer);
 
 #define DESTROY_FRAMEBUFFER(name) void name(FramebufferHandle handle)
 typedef DESTROY_FRAMEBUFFER(destroy_framebuffer);
 
-#define CREATE_GRAPHICS_PIPELINE(name) ShaderHandle name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 blendState, uint32 depthState, uint32 viewportWidth, uint32 viewportHeight, FramebufferHandle framebufferHandle, DescriptorHandle* descriptorHandles, uint32 numDescriptorHandles)
+#define CREATE_GRAPHICS_PIPELINE(name) bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID, uint32* descriptorHandles, uint32 numDescriptorHandles)
 typedef CREATE_GRAPHICS_PIPELINE(create_graphics_pipeline);
 
-#define DESTROY_GRAPHICS_PIPELINE(name) void name(ShaderHandle handle)
-typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
-
-#define CREATE_DESCRIPTOR(name) DescriptorHandle name(DescriptorLayout* descLayout)
+#define CREATE_DESCRIPTOR(name) DescriptorHandle name(uint32 descLayoutID)
 typedef CREATE_DESCRIPTOR(create_descriptor);
 
 #define DESTROY_DESCRIPTOR(name) void name(DescriptorHandle handle)
@@ -389,11 +384,21 @@ typedef DESTROY_DESCRIPTOR(destroy_descriptor);
 #define DESTROY_ALL_DESCRIPTORS(name) void name()
 typedef DESTROY_ALL_DESCRIPTORS(destroy_all_descriptors);
 
-#define WRITE_DESCRIPTOR(name) void name(DescriptorLayout* descLayout, DescriptorHandle* descSetHandles, DescriptorSetDataHandles* descSetDataHandles)
+#define WRITE_DESCRIPTOR(name) void name(uint32 descLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
 typedef WRITE_DESCRIPTOR(write_descriptor);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
 typedef SUBMIT_CMDS_IMMEDIATE(submit_cmds_immediate);
+
+// Not meant for the user
+#define CREATE_DESCRIPTOR_LAYOUT(name) bool name(uint32 descLayoutID, const Platform::DescriptorLayout* descLayout)
+typedef CREATE_DESCRIPTOR_LAYOUT(create_descriptor_layout);
+
+#define CREATE_RENDERPASS(name) bool name(uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
+typedef CREATE_RENDERPASS(create_renderpass);
+
+#define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 shaderID)
+typedef DESTROY_GRAPHICS_PIPELINE(destroy_graphics_pipeline);
 
 }
 }
