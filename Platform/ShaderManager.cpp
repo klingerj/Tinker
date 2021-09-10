@@ -27,10 +27,9 @@ void ShaderManager::Shutdown()
 
 void ShaderManager::RecreateWindowDependentResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)
 {
-    shaderBytecodeAllocator.ExplicitFree();
-    shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
-    platformFuncs->DestroyGraphicsPipeline(SHADER_ID_SWAP_CHAIN_BLIT);
+    //platformFuncs->DestroyGraphicsPipeline(SHADER_ID_SWAP_CHAIN_BLIT);
 
+    CreateAllRenderPasses(platformFuncs);
     // TODO: don't reload the shader every time we resize, need to be able to reference existing bytecode... which we do already store
     LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
 }
@@ -69,6 +68,9 @@ bool ShaderManager::LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFun
 
 void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
+    shaderBytecodeAllocator.ExplicitFree();
+    shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
+
     bool bOk = false;
 
     // Shaders
@@ -124,6 +126,26 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     TINKER_ASSERT(bOk);
 }
 
+void ShaderManager::CreateAllRenderPasses(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+{
+    bool bOk = false;
+    // Render passes
+    // TODO: make the render pass creation stuff more controllable by the app
+
+    // NOTE: this render pass is created inside the vulkan init code
+    // color, no depth
+    //bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
+    //TINKER_ASSERT(bOk);
+
+    // depth, no color
+    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_ZPrepass, 0, ImageFormat::Invalid, ImageLayout::eUndefined, ImageLayout::eUndefined, ImageFormat::Depth_32F);
+    TINKER_ASSERT(bOk);
+
+    // color, depth
+    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_MainView, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::eShaderRead, ImageFormat::Depth_32F);
+    TINKER_ASSERT(bOk);
+}
+
 void ShaderManager::LoadAllShaderResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     bool bOk = false;
@@ -176,22 +198,7 @@ void ShaderManager::LoadAllShaderResources(const Tk::Platform::PlatformAPIFuncs*
     TINKER_ASSERT(bOk);
     //-----
 
-    // Render passes
-
-    // TODO: make the render pass creation stuff more controllable by the app
-
-    // NOTE: this render pass is created inside the vulkan init code
-    // color, no depth
-    //bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
-    //TINKER_ASSERT(bOk);
-
-    // depth, no color
-    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_ZPrepass, 0, ImageFormat::Invalid, ImageLayout::eUndefined, ImageLayout::eUndefined, ImageFormat::Depth_32F);
-    TINKER_ASSERT(bOk);
-
-    // color, depth
-    bOk = platformFuncs->CreateRenderPass(RENDERPASS_ID_MainView, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::eShaderRead, ImageFormat::Depth_32F);
-    TINKER_ASSERT(bOk);
+    CreateAllRenderPasses(platformFuncs);
 
     LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 }

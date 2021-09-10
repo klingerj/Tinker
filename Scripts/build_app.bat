@@ -37,7 +37,7 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe
 set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/ShaderManager.cpp ../Platform/Graphics/Vulkan.cpp ../Platform/Graphics/VulkanTypes.cpp ../Platform/Graphics/VulkanGPUMemAllocator.cpp ../Platform/Win32Logging.cpp ../Platform/Win32Client.cpp
-set CompileDefines=/D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ 
+set CompileDefines=/D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb

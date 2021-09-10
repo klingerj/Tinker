@@ -870,6 +870,15 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
     }
 
     // Swap chain framebuffers
+    const uint32 numColorRTs = 1; // TODO: support multiple RTs
+
+    // Render pass
+    VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT];
+    renderPass.numColorRTs = 1;
+    renderPass.hasDepth = false;
+    const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
+    CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, depthFormat, &renderPass.renderPassVk);
+
     uint32 newFramebufferHandle = vulkanContextResources->resources->vulkanFramebufferResourcePool.Alloc();
     TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
     vulkanContextResources->resources->swapChainFramebufferHandle = FramebufferHandle(newFramebufferHandle);
@@ -879,19 +888,11 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
         VulkanFramebufferResource* newFramebuffer =
             &vulkanContextResources->resources->vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiFramebuffer];
 
-        const uint32 numColorRTs = 1; // TODO: support multiple RTs
         for (uint32 i = 0; i < numColorRTs; ++i)
         {
             newFramebuffer->clearValues[i] = { 0.0f, 0.0f, 0.0f, 1.0f };
         }
         newFramebuffer->numClearValues = numColorRTs;
-
-        // Render pass
-        VulkanRenderPass& renderPass = vulkanContextResources->resources->renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT];
-        renderPass.numColorRTs = 1;
-        renderPass.hasDepth = false;
-        const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
-        CreateRenderPass(vulkanContextResources->resources->device, numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, depthFormat, &renderPass.renderPassVk);
 
         // Framebuffer
         const VkImageView depthImageView = VK_NULL_HANDLE; // no depth buffer for swap chain
@@ -1195,19 +1196,6 @@ bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources
     return true;
 }
 
-void CreatePSOPerm(VulkanContextResources* vulkanContextResources, uint32 shaderID, uint32 blendState, uint32 depthState, uint8* vertexBytecode, uint32 vertexBytecodeSize, uint8* fragmentBytecode, uint32 fragmentBytecodeSize)
-{
-    VkPipeline& graphicsPipeline     = vulkanContextResources->resources->psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
-    VkPipelineLayout& pipelineLayout = vulkanContextResources->resources->psoPermutations.pipelineLayout[shaderID];
-
-    // Create the graphics pipeline
-
-    if (pipelineLayout == VK_NULL_HANDLE)
-    {
-        // Create it, otherwise don't
-    }
-}
-
 void DestroyPSOPerms(VulkanContextResources* vulkanContextResources, uint32 shaderID)
 {
     vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
@@ -1229,7 +1217,7 @@ void DestroyPSOPerms(VulkanContextResources* vulkanContextResources, uint32 shad
     }
 }
 
-void DestroyAllPSOPerms(VulkanContextResources* vulkanContextResources)
+void VulkanDestroyAllPSOPerms(VulkanContextResources* vulkanContextResources)
 {
     vkDeviceWaitIdle(vulkanContextResources->resources->device); // TODO: move this?
 
@@ -1270,7 +1258,7 @@ void DestroyAllDescLayouts(VulkanContextResources* vulkanContextResources)
     }
 }
 
-void DestroyAllRenderPasses(VulkanContextResources* vulkanContextResources)
+void VulkanDestroyAllRenderPasses(VulkanContextResources* vulkanContextResources)
 {
     for (uint32 rp = 0; rp < VkResources::eMaxRenderPasses; ++rp)
     {
@@ -2507,9 +2495,9 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources)
     delete vulkanContextResources->resources->threaded_secondaryCommandBuffers;
     vulkanContextResources->resources->threaded_secondaryCommandBuffers = nullptr;
 
-    DestroyAllPSOPerms(vulkanContextResources);
+    VulkanDestroyAllPSOPerms(vulkanContextResources);
     DestroyAllDescLayouts(vulkanContextResources);
-    DestroyAllRenderPasses(vulkanContextResources);
+    VulkanDestroyAllRenderPasses(vulkanContextResources);
 
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
