@@ -10,6 +10,7 @@ Successor to the Joe Engine. Nearly everything written from scratch.
 * Small linear algebra library
 * Asset file loading
 * Shader hotloading on keypress
+* Shader pipeline state object (PSO) permutations
 * Simple thread-job system with lockless queue
 * Custom memory allocators
 * Custom data structures
@@ -24,6 +25,7 @@ Successor to the Joe Engine. Nearly everything written from scratch.
 * Threading and benchmarking of file loading and parsing
 * PBR shaders
 * Compute shader support
+* Virtualized textures
 * Post processing, probably render graph
 * Support more platforms, probably Linux
 * Support more graphics APIs, OpenGL/DX12
