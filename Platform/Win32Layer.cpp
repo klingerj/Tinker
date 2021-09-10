@@ -44,6 +44,12 @@ Graphics::VulkanContextResources vulkanContextResources;
 bool g_windowResized = false;
 bool g_cursorLocked = false;
 
+#ifdef _SCRIPTS_DIR
+#define SCRIPTS_PATH STRINGIFY(_SCRIPTS_DIR)
+#else
+//#define SCRIPTS_PATH "..\\Scripts\\"
+#endif
+
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
 WorkerThreadPool g_ThreadPool;
 ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
@@ -867,6 +873,36 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
 
         case VK_F10:
         {
+            if (isDown)
+            {
+                Core::Utility::LogMsg("Platform", "Attempting to hotload shaders...\n", Core::Utility::LogSeverity::eInfo);
+                const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
+                if (SystemCommand(shaderCompileCommand) == 0)
+                {
+                    switch (g_GlobalAppParams.m_graphicsAPI)
+                    {
+                        case GraphicsAPI::eVulkan:
+                        {
+                            VulkanDestroyAllPSOPerms(&vulkanContextResources);
+                            break;
+                        }
+
+                        default:
+                        {
+                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
+                            runGame = false;
+                            break;
+                        }
+                    }
+                    g_ShaderManager.LoadAllShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                }
+                else
+                {
+                    Core::Utility::LogMsg("Platform", "Failed to create shader compile process! Shaders will not be compiled.\n", Core::Utility::LogSeverity::eWarning);
+                }
+                Core::Utility::LogMsg("Platform", "...Done.\n", Core::Utility::LogSeverity::eInfo);
+            }
+
             gameKeyCode = Keycode::eF10;
             break;
         }
@@ -1237,16 +1273,16 @@ wWinMain(HINSTANCE hInstance,
                     {
                         if (g_windowResized)
                         {
+                            VulkanDestroyAllPSOPerms(&vulkanContextResources);
+                            VulkanDestroyAllRenderPasses(&vulkanContextResources);
                             VulkanDestroySwapChain(&vulkanContextResources);
                             VulkanCreateSwapChain(&vulkanContextResources);
 
                             g_ShaderManager.RecreateWindowDependentResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                             g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-
-                            g_windowResized = false;
                         }
-                        shouldRenderFrame = vulkanContextResources.isSwapChainValid;
 
+                        shouldRenderFrame = vulkanContextResources.isSwapChainValid;
                         break;
                     }
 
@@ -1258,6 +1294,8 @@ wWinMain(HINSTANCE hInstance,
                         break;
                     }
                 }
+
+                g_windowResized = false;
             }
 
             if (shouldRenderFrame)

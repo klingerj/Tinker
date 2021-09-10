@@ -12,12 +12,6 @@
 #include "View.h"
 #include "InputManager.h"
 
-#ifdef _SCRIPTS_DIR
-#define SCRIPTS_PATH STRINGIFY(_SCRIPTS_DIR)
-#else
-//#define SCRIPTS_PATH "..\\Scripts\\"
-#endif
-
 #include <string.h>
 
 using namespace Tk;
@@ -139,30 +133,6 @@ void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
     platformFuncs->WriteDescriptor(Tk::Platform::DESCLAYOUT_ID_ASSET_INSTANCE, &descHandles[0], 1, &descDataHandles[0], 1);
 }
 
-void RecreateShaders(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
-{
-    //DestroyShaders(platformFuncs);
-    //LoadAllShaders(platformFuncs, windowWidth, windowHeight);
-}
-
-INPUT_CALLBACK(ShaderHotloadCallback)
-{
-    Platform::PrintDebugString("Attempting to hotload shaders...\n");
-
-    // Recompile shaders via script
-    const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
-    if (platformFuncs->SystemCommand(shaderCompileCommand) != 0)
-    {
-        Platform::PrintDebugString("Failed to create shader compile process! Shaders will not be compiled.\n");
-    }
-    else
-    {
-        // Recreate gpu resources
-        RecreateShaders(platformFuncs, currentWindowWidth, currentWindowHeight);
-        Platform::PrintDebugString("...Done.\n");
-    }
-}
-
 void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
 {
     Platform::ResourceDesc desc;
@@ -212,7 +182,6 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
 
     // Hotkeys
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF10, ShaderHotloadCallback);
 
     g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
     g_gameCamera.m_eye = v3f(27.0f, 27.0f, 27.0f);
@@ -284,15 +253,9 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     data.modelMatrix[3][1] = 10.0f;
     SetInstanceData(&MainView, instanceID, &data);
 
-    /*for (int i = 0; i < (128 - 6); ++i)
-    {
-        CreateInstance(&MainView, 2);
-    }*/
-
     CreateAnimatedPoly(platformFuncs, &gameGraphicsData.m_animatedPolygon);
 
     CreateAllDescriptors(platformFuncs);
-    //LoadAllShaders(platformFuncs, windowWidth, windowHeight);
 
     return 0;
 }
@@ -320,21 +283,6 @@ GAME_UPDATE(GameUpdate)
     {
         //TIMED_SCOPED_BLOCK("Input manager update - kb/mouse callbacks");
         g_InputManager.UpdateAndDoCallbacks(inputStateDeltas, platformFuncs);
-    }
-
-    // Temp test code for deletion of instances
-    if (0)
-    {
-        static uint32 frameCtr = 0;
-        static uint32 inst = 0;
-        if (frameCtr % 120 == 0)
-        {
-            DestroyInstance(&MainView, inst);
-            ++inst;
-            if (inst == 128) inst = 0;
-            //CreateInstance(&MainView, 1); // stuff slowly turns into cubes
-        }
-        ++frameCtr;
     }
 
     // Update view(s)
@@ -385,6 +333,7 @@ GAME_UPDATE(GameUpdate)
     // Record render commands for view(s)
     {
         //TIMED_SCOPED_BLOCK("Record render pass commands");
+
         Platform::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
@@ -458,8 +407,6 @@ void DestroyWindowResizeDependentResources(const Platform::PlatformAPIFuncs* pla
     }
     platformFuncs->DestroyResource(gameGraphicsData.m_rtColorHandle);
     platformFuncs->DestroyResource(gameGraphicsData.m_rtDepthHandle);
-
-    //DestroyShaders(platformFuncs);
 }
 
 extern "C"
@@ -474,8 +421,6 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 
     CreateGameRenderingResources(platformFuncs, newWindowWidth, newWindowHeight);
     WriteSwapChainBlitResources(platformFuncs);
-
-    //LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
 }
 
 extern "C"
@@ -501,7 +446,6 @@ GAME_DESTROY(GameDestroy)
         }
 
         g_AssetManager.FreeMemory();
-        //FreeShaderBytecodeMemory();
     }
 
     #if defined(MEM_TRACKING)
