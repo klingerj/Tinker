@@ -103,8 +103,8 @@ struct VkResources
     VkSwapchainKHR swapChain = VK_NULL_HANDLE;
     VkExtent2D swapChainExtent = { 0, 0 };
     VkFormat swapChainFormat = VK_FORMAT_UNDEFINED;
-    VkImage* swapChainImages = nullptr;
-    VkImageView* swapChainImageViews = nullptr;
+    VkImage swapChainImages[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+    VkImageView swapChainImageViews[VULKAN_MAX_SWAP_CHAIN_IMAGES];
     FramebufferHandle swapChainFramebufferHandle = DefaultFramebufferHandle_Invalid;
     uint32 numSwapChainImages = 0;
     uint32 currentSwapChainImage = 0;
@@ -122,7 +122,6 @@ struct VkResources
     VkSemaphore swapChainImageAvailableSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
     VkSemaphore renderCompleteSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
     VkCommandBuffer* commandBuffers = nullptr;
-    VkCommandBuffer* threaded_secondaryCommandBuffers = nullptr;
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;
 
@@ -155,6 +154,13 @@ void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRT
     uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* frameBuffer);
 void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colorFormat, VkImageLayout startLayout, VkImageLayout endLayout, VkFormat depthFormat, VkRenderPass* renderPass);
 VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VkDevice device);
+
+void InitVulkanDataTypesPerEnum();
+const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState);
+const VkPipelineDepthStencilStateCreateInfo& GetVkDepthState(uint32 gameDepthState);
+const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout);
+const VkFormat& GetVkImageFormat(uint32 gameImageFormat);
+const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType);
 
 }
 }
