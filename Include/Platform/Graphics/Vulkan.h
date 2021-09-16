@@ -58,6 +58,7 @@ void DestroyVulkan(VulkanContextResources* vulkanContextResources);
 
 void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources);
 void VulkanDestroySwapChain(VulkanContextResources* vulkanContextResources);
+void CreateSamplers(VulkanContextResources* vulkanContextResources);
 
 // Frame command recording
 void AcquireFrame(VulkanContextResources* vulkanContextResources);
@@ -94,8 +95,6 @@ void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources)
 void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount);
 void InitDescriptorPool(VulkanContextResources* vulkanContextResources);
 bool VulkanCreateRenderPass(VulkanContextResources* vulkanContextResources, uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat);
-
-void CreateSamplers(VulkanContextResources* vulkanContextResources);
 
 // Memory mapping - probably just for staging buffers
 void* VulkanMapResource(VulkanContextResources* vulkanContextResources, ResourceHandle handle);
