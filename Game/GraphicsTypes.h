@@ -2,7 +2,7 @@
 
 #include "Core/CoreDefines.h"
 #include "Core/Math/VectorTypes.h"
-#include "PlatformGameAPI.h"
+#include "Platform/PlatformGameAPI.h"
 
 // Buffer that has no persistent staging buffer
 // Meant to updated once with a staging buffer which should

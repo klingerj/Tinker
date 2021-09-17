@@ -49,7 +49,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
-set CompileIncludePaths=/I ../Include 
+set CompileIncludePaths=/I ../ 
 set LibsToLink=user32.lib ws2_32.lib 
 
 echo.

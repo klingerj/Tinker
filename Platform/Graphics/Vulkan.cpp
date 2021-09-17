@@ -1,6 +1,5 @@
 #include "Platform/Graphics/Vulkan.h"
 #include "Platform/Graphics/VulkanTypes.h"
-#include "PlatformGameAPI.h"
 #include "Core/Utility/Logging.h"
 
 #include <iostream>

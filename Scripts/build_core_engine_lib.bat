@@ -47,7 +47,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
-set CompileIncludePaths=/I ../Include 
+set CompileIncludePaths=/I ../ 
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.

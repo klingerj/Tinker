@@ -2,7 +2,7 @@
 
 #include "Core/CoreDefines.h"
 #include "Core/Math/VectorTypes.h"
-#include "PlatformGameAPI.h"
+#include "Platform/PlatformGameAPI.h"
 #include "Platform/ShaderManager.h"
 
 #ifdef _WIN32

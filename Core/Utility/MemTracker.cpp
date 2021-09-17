@@ -1,5 +1,5 @@
 #include "Core/Utility/MemTracker.h"
-#include "PlatformGameAPI.h"
+#include "Platform/PlatformGameAPI.h"
 
 #include <string.h>
 

@@ -51,7 +51,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=0
     )
 
-set CompileIncludePaths=/I ../Include /I ../Platform
+set CompileIncludePaths=/I ../ 
 
 set OBJDir=%cd%\obj_benchmark\
 if NOT EXIST %OBJDir% mkdir %OBJDir%

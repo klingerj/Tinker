@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PlatformGameInputHandlingAPI.h"
+#include "Platform/PlatformGameInputHandlingAPI.h"
 
 namespace Tk
 {

@@ -1,5 +1,4 @@
-#include "PlatformGameAPI.h"
-#include "PlatformGameGraphicsAPI.h"
+#include "Platform/PlatformGameAPI.h"
 #include "Core/Allocators.h"
 #include "Core/Math/VectorTypes.h"
 #include "Core/FileIO/FileLoading.h"

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "Core/FileIO/FileLoading.h"
+#include "FileLoading.h"
 #include "Core/Mem.h"
 
 #include <string.h>

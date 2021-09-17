@@ -49,15 +49,14 @@ if "%BuildConfig%" == "Debug" (
 echo.
 echo Building TinkerServer.exe...
 
-rem set CompileIncludePaths=""
+set CompileIncludePaths= 
 set LibsToLink=user32.lib ws2_32.lib
 
 set OBJDir=%cd%\obj_server\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-rem /I %CompileIncludePaths%
-cl %CommonCompileFlags% %CompileDefines% %DebugCompileFlagsServer% %SourceListServer% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsServer% /out:TinkerServer.exe 
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsServer% %SourceListServer% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsServer% /out:TinkerServer.exe 
 
 :DoneBuild
 popd
