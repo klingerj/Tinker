@@ -1,6 +1,6 @@
 #include "VectorTypeBenchmarks.h"
 
-#include "Win32WorkerThreadPool.cpp"
+#include "Platform/Win32WorkerThreadPool.cpp"
 
 using namespace Tk;
 using namespace Platform;
