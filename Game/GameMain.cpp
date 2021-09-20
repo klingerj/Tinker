@@ -10,6 +10,7 @@
 #include "Raytracing.h"
 #include "View.h"
 #include "InputManager.h"
+#include "Core/Graphics/VirtualTexture.h"
 
 #include <string.h>
 
@@ -255,6 +256,11 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     CreateAnimatedPoly(platformFuncs, &gameGraphicsData.m_animatedPolygon);
 
     CreateAllDescriptors(platformFuncs);
+
+    // TODO: TEMP: test virtual texture
+    Core::Graphics::VirtualTexture vt;
+    vt.Reset();
+    vt.Create(platformFuncs, 4, 16, v2ui(1024, 1024), v2ui(1024, 1024));
 
     return 0;
 }
