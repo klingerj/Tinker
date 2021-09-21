@@ -208,7 +208,7 @@ struct DescriptorHandle
 };
 #define DefaultDescHandle_Invalid DescriptorHandle()
 
-#define MAX_DESCRIPTOR_SETS_PER_SHADER 3
+#define MAX_DESCRIPTOR_SETS_PER_SHADER 5
 #define MAX_BINDINGS_PER_SET 3
 
 typedef struct descriptor_layout_params
@@ -333,6 +333,8 @@ enum
     DESCLAYOUT_ID_ASSET_INSTANCE,
     DESCLAYOUT_ID_ASSET_VBS,
     DESCLAYOUT_ID_ANIMPOLY_VBS,
+    DESCLAYOUT_ID_VIRTUAL_TEXTURE,
+    DESCLAYOUT_ID_TERRAIN_DATA,
     DESCLAYOUT_ID_MAX,
 };
 
@@ -350,6 +352,7 @@ enum
     SHADER_ID_BASIC_ZPrepass,
     SHADER_ID_BASIC_MainView,
     SHADER_ID_ANIMATEDPOLY_MainView,
+    SHADER_ID_BASIC_VirtualTexture,
     SHADER_ID_MAX,
 };
 //-----
