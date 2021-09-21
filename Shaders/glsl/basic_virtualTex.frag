@@ -11,7 +11,7 @@ struct PageTableEntry
     // -2 == use fallback
     uint frameIndex;
 };
-layout(set = 3, binding = 0) uniform DescPageTable
+layout(set = 3, binding = 1) uniform DescPageTable
 {
     PageTableEntry data[MAX_VIRTUAL_PAGES];
     vec4 PageDims; // xy is single page dims, zw is total page texture dims

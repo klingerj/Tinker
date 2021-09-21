@@ -129,9 +129,12 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
         descLayouts[i] = DESCLAYOUT_ID_MAX;
 
     // Virtual texture, basic shader
-    descLayouts[0] = DESCLAYOUT_ID_VIRTUAL_TEXTURE;
-    descLayouts[1] = DESCLAYOUT_ID_TERRAIN_DATA;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[2], shaderFilePaths[6], SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 2);
+    descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[1] = DESCLAYOUT_ID_ASSET_INSTANCE;
+    descLayouts[2] = DESCLAYOUT_ID_ASSET_VBS;
+    descLayouts[3] = DESCLAYOUT_ID_VIRTUAL_TEXTURE;
+    descLayouts[4] = DESCLAYOUT_ID_TERRAIN_DATA;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[2], shaderFilePaths[6], SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 5);
     TINKER_ASSERT(bOk);
 }
 

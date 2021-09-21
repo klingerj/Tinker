@@ -137,6 +137,7 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
 {
     Platform::ResourceDesc desc;
     desc.resourceType = Platform::ResourceType::eImage2D;
+    desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB;
     gameGraphicsData.m_rtColorHandle = platformFuncs->CreateResource(desc);
@@ -260,7 +261,8 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
     // TODO: TEMP: test virtual texture
     Core::Graphics::VirtualTexture vt;
     vt.Reset();
-    vt.Create(platformFuncs, 4, 16, v2ui(1024, 1024), v2ui(1024, 1024));
+    vt.Create(platformFuncs, graphicsCommandStream, 4, 16, v2ui(1024, 1024), v2ui(1024, 1024));
+    vt.Destroy(platformFuncs);
 
     return 0;
 }
