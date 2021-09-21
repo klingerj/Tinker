@@ -101,7 +101,7 @@ void WriteSwapChainBlitResources(const Platform::PlatformAPIFuncs* platformFuncs
 void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     // Swap chain blit
-    gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(Tk::Platform::SHADER_ID_SWAP_CHAIN_BLIT);
+    gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(Tk::Platform::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
     WriteSwapChainBlitResources(platformFuncs);
 
     // Descriptor data
