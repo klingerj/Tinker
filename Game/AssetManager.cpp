@@ -450,6 +450,7 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
         // Create texture handles
         ResourceDesc desc;
         desc.resourceType = Platform::ResourceType::eImage2D;
+        desc.arrayEles = 1;
 
         desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB; // TODO: don't hard code this
         desc.dims = m_allTextureMetadata[uiAsset].m_dims;

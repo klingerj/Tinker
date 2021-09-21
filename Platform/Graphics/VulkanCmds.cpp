@@ -318,9 +318,6 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
                 }
             }
 
-            uint32 width = dstResourceChain->resDesc.dims.x;
-            uint32 height = (sizeInBytes / bytesPerPixel) / width;
-
             VkBuffer& srcBuffer = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[vulkanContextResources->resources->currentSwapChainImage].buffer;
             VkImage& dstImage = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[vulkanContextResources->resources->currentSwapChainImage].image;
 
@@ -332,9 +329,9 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
             region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             region.imageSubresource.mipLevel = 0;
             region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = 1;
+            region.imageSubresource.layerCount = dstResourceChain->resDesc.arrayEles;
             region.imageOffset = { 0, 0, 0 };
-            region.imageExtent = { width, height, 1 };
+            region.imageExtent = { dstResourceChain->resDesc.dims.x, dstResourceChain->resDesc.dims.y, dstResourceChain->resDesc.dims.z };
 
             vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
             break;
@@ -534,7 +531,7 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = memResourceChain->resDesc.arrayEles;
 
     vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }

@@ -150,6 +150,7 @@ typedef struct graphics_resource_description
         struct
         {
             uint32 imageFormat;
+            uint32 arrayEles;
         };
     };
 } ResourceDesc;
