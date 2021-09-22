@@ -149,7 +149,7 @@ void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMe
 void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeInBytes,
     VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
     VkBuffer& buffer, VkDeviceMemory& deviceMemory);
-void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView);
+void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView, uint32 arrayEles);
 void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRTs, VkImageView depthRT,
     uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* frameBuffer);
 void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colorFormat, VkImageLayout startLayout, VkImageLayout endLayout, VkFormat depthFormat, VkRenderPass* renderPass);
