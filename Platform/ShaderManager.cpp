@@ -74,7 +74,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     bool bOk = false;
 
     // Shaders
-    const uint32 numShaderFilepaths = 7;
+    const uint32 numShaderFilepaths = 8;
     const char* shaderFilePaths[numShaderFilepaths] =
     {
         SHADERS_SPV_PATH "blit_vert_glsl.spv",
@@ -83,6 +83,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
         SHADERS_SPV_PATH "basic_frag_glsl.spv",
         SHADERS_SPV_PATH "animpoly_vert_glsl.spv",
         SHADERS_SPV_PATH "animpoly_frag_glsl.spv",
+        SHADERS_SPV_PATH "basic_noModelMat_vert_glsl.spv",
         SHADERS_SPV_PATH "basic_virtualTex_frag_glsl.spv",
     };
 
@@ -121,7 +122,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
 
     // Animated poly
     descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
-    descLayouts[1] = DESCLAYOUT_ID_ANIMPOLY_VBS;
+    descLayouts[1] = DESCLAYOUT_ID_POSONLY_VBS;
     bOk = LoadShader(platformFuncs, shaderFilePaths[4], shaderFilePaths[5], SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
@@ -130,11 +131,10 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
 
     // Virtual texture, basic shader
     descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
-    descLayouts[1] = DESCLAYOUT_ID_ASSET_INSTANCE;
-    descLayouts[2] = DESCLAYOUT_ID_ASSET_VBS;
-    descLayouts[3] = DESCLAYOUT_ID_VIRTUAL_TEXTURE;
-    descLayouts[4] = DESCLAYOUT_ID_TERRAIN_DATA;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[2], shaderFilePaths[6], SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 5);
+    descLayouts[1] = DESCLAYOUT_ID_POSONLY_VBS;
+    descLayouts[2] = DESCLAYOUT_ID_VIRTUAL_TEXTURE;
+    descLayouts[3] = DESCLAYOUT_ID_TERRAIN_DATA;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[6], shaderFilePaths[7], SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 4);
     TINKER_ASSERT(bOk);
 }
 
@@ -206,7 +206,7 @@ void ShaderManager::LoadAllShaderResources(const Tk::Platform::PlatformAPIFuncs*
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
     descriptorLayout.params[0].amount = 1;
-    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ANIMPOLY_VBS, &descriptorLayout);
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_POSONLY_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();

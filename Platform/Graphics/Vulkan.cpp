@@ -763,7 +763,8 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
             vulkanContextResources->resources->swapChainFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
             vulkanContextResources->resources->swapChainImages[uiImageView],
-            &vulkanContextResources->resources->swapChainImageViews[uiImageView]);
+            &vulkanContextResources->resources->swapChainImageViews[uiImageView],
+            1);
     }
 
     // Swap chain framebuffers
@@ -1647,7 +1648,8 @@ ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextRe
             GetVkImageFormat(imageFormat),
             aspectMask,
             newResource->image,
-            &newResource->imageView);
+            &newResource->imageView,
+            numArrayEles);
     }
 
     return ResourceHandle(newResourceHandle);

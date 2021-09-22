@@ -206,7 +206,6 @@ void VulkanRecordCommandDrawCall(VulkanContextResources* vulkanContextResources,
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(vulkanContextResources, immediateSubmit);
 
-    uint32 numSwapChainImages = vulkanContextResources->resources->numSwapChainImages;
     uint32 currentSwapChainImage = vulkanContextResources->resources->currentSwapChainImage;
 
     // Index buffer
@@ -250,7 +249,7 @@ void VulkanRecordCommandBindShader(VulkanContextResources* vulkanContextResource
             VkDescriptorSet* descSet =
                 &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[vulkanContextResources->resources->currentSwapChainImage].descriptorSet;
 
-            vkCmdBindDescriptorSets(vulkanContextResources->resources->commandBuffers[vulkanContextResources->resources->currentSwapChainImage], // TODO: use cmd buffer chosen?
+            vkCmdBindDescriptorSets(commandBuffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipelineLayout, uiDesc, 1, descSet, 0, nullptr);
         }
@@ -318,22 +317,25 @@ void VulkanRecordCommandMemoryTransfer(VulkanContextResources* vulkanContextReso
                 }
             }
 
-            VkBuffer& srcBuffer = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[vulkanContextResources->resources->currentSwapChainImage].buffer;
-            VkImage& dstImage = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[vulkanContextResources->resources->currentSwapChainImage].image;
+            for (uint32 uiImg = 0; uiImg < vulkanContextResources->resources->numSwapChainImages; ++uiImg)
+            {
+                VkBuffer& srcBuffer = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
+                VkImage& dstImage = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[uiImg].image;
 
-            // TODO: make some of these function params
-            VkBufferImageCopy region = {};
-            region.bufferOffset = 0;
-            region.bufferRowLength = 0;
-            region.bufferImageHeight = 0;
-            region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            region.imageSubresource.mipLevel = 0;
-            region.imageSubresource.baseArrayLayer = 0;
-            region.imageSubresource.layerCount = dstResourceChain->resDesc.arrayEles;
-            region.imageOffset = { 0, 0, 0 };
-            region.imageExtent = { dstResourceChain->resDesc.dims.x, dstResourceChain->resDesc.dims.y, dstResourceChain->resDesc.dims.z };
+                // TODO: make some of these function params
+                VkBufferImageCopy region = {};
+                region.bufferOffset = 0;
+                region.bufferRowLength = 0;
+                region.bufferImageHeight = 0;
+                region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                region.imageSubresource.mipLevel = 0;
+                region.imageSubresource.baseArrayLayer = 0;
+                region.imageSubresource.layerCount = dstResourceChain->resDesc.arrayEles;
+                region.imageOffset = { 0, 0, 0 };
+                region.imageExtent = { dstResourceChain->resDesc.dims.x, dstResourceChain->resDesc.dims.y, dstResourceChain->resDesc.dims.z };
 
-            vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+                vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            }
             break;
         }
     }
@@ -412,128 +414,132 @@ void VulkanRecordCommandTransitionLayout(VulkanContextResources* vulkanContextRe
 #endif
 
     VulkanMemResourceChain* memResourceChain = vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-    VulkanMemResource* memResource = &memResourceChain->resourceChain[vulkanContextResources->resources->currentSwapChainImage];
 
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.oldLayout = GetVkImageLayout(startLayout);
-    barrier.newLayout = GetVkImageLayout(endLayout);
-
-    VkPipelineStageFlags srcStage;
-    VkPipelineStageFlags dstStage;
-
-    switch (startLayout)
+    for (uint32 uiImg = 0; uiImg < vulkanContextResources->resources->numSwapChainImages; ++uiImg)
     {
-        case ImageLayout::eUndefined:
+        VulkanMemResource* memResource = &memResourceChain->resourceChain[uiImg];
+
+        VkImageMemoryBarrier barrier = {};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.oldLayout = GetVkImageLayout(startLayout);
+        barrier.newLayout = GetVkImageLayout(endLayout);
+
+        VkPipelineStageFlags srcStage;
+        VkPipelineStageFlags dstStage;
+
+        switch (startLayout)
         {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = 0;
-            srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            break;
+            case ImageLayout::eUndefined:
+            {
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                barrier.srcAccessMask = 0;
+                srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                break;
+            }
+
+            case ImageLayout::eShaderRead:
+            {
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                break;
+            }
+
+            case ImageLayout::eTransferDst:
+            {
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            }
+
+            case ImageLayout::eDepthOptimal:
+            {
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+                break;
+            }
+
+            default:
+            {
+                Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
+                TINKER_ASSERT(0);
+                return;
+            }
         }
 
-        case ImageLayout::eShaderRead:
+        switch (endLayout)
         {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
+            case ImageLayout::eUndefined:
+            {
+                TINKER_ASSERT(0);
+                // Can't transition to undefined according to Vulkan spec
+                return;
+            }
+
+            case ImageLayout::eShaderRead:
+            {
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                break;
+            }
+
+            case ImageLayout::eTransferDst:
+            {
+                barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            }
+
+            case ImageLayout::eDepthOptimal:
+            {
+                barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+                dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+                break;
+            }
+
+            default:
+            {
+                Core::Utility::LogMsg("Platform", "Invalid src image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
+                TINKER_ASSERT(0);
+                return;
+            }
         }
 
-        case ImageLayout::eTransferDst:
+        switch (memResourceChain->resDesc.imageFormat)
         {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
+            case ImageFormat::BGRA8_SRGB:
+            case ImageFormat::RGBA8_SRGB:
+            {
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                break;
+            }
+
+            case ImageFormat::Depth_32F:
+            {
+                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                break;
+            }
+
+            default:
+            {
+                Core::Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Core::Utility::LogSeverity::eCritical);
+                TINKER_ASSERT(0);
+                return;
+            }
         }
 
-        case ImageLayout::eDepthOptimal:
-        {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-            break;
-        }
+        barrier.image = memResource->image;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = memResourceChain->resDesc.arrayEles;
 
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            return;
-        }
+        vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
-
-    switch (endLayout)
-    {
-        case ImageLayout::eUndefined:
-        {
-            TINKER_ASSERT(0);
-            // Can't transition to undefined according to Vulkan spec
-            return;
-        }
-
-        case ImageLayout::eShaderRead:
-        {
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-            break;
-        }
-
-        case ImageLayout::eTransferDst:
-        {
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            break;
-        }
-
-        case ImageLayout::eDepthOptimal:
-        {
-            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid src image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            return;
-        }
-    }
-
-    switch (memResourceChain->resDesc.imageFormat)
-    {
-        case ImageFormat::BGRA8_SRGB:
-        case ImageFormat::RGBA8_SRGB:
-        {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            break;
-        }
-
-        case ImageFormat::Depth_32F:
-        {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            return;
-        }
-    }
-
-    barrier.image = memResource->image;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = memResourceChain->resDesc.arrayEles;
-
-    vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void VulkanRecordCommandClearImage(VulkanContextResources* vulkanContextResources, ResourceHandle imageHandle,
