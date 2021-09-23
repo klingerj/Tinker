@@ -10,6 +10,7 @@
 #include "Raytracing.h"
 #include "View.h"
 #include "InputManager.h"
+#include "Core/Graphics/VirtualTexture.h"
 
 #include <string.h>
 
@@ -53,6 +54,8 @@ INPUT_CALLBACK(GameCameraRotateVerticalCallback)
 {
     RotateCameraAboutRight(&g_gameCamera, cameraRotSensitivityVert * -(int32)param);
 }
+
+Core::Graphics::VirtualTexture vt;
 
 #define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
@@ -100,7 +103,7 @@ void WriteSwapChainBlitResources(const Platform::PlatformAPIFuncs* platformFuncs
 void CreateAllDescriptors(const Platform::PlatformAPIFuncs* platformFuncs)
 {
     // Swap chain blit
-    gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(Tk::Platform::SHADER_ID_SWAP_CHAIN_BLIT);
+    gameGraphicsData.m_swapChainBlitDescHandle = platformFuncs->CreateDescriptor(Tk::Platform::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
     WriteSwapChainBlitResources(platformFuncs);
 
     // Descriptor data
@@ -136,6 +139,7 @@ void CreateGameRenderingResources(const Platform::PlatformAPIFuncs* platformFunc
 {
     Platform::ResourceDesc desc;
     desc.resourceType = Platform::ResourceType::eImage2D;
+    desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB;
     gameGraphicsData.m_rtColorHandle = platformFuncs->CreateResource(desc);
@@ -256,7 +260,35 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platfor
 
     CreateAllDescriptors(platformFuncs);
 
+    // TODO: TEMP: test virtual texture
+    vt.Reset();
+    vt.Create(platformFuncs, graphicsCommandStream, 4, 16, v2ui(1024, 1024), v2ui(1024, 1024));
+
     return 0;
+}
+
+// TODO: move this out
+void DrawTerrain(Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
+{
+    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
+    command->m_commandType = Platform::GraphicsCmd::eDrawCall;
+    command->debugLabel = "Draw terrain quad";
+    command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
+    command->m_numInstances = 1;
+    command->m_indexBufferHandle = vt.m_terrainIdx;
+    command->m_shader = Tk::Platform::SHADER_ID_BASIC_VirtualTexture;
+    command->m_blendState = Platform::BlendState::eAlphaBlend;
+    command->m_depthState = Platform::DepthState::eTestOnWriteOn;
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
+        command->m_descriptors[i] = Platform::DefaultDescHandle_Invalid;
+    }
+    command->m_descriptors[0] = gameGraphicsData.m_DescData_Global;
+    command->m_descriptors[1] = vt.m_desc_terrainPos;
+    command->m_descriptors[2] = vt.m_desc;
+    command->m_descriptors[3] = vt.m_desc_terrain;
+    ++graphicsCommandStream->m_numCommands;
 }
 
 extern "C"
@@ -297,6 +329,8 @@ GAME_UPDATE(GameUpdate)
         descriptors[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
         Update(&MainView, descriptors, platformFuncs);
     }
+
+    vt.Update(platformFuncs);
 
     // Clear depth buffer
     {
@@ -346,6 +380,9 @@ GAME_UPDATE(GameUpdate)
 
         UpdateAnimatedPoly(platformFuncs, &gameGraphicsData.m_animatedPolygon);
         DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Tk::Platform::SHADER_ID_ANIMATEDPOLY_MainView, Platform::BlendState::eAlphaBlend, Platform::DepthState::eTestOnWriteOn, graphicsCommandStream);
+
+        DrawTerrain(graphicsCommandStream);
+
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
 
@@ -434,6 +471,8 @@ GAME_DESTROY(GameDestroy)
         DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
         
         DestroyAnimatedPoly(platformFuncs, &gameGraphicsData.m_animatedPolygon);
+
+        vt.Destroy(platformFuncs);
 
         // Destroy assets
         g_AssetManager.DestroyAllMeshData(platformFuncs);

@@ -763,7 +763,8 @@ void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources)
             vulkanContextResources->resources->swapChainFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
             vulkanContextResources->resources->swapChainImages[uiImageView],
-            &vulkanContextResources->resources->swapChainImageViews[uiImageView]);
+            &vulkanContextResources->resources->swapChainImageViews[uiImageView],
+            1);
     }
 
     // Swap chain framebuffers
@@ -1556,7 +1557,7 @@ FramebufferHandle VulkanCreateFramebuffer(VulkanContextResources* vulkanContextR
     return FramebufferHandle(newFramebufferHandle);
 }
 
-ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextResources, uint32 imageFormat, uint32 width, uint32 height)
+ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextResources, uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles)
 {
     uint32 newResourceHandle = vulkanContextResources->resources->vulkanMemResourcePool.Alloc();
 
@@ -1574,7 +1575,7 @@ ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextRe
         imageCreateInfo.extent.height = height;
         imageCreateInfo.extent.depth = 1;
         imageCreateInfo.mipLevels = 1;
-        imageCreateInfo.arrayLayers = 1;
+        imageCreateInfo.arrayLayers = numArrayEles;
         imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageCreateInfo.format = GetVkImageFormat(imageFormat);
         imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -1647,7 +1648,8 @@ ResourceHandle VulkanCreateImageResource(VulkanContextResources* vulkanContextRe
             GetVkImageFormat(imageFormat),
             aspectMask,
             newResource->image,
-            &newResource->imageView);
+            &newResource->imageView,
+            numArrayEles);
     }
 
     return ResourceHandle(newResourceHandle);
@@ -1667,7 +1669,7 @@ ResourceHandle VulkanCreateResource(VulkanContextResources* vulkanContextResourc
 
         case ResourceType::eImage2D:
         {
-            newHandle = VulkanCreateImageResource(vulkanContextResources, resDesc.imageFormat, resDesc.dims.x, resDesc.dims.y);
+            newHandle = VulkanCreateImageResource(vulkanContextResources, resDesc.imageFormat, resDesc.dims.x, resDesc.dims.y, resDesc.arrayEles);
             break;
         }
 

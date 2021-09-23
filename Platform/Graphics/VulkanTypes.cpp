@@ -70,12 +70,12 @@ void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeI
     vkBindBufferMemory(device, buffer, deviceMemory, 0);
 }
 
-void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView)
+void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView, uint32 arrayEles)
 {
     VkImageViewCreateInfo imageViewCreateInfo = {};
     imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     imageViewCreateInfo.image = image;
-    imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imageViewCreateInfo.viewType = arrayEles > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY: VK_IMAGE_VIEW_TYPE_2D;
     imageViewCreateInfo.format = format;
     imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -85,7 +85,7 @@ void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspect
     imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
     imageViewCreateInfo.subresourceRange.levelCount = 1;
     imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    imageViewCreateInfo.subresourceRange.layerCount = 1;
+    imageViewCreateInfo.subresourceRange.layerCount = arrayEles;
 
     VkResult result = vkCreateImageView(device, &imageViewCreateInfo, nullptr, imageView);
     if (result != VK_SUCCESS)

@@ -6,12 +6,12 @@
 
 #include <vulkan/vulkan.h>
 
-#define VULKAN_RESOURCE_POOL_MAX 256
+#define VULKAN_RESOURCE_POOL_MAX 512
 
 #define VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES 3
-#define VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS 16
-#define VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES 16
-#define VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS 16
+#define VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS 64
+#define VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES 64
+#define VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS 64
 
 #define VULKAN_MAX_RENDERTARGETS 1
 #define VULKAN_MAX_RENDERTARGETS_WITH_DEPTH VULKAN_MAX_RENDERTARGETS + 1 // +1 for depth
@@ -149,7 +149,7 @@ void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMe
 void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeInBytes,
     VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
     VkBuffer& buffer, VkDeviceMemory& deviceMemory);
-void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView);
+void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView, uint32 arrayEles);
 void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRTs, VkImageView depthRT,
     uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* frameBuffer);
 void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colorFormat, VkImageLayout startLayout, VkImageLayout endLayout, VkFormat depthFormat, VkRenderPass* renderPass);

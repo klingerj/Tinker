@@ -74,7 +74,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     bool bOk = false;
 
     // Shaders
-    const uint32 numShaderFilepaths = 6;
+    const uint32 numShaderFilepaths = 8;
     const char* shaderFilePaths[numShaderFilepaths] =
     {
         SHADERS_SPV_PATH "blit_vert_glsl.spv",
@@ -83,6 +83,8 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
         SHADERS_SPV_PATH "basic_frag_glsl.spv",
         SHADERS_SPV_PATH "animpoly_vert_glsl.spv",
         SHADERS_SPV_PATH "animpoly_frag_glsl.spv",
+        SHADERS_SPV_PATH "basic_noModelMat_vert_glsl.spv",
+        SHADERS_SPV_PATH "basic_virtualTex_frag_glsl.spv",
     };
 
     uint32 descLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
@@ -93,8 +95,8 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descLayouts[0] = DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX;
     descLayouts[1] = DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS;
     bOk = LoadShader(platformFuncs, shaderFilePaths[0], shaderFilePaths[1], SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, RENDERPASS_ID_SWAP_CHAIN_BLIT, descLayouts, 2);
-    
     TINKER_ASSERT(bOk);
+
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descLayouts[i] = DESCLAYOUT_ID_MAX;
 
@@ -103,8 +105,8 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descLayouts[1] = DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = DESCLAYOUT_ID_ASSET_VBS;
     bOk = LoadShader(platformFuncs, shaderFilePaths[2], nullptr, SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, RENDERPASS_ID_ZPrepass, descLayouts, 3);
-    
     TINKER_ASSERT(bOk);
+
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descLayouts[i] = DESCLAYOUT_ID_MAX;
 
@@ -113,16 +115,26 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descLayouts[1] = DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = DESCLAYOUT_ID_ASSET_VBS;
     bOk = LoadShader(platformFuncs, shaderFilePaths[2], shaderFilePaths[3], SHADER_ID_BASIC_MainView, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 3);
-    
     TINKER_ASSERT(bOk);
+
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descLayouts[i] = DESCLAYOUT_ID_MAX;
 
     // Animated poly
     descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
-    descLayouts[1] = DESCLAYOUT_ID_ANIMPOLY_VBS;
+    descLayouts[1] = DESCLAYOUT_ID_POSONLY_VBS;
     bOk = LoadShader(platformFuncs, shaderFilePaths[4], shaderFilePaths[5], SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 2);
-    
+    TINKER_ASSERT(bOk);
+
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        descLayouts[i] = DESCLAYOUT_ID_MAX;
+
+    // Virtual texture, basic shader
+    descLayouts[0] = DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[1] = DESCLAYOUT_ID_POSONLY_VBS;
+    descLayouts[2] = DESCLAYOUT_ID_VIRTUAL_TEXTURE;
+    descLayouts[3] = DESCLAYOUT_ID_TERRAIN_DATA;
+    bOk = LoadShader(platformFuncs, shaderFilePaths[6], shaderFilePaths[7], SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, RENDERPASS_ID_MainView, descLayouts, 4);
     TINKER_ASSERT(bOk);
 }
 
@@ -194,7 +206,23 @@ void ShaderManager::LoadAllShaderResources(const Tk::Platform::PlatformAPIFuncs*
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Platform::DescriptorType::eSSBO;
     descriptorLayout.params[0].amount = 1;
-    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_ANIMPOLY_VBS, &descriptorLayout);
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_POSONLY_VBS, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Platform::DescriptorType::eSampledImage;
+    descriptorLayout.params[0].amount = 1;
+    descriptorLayout.params[1].type = Platform::DescriptorType::eBuffer;
+    descriptorLayout.params[1].amount = 1;
+    descriptorLayout.params[2].type = Platform::DescriptorType::eSampledImage;
+    descriptorLayout.params[2].amount = 1;
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_VIRTUAL_TEXTURE, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Platform::DescriptorType::eBuffer;
+    descriptorLayout.params[0].amount = 1;
+    bOk = platformFuncs->CreateDescriptorLayout(DESCLAYOUT_ID_TERRAIN_DATA, &descriptorLayout);
     TINKER_ASSERT(bOk);
     //-----
 
