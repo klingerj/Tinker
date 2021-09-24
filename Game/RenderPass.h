@@ -4,7 +4,7 @@
 
 struct GameRenderPass
 {
-    Tk::Platform::FramebufferHandle framebuffer;
+    Tk::Platform::Graphics::FramebufferHandle framebuffer;
     uint32 renderPassID;
     uint32 renderWidth;
     uint32 renderHeight;
@@ -16,4 +16,4 @@ void EndRenderPass(GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStre
 void DrawMeshDataCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
     uint32 numInstances, Tk::Platform::ResourceHandle indexBufferHandle,
     uint32 shaderID, uint32 blendState, uint32 depthState,
-    Tk::Platform::DescriptorHandle* descriptors, const char* debugLabel);
+    Tk::Platform::Graphics::DescriptorHandle* descriptors, const char* debugLabel);

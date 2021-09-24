@@ -1,11 +1,17 @@
-#include "Platform/Graphics/Vulkan.h"
 #include "Platform/Graphics/VulkanTypes.h"
+#include "Platform/Graphics/Vulkan.h"
+#include "Platform/PlatformCommon.h"
 #include "Core/Utility/Logging.h"
 
 #include <iostream>
 // TODO: move this to be a compile define
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 #define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
+
+#ifdef _WIN32
+#include <vulkan/vulkan_win32.h>
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
 
 // NOTE: The convention in this project to is flip the viewport upside down since a left-handed projection
 // matrix is often used. However, doing this flip causes the application to not render properly when run
@@ -18,6 +24,8 @@ namespace Platform
 {
 namespace Graphics
 {
+
+VulkanContextResources g_vulkanContextResources;
 
 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
@@ -34,8 +42,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 #endif
 
 int InitVulkan(VulkanContextResources* vulkanContextResources,
-    const PlatformWindowHandles* platformWindowHandles,
-    uint32 width, uint32 height, uint32 numThreads)
+    const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
+    uint32 width, uint32 height)
 {
     vulkanContextResources->resources = new VkResources{};
 
@@ -1040,7 +1048,7 @@ bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources
     return true;
 }
 
-bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const Platform::DescriptorLayout* descriptorLayout)
+bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const Platform::Graphics::DescriptorLayout* descriptorLayout)
 {
     // Descriptor layout
     VkDescriptorSetLayoutBinding descLayoutBinding[MAX_BINDINGS_PER_SET] = {};
@@ -1088,7 +1096,7 @@ bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources
         TINKER_ASSERT(0);
     }
 
-    memcpy(&vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings, &descriptorLayout->params[0], sizeof(Platform::DescriptorLayout));
+    memcpy(&vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings, &descriptorLayout->params[0], sizeof(Platform::Graphics::DescriptorLayout));
     return true;
 }
 

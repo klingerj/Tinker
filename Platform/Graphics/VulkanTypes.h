@@ -76,7 +76,7 @@ typedef struct
 typedef struct
 {
     VkDescriptorSetLayout layout;
-    Platform::DescriptorLayout bindings;
+    Platform::Graphics::DescriptorLayout bindings;
 } VulkanDescriptorLayout;
 
 typedef struct

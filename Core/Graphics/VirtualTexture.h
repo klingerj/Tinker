@@ -11,18 +11,18 @@ namespace Graphics
 
 struct VirtualTexture
 {
-    Platform::ResourceHandle m_fallback;
-    Platform::ResourceHandle m_pageTable;
-    Platform::ResourceHandle m_frames;
-    Platform::DescriptorHandle m_desc;
+    Platform::Graphics::ResourceHandle m_fallback;
+    Platform::Graphics::ResourceHandle m_pageTable;
+    Platform::Graphics::ResourceHandle m_frames;
+    Platform::Graphics::DescriptorHandle m_desc;
     // TODO: move this, it's for terrain, not this
     // terrain texturing data
-    Platform::ResourceHandle m_terrainData;
-    Platform::DescriptorHandle m_desc_terrain;
+    Platform::Graphics::ResourceHandle m_terrainData;
+    Platform::Graphics::DescriptorHandle m_desc_terrain;
     // terrain mesh
-    Platform::ResourceHandle m_terrainVtxPos;
-    Platform::DescriptorHandle m_desc_terrainPos;
-    Platform::ResourceHandle m_terrainIdx;
+    Platform::Graphics::ResourceHandle m_terrainVtxPos;
+    Platform::Graphics::DescriptorHandle m_desc_terrainPos;
+    Platform::Graphics::ResourceHandle m_terrainIdx;
 
     uint32 m_numPages;
     uint32 m_numFrames;
@@ -31,9 +31,9 @@ struct VirtualTexture
 
     void Reset()
     {
-        m_fallback = Platform::DefaultResHandle_Invalid;
-        m_pageTable = Platform::DefaultResHandle_Invalid;
-        m_frames = Platform::DefaultResHandle_Invalid;
+        m_fallback = Platform::Graphics::DefaultResHandle_Invalid;
+        m_pageTable = Platform::Graphics::DefaultResHandle_Invalid;
+        m_frames = Platform::Graphics::DefaultResHandle_Invalid;
 
         m_numPages = 0;
         m_numFrames = 0;
@@ -46,12 +46,12 @@ struct VirtualTexture
         m_numPages = numPages; // pages in page table
         m_numFrames = numFrames; // number of textures actually in gpu memory
 
-        Platform::ResourceDesc desc;
-        desc.resourceType = Platform::ResourceType::eImage2D;
+        Platform::Graphics::ResourceDesc desc;
+        desc.resourceType = Platform::Graphics::ResourceType::eImage2D;
 
         // Create fallback texture
         desc.dims = v3ui(fallbackDims.x, fallbackDims.y, 1);
-        desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB; // TODO: take format as parameter
+        desc.imageFormat = Platform::Graphics::ImageFormat::RGBA8_SRGB; // TODO: take format as parameter
         desc.arrayEles = 1;
         m_fallbackDims = fallbackDims;
         m_fallback = platformFuncs->CreateResource(desc);
@@ -59,24 +59,24 @@ struct VirtualTexture
         // Create texture of frames
         desc.dims = v3ui(pageDims.x, pageDims.y, 1);
         desc.arrayEles = numFrames;
-        desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB; // TODO: take format as parameter
+        desc.imageFormat = Platform::Graphics::ImageFormat::RGBA8_SRGB; // TODO: take format as parameter
         m_frameDims = fallbackDims;
         m_frames = platformFuncs->CreateResource(desc);
 
         // Create page table - buffer
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
-        desc.bufferUsage = Platform::BufferUsage::eUniform;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eUniform;
         desc.dims = v3ui(128 * sizeof(v4ui), 0, 0); // stores an array of uints that indicate the which page is being used
         m_pageTable = platformFuncs->CreateResource(desc);
 
-        m_desc = platformFuncs->CreateDescriptor(Platform::DESCLAYOUT_ID_VIRTUAL_TEXTURE);
+        m_desc = platformFuncs->CreateDescriptor(Platform::Graphics::DESCLAYOUT_ID_VIRTUAL_TEXTURE);
 
-        Platform::DescriptorSetDataHandles descHandles = {};
+        Platform::Graphics::DescriptorSetDataHandles descHandles = {};
         descHandles.InitInvalid();
         descHandles.handles[0] = m_frames;
         descHandles.handles[1] = m_pageTable;
         descHandles.handles[2] = m_fallback;
-        platformFuncs->WriteDescriptor(Platform::DESCLAYOUT_ID_VIRTUAL_TEXTURE, &m_desc, 1, &descHandles, 3);
+        platformFuncs->WriteDescriptor(Platform::Graphics::DESCLAYOUT_ID_VIRTUAL_TEXTURE, &m_desc, 1, &descHandles, 3);
 
         // With immediate submission, write texture data to gpu and initialize page table
         InitializeGPUTextures(platformFuncs, graphicsCommandStream);
@@ -88,18 +88,18 @@ struct VirtualTexture
     void InitializeTerrainData(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
     {
         // Terrain-specific stuff - TODO: move these outta here
-        m_desc_terrain = platformFuncs->CreateDescriptor(Platform::DESCLAYOUT_ID_TERRAIN_DATA);
+        m_desc_terrain = platformFuncs->CreateDescriptor(Platform::Graphics::DESCLAYOUT_ID_TERRAIN_DATA);
 
-        Platform::ResourceDesc desc;
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
-        desc.bufferUsage = Platform::BufferUsage::eUniform;
+        Platform::Graphics::ResourceDesc desc;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eUniform;
         desc.dims = v3ui(sizeof(uint32) * 4, 0, 0); // only need 2 uints right now, for number of terrain tiles along x and y
         m_terrainData = platformFuncs->CreateResource(desc);
 
-        Platform::DescriptorSetDataHandles descHandles = {};
+        Platform::Graphics::DescriptorSetDataHandles descHandles = {};
         descHandles.InitInvalid();
         descHandles.handles[0] = m_terrainData;
-        platformFuncs->WriteDescriptor(Platform::DESCLAYOUT_ID_TERRAIN_DATA, &m_desc_terrain, 1, &descHandles, 1);
+        platformFuncs->WriteDescriptor(Platform::Graphics::DESCLAYOUT_ID_TERRAIN_DATA, &m_desc_terrain, 1, &descHandles, 1);
 
         // Terrain stuff
         void* bufferMapped = platformFuncs->MapResource(m_terrainData);
@@ -109,32 +109,32 @@ struct VirtualTexture
         platformFuncs->UnmapResource(m_terrainData);
 
         // Terrain vertex positions
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
-        desc.bufferUsage = Platform::BufferUsage::eVertex;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eVertex;
         desc.dims = v3ui(sizeof(v4f) * 4, 0, 0);
         m_terrainVtxPos = platformFuncs->CreateResource(desc);
 
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
-        desc.bufferUsage = Platform::BufferUsage::eIndex;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eIndex;
         desc.dims = v3ui(sizeof(uint32) * 6, 0, 0);
         m_terrainIdx = platformFuncs->CreateResource(desc);
 
-        m_desc_terrainPos = platformFuncs->CreateDescriptor(Platform::DESCLAYOUT_ID_POSONLY_VBS);
+        m_desc_terrainPos = platformFuncs->CreateDescriptor(Platform::Graphics::DESCLAYOUT_ID_POSONLY_VBS);
 
-        Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+        Platform::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
         for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         {
             descDataHandles[i].InitInvalid();
         }
         descDataHandles[0].handles[0] = m_terrainVtxPos;
 
-        platformFuncs->WriteDescriptor(Platform::DESCLAYOUT_ID_POSONLY_VBS, &m_desc_terrainPos, 1, &descDataHandles[0], 1);
+        platformFuncs->WriteDescriptor(Platform::Graphics::DESCLAYOUT_ID_POSONLY_VBS, &m_desc_terrainPos, 1, &descDataHandles[0], 1);
         
         // Mem transfer vtx/idx buffers from staging buffers
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
         desc.dims = v3ui(sizeof(v4f) * 4, 1, 1);
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        Platform::ResourceHandle stagingBufferVtx = platformFuncs->CreateResource(desc);
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
+        Platform::Graphics::ResourceHandle stagingBufferVtx = platformFuncs->CreateResource(desc);
         void* stagingBufferMapped = platformFuncs->MapResource(stagingBufferVtx);
         const float scale = 20.0f;
         ((v4f*)stagingBufferMapped)[0] = v4f(-1.0f * scale, -1.0f * scale, -1.0f, 1);
@@ -143,10 +143,10 @@ struct VirtualTexture
         ((v4f*)stagingBufferMapped)[3] = v4f( 1.0f * scale,  1.0f * scale, -1.0f, 1);
         platformFuncs->UnmapResource(stagingBufferVtx);
 
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
         desc.dims = v3ui(sizeof(uint32) * 6, 1, 1);
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        Platform::ResourceHandle stagingBufferIdx = platformFuncs->CreateResource(desc);
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
+        Platform::Graphics::ResourceHandle stagingBufferIdx = platformFuncs->CreateResource(desc);
         stagingBufferMapped = platformFuncs->MapResource(stagingBufferIdx);
         ((uint32*)stagingBufferMapped)[0] = 0;
         ((uint32*)stagingBufferMapped)[1] = 1;
@@ -156,9 +156,9 @@ struct VirtualTexture
         ((uint32*)stagingBufferMapped)[5] = 3;
         platformFuncs->UnmapResource(stagingBufferIdx);
 
-        Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        Tk::Platform::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-        command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Terrain Vtx Pos Buf";
         command->m_sizeInBytes = sizeof(v4f) * 4;
         command->m_srcBufferHandle = stagingBufferVtx;
@@ -166,7 +166,7 @@ struct VirtualTexture
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Terrain Vtx Idx Buf";
         command->m_sizeInBytes = sizeof(uint32) * 6;
         command->m_srcBufferHandle = stagingBufferIdx;
@@ -184,11 +184,11 @@ struct VirtualTexture
     void InitializeGPUTextures(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream)
     {
         // Initialize fallback texture to white
-        Platform::ResourceDesc desc;
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
+        Platform::Graphics::ResourceDesc desc;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
         desc.dims = v3ui(m_fallbackDims.x * m_fallbackDims.y * sizeof(uint32), 1, 1);
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        Platform::ResourceHandle stagingTexture_fallback = platformFuncs->CreateResource(desc);
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
+        Platform::Graphics::ResourceHandle stagingTexture_fallback = platformFuncs->CreateResource(desc);
         void* stagingBufferMapped = platformFuncs->MapResource(stagingTexture_fallback);
 
         uint32* texPixels = (uint32*)stagingBufferMapped;
@@ -200,8 +200,8 @@ struct VirtualTexture
 
         // Initialize each physical frame texture to a different color 
         desc.dims = v3ui(m_frameDims.x * m_frameDims.y * m_numFrames * sizeof(uint32), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
-        Platform::ResourceHandle stagingTexture_frames = platformFuncs->CreateResource(desc);
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
+        Platform::Graphics::ResourceHandle stagingTexture_frames = platformFuncs->CreateResource(desc);
         stagingBufferMapped = platformFuncs->MapResource(stagingTexture_frames);
 
         texPixels = (uint32*)stagingBufferMapped;
@@ -244,19 +244,19 @@ struct VirtualTexture
         memcpy(bufferMapped, pageEntries, sizeof(uint32) * MAX_PAGES);
         platformFuncs->UnmapResource(m_pageTable);
 
-        Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        Tk::Platform::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
         // Transition to transfer dst optimal layout
-        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition virtual fallback image layout to transfer dst optimal";
         command->m_imageHandle = m_fallback;
-        command->m_startLayout = Platform::ImageLayout::eUndefined;
-        command->m_endLayout = Platform::ImageLayout::eTransferDst;
+        command->m_startLayout = Platform::Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Platform::Graphics::ImageLayout::eTransferDst;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
         // Texture buffer copy
-        command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update virtual fallback texture data";
         command->m_sizeInBytes = m_fallbackDims.x * m_fallbackDims.y * sizeof(uint32);
         command->m_srcBufferHandle = stagingTexture_fallback;
@@ -264,25 +264,25 @@ struct VirtualTexture
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
-        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition virtual fallback image layout to shader read optimal";
         command->m_imageHandle = m_fallback;
-        command->m_startLayout = Platform::ImageLayout::eTransferDst;
-        command->m_endLayout = Platform::ImageLayout::eShaderRead;
+        command->m_startLayout = Platform::Graphics::ImageLayout::eTransferDst;
+        command->m_endLayout = Platform::Graphics::ImageLayout::eShaderRead;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
         // Transition to transfer dst optimal layout
-        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition virtual frames array image layout to transfer dst optimal";
         command->m_imageHandle = m_frames;
-        command->m_startLayout = Platform::ImageLayout::eUndefined;
-        command->m_endLayout = Platform::ImageLayout::eTransferDst;
+        command->m_startLayout = Platform::Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Platform::Graphics::ImageLayout::eTransferDst;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
         // Texture buffer copy
-        command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update virtual frames array texture data";
         command->m_sizeInBytes = m_frameDims.x * m_frameDims.y * m_numFrames * sizeof(uint32);
         command->m_srcBufferHandle = stagingTexture_frames;
@@ -290,11 +290,11 @@ struct VirtualTexture
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
-        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition virtual frames array image layout to shader read optimal";
         command->m_imageHandle = m_frames;
-        command->m_startLayout = Platform::ImageLayout::eTransferDst;
-        command->m_endLayout = Platform::ImageLayout::eShaderRead;
+        command->m_startLayout = Platform::Graphics::ImageLayout::eTransferDst;
+        command->m_endLayout = Platform::Graphics::ImageLayout::eShaderRead;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
