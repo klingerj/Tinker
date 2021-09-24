@@ -1,4 +1,4 @@
-#include "Platform/Graphics/GPUMemAllocator.h"
+#include "Platform/Graphics/VulkanGPUMemAllocator.h"
 
 #include <vulkan/vulkan.h>
 

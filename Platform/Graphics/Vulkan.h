@@ -3,19 +3,20 @@
 #include "Core/CoreDefines.h"
 #include "Core/Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
-#include "Platform/ShaderManager.h"
-
-#ifdef _WIN32
-#include <windows.h>
-#define VK_USE_PLATFORM_WIN32_KHR
-#else
-// TODO: include other platform headers
-#endif
 
 namespace Tk
 {
 namespace Platform
 {
+struct PlatformWindowHandles;
+}
+}
+
+namespace Tk
+{
+namespace Platform
+{
+
 namespace Graphics
 {
 
@@ -26,6 +27,8 @@ struct VulkanContextResources
     bool isSwapChainValid = false;
     VkResources* resources = nullptr;
 };
+
+extern VulkanContextResources g_vulkanContextResources;
 
 typedef struct vulkan_vertex_position
 {
@@ -42,18 +45,8 @@ typedef struct vulkan_vertex_normal
     v3f normal;
 } VulkanVertexNormal;
 
-typedef struct platform_window_handles
-{
-    #ifdef _WIN32
-    HINSTANCE instance;
-    HWND windowHandle;
-    #else
-    // TODO: other platform window handles/pointers
-    #endif
-} PlatformWindowHandles;
-
 // Init/destroy - called one time
-int InitVulkan(VulkanContextResources* vulkanContextResources, const PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height, uint32 numThreads);
+int InitVulkan(VulkanContextResources* vulkanContextResources, const Tk::Platform::PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height);
 void DestroyVulkan(VulkanContextResources* vulkanContextResources);
 
 void VulkanCreateSwapChain(VulkanContextResources* vulkanContextResources);
@@ -88,7 +81,7 @@ void VulkanDestroyAllPSOPerms(VulkanContextResources* vulkanContextResources);
 void DestroyAllDescLayouts(VulkanContextResources* vulkanContextResources);
 void VulkanDestroyAllRenderPasses(VulkanContextResources* vulkanContextResources);
 
-bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const Platform::DescriptorLayout* descriptorLayout);
+bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout);
 DescriptorHandle VulkanCreateDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID);
 void VulkanDestroyDescriptor(VulkanContextResources* vulkanContextResources, DescriptorHandle handle);
 void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources);

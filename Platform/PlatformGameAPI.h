@@ -52,28 +52,13 @@ struct PlatformAPIFuncs
     init_network_connection* InitNetworkConnection;
     end_network_connection* EndNetworkConnection;
     send_message_to_server* SendMessageToServer;
-    create_resource* CreateResource;
-    destroy_resource* DestroyResource;
-    map_resource* MapResource;
-    unmap_resource* UnmapResource;
-    create_framebuffer* CreateFramebuffer;
-    destroy_framebuffer* DestroyFramebuffer;
-    create_graphics_pipeline* CreateGraphicsPipeline;
-    destroy_graphics_pipeline* DestroyGraphicsPipeline;
-    create_descriptor* CreateDescriptor;
-    destroy_descriptor* DestroyDescriptor;
-    destroy_all_descriptors* DestroyAllDescriptors;
-    create_renderpass* CreateRenderPass;
-    write_descriptor* WriteDescriptor;
-    submit_cmds_immediate* SubmitCmdsImmediate;
-    create_descriptor_layout* CreateDescriptorLayout;
 };
 
 // Game side
-#define GAME_UPDATE(name) uint32 name(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)
+#define GAME_UPDATE(name) uint32 name(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)
 typedef GAME_UPDATE(game_update);
 
-#define GAME_DESTROY(name) void name(Tk::Platform::PlatformAPIFuncs* platformFuncs)
+#define GAME_DESTROY(name) void name(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
 typedef GAME_DESTROY(game_destroy);
 
 #define GAME_WINDOW_RESIZE(name) void name(Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)

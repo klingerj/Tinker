@@ -38,13 +38,13 @@ typedef int64_t  int64;
 template <typename T>
 inline T max(const T& a, const T& b)
 {
-    return a > b ? a : b;
+    return (a > b) ? a : b;
 }
 
 template <typename T>
 inline T min(const T& a, const T& b)
 {
-    return a < b ? a : b;
+    return (a < b) ? a : b;
 }
 #define CLAMP(a, b, c) min(max(a, b), c)
 
@@ -89,3 +89,8 @@ inline uint32 SafeTruncateUint64(uint64 value)
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
 #endif
 
+#ifdef _WIN32
+#define TINKER_API __declspec(dllexport)
+#else
+#define TINKER_API
+#endif

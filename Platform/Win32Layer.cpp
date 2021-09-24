@@ -1,9 +1,12 @@
+#include "Core/CoreDefines.h"
+#include "PlatformCommon.h"
 #include "PlatformGameAPI.h"
-#include "Platform/Graphics/Vulkan.h"
+#include "Win32Client.h"
+#include "Win32WorkerThreadPool.cpp"
+#include "Graphics/GraphicsCommon.h"
+#include "ShaderManager.h"
 #include "Core/Utility/Logging.h"
 #include "Core/Utility/ScopedTimer.h"
-#include "Platform/Win32Client.h"
-#include "Win32WorkerThreadPool.cpp"
 
 #include <windows.h>
 #include <Windowsx.h>
@@ -32,16 +35,19 @@ typedef struct win32_game_code
     game_window_resize* GameWindowResize = GameWindowResizeStub;
 } Win32GameCode;
 
-volatile bool runGame = true;
-HWND g_windowHandle = NULL;
-HCURSOR g_cursor = NULL;
-PlatformAPIFuncs g_platformAPIFuncs;
-GraphicsCommandStream g_graphicsCommandStream;
 Win32GameCode g_GameCode;
 const char* GameDllStr = "TinkerGame.dll";
-InputStateDeltas g_inputStateDeltas;
-Graphics::VulkanContextResources vulkanContextResources;
+
+volatile bool runGame = true;
+
+HWND g_windowHandle = NULL;
+PlatformAPIFuncs g_platformAPIFuncs;
+Graphics::GraphicsCommandStream g_graphicsCommandStream;
 bool g_windowResized = false;
+
+InputStateDeltas g_inputStateDeltas;
+
+HCURSOR g_cursor = NULL;
 bool g_cursorLocked = false;
 
 #ifdef _SCRIPTS_DIR
@@ -64,23 +70,15 @@ ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
 }
 #endif
 
-// TODO: implement other graphics APIs
-enum GraphicsAPI
-{
-    eVulkan = 0,
-    eInvalid
-};
-
 typedef struct global_app_params
 {
-    uint8 m_graphicsAPI;
     uint32 m_windowWidth;
     uint32 m_windowHeight;
 } GlobalAppParams;
 GlobalAppParams g_GlobalAppParams;
 
 SYSTEM_INFO g_SystemInfo;
-Graphics::PlatformWindowHandles g_platformWindowHandles;
+PlatformWindowHandles g_platformWindowHandles;
 
 static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
@@ -214,543 +212,6 @@ WRITE_ENTIRE_FILE(WriteEntireFile)
     }
 }
 
-static void ProcessGraphicsCommandStream(GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit)
-{
-    TINKER_ASSERT(graphicsCommandStream->m_numCommands <= graphicsCommandStream->m_maxCommands);
-
-    const bool multithreadedCmdRecording = false;
-
-    if (multithreadedCmdRecording)
-    {
-        // TODO: old API, change to be job list
-        /*uint32 numThreads = g_SystemInfo.dwNumberOfProcessors / 2;
-        Platform::WorkerJob** jobs = new Platform::WorkerJob*[numThreads];
-
-        for (uint32 uiJob = 0; uiJob < g_SystemInfo.dwNumberOfProcessors / 2; ++uiJob)
-        {
-            // TODO: we could probably just simply break up the list of commands into even-ish chunks, record them,
-            // and then plop them into the primary one
-            // TODO: going to need to ask vulkan to give/specify a secondary buffer based on the thread id
-            jobs[uiJob] = Platform::CreateNewThreadJob([=]()
-                {
-                });
-
-            //platformFuncs->EnqueueWorkerThreadJob(jobs[uiJob]);
-        }
-        for (uint32 i = 0; i < numThreads; ++i)
-        {
-            WaitOnJob(jobs[i]);
-        }
-        for (uint32 i = 0; i < numThreads; ++i)
-        {
-            delete jobs[i];
-        }
-        delete jobs;*/
-    }
-    else
-    {
-        // Track number of instances for proper indexing into uniform buffer of instance data
-        uint32 instanceCount = 0;
-        uint32 currentShaderID = SHADER_ID_MAX;
-        uint32 currentBlendState = BlendState::eMax;
-        uint32 currentDepthState = DepthState::eMax;
-
-        for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
-        {
-            TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < GraphicsCmd::eMax);
-
-            const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
-
-            switch (currentCmd.m_commandType)
-            {
-                case GraphicsCmd::eDrawCall:
-                {
-                    switch (g_GlobalAppParams.m_graphicsAPI)
-                    {
-                        case GraphicsAPI::eVulkan:
-                        {
-                            // TODO: only need this to bind descriptors, need to bind those in a diff cmd.
-                            /*if (currentShaderID   != currentCmd.m_shader ||
-                                currentBlendState != currentCmd.m_blendState || 
-                                currentDepthState != currentCmd.m_depthState)*/
-                            {
-                                currentShaderID   = currentCmd.m_shader;
-                                currentBlendState = currentCmd.m_blendState;
-                                currentDepthState = currentCmd.m_depthState;
-
-                                Graphics::VulkanRecordCommandBindShader(&vulkanContextResources,
-                                    currentShaderID, currentBlendState, currentDepthState,
-                                    &currentCmd.m_descriptors[0], immediateSubmit);
-                            }
-
-                            // Push constant
-                            {
-                                uint32 data[4] = {};
-                                data[0] = instanceCount;
-                                Graphics::VulkanRecordCommandPushConstant(&vulkanContextResources, (uint8*)data, sizeof(uint32) * 4, currentShaderID, currentBlendState, currentDepthState);
-                            }
-                            Graphics::VulkanRecordCommandDrawCall(&vulkanContextResources,
-                                currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
-                                currentCmd.m_numInstances, currentCmd.debugLabel, immediateSubmit);
-                            instanceCount += currentCmd.m_numInstances;
-                            break;
-                        }
-
-                        default:
-                        {
-                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                            runGame = false;
-                        }
-                    }
-
-                    break;
-                }
-
-                case GraphicsCmd::eMemTransfer:
-                {
-                    switch (g_GlobalAppParams.m_graphicsAPI)
-                    {
-                        case GraphicsAPI::eVulkan:
-                        {
-                            Graphics::VulkanRecordCommandMemoryTransfer(&vulkanContextResources,
-                                currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
-                                currentCmd.debugLabel, immediateSubmit);
-                            break;
-                        }
-
-                        default:
-                        {
-                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                            runGame = false;
-                        }
-                    }
-
-                    break;
-                }
-
-                case GraphicsCmd::eRenderPassBegin:
-                {
-                    switch (g_GlobalAppParams.m_graphicsAPI)
-                    {
-                        case GraphicsAPI::eVulkan:
-                        {
-                            instanceCount = 0;
-
-                            Graphics::VulkanRecordCommandRenderPassBegin(&vulkanContextResources,
-                                currentCmd.m_framebufferHandle, currentCmd.m_renderPassID,
-                                currentCmd.m_renderWidth, currentCmd.m_renderHeight,
-                                currentCmd.debugLabel, immediateSubmit);
-                            break;
-                        }
-
-                        default:
-                        {
-                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                            runGame = false;
-                        }
-                    }
-
-                    break;
-                }
-
-                case GraphicsCmd::eRenderPassEnd:
-                {
-                    switch (g_GlobalAppParams.m_graphicsAPI)
-                    {
-                        case GraphicsAPI::eVulkan:
-                        {
-                            Graphics::VulkanRecordCommandRenderPassEnd(&vulkanContextResources, immediateSubmit);
-                            break;
-                        }
-
-                        default:
-                        {
-                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                            runGame = false;
-                        }
-                    }
-
-                    break;
-                }
-
-                case GraphicsCmd::eLayoutTransition:
-                {
-                    switch (g_GlobalAppParams.m_graphicsAPI)
-                    {
-                        case GraphicsAPI::eVulkan:
-                        {
-                            Graphics::VulkanRecordCommandTransitionLayout(&vulkanContextResources, currentCmd.m_imageHandle,
-                                currentCmd.m_startLayout, currentCmd.m_endLayout,
-                                currentCmd.debugLabel, immediateSubmit);
-                            break;
-                        }
-
-                        default:
-                        {
-                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                            runGame = false;
-                        }
-                    }
-
-                    break;
-                }
-
-                case GraphicsCmd::eClearImage:
-                {
-                    switch (g_GlobalAppParams.m_graphicsAPI)
-                    {
-                        case GraphicsAPI::eVulkan:
-                        {
-                            Graphics::VulkanRecordCommandClearImage(&vulkanContextResources, currentCmd.m_imageHandle,
-                                currentCmd.m_clearValue, currentCmd.debugLabel, immediateSubmit);
-                            break;
-                        }
-
-                        default:
-                        {
-                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                            runGame = false;
-                        }
-                    }
-
-                    break;
-                }
-
-                default:
-                {
-                    // Invalid command type
-                    TINKER_ASSERT(0);
-                    break;
-                }
-            }
-        }
-    }
-}
-
-SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
-{
-    Graphics::BeginVulkanCommandRecordingImmediate(&vulkanContextResources);
-    ProcessGraphicsCommandStream(graphicsCommandStream, true);
-    Graphics::EndVulkanCommandRecordingImmediate(&vulkanContextResources);
-}
-
-static void BeginFrameRecording()
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            BeginVulkanCommandRecording(&vulkanContextResources);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-        }
-    }
-}
-
-static void EndFrameRecording()
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            EndVulkanCommandRecording(&vulkanContextResources);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-        }
-    }
-}
-
-static void SubmitFrameToGPU()
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanSubmitFrame(&vulkanContextResources);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-        }
-    }
-}
-
-CREATE_RESOURCE(CreateResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            return Graphics::VulkanCreateResource(&vulkanContextResources, resDesc);
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-
-            return DefaultResHandle_Invalid;
-        }
-    }
-}
-
-CREATE_FRAMEBUFFER(CreateFramebuffer)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            return Graphics::VulkanCreateFramebuffer(&vulkanContextResources,
-                rtColorHandles, numRTColorHandles, rtDepthHandle,
-                width, height, renderPassID);
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            return DefaultFramebufferHandle_Invalid;
-        }
-    }
-}
-
-CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            return Graphics::VulkanCreateGraphicsPipeline(&vulkanContextResources,
-                    vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
-                    shaderID, viewportWidth, viewportHeight, renderPassID, descriptorHandles, numDescriptorHandles);
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            return false;
-        }
-    }
-}
-
-DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::DestroyPSOPerms(&vulkanContextResources, shaderID);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-        }
-    }
-}
-
-CREATE_DESCRIPTOR(CreateDescriptor)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            return Graphics::VulkanCreateDescriptor(&vulkanContextResources, descLayoutID);
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            return DefaultDescHandle_Invalid;
-        }
-    }
-}
-
-CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            return Graphics::VulkanCreateDescriptorLayout(&vulkanContextResources, descLayoutID, descLayout);
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            return false;
-        }
-    }
-}
-
-CREATE_RENDERPASS(CreateRenderPass)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            return Graphics::VulkanCreateRenderPass(&vulkanContextResources, renderPassID, numColorRTs, colorFormat, startLayout, endLayout, depthFormat);
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            return false;
-        }
-    }
-}
-
-DESTROY_RESOURCE(DestroyResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanDestroyResource(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-DESTROY_FRAMEBUFFER(DestroyFramebuffer)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanDestroyFramebuffer(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-DESTROY_DESCRIPTOR(DestroyDescriptor)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanDestroyDescriptor(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanDestroyAllDescriptors(&vulkanContextResources);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-WRITE_DESCRIPTOR(WriteDescriptor)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanWriteDescriptor(&vulkanContextResources, descLayoutID, descSetHandles, descSetCount, descSetDataHandles, descSetDataCount);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
-MAP_RESOURCE(MapResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            return Graphics::VulkanMapResource(&vulkanContextResources, handle);
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            return nullptr;
-        }
-    }
-}
-
-UNMAP_RESOURCE(UnmapResource)
-{
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            Graphics::VulkanUnmapResource(&vulkanContextResources, handle);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            runGame = false;
-            break;
-        }
-    }
-}
-
 INIT_NETWORK_CONNECTION(InitNetworkConnection)
 {
     if (Network::InitClient() != 0)
@@ -879,21 +340,7 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
                 const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
                 if (SystemCommand(shaderCompileCommand) == 0)
                 {
-                    switch (g_GlobalAppParams.m_graphicsAPI)
-                    {
-                        case GraphicsAPI::eVulkan:
-                        {
-                            VulkanDestroyAllPSOPerms(&vulkanContextResources);
-                            break;
-                        }
-
-                        default:
-                        {
-                            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                            runGame = false;
-                            break;
-                        }
-                    }
+                    g_ShaderManager.ReloadShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_ShaderManager.LoadAllShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                 }
                 else
@@ -981,33 +428,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         }
         case WM_SIZE:
         {
-            switch (g_GlobalAppParams.m_graphicsAPI)
+            if (wParam == 1) // window minimized - can't create swap chain with size 0
             {
-                case GraphicsAPI::eVulkan:
-                {
-                    if (vulkanContextResources.isInitted)
-                    {
-                        if (wParam == 1) // window minimized - can't create swap chain with size 0
-                        {
-                            vulkanContextResources.isSwapChainValid = false;
-                        }
-                        else
-                        {
-                            // Normal window resize / maximize
-                            g_GlobalAppParams.m_windowWidth = LOWORD(lParam);
-                            g_GlobalAppParams.m_windowHeight = HIWORD(lParam);
-                            g_windowResized = true; // swap chain will be recreated
-                        }
-                    }
-                    break;
-                }
-
-                default:
-                {
-                    Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                    runGame = false;
-                    break;
-                }
+                Graphics::WindowMinimized();
+            }
+            else
+            {
+                // Normal window resize / maximize
+                g_GlobalAppParams.m_windowWidth = LOWORD(lParam);
+                g_GlobalAppParams.m_windowHeight = HIWORD(lParam);
+                g_windowResized = true; // swap chain will be recreated later when this flag is checked
             }
 
             break;
@@ -1130,7 +560,6 @@ wWinMain(HINSTANCE hInstance,
 
         // TODO: load from settings file
         g_GlobalAppParams = {};
-        g_GlobalAppParams.m_graphicsAPI = GraphicsAPI::eVulkan;
         g_GlobalAppParams.m_windowWidth = 800;
         g_GlobalAppParams.m_windowHeight = 600;
 
@@ -1180,28 +609,8 @@ wWinMain(HINSTANCE hInstance,
         g_platformWindowHandles = {};
         g_platformWindowHandles.instance = hInstance;
         g_platformWindowHandles.windowHandle = g_windowHandle;
-
-        switch (g_GlobalAppParams.m_graphicsAPI)
-        {
-            case GraphicsAPI::eVulkan:
-            {
-                vulkanContextResources = {};
-                int result = InitVulkan(&vulkanContextResources, &g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, g_SystemInfo.dwNumberOfProcessors / 2);
-                if (result)
-                {
-                    Core::Utility::LogMsg("Platform", "Failed to init graphics backend!", Core::Utility::LogSeverity::eCritical);
-                    return 1;
-                }
-                break;
-            }
-
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                return 1;
-            }
-        }
-
+        Graphics::CreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+        
         g_platformAPIFuncs = {};
         g_platformAPIFuncs.EnqueueWorkerThreadJob  = EnqueueWorkerThreadJob;
         // Generic OS
@@ -1213,27 +622,11 @@ wWinMain(HINSTANCE hInstance,
         g_platformAPIFuncs.InitNetworkConnection   = InitNetworkConnection;
         g_platformAPIFuncs.EndNetworkConnection    = EndNetworkConnection;
         g_platformAPIFuncs.SendMessageToServer     = SendMessageToServer;
-        // Graphics
-        g_platformAPIFuncs.CreateResource          = CreateResource;
-        g_platformAPIFuncs.DestroyResource         = DestroyResource;
-        g_platformAPIFuncs.MapResource             = MapResource;
-        g_platformAPIFuncs.UnmapResource           = UnmapResource;
-        g_platformAPIFuncs.CreateFramebuffer       = CreateFramebuffer;
-        g_platformAPIFuncs.DestroyFramebuffer      = DestroyFramebuffer;
-        g_platformAPIFuncs.CreateGraphicsPipeline  = CreateGraphicsPipeline;
-        g_platformAPIFuncs.DestroyGraphicsPipeline = DestroyGraphicsPipeline;
-        g_platformAPIFuncs.CreateDescriptor        = CreateDescriptor;
-        g_platformAPIFuncs.DestroyAllDescriptors   = DestroyAllDescriptors;
-        g_platformAPIFuncs.CreateRenderPass        = CreateRenderPass;
-        g_platformAPIFuncs.DestroyDescriptor       = DestroyDescriptor;
-        g_platformAPIFuncs.WriteDescriptor         = WriteDescriptor;
-        g_platformAPIFuncs.SubmitCmdsImmediate     = SubmitCmdsImmediate;
-        g_platformAPIFuncs.CreateDescriptorLayout  = CreateDescriptorLayout;
 
         g_graphicsCommandStream = {};
         g_graphicsCommandStream.m_numCommands = 0;
         g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-        g_graphicsCommandStream.m_graphicsCommands = (GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
+        g_graphicsCommandStream.m_graphicsCommands = (Graphics::GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(Graphics::GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
@@ -1259,42 +652,18 @@ wWinMain(HINSTANCE hInstance,
 
             {
                 //TIMED_SCOPED_BLOCK("Process window messages");
-
                 ProcessWindowMessages();
             }
 
             bool shouldRenderFrame = false;
             {
                 //TIMED_SCOPED_BLOCK("Window resize check");
-
-                switch (g_GlobalAppParams.m_graphicsAPI)
+                if (g_windowResized)
                 {
-                    case GraphicsAPI::eVulkan:
-                    {
-                        if (g_windowResized)
-                        {
-                            VulkanDestroyAllPSOPerms(&vulkanContextResources);
-                            VulkanDestroyAllRenderPasses(&vulkanContextResources);
-                            VulkanDestroySwapChain(&vulkanContextResources);
-                            VulkanCreateSwapChain(&vulkanContextResources);
-
-                            g_ShaderManager.RecreateWindowDependentResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-                            g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-                        }
-
-                        shouldRenderFrame = vulkanContextResources.isSwapChainValid;
-                        break;
-                    }
-
-                    default:
-                    {
-                        Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                        shouldRenderFrame = false;
-                        runGame = false;
-                        break;
-                    }
+                    shouldRenderFrame = Graphics::WindowResize();
+                    g_ShaderManager.CreateWindowDependentResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                 }
-
                 g_windowResized = false;
             }
 
@@ -1302,8 +671,7 @@ wWinMain(HINSTANCE hInstance,
             {
                 {
                     //TIMED_SCOPED_BLOCK("Acquire Frame");
-
-                    AcquireFrame(&vulkanContextResources);
+                    Graphics::AcquireFrame();
                 }
 
                 {
@@ -1321,10 +689,10 @@ wWinMain(HINSTANCE hInstance,
                 // Process command stream
                 {
                     //TIMED_SCOPED_BLOCK("Graphics command stream processing");
-                    BeginFrameRecording();
-                    ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
-                    EndFrameRecording();
-                    SubmitFrameToGPU();
+                    Graphics::BeginFrameRecording();
+                    Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
+                    Graphics::EndFrameRecording();
+                    Graphics::SubmitFrameToGPU();
                 }
             }
         }
@@ -1337,22 +705,7 @@ wWinMain(HINSTANCE hInstance,
             g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
             #endif
 
-            // Reset graphics context
-            switch (g_GlobalAppParams.m_graphicsAPI)
-            {
-                case GraphicsAPI::eVulkan:
-                {
-                    DestroyVulkan(&vulkanContextResources);
-                    InitVulkan(&vulkanContextResources, &g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, g_SystemInfo.dwNumberOfProcessors / 2);
-                    break;
-                }
-
-                default:
-                {
-                    Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-                    break;
-                }
-            }
+            Graphics::RecreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
         }
     }
 
@@ -1363,23 +716,9 @@ wWinMain(HINSTANCE hInstance,
     #endif
 
     g_ShaderManager.Shutdown();
+    Graphics::DestroyContext();
 
     _aligned_free(g_graphicsCommandStream.m_graphicsCommands);
-
-    switch (g_GlobalAppParams.m_graphicsAPI)
-    {
-        case GraphicsAPI::eVulkan:
-        {
-            DestroyVulkan(&vulkanContextResources);
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid/unsupported graphics API chosen!", Core::Utility::LogSeverity::eCritical);
-            break;
-        }
-    }
 
     #if defined(MEM_TRACKING)
     _CrtDumpMemoryLeaks();

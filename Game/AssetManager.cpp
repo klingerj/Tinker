@@ -315,44 +315,44 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
     {
         // Create buffer handles
         ResourceDesc desc;
-        desc.resourceType = Platform::ResourceType::eBuffer1D;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
 
         ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
         void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
 
         // Positions
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eVertex;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eVertex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
 
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
         stagingBufferHandle_Pos = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_Pos = platformFuncs->MapResource(stagingBufferHandle_Pos);
 
         // UVs
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eVertex;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eVertex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
         stagingBufferHandle_UV = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_UV = platformFuncs->MapResource(stagingBufferHandle_UV);
 
         // Normals
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eVertex;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eVertex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
         stagingBufferHandle_Norm = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_Norm = platformFuncs->MapResource(stagingBufferHandle_Norm);
 
         // Indices
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), 0, 0);
-        desc.bufferUsage = Platform::BufferUsage::eIndex;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eIndex;
         m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = platformFuncs->CreateResource(desc);
         
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
         stagingBufferHandle_Idx = platformFuncs->CreateResource(desc);
         stagingBufferMemPtr_Idx = platformFuncs->MapResource(stagingBufferHandle_Idx);
 
@@ -385,10 +385,10 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
         // Create, submit, and execute the buffer copy commands
         {
             // Graphics command to copy from staging buffer to gpu local buffer
-            Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+            Tk::Platform::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
             // Position buffer copy
-            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+            command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx Pos Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
             command->m_srcBufferHandle = stagingBufferHandle_Pos;
@@ -397,7 +397,7 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
             ++command;
 
             // UV buffer copy
-            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+            command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx UV Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
             command->m_srcBufferHandle = stagingBufferHandle_UV;
@@ -406,7 +406,7 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
             ++command;
 
             // Normal buffer copy
-            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+            command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx Norm Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
             command->m_srcBufferHandle = stagingBufferHandle_Norm;
@@ -415,7 +415,7 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
             ++command;
 
             // Index buffer copy
-            command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+            command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
             command->debugLabel = "Update Asset Vtx Idx Buf";
             command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
             command->m_srcBufferHandle = stagingBufferHandle_Idx;
@@ -449,17 +449,17 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
     {
         // Create texture handles
         ResourceDesc desc;
-        desc.resourceType = Platform::ResourceType::eImage2D;
+        desc.resourceType = Platform::Graphics::ResourceType::eImage2D;
         desc.arrayEles = 1;
 
-        desc.imageFormat = Platform::ImageFormat::RGBA8_SRGB; // TODO: don't hard code this
+        desc.imageFormat = Platform::Graphics::ImageFormat::RGBA8_SRGB; // TODO: don't hard code this
         desc.dims = m_allTextureMetadata[uiAsset].m_dims;
         m_allTextureGraphicsHandles[uiAsset] = platformFuncs->CreateResource(desc);
 
         uint32 textureSizeInBytes = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y * 4; // 4 bytes per pixel since RGBA8
         desc.dims = v3ui(textureSizeInBytes, 0, 0);
-        desc.resourceType = Platform::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
-        desc.bufferUsage = Platform::BufferUsage::eStaging;
+        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
+        desc.bufferUsage = Platform::Graphics::BufferUsage::eStaging;
         imageStagingBufferHandles[uiAsset] = platformFuncs->CreateResource(desc);
         void* stagingBufferMemPtr = platformFuncs->MapResource(imageStagingBufferHandles[uiAsset]);
 
@@ -470,7 +470,7 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
     }
 
     // Graphics command to copy from staging buffer to gpu local buffer
-    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     // Create, submit, and execute the buffer copy commands
     for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)
@@ -478,16 +478,16 @@ void AssetManager::InitAssetGraphicsResources(const Tk::Platform::PlatformAPIFun
         uint32 textureSizeInBytes = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y * 4; // 4 bytes per pixel since RGBA8
 
         // Transition to transfer dst optimal layout
-        command->m_commandType = Platform::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition image layout to transfer dst optimal";
         command->m_imageHandle = m_allTextureGraphicsHandles[uiAsset];
-        command->m_startLayout = Platform::ImageLayout::eUndefined;
-        command->m_endLayout = Platform::ImageLayout::eTransferDst;
+        command->m_startLayout = Platform::Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Platform::Graphics::ImageLayout::eTransferDst;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
         // Texture buffer copy
-        command->m_commandType = Platform::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Platform::Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Asset Texture Data";
         command->m_sizeInBytes = textureSizeInBytes;
         command->m_srcBufferHandle = imageStagingBufferHandles[uiAsset];
@@ -519,16 +519,16 @@ void AssetManager::DestroyAllMeshData(const Tk::Platform::PlatformAPIFuncs* plat
         StaticMeshData* meshData = GetMeshGraphicsDataByID(uiAssetID);
 
         platformFuncs->DestroyResource(meshData->m_positionBuffer.gpuBufferHandle);
-        meshData->m_positionBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+        meshData->m_positionBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
         platformFuncs->DestroyResource(meshData->m_uvBuffer.gpuBufferHandle);
-        meshData->m_uvBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+        meshData->m_uvBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
         platformFuncs->DestroyResource(meshData->m_normalBuffer.gpuBufferHandle);
-        meshData->m_normalBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+        meshData->m_normalBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
         platformFuncs->DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
-        meshData->m_indexBuffer.gpuBufferHandle = Platform::DefaultResHandle_Invalid;
+        meshData->m_indexBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
 
         platformFuncs->DestroyDescriptor(meshData->m_descriptor);
-        meshData->m_descriptor = Platform::DefaultDescHandle_Invalid;
+        meshData->m_descriptor = Platform::Graphics::DefaultDescHandle_Invalid;
     }
 }
 
@@ -536,7 +536,7 @@ void AssetManager::DestroyAllTextureData(const Tk::Platform::PlatformAPIFuncs* p
 {
     for (uint32 uiAssetID = 0; uiAssetID < m_numTextureAssets; ++uiAssetID)
     {
-        Platform::ResourceHandle textureHandle = GetTextureGraphicsDataByID(uiAssetID);
+        Platform::Graphics::ResourceHandle textureHandle = GetTextureGraphicsDataByID(uiAssetID);
         platformFuncs->DestroyResource(textureHandle);
     }
 }
@@ -546,7 +546,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platfor
     StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
     data->m_descriptor = platformFuncs->CreateDescriptor(DESCLAYOUT_ID_ASSET_VBS);
 
-    Platform::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    Platform::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
     descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
     descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;
@@ -554,7 +554,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID, const Tk::Platfor
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Platform::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { data->m_descriptor, Platform::DefaultDescHandle_Invalid, Platform::DefaultDescHandle_Invalid };
+    Platform::Graphics::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { data->m_descriptor, Platform::Graphics::DefaultDescHandle_Invalid, Platform::Graphics::DefaultDescHandle_Invalid };
     platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], 1, &descDataHandles[0], 1);
 }
 

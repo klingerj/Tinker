@@ -10,15 +10,15 @@ if "%BuildConfig%" NEQ "Debug" (
     )
 
 rem Run game build script
-call build_game.bat %BuildConfig%
+rem call build_game.bat %BuildConfig%
 echo.
 
-echo ***** Building Tinker Platform *****
+echo ***** Building Tinker App *****
 
 pushd ..
 if NOT EXIST .\Build mkdir .\Build
 pushd .\Build
-del TinkerPlatform.pdb > NUL 2> NUL
+del TinkerApp.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
@@ -36,17 +36,17 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerPlatform - primary exe
-set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/ShaderManager.cpp ../Platform/Graphics/Vulkan.cpp ../Platform/Graphics/VulkanCmds.cpp ../Platform/Graphics/VulkanTypes.cpp ../Platform/Graphics/VulkanGPUMemAllocator.cpp ../Platform/Win32Logging.cpp ../Platform/Win32Client.cpp
+set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Graphics/GraphicsCommon.cpp ../Platform/ShaderManager.cpp ../Platform/Graphics/Vulkan.cpp ../Platform/Graphics/VulkanCmds.cpp ../Platform/Graphics/VulkanTypes.cpp ../Platform/Graphics/VulkanGPUMemAllocator.cpp ../Platform/Win32Logging.cpp ../Platform/Win32Client.cpp
 set CompileDefines=/D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
     set DebugLinkFlagsPlatform=/pdb:TinkerPlatform.pdb
-    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1 /D_VULKAN 
     ) else (
     set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
     set DebugLinkFlagsPlatform=/pdb:TinkerPlatform.pdb
-    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
+    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1 /D_VULKAN 
     )
 
 set CompileIncludePaths=/I ../ 
@@ -68,7 +68,12 @@ set OBJDir=%cd%\obj_platform\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerPlatform.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerApp.exe
+
+if EXIST TinkerApp.exp (
+    echo Deleting unnecessary file TinkerApp.exp
+    del TinkerApp.exp
+    )
 
 :DoneBuild
 popd
