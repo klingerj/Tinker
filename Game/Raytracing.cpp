@@ -1,6 +1,6 @@
 #include "Raytracing.h"
 #include "Core/Mem.h"
-#include "Core/FileIO/FileLoading.h"
+#include "Core/FileLoading.h"
 #include "Core/Raytracing/AccelStructures/Octree.h"
 #include "Core/Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"

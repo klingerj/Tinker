@@ -5,7 +5,6 @@
 using namespace Tk;
 using namespace Platform;
 using namespace Core;
-using namespace Math;
 
 const uint32 threadCount = 1;
 WorkerThreadPool g_threadpool;

@@ -2,7 +2,6 @@
 
 using namespace Tk;
 using namespace Core;
-using namespace Math;
 
 static const v3f WORLD_UP = v3f(0, 0, 1);
 static const float nearPlane = 0.1f;

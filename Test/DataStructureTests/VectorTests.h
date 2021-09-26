@@ -1,7 +1,5 @@
-#include "Core/Containers/Vector.h"
+#include "Core/DataStructures/Vector.h"
 #include "TinkerTest.h"
-
-using namespace Containers;
 
 void Test_VectorConstructorDefault()
 {

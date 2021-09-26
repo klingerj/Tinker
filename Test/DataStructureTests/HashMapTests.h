@@ -1,7 +1,5 @@
-#include "Core/Containers/HashMap.h"
+#include "Core/DataStructures/HashMap.h"
 #include "TinkerTest.h"
-
-using namespace Containers;
 
 #include <unordered_map>
 #include <random>

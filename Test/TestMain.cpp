@@ -1,9 +1,9 @@
 #include "TinkerTest.h"
 
 #include "MathTests/VectorTypeTests.h"
-#include "ContainerTests/RingBufferTests.h"
-#include "ContainerTests/VectorTests.h"
-#include "ContainerTests/HashMapTests.h"
+#include "DataStructureTests/RingBufferTests.h"
+#include "DataStructureTests/VectorTests.h"
+#include "DataStructureTests/HashMapTests.h"
 #include "MemoryTests/AllocatorTests.h"
 #include "AlgorithmTests/SortingTests.h"
 

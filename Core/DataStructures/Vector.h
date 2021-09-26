@@ -6,8 +6,6 @@ namespace Tk
 {
 namespace Core
 {
-namespace Containers
-{
 
 #define CMP_FUNC(name) bool name(const void* A, const void* B)
 typedef CMP_FUNC(CompareFunc);
@@ -99,6 +97,5 @@ struct Vector : public VectorBase
 };
 
 
-}
 }
 }

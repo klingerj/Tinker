@@ -1,6 +1,6 @@
 #include "AssetManager.h"
 #include "Core/Utility/Logging.h"
-#include "Core/FileIO/FileLoading.h"
+#include "Core/FileLoading.h"
 #include "Platform/Graphics/GraphicsCommon.h"
 
 #include <string.h>

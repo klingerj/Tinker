@@ -3,7 +3,6 @@
 
 using namespace Tk;
 using namespace Core;
-using namespace Math;
 
 // V2
 void Test_v2ConstructorDefault()

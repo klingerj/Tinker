@@ -2,7 +2,7 @@
 
 #include "Platform/PlatformGameAPI.h"
 #include "Core/Math/VectorTypes.h"
-#include "Core/Containers/Vector.h"
+#include "Core/DataStructures/Vector.h"
 #include "GraphicsTypes.h"
 
 struct Instance
@@ -21,12 +21,12 @@ struct View
     alignas(CACHE_LINE) m4f m_viewMatrix;
     alignas(CACHE_LINE) m4f m_projMatrix;
     alignas(CACHE_LINE) m4f m_viewProjMatrix;
-    alignas(CACHE_LINE) Tk::Core::Containers::Vector<Instance> m_instances;
-    Tk::Core::Containers::Vector<DescriptorData_Instance> m_instanceData;
+    alignas(CACHE_LINE) Tk::Core::Vector<Instance> m_instances;
+    Tk::Core::Vector<DescriptorData_Instance> m_instanceData;
 
     // Sorted copies of instance data
-    Tk::Core::Containers::Vector<Instance> m_instances_sorted;
-    Tk::Core::Containers::Vector<DescriptorData_Instance> m_instanceData_sorted;
+    Tk::Core::Vector<Instance> m_instances_sorted;
+    Tk::Core::Vector<DescriptorData_Instance> m_instanceData_sorted;
 
     uint32 m_maxInstances;
     uint32 m_numInstances;

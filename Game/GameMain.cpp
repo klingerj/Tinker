@@ -2,7 +2,7 @@
 #include "Platform/Graphics/GraphicsCommon.h"
 #include "Core/Allocators.h"
 #include "Core/Math/VectorTypes.h"
-#include "Core/FileIO/FileLoading.h"
+#include "Core/FileLoading.h"
 #include "Core/Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
 #include "RenderPass.h"
@@ -19,7 +19,6 @@
 using namespace Tk;
 using namespace Platform;
 using namespace Core;
-using namespace Math;
 
 static bool isGameInitted = false;
 static const bool isMultiplayer = false;

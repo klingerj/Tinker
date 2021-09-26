@@ -9,8 +9,6 @@ namespace Tk
 {
 namespace Core
 {
-namespace Math
-{
 
 // Vector classes
 
@@ -1293,24 +1291,23 @@ namespace VectorOps
 
 }
 }
-}
 
-typedef Tk::Core::Math::vec2<uint32> v2ui;
-typedef Tk::Core::Math::vec3<uint32> v3ui;
-typedef Tk::Core::Math::vec4<uint32> v4ui;
-typedef Tk::Core::Math::vec2<int32>  v2i;
-typedef Tk::Core::Math::vec3<int32>  v3i;
-typedef Tk::Core::Math::vec4<int32>  v4i;
-typedef Tk::Core::Math::vec2<float>  v2f;
-typedef Tk::Core::Math::vec3<float>  v3f;
-typedef Tk::Core::Math::vec4<float>  v4f;
+typedef Tk::Core::vec2<uint32> v2ui;
+typedef Tk::Core::vec3<uint32> v3ui;
+typedef Tk::Core::vec4<uint32> v4ui;
+typedef Tk::Core::vec2<int32>  v2i;
+typedef Tk::Core::vec3<int32>  v3i;
+typedef Tk::Core::vec4<int32>  v4i;
+typedef Tk::Core::vec2<float>  v2f;
+typedef Tk::Core::vec3<float>  v3f;
+typedef Tk::Core::vec4<float>  v4f;
 
-typedef Tk::Core::Math::mat2<uint32> m2ui;
-typedef Tk::Core::Math::mat3<uint32> m3ui;
-typedef Tk::Core::Math::mat4<uint32> m4ui;
-typedef Tk::Core::Math::mat2<int32>  m2i;
-typedef Tk::Core::Math::mat3<int32>  m3i;
-typedef Tk::Core::Math::mat4<int32>  m4i;
-typedef Tk::Core::Math::mat2<float>  m2f;
-typedef Tk::Core::Math::mat3<float>  m3f;
-typedef Tk::Core::Math::mat4<float>  m4f;
+typedef Tk::Core::mat2<uint32> m2ui;
+typedef Tk::Core::mat3<uint32> m3ui;
+typedef Tk::Core::mat4<uint32> m4ui;
+typedef Tk::Core::mat2<int32>  m2i;
+typedef Tk::Core::mat3<int32>  m3i;
+typedef Tk::Core::mat4<int32>  m4i;
+typedef Tk::Core::mat2<float>  m2f;
+typedef Tk::Core::mat3<float>  m3f;
+typedef Tk::Core::mat4<float>  m4f;

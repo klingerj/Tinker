@@ -1,5 +1,5 @@
 #include "PlatformGameAPI.h"
-#include "Core/Containers/RingBuffer.h"
+#include "Core/DataStructures/RingBuffer.h"
 
 #include <process.h>
 #include <windows.h>
@@ -14,15 +14,13 @@ namespace Tk
 namespace Platform
 {
 
-using namespace Core;
-
 typedef struct thread_info
 {
     alignas(CACHE_LINE) volatile bool terminate = false;
     volatile bool didTerminate = true;
     uint32 threadId = 0;
     alignas(CACHE_LINE) HANDLE semaphoreHandle = INVALID_HANDLE_VALUE;
-    alignas(CACHE_LINE) Containers::RingBuffer<WorkerJob*> jobs;
+    alignas(CACHE_LINE) Core::RingBuffer<WorkerJob*> jobs;
 } ThreadInfo;
 
 void __cdecl WorkerThreadFunction(void* arg)

@@ -10,8 +10,6 @@ namespace Tk
 {
 namespace Core
 {
-namespace Containers
-{
 
 // Single Producer, Single Consumer wait-free queue
 template <typename T, uint32 size = 0> // TODO: assert Size >= 1? or that it is a power of 2?
@@ -106,5 +104,3 @@ public:
 
 }
 }
-}
-

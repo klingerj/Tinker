@@ -12,8 +12,6 @@ namespace Core
 namespace FileLoading
 {
 
-using namespace Math;
-
 void scanLine(uint8* buffer, uint32* currentIndex)
 {
     startScan:
