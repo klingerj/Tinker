@@ -33,12 +33,12 @@ struct View
     uint8 m_instanceListDirty;
 };
 void Init(View* view, uint32 maxInstances);
-void Update(View* view, Tk::Platform::Graphics::DescriptorSetDataHandles* descDataHandles, const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+void Update(View* view, Tk::Platform::Graphics::DescriptorSetDataHandles* descDataHandles);
 
 uint32 CreateInstance(View* view, uint32 assetID);
 void DestroyInstance(View* view, uint32 instanceID);
 void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instance* data);
 
 struct GameRenderPass;
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream,
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream,
     uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Platform::Graphics::DescriptorHandle* descriptors);

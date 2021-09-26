@@ -2,21 +2,19 @@
 
 #include "Core/CoreDefines.h"
 #include "PlatformGameThreadAPI.h"
-#include "PlatformGameGraphicsAPI.h"
 #include "PlatformGameInputHandlingAPI.h"
 
 namespace Tk
 {
-
 namespace Platform
 {
 
 // I/O
-void PrintDebugString(const char* str);
+TINKER_API void PrintDebugString(const char* str);
 
 // Memory
-void* AllocAligned(size_t size, size_t alignment, const char* filename, int lineNum);
-void FreeAligned(void* ptr);
+TINKER_API void* AllocAligned(size_t size, size_t alignment, const char* filename, int lineNum);
+TINKER_API void FreeAligned(void* ptr);
 
 // Platform File API function
 #define READ_ENTIRE_FILE(name) void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
@@ -53,6 +51,11 @@ struct PlatformAPIFuncs
     end_network_connection* EndNetworkConnection;
     send_message_to_server* SendMessageToServer;
 };
+
+namespace Graphics
+{
+struct GraphicsCommandStream;
+}
 
 // Game side
 #define GAME_UPDATE(name) uint32 name(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)

@@ -54,7 +54,7 @@ void VulkanDestroySwapChain(VulkanContextResources* vulkanContextResources);
 void CreateSamplers(VulkanContextResources* vulkanContextResources);
 
 // Frame command recording
-void AcquireFrame(VulkanContextResources* vulkanContextResources);
+bool AcquireFrame(VulkanContextResources* vulkanContextResources);
 void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources);
 
 void BeginVulkanCommandRecording(VulkanContextResources* vulkanContextResources);

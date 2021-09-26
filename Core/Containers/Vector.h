@@ -17,18 +17,18 @@ struct VectorBase
 {
     enum : uint32 { eInvalidIndex = MAX_UINT32 };
 
-    ~VectorBase();
+    TINKER_API ~VectorBase();
 
 protected:
     uint8* m_data;
     uint32 m_size;
     uint32 m_capacity;
 
-    void Reserve(uint32 numEles, uint32 eleSize);
-    void Resize(uint32 numEles, uint32 eleSize);
-    void Clear();
-    void PushBackRaw(void* data, uint32 eleSize);
-    uint32 Find(void* data, uint32 eleSize, CompareFunc Compare) const;
+    TINKER_API void Reserve(uint32 numEles, uint32 eleSize);
+    TINKER_API void Resize(uint32 numEles, uint32 eleSize);
+    TINKER_API void Clear();
+    TINKER_API void PushBackRaw(void* data, uint32 eleSize);
+    TINKER_API uint32 Find(void* data, uint32 eleSize, CompareFunc Compare) const;
 };
 
 // NOTE: probably only works for POD types right now

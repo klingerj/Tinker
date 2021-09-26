@@ -1,3 +1,4 @@
+#include "Platform/Graphics/GraphicsCommon.h"
 #include "Platform/Graphics/Vulkan.h"
 #include "Platform/Graphics/VulkanTypes.h"
 #include "Core/Utility/Logging.h"
@@ -9,7 +10,7 @@ namespace Platform
 namespace Graphics
 {
 
-void AcquireFrame(VulkanContextResources* vulkanContextResources)
+bool AcquireFrame(VulkanContextResources* vulkanContextResources)
 {
     vkWaitForFences(vulkanContextResources->resources->device, 1, &vulkanContextResources->resources->fences[vulkanContextResources->resources->currentFrame], VK_TRUE, (uint64)-1);
 
@@ -30,21 +31,23 @@ void AcquireFrame(VulkanContextResources* vulkanContextResources)
             Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
             VulkanDestroySwapChain(vulkanContextResources);
             VulkanCreateSwapChain(vulkanContextResources);
-            return; // Don't present on this frame
+            return false; // Don't present on this frame
         }
         else
         {
             Core::Utility::LogMsg("Platform", "Not recreating swap chain!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
+
+        return false;
     }
 
-    if (vulkanContextResources->resources->imageInFlightFences[currentSwapChainImageIndex] != VK_NULL_HANDLE) {
+    if (vulkanContextResources->resources->imageInFlightFences[currentSwapChainImageIndex] != VK_NULL_HANDLE)
         vkWaitForFences(vulkanContextResources->resources->device, 1, &vulkanContextResources->resources->imageInFlightFences[currentSwapChainImageIndex], VK_TRUE, (uint64)-1);
-    }
-    vulkanContextResources->resources->imageInFlightFences[currentSwapChainImageIndex] = vulkanContextResources->resources->fences[vulkanContextResources->resources->currentFrame];
 
+    vulkanContextResources->resources->imageInFlightFences[currentSwapChainImageIndex] = vulkanContextResources->resources->fences[vulkanContextResources->resources->currentFrame];
     vulkanContextResources->resources->currentSwapChainImage = currentSwapChainImageIndex;
+    return true;
 }
 
 void VulkanSubmitFrame(VulkanContextResources* vulkanContextResources)

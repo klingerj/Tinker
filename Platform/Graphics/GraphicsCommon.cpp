@@ -2,8 +2,7 @@
 #include "Platform/PlatformCommon.h"
 #include "Core/Utility/Logging.h"
 
-#ifdef _VULKAN
-#define VULKAN
+#ifdef VULKAN
 #include "Vulkan.h"
 #endif
 
@@ -35,14 +34,13 @@ void RecreateContext(const PlatformWindowHandles* windowHandles, uint32 windowWi
     #endif
 }
 
-bool WindowResize()
+void WindowResize()
 {
     #ifdef VULKAN
     VulkanDestroyAllPSOPerms(&g_vulkanContextResources);
     VulkanDestroyAllRenderPasses(&g_vulkanContextResources);
     VulkanDestroySwapChain(&g_vulkanContextResources);
     VulkanCreateSwapChain(&g_vulkanContextResources);
-    return g_vulkanContextResources.isSwapChainValid;
     #endif
 }
 
@@ -67,10 +65,13 @@ void DestroyAllPSOPerms()
     #endif
 }
 
-void AcquireFrame()
+bool AcquireFrame()
 {
     #ifdef VULKAN
-    AcquireFrame(&g_vulkanContextResources);
+    if (g_vulkanContextResources.isSwapChainValid)
+        return AcquireFrame(&g_vulkanContextResources);
+    
+    return false;
     #endif
 }
 

@@ -19,7 +19,7 @@ namespace LogSeverity
     };
 }
 
-void LogMsg(const char* prefix, const char* msg, uint32 severity);
+TINKER_API void LogMsg(const char* prefix, const char* msg, uint32 severity);
 
 }
 }

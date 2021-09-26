@@ -3,6 +3,7 @@
 #include "Core/CoreDefines.h"
 #include "Core/Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
+#include "Platform/Graphics/GraphicsCommon.h"
 
 // Buffer that has no persistent staging buffer
 // Meant to updated once with a staging buffer which should
@@ -50,9 +51,9 @@ struct TransientPrim
     uint32 numVertices;
 };
 
-void CreateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
-void DestroyAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
-void UpdateAnimatedPoly(const Tk::Platform::PlatformAPIFuncs* platformFuncs, TransientPrim* prim);
+void CreateAnimatedPoly(TransientPrim* prim);
+void DestroyAnimatedPoly(TransientPrim* prim);
+void UpdateAnimatedPoly(TransientPrim* prim);
 void DrawAnimatedPoly(TransientPrim* prim, Tk::Platform::Graphics::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream);
 
 typedef struct game_graphics_data
@@ -106,20 +107,20 @@ using DefaultGeometry = struct default_geometry<numPoints, numIndices>;
 #define DEFAULT_QUAD_NUM_INDICES 6
 extern DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad;
 
-void CreateDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
-void DestroyDefaultGeometry(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+void CreateDefaultGeometry(Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void DestroyDefaultGeometry();
 
 template <typename DefGeom>
-void DestroyDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+void DestroyDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
 {
-    platformFuncs->DestroyDescriptor(geom.m_descriptor);
+    Graphics::DestroyDescriptor(geom.m_descriptor);
     geom.m_descriptor = Platform::Graphics::DefaultDescHandle_Invalid;
 }
 
 template <typename DefGeom>
-void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
 {
-    geom.m_descriptor = platformFuncs->CreateDescriptor(DESCLAYOUT_ID_ASSET_VBS);
+    geom.m_descriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS);
 
     Platform::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
@@ -130,6 +131,6 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom, const Tk::Platfo
     descDataHandles[2].InitInvalid();
 
     Platform::Graphics::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { geom.m_descriptor, Platform::Graphics::DefaultDescHandle_Invalid, Platform::Graphics::DefaultDescHandle_Invalid };
-    platformFuncs->WriteDescriptor(DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], 1, &descDataHandles[0], 1);
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], 1, &descDataHandles[0], 1);
 }
 

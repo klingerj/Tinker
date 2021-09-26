@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/CoreDefines.h"
 #include "Core/Math/VectorTypes.h"
 
 namespace Tk
@@ -31,7 +32,7 @@ struct Intersection
     }
 };
 
-void IntersectRayTriangle(const Ray& ray, const v3f* triangle, Intersection& isx);
+TINKER_API void IntersectRayTriangle(const Ray& ray, const v3f* triangle, Intersection& isx);
 //void IntersectRayCube(const Ray& ray, const Box& box);
 
 }

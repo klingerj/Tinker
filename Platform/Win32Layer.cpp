@@ -37,6 +37,7 @@ typedef struct win32_game_code
 
 Win32GameCode g_GameCode;
 const char* GameDllStr = "TinkerGame.dll";
+const bool enableDllHotloading = true;
 
 volatile bool runGame = true;
 
@@ -82,6 +83,9 @@ PlatformWindowHandles g_platformWindowHandles;
 
 static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
+    if (!enableDllHotloading)
+        return false;
+
     HANDLE gameDllFileHandle = CreateFile(gameDllSourcePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     if (gameDllFileHandle == INVALID_HANDLE_VALUE)
@@ -337,16 +341,17 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
             if (isDown)
             {
                 Core::Utility::LogMsg("Platform", "Attempting to hotload shaders...\n", Core::Utility::LogSeverity::eInfo);
+
                 const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
                 if (SystemCommand(shaderCompileCommand) == 0)
                 {
                     g_ShaderManager.ReloadShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-                    g_ShaderManager.LoadAllShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                 }
                 else
                 {
                     Core::Utility::LogMsg("Platform", "Failed to create shader compile process! Shaders will not be compiled.\n", Core::Utility::LogSeverity::eWarning);
                 }
+
                 Core::Utility::LogMsg("Platform", "...Done.\n", Core::Utility::LogSeverity::eInfo);
             }
 
@@ -431,13 +436,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
             if (wParam == 1) // window minimized - can't create swap chain with size 0
             {
                 Graphics::WindowMinimized();
+                g_GlobalAppParams.m_windowWidth = 0;
+                g_GlobalAppParams.m_windowHeight = 0;
             }
             else
             {
                 // Normal window resize / maximize
-                g_GlobalAppParams.m_windowWidth = LOWORD(lParam);
-                g_GlobalAppParams.m_windowHeight = HIWORD(lParam);
-                g_windowResized = true; // swap chain will be recreated later when this flag is checked
+                uint32 newWindowWidth = LOWORD(lParam);
+                uint32 newWindowHeight = HIWORD(lParam);
+                if (newWindowWidth != g_GlobalAppParams.m_windowWidth ||
+                    newWindowHeight != g_GlobalAppParams.m_windowHeight)
+                {
+                    g_GlobalAppParams.m_windowWidth = newWindowWidth;
+                    g_GlobalAppParams.m_windowHeight = newWindowHeight;
+                    g_windowResized = true; // swap chain will be recreated later when this flag is checked
+                }
             }
 
             break;
@@ -655,25 +668,25 @@ wWinMain(HINSTANCE hInstance,
                 ProcessWindowMessages();
             }
 
-            bool shouldRenderFrame = false;
             {
                 //TIMED_SCOPED_BLOCK("Window resize check");
                 if (g_windowResized)
                 {
-                    shouldRenderFrame = Graphics::WindowResize();
+                    Graphics::WindowResize();
                     g_ShaderManager.CreateWindowDependentResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    g_windowResized = false;
                 }
-                g_windowResized = false;
+            }
+
+            bool shouldRenderFrame = false;
+            {
+                //TIMED_SCOPED_BLOCK("Acquire Frame");
+                shouldRenderFrame = Graphics::AcquireFrame();
             }
 
             if (shouldRenderFrame)
             {
-                {
-                    //TIMED_SCOPED_BLOCK("Acquire Frame");
-                    Graphics::AcquireFrame();
-                }
-
                 {
                     //TIMED_SCOPED_BLOCK("Game Update");
 
@@ -706,6 +719,9 @@ wWinMain(HINSTANCE hInstance,
             #endif
 
             Graphics::RecreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            g_ShaderManager.Shutdown();
+            g_ShaderManager.Startup();
+            g_ShaderManager.LoadAllShaderResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
         }
     }
 

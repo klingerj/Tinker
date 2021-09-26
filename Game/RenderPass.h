@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Platform/PlatformGameAPI.h"
+#include "Platform/Graphics/GraphicsCommon.h"
 
 struct GameRenderPass
 {
@@ -11,9 +11,9 @@ struct GameRenderPass
     const char* debugLabel;
 };
 
-void StartRenderPass(GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
-void EndRenderPass(GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream);
-void DrawMeshDataCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
-    uint32 numInstances, Tk::Platform::ResourceHandle indexBufferHandle,
+void StartRenderPass(GameRenderPass* renderPass, Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void EndRenderPass(GameRenderPass* renderPass, Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void DrawMeshDataCommand(Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
+    uint32 numInstances, Tk::Platform::Graphics::ResourceHandle indexBufferHandle,
     uint32 shaderID, uint32 blendState, uint32 depthState,
     Tk::Platform::Graphics::DescriptorHandle* descriptors, const char* debugLabel);
