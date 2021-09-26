@@ -7,7 +7,8 @@ set VulkanVersion=1.2.141.2
 set VulkanPath="C:\VulkanSDK"\%VulkanVersion%
 
 echo.
-echo Compiling GLSL shaders to SPV, using Vulkan SDK v%VulkanVersion% glslangValidator
+echo ***** Compiling GLSL shaders to SPV *****
+echo Using Vulkan SDK v%VulkanVersion% glslangValidator
 echo.
 
 echo Deleting existing .spv files...

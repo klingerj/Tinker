@@ -6,8 +6,6 @@ namespace Tk
 {
 namespace Core
 {
-using namespace Math;
-
 namespace Raytracing
 {
 

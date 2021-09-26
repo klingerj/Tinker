@@ -1,11 +1,10 @@
 #include "HashMapBenchmarks.h"
-#include "Core/Containers/HashMap.h"
+#include "Core/DataStructures/HashMap.h"
 
 #include <unordered_map>
 
 using namespace Tk;
 using namespace Core;
-using namespace Containers;
 
 const uint32 g_numEles = 10000000;
 uint32 keys[g_numEles] = {};

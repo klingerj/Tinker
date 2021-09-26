@@ -1,4 +1,4 @@
-#include "Core/Containers/HashMap.h"
+#include "HashMap.h"
 #include "Core/Mem.h"
 
 #include <string.h>
@@ -6,8 +6,6 @@
 namespace Tk
 {
 namespace Core
-{
-namespace Containers
 {
 
 HashMapBase::~HashMapBase()
@@ -89,6 +87,5 @@ uint32 HashMapBase::Insert(uint32 index, void* key, void* value, CompareKeyFunc 
     return eInvalidIndex;
 }
 
-}
 }
 }

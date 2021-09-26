@@ -9,7 +9,6 @@
 using namespace Tk;
 using namespace Platform;
 using namespace Core;
-using namespace Containers;
 
 void Init(View* view, uint32 maxInstances)
 {

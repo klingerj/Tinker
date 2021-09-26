@@ -18,8 +18,6 @@ namespace Tk
 {
 namespace Core
 {
-namespace Containers
-{
 
 // Open addressing hashmap
 struct HashMapBase
@@ -116,6 +114,5 @@ public:
     }
 };
 
-}
 }
 }

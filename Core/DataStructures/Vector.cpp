@@ -1,4 +1,4 @@
-#include "Core/Containers/Vector.h"
+#include "Vector.h"
 #include "Core/Mem.h"
 
 #include <string.h>
@@ -6,8 +6,6 @@
 namespace Tk
 {
 namespace Core
-{
-namespace Containers
 {
 
 VectorBase::~VectorBase()
@@ -86,6 +84,5 @@ uint32 VectorBase::Find(void* data, uint32 eleSize, CompareFunc Compare) const
     return eInvalidIndex;
 }
 
-}
 }
 }
