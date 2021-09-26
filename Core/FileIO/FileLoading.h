@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/CoreDefines.h"
 #include "Core/Math/VectorTypes.h"
 
 // TODO: put this somewhere else
@@ -36,10 +37,10 @@ namespace FileLoading
 
 // Returns the number of vertices in the obj file
 // Counts the number of rows that start with f, times 3 (assumes triangulated mesh)
-uint32 GetOBJVertCount(uint8* entireFileBuffer, uint32 bufferSizeInBytes);
+TINKER_API uint32 GetOBJVertCount(uint8* entireFileBuffer, uint32 bufferSizeInBytes);
 
 // Parse the OBJ file and populate existing vertex attribute buffers
-void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, uint32* dstIndexBuffer,
+TINKER_API void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, uint32* dstIndexBuffer,
     uint8* entireFileBuffer, uint32 bufferSizeInBytes);
 
 // Loading of various texture types
@@ -77,9 +78,9 @@ typedef struct bmp_info
 } BMPInfo;
 #pragma pack(pop)
 
-BMPInfo GetBMPInfo(uint8* entireFileBuffer);
+TINKER_API BMPInfo GetBMPInfo(uint8* entireFileBuffer);
 
-void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, uint32 height, uint16 bitsPerPx);
+TINKER_API void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, uint32 height, uint16 bitsPerPx);
 
 }
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Core/Mem.h"
-
 #include <stdint.h>
 #include <math.h>
 #include <cmath>
@@ -89,8 +87,12 @@ inline uint32 SafeTruncateUint64(uint64 value)
 #define OPTIMIZATIONS_OFF __pragma(optimize( "", off ))
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && (defined(TINKER_APP) || defined(TINKER_GAME))
+#ifdef TINKER_EXPORTING
 #define TINKER_API __declspec(dllexport)
+#else
+#define TINKER_API __declspec(dllimport)
+#endif
 #else
 #define TINKER_API
 #endif

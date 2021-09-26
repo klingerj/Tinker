@@ -6,14 +6,14 @@
 using namespace Tk;
 using namespace Platform;
 
-void DrawMeshDataCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
-    uint32 numInstances, Tk::Platform::ResourceHandle indexBufferHandle,
+void DrawMeshDataCommand(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
+    uint32 numInstances, Graphics::ResourceHandle indexBufferHandle,
     uint32 shaderID, uint32 blendState, uint32 depthState,
-    Tk::Platform::DescriptorHandle* descriptors, const char* debugLabel)
+    Graphics::DescriptorHandle* descriptors, const char* debugLabel)
 {
-    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = Platform::GraphicsCmd::eDrawCall;
+    command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
     command->debugLabel = debugLabel;
 
     command->m_numIndices = numIndices;
@@ -22,15 +22,15 @@ void DrawMeshDataCommand(Tk::Platform::GraphicsCommandStream* graphicsCommandStr
     command->m_blendState = blendState;
     command->m_depthState = depthState;
     command->m_indexBufferHandle = indexBufferHandle;
-    memcpy(command->m_descriptors, descriptors, sizeof(DescriptorHandle) * MAX_DESCRIPTOR_SETS_PER_SHADER);
+    memcpy(command->m_descriptors, descriptors, sizeof(Graphics::DescriptorHandle) * MAX_DESCRIPTOR_SETS_PER_SHADER);
     ++graphicsCommandStream->m_numCommands;
 }
 
-void StartRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* graphicsCommandStream)
+void StartRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
-    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = Platform::GraphicsCmd::eRenderPassBegin;
+    command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = renderPass->debugLabel;
     command->m_framebufferHandle = renderPass->framebuffer;
     command->m_renderPassID = renderPass->renderPassID;
@@ -40,11 +40,11 @@ void StartRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream
     ++command;
 }
 
-void EndRenderPass(GameRenderPass* renderPass, Platform::GraphicsCommandStream* graphicsCommandStream)
+void EndRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
-    Tk::Platform::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = Platform::GraphicsCmd::eRenderPassEnd;
+    command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
     command->debugLabel = renderPass->debugLabel;
     ++graphicsCommandStream->m_numCommands;
     ++command;

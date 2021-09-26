@@ -9,10 +9,6 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
-rem Run game build script
-rem call build_game.bat %BuildConfig%
-echo.
-
 echo ***** Building Tinker App *****
 
 pushd ..
@@ -35,25 +31,44 @@ if "%BuildConfig%" == "Debug" (
     )
 
 rem *********************************************************************************************************
-rem TinkerPlatform - primary exe
-set SourceListPlatform=../Platform/Win32Layer.cpp ../Platform/Win32PlatformGameAPI.cpp ../Platform/Graphics/GraphicsCommon.cpp ../Platform/ShaderManager.cpp ../Platform/Graphics/Vulkan.cpp ../Platform/Graphics/VulkanCmds.cpp ../Platform/Graphics/VulkanTypes.cpp ../Platform/Graphics/VulkanGPUMemAllocator.cpp ../Platform/Win32Logging.cpp ../Platform/Win32Client.cpp
-set CompileDefines=/D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ 
+rem TinkerApp - primary exe
+set SourceListApp=
+set SourceListApp=%SourceListApp%../Platform/Win32Layer.cpp 
+set SourceListApp=%SourceListApp%../Platform/Win32PlatformGameAPI.cpp 
+set SourceListApp=%SourceListApp%../Platform/Win32Logging.cpp 
+set SourceListApp=%SourceListApp%../Platform/Win32Client.cpp 
+set SourceListApp=%SourceListApp%../Platform/Graphics/GraphicsCommon.cpp 
+set SourceListApp=%SourceListApp%../Platform/ShaderManager.cpp 
+set SourceListApp=%SourceListApp%../Platform/Graphics/Vulkan.cpp 
+set SourceListApp=%SourceListApp%../Platform/Graphics/VulkanCmds.cpp 
+set SourceListApp=%SourceListApp%../Platform/Graphics/VulkanTypes.cpp 
+set SourceListApp=%SourceListApp%../Platform/Graphics/VulkanGPUMemAllocator.cpp 
+set SourceListApp=%SourceListApp%../Core/Math/VectorTypes.cpp 
+set SourceListApp=%SourceListApp%../Core/FileIO/FileLoading.cpp 
+set SourceListApp=%SourceListApp%../Core/Containers/Vector.cpp 
+set SourceListApp=%SourceListApp%../Core/Containers/HashMap.cpp 
+set SourceListApp=%SourceListApp%../Core/Utility/MemTracker.cpp 
+set SourceListApp=%SourceListApp%../Core/Mem.cpp 
+set SourceListApp=%SourceListApp%../Core/Raytracing/RayIntersection.cpp 
+set SourceListApp=%SourceListApp%../Core/Raytracing/AccelStructures/Octree.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/VirtualTexture.cpp 
+set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
 
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
-    set DebugLinkFlagsPlatform=/pdb:TinkerPlatform.pdb
-    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1 /D_VULKAN 
+    set DebugCompileFlagsApp=/TinkerApp.pdb
+    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb
+    set CompileDefines=%CompileDefines%
     ) else (
-    set DebugCompileFlagsPlatform=/FdTinkerPlatform.pdb
-    set DebugLinkFlagsPlatform=/pdb:TinkerPlatform.pdb
-    set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1 /D_VULKAN 
+    set DebugCompileFlagsApp=/FdTinkerApp.pdb
+    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb
+    set CompileDefines=%CompileDefines%
     )
 
 set CompileIncludePaths=/I ../ 
 set LibsToLink=user32.lib ws2_32.lib 
 
 echo.
-echo Building TinkerPlatform.exe...
+echo Building TinkerApp.exe...
 
 rem Vulkan
 set VulkanVersion=1.2.141.2
@@ -64,17 +79,23 @@ set VulkanPath=C:\VulkanSDK\%VulkanVersion%
 set CompileIncludePaths=%CompileIncludePaths% /I %VulkanPath%/Include
 set LibsToLink=%LibsToLink% %VulkanPath%\Lib\vulkan-1.lib
 
-set OBJDir=%cd%\obj_platform\
+set OBJDir=%cd%\obj_app\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsPlatform% %SourceListPlatform% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerApp.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsPlatform% %SourceListApp% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerApp.exe
 
+echo.
 if EXIST TinkerApp.exp (
     echo Deleting unnecessary file TinkerApp.exp
+    echo.
     del TinkerApp.exp
     )
 
 :DoneBuild
 popd
 popd
+
+rem Run game build script
+call build_game.bat %BuildConfig%
+echo.

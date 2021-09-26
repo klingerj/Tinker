@@ -35,8 +35,8 @@ set CompileIncludePaths=/I ../
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
-set SourceListGame=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Game/GameMain.cpp ../Game/GraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/RenderPass.cpp ../Game/Raytracing.cpp ../Game/View.cpp ../Game/Camera.cpp ../Game/InputManager.cpp
-set CompileDefines=/D_ASSETS_DIR=..\\Assets\\ 
+set SourceListGame=../Game/GameMain.cpp ../Game/GraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/RenderPass.cpp ../Game/Raytracing.cpp ../Game/View.cpp ../Game/Camera.cpp ../Game/InputManager.cpp
+set CompileDefines=/DTINKER_GAME /D_ASSETS_DIR=..\\Assets\\ 
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%
@@ -61,7 +61,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerCore.lib /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerApp.lib /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
 
 rem Delete unnecessary files
 echo.
@@ -71,6 +71,7 @@ if EXIST TinkerGame.lib (
     )
 if EXIST TinkerGame.exp (
     echo Deleting unnecessary file TinkerGame.exp
+    echo.
     del TinkerGame.exp
     )
 

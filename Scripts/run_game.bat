@@ -7,7 +7,7 @@ if NOT EXIST .\Build (
     )
 pushd .\Build
 
-TinkerPlatform.exe
+TinkerApp.exe
 
 popd
 popd

@@ -2,9 +2,9 @@
 #include "Core/Mem.h"
 #include "Core/FileIO/FileLoading.h"
 #include "Core/Raytracing/AccelStructures/Octree.h"
+#include "Core/Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
 #include "Camera.h"
-#include "Core/Utility/ScopedTimer.h"
 #include "AssetManager.h"
 
 #include <string.h>

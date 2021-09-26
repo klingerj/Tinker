@@ -59,7 +59,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerBenchmark.exe...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerCore.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerApp.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
 
 :DoneBuild
 popd

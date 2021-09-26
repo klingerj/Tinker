@@ -412,12 +412,12 @@ DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
 
 void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
 void RecreateContext(const PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
-bool WindowResize();
+void WindowResize();
 void WindowMinimized();
 void DestroyContext();
 void DestroyAllPSOPerms();
 
-void AcquireFrame();
+bool AcquireFrame();
 void ProcessGraphicsCommandStream(const Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit);
 void BeginFrameRecording();
 void EndFrameRecording();

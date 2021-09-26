@@ -2,6 +2,7 @@
 #include "AssetManager.h"
 #include "RenderPass.h"
 #include "Core/Sorting.h"
+#include "Platform/Graphics/GraphicsCommon.h"
 
 #include <string.h>
 
@@ -27,16 +28,16 @@ CMP_LT_FUNC(CompareLessThan_InstanceByAssetID)
     return ((Instance*)A)->m_assetID < ((Instance*)B)->m_assetID;
 }
 
-void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platform::PlatformAPIFuncs* platformFuncs)
+void Update(View* view, Graphics::DescriptorSetDataHandles* descDataHandles)
 {
     DescriptorData_Global globalData = {};
     globalData.viewProj = view->m_projMatrix * view->m_viewMatrix;
 
     // Globals
-    Platform::ResourceHandle bufferHandle = descDataHandles[0].handles[0];
-    void* descDataBufferMemPtr_Global = platformFuncs->MapResource(bufferHandle);
+    Graphics::ResourceHandle bufferHandle = descDataHandles[0].handles[0];
+    void* descDataBufferMemPtr_Global = Graphics::MapResource(bufferHandle);
     memcpy(descDataBufferMemPtr_Global, &globalData, sizeof(DescriptorData_Global));
-    platformFuncs->UnmapResource(bufferHandle);
+    Graphics::UnmapResource(bufferHandle);
 
     // Sort instances for batching of draw calls
     uint32 activeInstanceCounter = 0;
@@ -69,9 +70,9 @@ void Update(View* view, DescriptorSetDataHandles* descDataHandles, const Platfor
     const DescriptorData_Instance* instanceData = (const DescriptorData_Instance*)view->m_instanceData_sorted.Data();
     bufferHandle = descDataHandles[1].handles[0];
 
-    void* descDataBufferMemPtr_Instance = platformFuncs->MapResource(bufferHandle);
+    void* descDataBufferMemPtr_Instance = Graphics::MapResource(bufferHandle);
     memcpy(descDataBufferMemPtr_Instance, instanceData, sizeof(DescriptorData_Instance) * view->m_numInstances);
-    platformFuncs->UnmapResource(bufferHandle);
+    Graphics::UnmapResource(bufferHandle);
 }
 
 uint32 CreateInstance(View* view, uint32 assetID)
@@ -123,8 +124,8 @@ void SetInstanceData(View* view, uint32 instanceID, const DescriptorData_Instanc
     memcpy(&view->m_instanceData[instanceID], data, sizeof(DescriptorData_Instance));
 }
 
-void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platform::GraphicsCommandStream* graphicsCommandStream,
-    uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Platform::DescriptorHandle* descriptors)
+void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Graphics::GraphicsCommandStream* graphicsCommandStream,
+    uint32 shaderID, uint32 blendState, uint32 depthState, Graphics::DescriptorHandle* descriptors)
 {
     if (view->m_numInstances > 0)
     {
@@ -165,4 +166,3 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Tk::Platfo
         }
     }
 }
-

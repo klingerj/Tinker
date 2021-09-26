@@ -27,7 +27,7 @@ struct HashMapBase
     // TODO: assuming uint32 here
     enum : uint32 { eInvalidIndex = MAX_UINT32 };
     
-    ~HashMapBase();
+    TINKER_API ~HashMapBase();
 
 private:
     uint32 ProbeFunc(uint32 index) const
@@ -39,10 +39,10 @@ protected:
     uint8* m_data;
     uint32 m_size;
 
-    void Reserve(uint32 numEles, uint32 eleSize);
-    uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare) const;
-    void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const;
-    uint32 Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize);
+    TINKER_API void Reserve(uint32 numEles, uint32 eleSize);
+    TINKER_API uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare) const;
+    TINKER_API void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const;
+    TINKER_API uint32 Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize);
 };
 
 
