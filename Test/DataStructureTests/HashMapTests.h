@@ -1,4 +1,4 @@
-#include "Core/DataStructures/HashMap.h"
+#include "DataStructures/HashMap.h"
 #include "TinkerTest.h"
 
 #include <unordered_map>

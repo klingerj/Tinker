@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Core/CoreDefines.h"
-#include "Core/Math/VectorTypes.h"
-#include "Core/Raytracing/RayIntersection.h"
+#include "CoreDefines.h"
+#include "Math/VectorTypes.h"
+#include "Raytracing/RayIntersection.h"
 
 namespace Tk
 {

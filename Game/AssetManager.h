@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GraphicsTypes.h"
-#include "Core/Allocators.h"
+#include "Allocators.h"
 
 #ifdef _ASSETS_DIR
 #define ASSETS_PATH STRINGIFY(_ASSETS_DIR)

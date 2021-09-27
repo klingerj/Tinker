@@ -3,7 +3,7 @@
 #endif
 
 #include "Platform/Win32Client.h"
-#include "Core/Utility/Logging.h"
+#include "Utility/Logging.h"
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>

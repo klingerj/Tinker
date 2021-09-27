@@ -1,4 +1,4 @@
-#include "Core/Raytracing/RayIntersection.h"
+#include "RayIntersection.h"
 
 namespace Tk
 {

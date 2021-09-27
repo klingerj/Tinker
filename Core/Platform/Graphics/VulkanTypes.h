@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/CoreDefines.h"
-#include "Core/Allocators.h"
+#include "CoreDefines.h"
+#include "Allocators.h"
 #include "Platform/PlatformGameGraphicsAPI.h"
 
 #include <vulkan/vulkan.h>

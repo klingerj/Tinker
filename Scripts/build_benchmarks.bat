@@ -38,7 +38,7 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerBenchmark - benchmarking
-set SourceListBenchmark=../Platform/Win32PlatformGameAPI.cpp ../Platform/Win32Logging.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp ../Benchmark/ContainerBenchmarks/HashMapBenchmarks.cpp
+set SourceListBenchmark=../Core/Platform/Win32PlatformGameAPI.cpp ../Core/Platform/Win32Logging.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp ../Benchmark/ContainerBenchmarks/HashMapBenchmarks.cpp
 set CompileDefines= 
 
 if "%BuildConfig%" == "Debug" (
@@ -51,7 +51,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=0
     )
 
-set CompileIncludePaths=/I ../ 
+set CompileIncludePaths=/I ../Core 
 
 set OBJDir=%cd%\obj_benchmark\
 if NOT EXIST %OBJDir% mkdir %OBJDir%

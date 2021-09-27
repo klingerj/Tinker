@@ -31,7 +31,7 @@ if "%BuildConfig%" == "Debug" (
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
-set CompileIncludePaths=/I ../ 
+set CompileIncludePaths=/I ../Core 
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library

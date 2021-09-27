@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Platform/PlatformGameGraphicsAPI.h"
-#include "Core/Math/VectorTypes.h"
+#include "Math/VectorTypes.h"
 
 namespace Tk
 {

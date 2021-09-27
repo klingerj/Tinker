@@ -33,7 +33,7 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerServer
-set SourceListServer=../Platform/Win32Server.cpp
+set SourceListServer=../Core/Platform/Win32Server.cpp
 set CompileDefines= 
 
 if "%BuildConfig%" == "Debug" (
@@ -49,7 +49,7 @@ if "%BuildConfig%" == "Debug" (
 echo.
 echo Building TinkerServer.exe...
 
-set CompileIncludePaths= 
+set CompileIncludePaths=/I ../Core 
 set LibsToLink=user32.lib ws2_32.lib
 
 set OBJDir=%cd%\obj_server\

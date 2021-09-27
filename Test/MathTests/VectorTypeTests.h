@@ -1,4 +1,4 @@
-#include "Core/Math/VectorTypes.h"
+#include "Math/VectorTypes.h"
 #include "TinkerTest.h"
 
 using namespace Tk;

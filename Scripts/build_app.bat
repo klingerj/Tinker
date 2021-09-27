@@ -33,16 +33,16 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem TinkerApp - primary exe
 set SourceListApp=
-set SourceListApp=%SourceListApp%../Platform/Win32Layer.cpp 
-set SourceListApp=%SourceListApp%../Platform/Win32PlatformGameAPI.cpp 
-set SourceListApp=%SourceListApp%../Platform/Win32Logging.cpp 
-set SourceListApp=%SourceListApp%../Platform/Win32Client.cpp 
-set SourceListApp=%SourceListApp%../Platform/Graphics/GraphicsCommon.cpp 
-set SourceListApp=%SourceListApp%../Platform/ShaderManager.cpp 
-set SourceListApp=%SourceListApp%../Platform/Graphics/Vulkan.cpp 
-set SourceListApp=%SourceListApp%../Platform/Graphics/VulkanCmds.cpp 
-set SourceListApp=%SourceListApp%../Platform/Graphics/VulkanTypes.cpp 
-set SourceListApp=%SourceListApp%../Platform/Graphics/VulkanGPUMemAllocator.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Win32Layer.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Win32PlatformGameAPI.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Win32Logging.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Win32Client.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Graphics/GraphicsCommon.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/ShaderManager.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Graphics/Vulkan.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Graphics/VulkanCmds.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Graphics/VulkanTypes.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Graphics/VulkanGPUMemAllocator.cpp 
 set SourceListApp=%SourceListApp%../Core/Math/VectorTypes.cpp 
 set SourceListApp=%SourceListApp%../Core/FileLoading.cpp 
 set SourceListApp=%SourceListApp%../Core/DataStructures/Vector.cpp 
@@ -64,7 +64,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=%CompileDefines%
     )
 
-set CompileIncludePaths=/I ../ 
+set CompileIncludePaths=/I ../Core 
 set LibsToLink=user32.lib ws2_32.lib 
 
 echo.

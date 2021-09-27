@@ -36,11 +36,11 @@ if "%BuildConfig%" == "Debug" (
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
-set CompileIncludePaths=/I ../ 
+set CompileIncludePaths=/I ../Core 
 
 rem *********************************************************************************************************
 rem TinkerTest - unit testing
-set SourceListTest=../Platform/Win32PlatformGameAPI.cpp ../Test/TestMain.cpp
+set SourceListTest=../Core/Platform/Win32PlatformGameAPI.cpp ../Test/TestMain.cpp
 set CompileDefines= 
 
 if "%BuildConfig%" == "Debug" (

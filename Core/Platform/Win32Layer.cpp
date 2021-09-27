@@ -1,12 +1,12 @@
-#include "Core/CoreDefines.h"
+#include "CoreDefines.h"
 #include "PlatformCommon.h"
 #include "PlatformGameAPI.h"
 #include "Win32Client.h"
 #include "Win32WorkerThreadPool.cpp"
 #include "Graphics/GraphicsCommon.h"
 #include "ShaderManager.h"
-#include "Core/Utility/Logging.h"
-#include "Core/Utility/ScopedTimer.h"
+#include "Utility/Logging.h"
+#include "Utility/ScopedTimer.h"
 
 #include <windows.h>
 #include <Windowsx.h>

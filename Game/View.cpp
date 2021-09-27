@@ -1,7 +1,7 @@
 #include "View.h"
 #include "AssetManager.h"
 #include "RenderPass.h"
-#include "Core/Sorting.h"
+#include "Sorting.h"
 #include "Platform/Graphics/GraphicsCommon.h"
 
 #include <string.h>

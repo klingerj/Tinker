@@ -1,6 +1,6 @@
 #include "GraphicsCommon.h"
 #include "Platform/PlatformCommon.h"
-#include "Core/Utility/Logging.h"
+#include "Utility/Logging.h"
 
 #ifdef VULKAN
 #include "Vulkan.h"
