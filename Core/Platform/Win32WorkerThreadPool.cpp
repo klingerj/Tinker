@@ -1,5 +1,5 @@
 #include "PlatformGameAPI.h"
-#include "Core/DataStructures/RingBuffer.h"
+#include "DataStructures/RingBuffer.h"
 
 #include <process.h>
 #include <windows.h>

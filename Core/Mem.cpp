@@ -1,5 +1,5 @@
-#include "Core/Utility/MemTracker.h"
-#include "Core/Mem.h"
+#include "Utility/MemTracker.h"
+#include "Mem.h"
 
 namespace Tk
 {

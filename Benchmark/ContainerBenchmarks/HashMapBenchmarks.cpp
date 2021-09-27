@@ -1,5 +1,5 @@
 #include "HashMapBenchmarks.h"
-#include "Core/DataStructures/HashMap.h"
+#include "DataStructures/HashMap.h"
 
 #include <unordered_map>
 

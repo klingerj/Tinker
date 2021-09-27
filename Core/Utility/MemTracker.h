@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/CoreDefines.h"
+#include "CoreDefines.h"
 
 #define MAX_RECORDS MAX_UINT16
 

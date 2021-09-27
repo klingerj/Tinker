@@ -1,4 +1,4 @@
-#include "Core/Sorting.h"
+#include "Sorting.h"
 #include "TinkerTest.h"
 
 // TODO: have own rng

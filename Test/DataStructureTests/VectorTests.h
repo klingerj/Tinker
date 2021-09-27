@@ -1,4 +1,4 @@
-#include "Core/DataStructures/Vector.h"
+#include "DataStructures/Vector.h"
 #include "TinkerTest.h"
 
 void Test_VectorConstructorDefault()

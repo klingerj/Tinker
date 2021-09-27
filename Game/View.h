@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Platform/PlatformGameAPI.h"
-#include "Core/Math/VectorTypes.h"
-#include "Core/DataStructures/Vector.h"
+#include "Math/VectorTypes.h"
+#include "DataStructures/Vector.h"
 #include "GraphicsTypes.h"
 
 struct Instance

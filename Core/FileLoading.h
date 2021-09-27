@@ -1,10 +1,10 @@
 #pragma once
 
-#include "Core/CoreDefines.h"
-#include "Core/Math/VectorTypes.h"
+#include "CoreDefines.h"
+#include "Math/VectorTypes.h"
 
 // TODO: put this somewhere else
-#include "Core/Mem.h"
+#include "Mem.h"
 struct Buffer
 {
     uint8* m_data = nullptr;

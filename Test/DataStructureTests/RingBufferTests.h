@@ -1,4 +1,4 @@
-#include "Core/DataStructures/RingBuffer.h"
+#include "DataStructures/RingBuffer.h"
 #include "TinkerTest.h"
 
 void Test_RingBufferConstructorDefault()

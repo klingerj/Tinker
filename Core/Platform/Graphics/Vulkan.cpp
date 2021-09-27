@@ -1,7 +1,7 @@
 #include "Platform/Graphics/VulkanTypes.h"
 #include "Platform/Graphics/Vulkan.h"
 #include "Platform/PlatformCommon.h"
-#include "Core/Utility/Logging.h"
+#include "Utility/Logging.h"
 
 #include <iostream>
 // TODO: move this to be a compile define

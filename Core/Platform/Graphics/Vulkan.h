@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/CoreDefines.h"
-#include "Core/Math/VectorTypes.h"
+#include "CoreDefines.h"
+#include "Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
 
 namespace Tk

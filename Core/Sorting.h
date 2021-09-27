@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/CoreDefines.h"
-#include "Core/Mem.h"
+#include "CoreDefines.h"
+#include "Mem.h"
 
 #include <string.h>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Raytracing/RayIntersection.h"
+#include "Raytracing/RayIntersection.h"
 #include "Platform/PlatformGameAPI.h"
 
 void RayMeshIntersectNaive(Tk::Core::Raytracing::Intersection& isx);
