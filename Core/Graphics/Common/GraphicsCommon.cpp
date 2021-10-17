@@ -4,6 +4,7 @@
 
 #ifdef VULKAN
 #include "Graphics/Vulkan/Vulkan.h"
+#include "Graphics/Vulkan/VulkanTypes.h"
 #endif
 
 namespace Tk
@@ -18,8 +19,7 @@ void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uin
     int result = 0;
 
     #ifdef VULKAN
-    g_vulkanContextResources = {};
-    result = InitVulkan(&g_vulkanContextResources, windowHandles, windowWidth, windowHeight);
+    result = InitVulkan(windowHandles, windowWidth, windowHeight);
     #endif
 
     if (result)
@@ -29,18 +29,18 @@ void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uin
 void RecreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     #ifdef VULKAN
-    DestroyVulkan(&g_vulkanContextResources);
-    InitVulkan(&g_vulkanContextResources, windowHandles, windowWidth, windowHeight);
+    DestroyVulkan();
+    InitVulkan(windowHandles, windowWidth, windowHeight);
     #endif
 }
 
 void WindowResize()
 {
     #ifdef VULKAN
-    VulkanDestroyAllPSOPerms(&g_vulkanContextResources);
-    VulkanDestroyAllRenderPasses(&g_vulkanContextResources);
-    VulkanDestroySwapChain(&g_vulkanContextResources);
-    VulkanCreateSwapChain(&g_vulkanContextResources);
+    VulkanDestroyAllPSOPerms();
+    VulkanDestroyAllRenderPasses();
+    VulkanDestroySwapChain();
+    VulkanCreateSwapChain();
     #endif
 }
 
@@ -54,14 +54,14 @@ void WindowMinimized()
 void DestroyContext()
 {
     #ifdef VULKAN
-    DestroyVulkan(&g_vulkanContextResources);
+    DestroyVulkan();
     #endif
 }
 
 void DestroyAllPSOPerms()
 {
     #ifdef VULKAN
-    VulkanDestroyAllPSOPerms(&g_vulkanContextResources);
+    VulkanDestroyAllPSOPerms();
     #endif
 }
 
@@ -69,7 +69,7 @@ bool AcquireFrame()
 {
     #ifdef VULKAN
     if (g_vulkanContextResources.isSwapChainValid)
-        return AcquireFrame(&g_vulkanContextResources);
+        return VulkanAcquireFrame();
     
     return false;
     #endif
@@ -108,19 +108,17 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     currentBlendState = currentCmd.m_blendState;
                     currentDepthState = currentCmd.m_depthState;
 
-                    Graphics::VulkanRecordCommandBindShader(&g_vulkanContextResources,
-                        currentShaderID, currentBlendState, currentDepthState,
+                    Graphics::VulkanRecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState,
                         &currentCmd.m_descriptors[0], immediateSubmit);
 
                     // Push constant
                     {
                         uint32 data[4] = {};
                         data[0] = instanceCount;
-                        Graphics::VulkanRecordCommandPushConstant(&g_vulkanContextResources, (uint8*)data, sizeof(uint32) * 4, currentShaderID, currentBlendState, currentDepthState);
+                        Graphics::VulkanRecordCommandPushConstant((uint8*)data, sizeof(uint32) * 4, currentShaderID, currentBlendState, currentDepthState);
                     }
 
-                    Graphics::VulkanRecordCommandDrawCall(&g_vulkanContextResources,
-                        currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
+                    Graphics::VulkanRecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
                         currentCmd.m_numInstances, currentCmd.debugLabel, immediateSubmit);
 
                     #endif
@@ -132,8 +130,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 case GraphicsCmd::eMemTransfer:
                 {
                     #ifdef VULKAN
-                    Graphics::VulkanRecordCommandMemoryTransfer(&g_vulkanContextResources,
-                        currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
+                    Graphics::VulkanRecordCommandMemoryTransfer(currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
                         currentCmd.debugLabel, immediateSubmit);
                     #endif
 
@@ -144,8 +141,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 {
                     instanceCount = 0;
                     #ifdef VULKAN
-                    Graphics::VulkanRecordCommandRenderPassBegin(&g_vulkanContextResources,
-                        currentCmd.m_framebufferHandle, currentCmd.m_renderPassID,
+                    Graphics::VulkanRecordCommandRenderPassBegin(currentCmd.m_framebufferHandle, currentCmd.m_renderPassID,
                         currentCmd.m_renderWidth, currentCmd.m_renderHeight,
                         currentCmd.debugLabel, immediateSubmit);
                     #endif
@@ -156,7 +152,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 case GraphicsCmd::eRenderPassEnd:
                 {
                     #ifdef VULKAN
-                    Graphics::VulkanRecordCommandRenderPassEnd(&g_vulkanContextResources, immediateSubmit);
+                    Graphics::VulkanRecordCommandRenderPassEnd(immediateSubmit);
                     #endif
 
                     break;
@@ -165,7 +161,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 case GraphicsCmd::eLayoutTransition:
                 {
                     #ifdef VULKAN
-                    Graphics::VulkanRecordCommandTransitionLayout(&g_vulkanContextResources, currentCmd.m_imageHandle,
+                    Graphics::VulkanRecordCommandTransitionLayout(currentCmd.m_imageHandle,
                         currentCmd.m_startLayout, currentCmd.m_endLayout,
                         currentCmd.debugLabel, immediateSubmit);
                     #endif
@@ -176,7 +172,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 case GraphicsCmd::eClearImage:
                 {
                     #ifdef VULKAN
-                    Graphics::VulkanRecordCommandClearImage(&g_vulkanContextResources, currentCmd.m_imageHandle,
+                    Graphics::VulkanRecordCommandClearImage(currentCmd.m_imageHandle,
                         currentCmd.m_clearValue, currentCmd.debugLabel, immediateSubmit);
                     #endif
 
@@ -197,66 +193,65 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 void BeginFrameRecording()
 {
     #ifdef VULKAN
-    BeginVulkanCommandRecording(&g_vulkanContextResources);
+    BeginVulkanCommandRecording();
     #endif
 }
 
 void EndFrameRecording()
 {
     #ifdef VULKAN
-    EndVulkanCommandRecording(&g_vulkanContextResources);
+    EndVulkanCommandRecording();
     #endif
 }
 
 void SubmitFrameToGPU()
 {
     #ifdef VULKAN
-    Graphics::VulkanSubmitFrame(&g_vulkanContextResources);
+    Graphics::VulkanSubmitFrame();
     #endif
 }
 
 SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
 {
     #ifdef VULKAN
-    Graphics::BeginVulkanCommandRecordingImmediate(&g_vulkanContextResources);
+    Graphics::BeginVulkanCommandRecordingImmediate();
     ProcessGraphicsCommandStream(graphicsCommandStream, true);
-    Graphics::EndVulkanCommandRecordingImmediate(&g_vulkanContextResources);
+    Graphics::EndVulkanCommandRecordingImmediate();
     #endif
 }
 
 CREATE_RESOURCE(CreateResource)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateResource(&g_vulkanContextResources, resDesc);
+    return Graphics::VulkanCreateResource(resDesc);
     #endif
 }
 
 DESTROY_RESOURCE(DestroyResource)
 {
     #ifdef VULKAN
-    Graphics::VulkanDestroyResource(&g_vulkanContextResources, handle);
+    Graphics::VulkanDestroyResource(handle);
     #endif
 }
 
 MAP_RESOURCE(MapResource)
 {
     #ifdef VULKAN
-    return Graphics::VulkanMapResource(&g_vulkanContextResources, handle);
+    return Graphics::VulkanMapResource(handle);
     #endif
 }
 
 UNMAP_RESOURCE(UnmapResource)
 {
     #ifdef VULKAN
-    Graphics::VulkanUnmapResource(&g_vulkanContextResources, handle);
+    Graphics::VulkanUnmapResource(handle);
     #endif
 }
 
 CREATE_FRAMEBUFFER(CreateFramebuffer)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateFramebuffer(&g_vulkanContextResources,
-        rtColorHandles, numRTColorHandles, rtDepthHandle,
+    return Graphics::VulkanCreateFramebuffer(rtColorHandles, numRTColorHandles, rtDepthHandle,
         width, height, renderPassID);
     #endif
 }
@@ -264,15 +259,14 @@ CREATE_FRAMEBUFFER(CreateFramebuffer)
 DESTROY_FRAMEBUFFER(DestroyFramebuffer)
 {
     #ifdef VULKAN
-    Graphics::VulkanDestroyFramebuffer(&g_vulkanContextResources, handle);
+    Graphics::VulkanDestroyFramebuffer(handle);
     #endif
 }
 
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateGraphicsPipeline(&g_vulkanContextResources,
-        vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
+    return Graphics::VulkanCreateGraphicsPipeline(vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
         shaderID, viewportWidth, viewportHeight, renderPassID, descriptorHandles, numDescriptorHandles);
     #endif
 }
@@ -280,49 +274,49 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 CREATE_DESCRIPTOR(CreateDescriptor)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateDescriptor(&g_vulkanContextResources, descLayoutID);
+    return Graphics::VulkanCreateDescriptor(descLayoutID);
     #endif
 }
 
 DESTROY_DESCRIPTOR(DestroyDescriptor)
 {
     #ifdef VULKAN
-    Graphics::VulkanDestroyDescriptor(&g_vulkanContextResources, handle);
+    Graphics::VulkanDestroyDescriptor(handle);
     #endif
 }
 
 DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
 {
     #ifdef VULKAN
-    Graphics::VulkanDestroyAllDescriptors(&g_vulkanContextResources);
+    Graphics::VulkanDestroyAllDescriptors();
     #endif
 }
 
 WRITE_DESCRIPTOR(WriteDescriptor)
 {
     #ifdef VULKAN
-    Graphics::VulkanWriteDescriptor(&g_vulkanContextResources, descLayoutID, descSetHandle, descSetDataHandles, descSetDataCount);
+    Graphics::VulkanWriteDescriptor(descLayoutID, descSetHandle, descSetDataHandles, descSetDataCount);
     #endif
 }
 
 CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateDescriptorLayout(&g_vulkanContextResources, descLayoutID, descLayout);
+    return Graphics::VulkanCreateDescriptorLayout(descLayoutID, descLayout);
     #endif
 }
 
 CREATE_RENDERPASS(CreateRenderPass)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateRenderPass(&g_vulkanContextResources, renderPassID, numColorRTs, colorFormat, startLayout, endLayout, depthFormat);
+    return Graphics::VulkanCreateRenderPass(renderPassID, numColorRTs, colorFormat, startLayout, endLayout, depthFormat);
     #endif
 }
 
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
 {
     #ifdef VULKAN
-    Graphics::DestroyPSOPerms(&g_vulkanContextResources, shaderID);
+    Graphics::DestroyPSOPerms(shaderID);
     #endif
 }
 

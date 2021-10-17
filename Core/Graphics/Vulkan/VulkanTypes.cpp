@@ -11,6 +11,8 @@ namespace Core
 namespace Graphics
 {
 
+VulkanContextResources g_vulkanContextResources;
+
 void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMemory* deviceMemory,
     VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags)
 {
@@ -47,7 +49,7 @@ void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMe
 
 void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeInBytes,
     VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
-    VkBuffer& buffer, VkDeviceMemory& deviceMemory)
+    VkBuffer* buffer, VkDeviceMemory* deviceMemory)
 {
     VkBufferCreateInfo bufferCreateInfo = {};
     bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -55,7 +57,7 @@ void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeI
     bufferCreateInfo.usage = usageFlags;
     bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &buffer);
+    VkResult result = vkCreateBuffer(device, &bufferCreateInfo, nullptr, buffer);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan buffer!", Core::Utility::LogSeverity::eCritical);
@@ -63,11 +65,11 @@ void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeI
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(device, *buffer, &memRequirements);
 
-    AllocGPUMemory(physicalDevice, device, &deviceMemory, memRequirements, propertyFlags);
+    AllocGPUMemory(physicalDevice, device, deviceMemory, memRequirements, propertyFlags);
 
-    vkBindBufferMemory(device, buffer, deviceMemory, 0);
+    vkBindBufferMemory(device, *buffer, *deviceMemory, 0);
 }
 
 void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView, uint32 arrayEles)
