@@ -37,12 +37,13 @@ set SourceListApp=%SourceListApp%../Core/Platform/Win32Layer.cpp
 set SourceListApp=%SourceListApp%../Core/Platform/Win32PlatformGameAPI.cpp 
 set SourceListApp=%SourceListApp%../Core/Platform/Win32Logging.cpp 
 set SourceListApp=%SourceListApp%../Core/Platform/Win32Client.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Graphics/GraphicsCommon.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/ShaderManager.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Graphics/Vulkan.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Graphics/VulkanCmds.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Graphics/VulkanTypes.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Graphics/VulkanGPUMemAllocator.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/Vulkan.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/VulkanCmds.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/VulkanTypes.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/VulkanGPUMemAllocator.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/Common/GraphicsCommon.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/Common/ShaderManager.cpp 
+set SourceListApp=%SourceListApp%../Core/Graphics/Common/VirtualTexture.cpp 
 set SourceListApp=%SourceListApp%../Core/Math/VectorTypes.cpp 
 set SourceListApp=%SourceListApp%../Core/FileLoading.cpp 
 set SourceListApp=%SourceListApp%../Core/DataStructures/Vector.cpp 
@@ -51,7 +52,6 @@ set SourceListApp=%SourceListApp%../Core/Utility/MemTracker.cpp
 set SourceListApp=%SourceListApp%../Core/Mem.cpp 
 set SourceListApp=%SourceListApp%../Core/Raytracing/RayIntersection.cpp 
 set SourceListApp=%SourceListApp%../Core/Raytracing/AccelStructures/Octree.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/VirtualTexture.cpp 
 set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
 
 if "%BuildConfig%" == "Debug" (

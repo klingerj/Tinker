@@ -3,7 +3,7 @@
 #include "CoreDefines.h"
 #include "Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
-#include "Platform/Graphics/GraphicsCommon.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 // Buffer that has no persistent staging buffer
 // Meant to updated once with a staging buffer which should

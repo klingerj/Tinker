@@ -2,7 +2,7 @@
 
 #include "CoreDefines.h"
 #include "Allocators.h"
-#include "Platform/PlatformGameGraphicsAPI.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 #include <vulkan/vulkan.h>
 

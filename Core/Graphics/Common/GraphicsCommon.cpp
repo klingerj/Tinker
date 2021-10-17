@@ -3,7 +3,7 @@
 #include "Utility/Logging.h"
 
 #ifdef VULKAN
-#include "Vulkan.h"
+#include "Graphics/Vulkan/Vulkan.h"
 #endif
 
 namespace Tk

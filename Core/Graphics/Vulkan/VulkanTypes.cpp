@@ -1,5 +1,5 @@
-#include "Platform/Graphics/VulkanTypes.h"
-#include "Platform/Graphics/VulkanGPUMemAllocator.h"
+#include "VulkanTypes.h"
+#include "Graphics/Vulkan/VulkanGPUMemAllocator.h"
 #include "Utility/Logging.h"
 
 #include <cstring>

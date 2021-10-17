@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Platform/Graphics/GraphicsCommon.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 struct GameRenderPass
 {

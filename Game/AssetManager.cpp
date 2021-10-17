@@ -1,7 +1,7 @@
 #include "AssetManager.h"
 #include "Utility/Logging.h"
 #include "FileLoading.h"
-#include "Platform/Graphics/GraphicsCommon.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 #include <string.h>
 

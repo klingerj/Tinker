@@ -1,5 +1,5 @@
-#include "Platform/Graphics/VulkanTypes.h"
-#include "Platform/Graphics/Vulkan.h"
+#include "Graphics/Vulkan/VulkanTypes.h"
+#include "Graphics/Vulkan/Vulkan.h"
 #include "Platform/PlatformCommon.h"
 #include "Utility/Logging.h"
 
