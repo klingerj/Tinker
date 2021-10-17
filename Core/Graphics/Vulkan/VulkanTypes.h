@@ -86,8 +86,11 @@ typedef struct
     bool hasDepth;
 } VulkanRenderPass;
 
-struct VkResources
+struct VulkanContextResources
 {
+    bool isInitted = false;
+    bool isSwapChainValid = false;
+    
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger = NULL;
     PFN_vkCmdBeginDebugUtilsLabelEXT pfnCmdBeginDebugUtilsLabelEXT = NULL;
@@ -142,13 +145,14 @@ struct VkResources
 
     VulkanRenderPass renderPasses[eMaxRenderPasses];
 };
+extern VulkanContextResources g_vulkanContextResources;
 
 // Helpers
 void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMemory* deviceMem,
     VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags);
 void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeInBytes,
     VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
-    VkBuffer& buffer, VkDeviceMemory& deviceMemory);
+    VkBuffer* buffer, VkDeviceMemory* deviceMemory);
 void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView, uint32 arrayEles);
 void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRTs, VkImageView depthRT,
     uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* frameBuffer);
