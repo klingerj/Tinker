@@ -1,5 +1,5 @@
 #include "Platform/PlatformGameAPI.h"
-#include "Platform/Graphics/GraphicsCommon.h"
+#include "Graphics/Common/GraphicsCommon.h"
 #include "Allocators.h"
 #include "Math/VectorTypes.h"
 #include "FileLoading.h"

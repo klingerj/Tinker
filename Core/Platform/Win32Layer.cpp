@@ -3,8 +3,8 @@
 #include "PlatformGameAPI.h"
 #include "Win32Client.h"
 #include "Win32WorkerThreadPool.cpp"
-#include "Graphics/GraphicsCommon.h"
-#include "ShaderManager.h"
+#include "Graphics/Common/GraphicsCommon.h"
+#include "Graphics/Common/ShaderManager.h"
 #include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
 

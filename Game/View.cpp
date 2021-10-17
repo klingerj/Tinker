@@ -2,7 +2,7 @@
 #include "AssetManager.h"
 #include "RenderPass.h"
 #include "Sorting.h"
-#include "Platform/Graphics/GraphicsCommon.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 #include <string.h>
 

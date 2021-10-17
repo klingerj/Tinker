@@ -1,6 +1,6 @@
-#include "Platform/Graphics/GraphicsCommon.h"
-#include "Platform/Graphics/Vulkan.h"
-#include "Platform/Graphics/VulkanTypes.h"
+#include "Graphics/Common/GraphicsCommon.h"
+#include "Graphics/Vulkan/Vulkan.h"
+#include "Graphics/Vulkan/VulkanTypes.h"
 #include "Utility/Logging.h"
 
 namespace Tk

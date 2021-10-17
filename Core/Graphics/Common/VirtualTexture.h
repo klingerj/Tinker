@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Platform/PlatformGameAPI.h"
-#include "Platform/Graphics/GraphicsCommon.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 namespace Tk
 {
