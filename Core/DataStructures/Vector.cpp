@@ -21,7 +21,8 @@ void VectorBase::Reserve(uint32 numEles, uint32 eleSize)
     if (numEles > m_capacity)
     {
         void* newData = CoreMalloc(numEles * eleSize);
-        memcpy(newData, m_data, m_size * eleSize);
+        if (m_size > 0)
+            memcpy(newData, m_data, m_size * eleSize);
 
         CoreFree(m_data); // free old data
         m_data = (uint8*)newData;

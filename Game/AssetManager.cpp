@@ -555,8 +555,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID)
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Graphics::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { data->m_descriptor, Graphics::DefaultDescHandle_Invalid, Graphics::DefaultDescHandle_Invalid };
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], 1, &descDataHandles[0], 1);
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, data->m_descriptor, &descDataHandles[0], 1);
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

@@ -1358,89 +1358,83 @@ void VulkanDestroyAllDescriptors(VulkanContextResources* vulkanContextResources)
     vulkanContextResources->resources->descriptorPool = VK_NULL_HANDLE;
 }
 
-void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
+void VulkanWriteDescriptor(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
 {
-    TINKER_ASSERT(descSetCount <= MAX_DESCRIPTOR_SETS_PER_SHADER);
     TINKER_ASSERT(descSetDataCount <= MAX_BINDINGS_PER_SET);
 
     DescriptorLayout* descLayout = &vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings;
 
     for (uint32 uiImage = 0; uiImage < vulkanContextResources->resources->numSwapChainImages; ++uiImage)
     {
-        for (uint32 uiSet = 0; uiSet < descSetCount; ++uiSet)
+        VkDescriptorSet* descriptorSet =
+            &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiImage].descriptorSet;
+
+        // Descriptor layout
+        VkWriteDescriptorSet descSetWrites[MAX_BINDINGS_PER_SET] = {};
+        uint32 descriptorCount = 0;
+
+        // Desc set info data
+        VkDescriptorBufferInfo descBufferInfo[MAX_BINDINGS_PER_SET] = {};
+        VkDescriptorImageInfo descImageInfo[MAX_BINDINGS_PER_SET] = {};
+
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
         {
-            if (descSetHandles[uiSet] == DefaultDescHandle_Invalid) continue;
-            VkDescriptorSet* descriptorSet =
-                &vulkanContextResources->resources->vulkanDescriptorResourcePool.PtrFromHandle(descSetHandles[uiSet].m_hDesc)->resourceChain[uiImage].descriptorSet;
+            descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
-            // Descriptor layout
-            VkWriteDescriptorSet descSetWrites[MAX_BINDINGS_PER_SET] = {};
-            uint32 descriptorCount = 0;
-
-            // Desc set info data
-            VkDescriptorBufferInfo descBufferInfo[MAX_BINDINGS_PER_SET] = {};
-            VkDescriptorImageInfo descImageInfo[MAX_BINDINGS_PER_SET] = {};
-
-            for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+            uint32 type = descLayout->params[uiDesc].type;
+            if (type != DescriptorType::eMax)
             {
-                descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                VulkanMemResource* res = &vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes)->resourceChain[uiImage];
 
-                uint32 type = descLayout->params[uiDesc].type;
-                if (type != DescriptorType::eMax)
+                switch (type)
                 {
-                    VulkanMemResource* res = &vulkanContextResources->resources->vulkanMemResourcePool.PtrFromHandle(descSetDataHandles[uiSet].handles[uiDesc].m_hRes)->resourceChain[uiImage];
-
-                    switch (type)
+                    case DescriptorType::eBuffer:
+                    case DescriptorType::eSSBO:
                     {
-                        case DescriptorType::eBuffer:
-                        case DescriptorType::eSSBO:
-                        {
-                            VkBuffer* buffer = &res->buffer;
+                        VkBuffer* buffer = &res->buffer;
 
-                            descBufferInfo[descriptorCount].buffer = *buffer;
-                            descBufferInfo[descriptorCount].offset = 0;
-                            descBufferInfo[descriptorCount].range = VK_WHOLE_SIZE;
+                        descBufferInfo[descriptorCount].buffer = *buffer;
+                        descBufferInfo[descriptorCount].offset = 0;
+                        descBufferInfo[descriptorCount].range = VK_WHOLE_SIZE;
 
-                            descSetWrites[descriptorCount].dstSet = *descriptorSet;
-                            descSetWrites[descriptorCount].dstBinding = descriptorCount;
-                            descSetWrites[descriptorCount].dstArrayElement = 0;
-                            descSetWrites[descriptorCount].descriptorType = GetVkDescriptorType(type);
-                            descSetWrites[descriptorCount].descriptorCount = 1;
-                            descSetWrites[descriptorCount].pBufferInfo = &descBufferInfo[descriptorCount];
-                            break;
-                        }
-
-                        case DescriptorType::eSampledImage:
-                        {
-                            VkImageView* imageView = &res->imageView;
-
-                            descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                            descImageInfo[descriptorCount].imageView = *imageView;
-                            descImageInfo[descriptorCount].sampler = vulkanContextResources->resources->linearSampler;
-
-                            descSetWrites[descriptorCount].dstSet = *descriptorSet;
-                            descSetWrites[descriptorCount].dstBinding = descriptorCount;
-                            descSetWrites[descriptorCount].dstArrayElement = 0;
-                            descSetWrites[descriptorCount].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                            descSetWrites[descriptorCount].descriptorCount = 1;
-                            descSetWrites[descriptorCount].pImageInfo = &descImageInfo[descriptorCount];
-                            break;
-                        }
-
-                        default:
-                        {
-                            break;
-                        }
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = GetVkDescriptorType(type);
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pBufferInfo = &descBufferInfo[descriptorCount];
+                        break;
                     }
-                    ++descriptorCount;
+
+                    case DescriptorType::eSampledImage:
+                    {
+                        VkImageView* imageView = &res->imageView;
+
+                        descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                        descImageInfo[descriptorCount].imageView = *imageView;
+                        descImageInfo[descriptorCount].sampler = vulkanContextResources->resources->linearSampler;
+
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pImageInfo = &descImageInfo[descriptorCount];
+                        break;
+                    }
+
+                    default:
+                    {
+                        break;
+                    }
                 }
+                ++descriptorCount;
             }
+        }
 
-            if (descriptorCount > 0)
-            {
-                vkUpdateDescriptorSets(vulkanContextResources->resources->device, descriptorCount, descSetWrites, 0, nullptr);
-            }
-
+        if (descriptorCount > 0)
+        {
+            vkUpdateDescriptorSets(vulkanContextResources->resources->device, descriptorCount, descSetWrites, 0, nullptr);
         }
     }
 }
