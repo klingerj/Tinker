@@ -2,6 +2,7 @@
 #include "Utility/Logging.h"
 #include "FileLoading.h"
 #include "Graphics/Common/GraphicsCommon.h"
+#include "Platform/PlatformGameAPI.h"
 
 #include <string.h>
 
@@ -16,7 +17,7 @@ void AssetManager::FreeMemory()
     m_meshBufferAllocator.ExplicitFree();
 }
 
-void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
+void AssetManager::LoadAllAssets()
 {
     // Meshes
     const uint32 numMeshAssets = 4;
@@ -40,7 +41,7 @@ void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
     uint32 meshFileSizes[numMeshAssets] = {};
     for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
     {
-        uint32 fileSize = platformFuncs->GetFileSize(meshFilePaths[uiAsset]); // + 1 byte for manual EOF byte
+        uint32 fileSize = GetEntireFileSize(meshFilePaths[uiAsset]); // + 1 byte for manual EOF byte
         meshFileSizes[uiAsset] = fileSize;
         totalMeshFileBytes += fileSize;
     }
@@ -68,11 +69,11 @@ void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
 
             jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
                 {
-                    platformFuncs->ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
+                    ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
                     currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
                 });
 
-            platformFuncs->EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
+            EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
         }
         jobs.WaitOnJobs();
         jobs.FreeList();
@@ -86,7 +87,7 @@ void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
             accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
 
             currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
-            platformFuncs->ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
+            ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
         }
     }
 
@@ -157,7 +158,7 @@ void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
     uint32 textureFileSizes[numTextureAssets] = {};
     for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
     {
-        uint32 fileSize = platformFuncs->GetFileSize(textureFilePaths[uiAsset]);
+        uint32 fileSize = GetEntireFileSize(textureFilePaths[uiAsset]);
         textureFileSizes[uiAsset] = fileSize;
         totalTextureFileBytes += fileSize;
     }
@@ -180,10 +181,10 @@ void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
 
             jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
                 {
-                    platformFuncs->ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
+                    ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
                 });
 
-            platformFuncs->EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
+            EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
         }
         jobs.WaitOnJobs();
         jobs.FreeList();
@@ -198,7 +199,7 @@ void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
             accumFileOffset += currentTextureFileSize;
 
             // Read each file into the buffer
-            platformFuncs->ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
+            ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
         }
     }
 
@@ -308,14 +309,14 @@ void AssetManager::LoadAllAssets(const PlatformAPIFuncs* platformFuncs)
     delete textureFileDataBuffer;
 }
 
-void AssetManager::InitAssetGraphicsResources(Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream)
+void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // Meshes
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
     {
         // Create buffer handles
         Graphics::ResourceDesc desc;
-        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
+        desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
         void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
@@ -385,7 +386,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Platform::Graphics::GraphicsCo
         // Create, submit, and execute the buffer copy commands
         {
             // Graphics command to copy from staging buffer to gpu local buffer
-            Tk::Platform::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+            Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
             // Position buffer copy
             command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
@@ -519,16 +520,16 @@ void AssetManager::DestroyAllMeshData()
         StaticMeshData* meshData = GetMeshGraphicsDataByID(uiAssetID);
 
         Graphics::DestroyResource(meshData->m_positionBuffer.gpuBufferHandle);
-        meshData->m_positionBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
+        meshData->m_positionBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
         Graphics::DestroyResource(meshData->m_uvBuffer.gpuBufferHandle);
-        meshData->m_uvBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
+        meshData->m_uvBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
         Graphics::DestroyResource(meshData->m_normalBuffer.gpuBufferHandle);
-        meshData->m_normalBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
+        meshData->m_normalBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
         Graphics::DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
-        meshData->m_indexBuffer.gpuBufferHandle = Platform::Graphics::DefaultResHandle_Invalid;
+        meshData->m_indexBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
 
         Graphics::DestroyDescriptor(meshData->m_descriptor);
-        meshData->m_descriptor = Platform::Graphics::DefaultDescHandle_Invalid;
+        meshData->m_descriptor = Core::Graphics::DefaultDescHandle_Invalid;
     }
 }
 
@@ -546,7 +547,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID)
     StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
     data->m_descriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS);
 
-    Platform::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
     descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
     descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;

@@ -20,7 +20,7 @@
 
 namespace Tk
 {
-namespace Platform
+namespace Core
 {
 namespace Graphics
 {
@@ -1048,7 +1048,7 @@ bool VulkanCreateGraphicsPipeline(VulkanContextResources* vulkanContextResources
     return true;
 }
 
-bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const Platform::Graphics::DescriptorLayout* descriptorLayout)
+bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources, uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout)
 {
     // Descriptor layout
     VkDescriptorSetLayoutBinding descLayoutBinding[MAX_BINDINGS_PER_SET] = {};
@@ -1096,7 +1096,7 @@ bool VulkanCreateDescriptorLayout(VulkanContextResources* vulkanContextResources
         TINKER_ASSERT(0);
     }
 
-    memcpy(&vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings, &descriptorLayout->params[0], sizeof(Platform::Graphics::DescriptorLayout));
+    memcpy(&vulkanContextResources->resources->descLayouts[descriptorLayoutID].bindings, &descriptorLayout->params[0], sizeof(DescriptorLayout));
     return true;
 }
 

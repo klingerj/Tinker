@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Platform/PlatformGameInputHandlingAPI.h"
+#include "Platform/PlatformGameAPI.h"
 
 namespace Tk
 {
@@ -10,7 +10,7 @@ namespace Tk
     }
 }
 
-#define INPUT_CALLBACK(name) void name(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 param)
+#define INPUT_CALLBACK(name) void name(uint32 param)
 typedef INPUT_CALLBACK(input_callback_func);
 
 struct InputManager
@@ -33,7 +33,7 @@ public:
     void BindKeycodeCallback_KeyDown(uint32 keycode, input_callback_func callback);
     void BindKeycodeCallback_KeyDownRepeat(uint32 keycode, input_callback_func callback);
     void BindMousecodeCallback(uint32 mousecode, input_callback_func callback);
-    void UpdateAndDoCallbacks(const Tk::Platform::InputStateDeltas* inputStateDeltas, const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+    void UpdateAndDoCallbacks(const Tk::Platform::InputStateDeltas* inputStateDeltas);
 };
 
 extern InputManager g_InputManager;

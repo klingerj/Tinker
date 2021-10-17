@@ -25,7 +25,7 @@ void InputManager::BindMousecodeCallback(uint32 mousecode, input_callback_func c
     m_callbacks_mouse[mousecode] = callback;
 }
 
-void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputStateDeltas, const Platform::PlatformAPIFuncs* platformFuncs)
+void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputStateDeltas)
 {
     m_previousInputState = m_currentInputState;
 
@@ -56,7 +56,7 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
             input_callback_func* cbFunc = m_callbacks_keyDown[uiKeycode];
             if (cbFunc)
             {
-                cbFunc(platformFuncs, 1); // TODO: figure out how/if to handle multiple state changes in a frame?
+                cbFunc(1); // TODO: figure out how/if to handle multiple state changes in a frame?
             }
         }
         else
@@ -67,7 +67,7 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
                 input_callback_func* cbFunc = m_callbacks_keyDownRepeat[uiKeycode];
                 if (cbFunc)
                 {
-                    cbFunc(platformFuncs, 1);
+                    cbFunc(1);
                 }
             }
         }
@@ -83,7 +83,7 @@ void InputManager::UpdateAndDoCallbacks(const Platform::InputStateDeltas* inputS
             input_callback_func* cbFunc = m_callbacks_mouse[uiMousecode];
             if (cbFunc)
             {
-                cbFunc(platformFuncs, (uint32)disp);
+                cbFunc((uint32)disp);
             }
         }
     }

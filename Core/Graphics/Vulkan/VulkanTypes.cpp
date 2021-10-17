@@ -6,7 +6,7 @@
 
 namespace Tk
 {
-namespace Platform
+namespace Core
 {
 namespace Graphics
 {

@@ -86,8 +86,8 @@ WorkerJob* CreateNewThreadJob(T t)
     return new JobFunc<T>(t);
 }
 
-#define ENQUEUE_WORKER_THREAD_JOB(name) void name(WorkerJob* newJob)
-typedef ENQUEUE_WORKER_THREAD_JOB(enqueue_worker_thread_job);
+#define ENQUEUE_WORKER_THREAD_JOB(name) TINKER_API void name(WorkerJob* newJob)
+ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob);
 
 }
 }
