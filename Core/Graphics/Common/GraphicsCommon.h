@@ -4,9 +4,14 @@
 
 namespace Tk
 {
+
 namespace Platform
 {
 struct PlatformWindowHandles;
+}
+
+namespace Core
+{
 struct GraphicsCommandStream;
 
 namespace Graphics
@@ -396,11 +401,11 @@ DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors);
 #define WRITE_DESCRIPTOR(name) TINKER_API void name(uint32 descLayoutID, DescriptorHandle* descSetHandles, uint32 descSetCount, DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
 WRITE_DESCRIPTOR(WriteDescriptor);
 
-#define SUBMIT_CMDS_IMMEDIATE(name) TINKER_API void name(Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream)
+#define SUBMIT_CMDS_IMMEDIATE(name) TINKER_API void name(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate);
 
 // Not meant for the user
-#define CREATE_DESCRIPTOR_LAYOUT(name) TINKER_API bool name(uint32 descLayoutID, const Platform::Graphics::DescriptorLayout* descLayout)
+#define CREATE_DESCRIPTOR_LAYOUT(name) TINKER_API bool name(uint32 descLayoutID, const DescriptorLayout* descLayout)
 CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout);
 
 #define CREATE_RENDERPASS(name) TINKER_API bool name(uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
@@ -410,14 +415,14 @@ CREATE_RENDERPASS(CreateRenderPass);
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
 
 void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
-void RecreateContext(const PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
+void RecreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
 void WindowResize();
 void WindowMinimized();
 void DestroyContext();
 void DestroyAllPSOPerms();
 
 bool AcquireFrame();
-void ProcessGraphicsCommandStream(const Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit);
+void ProcessGraphicsCommandStream(const Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit);
 void BeginFrameRecording();
 void EndFrameRecording();
 void SubmitFrameToGPU();

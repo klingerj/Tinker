@@ -22,7 +22,7 @@
 
 namespace Tk
 {
-namespace Platform
+namespace Core
 {
 namespace Graphics
 {
@@ -76,7 +76,7 @@ typedef struct
 typedef struct
 {
     VkDescriptorSetLayout layout;
-    Platform::Graphics::DescriptorLayout bindings;
+    Core::Graphics::DescriptorLayout bindings;
 } VulkanDescriptorLayout;
 
 typedef struct

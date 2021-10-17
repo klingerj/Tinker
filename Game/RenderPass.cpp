@@ -4,7 +4,7 @@
 #include <string.h>
 
 using namespace Tk;
-using namespace Platform;
+using namespace Core;
 
 void DrawMeshDataCommand(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
     uint32 numInstances, Graphics::ResourceHandle indexBufferHandle,

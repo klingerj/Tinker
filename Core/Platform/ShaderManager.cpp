@@ -26,21 +26,20 @@ void ShaderManager::Shutdown()
     shaderBytecodeAllocator.ExplicitFree();
 }
 
-void ShaderManager::ReloadShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)
+void ShaderManager::ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight)
 {
     Graphics::DestroyAllPSOPerms();
-    LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
+    LoadAllShaders(newWindowWidth, newWindowHeight);
 }
 
-void ShaderManager::CreateWindowDependentResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)
+void ShaderManager::CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight)
 {
-    CreateAllRenderPasses(platformFuncs);
+    CreateAllRenderPasses();
     // TODO: don't reload the shader every time we resize, need to be able to reference existing bytecode... which we do already store
-    LoadAllShaders(platformFuncs, newWindowWidth, newWindowHeight);
+    LoadAllShaders(newWindowWidth, newWindowHeight);
 }
 
-bool ShaderManager::LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFuncs,
-    const char* vertexShaderFileName, const char* fragmentShaderFileName,
+bool ShaderManager::LoadShader(const char* vertexShaderFileName, const char* fragmentShaderFileName,
     uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
     uint32* descLayouts, uint32 numDescLayouts)
 {
@@ -50,18 +49,18 @@ bool ShaderManager::LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFun
 
     if (vertexShaderFileName)
     {
-        vertexShaderFileSize = platformFuncs->GetFileSize(vertexShaderFileName);
+        vertexShaderFileSize = GetEntireFileSize(vertexShaderFileName);
         vertexShaderBuffer = shaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
         TINKER_ASSERT(vertexShaderBuffer);
-        platformFuncs->ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
+        ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
     }
 
     if (fragmentShaderFileName)
     {
-        fragmentShaderFileSize = platformFuncs->GetFileSize(fragmentShaderFileName);
+        fragmentShaderFileSize = GetEntireFileSize(fragmentShaderFileName);
         fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
         TINKER_ASSERT(fragmentShaderBuffer);
-        platformFuncs->ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
+        ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
     }
 
     const bool created = Tk::Platform::Graphics::CreateGraphicsPipeline(
@@ -71,7 +70,7 @@ bool ShaderManager::LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFun
     return created;
 }
 
-void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+void ShaderManager::LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
 {
     shaderBytecodeAllocator.ExplicitFree();
     shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
@@ -99,7 +98,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     // Swap chain blit
     descLayouts[0] = Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, Graphics::RENDERPASS_ID_SWAP_CHAIN_BLIT, descLayouts, 2);
+    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, Graphics::RENDERPASS_ID_SWAP_CHAIN_BLIT, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -109,7 +108,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, Graphics::RENDERPASS_ID_ZPrepass, descLayouts, 3);
+    bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, Graphics::RENDERPASS_ID_ZPrepass, descLayouts, 3);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -119,7 +118,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 3);
+    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 3);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -128,7 +127,7 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     // Animated poly
     descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 2);
+    bOk = LoadShader(shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -139,11 +138,11 @@ void ShaderManager::LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platfor
     descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_VIRTUAL_TEXTURE;
     descLayouts[3] = Graphics::DESCLAYOUT_ID_TERRAIN_DATA;
-    bOk = LoadShader(platformFuncs, shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 4);
+    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 4);
     TINKER_ASSERT(bOk);
 }
 
-void ShaderManager::CreateAllRenderPasses(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+void ShaderManager::CreateAllRenderPasses()
 {
     bool bOk = false;
     // Render passes
@@ -163,7 +162,7 @@ void ShaderManager::CreateAllRenderPasses(const Tk::Platform::PlatformAPIFuncs* 
     TINKER_ASSERT(bOk);
 }
 
-void ShaderManager::LoadAllShaderResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight)
+void ShaderManager::LoadAllShaderResources(, uint32 windowWidth, uint32 windowHeight)
 {
     bool bOk = false;
 
@@ -231,9 +230,9 @@ void ShaderManager::LoadAllShaderResources(const Tk::Platform::PlatformAPIFuncs*
     TINKER_ASSERT(bOk);
     //-----
 
-    CreateAllRenderPasses(platformFuncs);
+    CreateAllRenderPasses();
 
-    LoadAllShaders(platformFuncs, windowWidth, windowHeight);
+    LoadAllShaders(windowWidth, windowHeight);
 }
 
 }

@@ -34,6 +34,7 @@ rem ****************************************************************************
 rem TinkerApp - primary exe
 set SourceListApp=
 set SourceListApp=%SourceListApp%../Core/Platform/Win32Layer.cpp 
+set SourceListApp=%SourceListApp%../Core/Platform/Win32WorkerThreadPool.cpp 
 set SourceListApp=%SourceListApp%../Core/Platform/Win32PlatformGameAPI.cpp 
 set SourceListApp=%SourceListApp%../Core/Platform/Win32Logging.cpp 
 set SourceListApp=%SourceListApp%../Core/Platform/Win32Client.cpp 

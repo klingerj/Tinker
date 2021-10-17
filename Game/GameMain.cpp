@@ -65,7 +65,7 @@ static View MainView;
 INPUT_CALLBACK(RaytraceTestCallback)
 {
     Platform::PrintDebugString("Running raytrace test...\n");
-    RaytraceTest(platformFuncs);
+    RaytraceTest();
     Platform::PrintDebugString("...Done.\n");
 }
 
@@ -169,7 +169,7 @@ void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
 }
 
-uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
+uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
@@ -197,7 +197,7 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Graphics::G
     // Init network connection if multiplayer
     if (isMultiplayer)
     {
-        int result = platformFuncs->InitNetworkConnection();
+        int result = InitNetworkConnection();
         if (result != 0)
         {
             connectedToServer = false;
@@ -211,7 +211,7 @@ uint32 GameInit(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Graphics::G
 
     {
         TIMED_SCOPED_BLOCK("Load game assets");
-        g_AssetManager.LoadAllAssets(platformFuncs);
+        g_AssetManager.LoadAllAssets();
         g_AssetManager.InitAssetGraphicsResources(graphicsCommandStream);
     }
 
@@ -300,7 +300,7 @@ GAME_UPDATE(GameUpdate)
 
     if (!isGameInitted)
     {
-        uint32 initResult = GameInit(platformFuncs, graphicsCommandStream, windowWidth, windowHeight);
+        uint32 initResult = GameInit(graphicsCommandStream, windowWidth, windowHeight);
         if (initResult != 0)
         {
             return initResult;
@@ -315,7 +315,7 @@ GAME_UPDATE(GameUpdate)
 
     {
         //TIMED_SCOPED_BLOCK("Input manager update - kb/mouse callbacks");
-        g_InputManager.UpdateAndDoCallbacks(inputStateDeltas, platformFuncs);
+        g_InputManager.UpdateAndDoCallbacks(inputStateDeltas);
     }
 
     // Update view(s)
@@ -332,7 +332,7 @@ GAME_UPDATE(GameUpdate)
         Update(&MainView, descriptors);
     }
 
-    //vt.Update(platformFuncs);
+    //vt.Update();
 
     // Clear depth buffer
     {
@@ -423,7 +423,7 @@ GAME_UPDATE(GameUpdate)
 
     if (isGameInitted && isMultiplayer && connectedToServer)
     {
-        int result = platformFuncs->SendMessageToServer();
+        int result = SendMessageToServer();
         if (result != 0)
         {
             return 1;
@@ -474,7 +474,7 @@ GAME_DESTROY(GameDestroy)
         
         DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
 
-        //vt.Destroy(platformFuncs);
+        //vt.Destroy();
 
         // Destroy assets
         g_AssetManager.DestroyAllMeshData();
@@ -482,7 +482,7 @@ GAME_DESTROY(GameDestroy)
 
         if (isMultiplayer && connectedToServer)
         {
-            platformFuncs->EndNetworkConnection();
+            EndNetworkConnection();
         }
 
         g_AssetManager.FreeMemory();

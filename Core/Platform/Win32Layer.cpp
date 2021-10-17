@@ -1,8 +1,8 @@
 #include "CoreDefines.h"
 #include "PlatformCommon.h"
 #include "PlatformGameAPI.h"
+#include "Win32WorkerThreadPool.h"
 #include "Win32Client.h"
-#include "Win32WorkerThreadPool.cpp"
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Graphics/Common/ShaderManager.h"
 #include "Utility/Logging.h"
@@ -20,9 +20,6 @@
 #define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
 #endif
 
-using namespace Tk;
-using namespace Platform;
-
 static GAME_UPDATE(GameUpdateStub) { return 0; }
 static GAME_DESTROY(GameDestroyStub) {}
 static GAME_WINDOW_RESIZE(GameWindowResizeStub) {}
@@ -30,9 +27,9 @@ typedef struct win32_game_code
 {
     HMODULE GameDll = 0;
     FILETIME lastWriteTime = {};
-    game_update* GameUpdate = GameUpdateStub;
-    game_destroy* GameDestroy = GameDestroyStub;
-    game_window_resize* GameWindowResize = GameWindowResizeStub;
+    Tk::Platform::game_update* GameUpdate = GameUpdateStub;
+    Tk::Platform::game_destroy* GameDestroy = GameDestroyStub;
+    Tk::Platform::game_window_resize* GameWindowResize = GameWindowResizeStub;
 } Win32GameCode;
 
 Win32GameCode g_GameCode;
@@ -42,11 +39,10 @@ const bool enableDllHotloading = true;
 volatile bool runGame = true;
 
 HWND g_windowHandle = NULL;
-PlatformAPIFuncs g_platformAPIFuncs;
-Graphics::GraphicsCommandStream g_graphicsCommandStream;
+Tk::Core::Graphics::GraphicsCommandStream g_graphicsCommandStream;
 bool g_windowResized = false;
 
-InputStateDeltas g_inputStateDeltas;
+Tk::Platform::InputStateDeltas g_inputStateDeltas;
 
 HCURSOR g_cursor = NULL;
 bool g_cursorLocked = false;
@@ -57,20 +53,6 @@ bool g_cursorLocked = false;
 //#define SCRIPTS_PATH "..\\Scripts\\"
 #endif
 
-#ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-WorkerThreadPool g_ThreadPool;
-ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
-{
-    g_ThreadPool.EnqueueNewThreadJob(newJob);
-}
-#else
-ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
-{
-    (*newJob)();
-    newJob->m_done = true;
-}
-#endif
-
 typedef struct global_app_params
 {
     uint32 m_windowWidth;
@@ -79,7 +61,7 @@ typedef struct global_app_params
 GlobalAppParams g_GlobalAppParams;
 
 SYSTEM_INFO g_SystemInfo;
-PlatformWindowHandles g_platformWindowHandles;
+Tk::Platform::PlatformWindowHandles g_platformWindowHandles;
 
 static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
 {
@@ -98,7 +80,7 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
         else
         {
             // some other error, log a failure
-            Core::Utility::LogMsg("Platform", "Failed to get handle to game dll to reload!", Core::Utility::LogSeverity::eCritical);
+            Tk::Core::Utility::LogMsg("Platform", "Failed to get handle to game dll to reload!", Tk::Core::Utility::LogSeverity::eCritical);
         }
 
         // Regardless of error code, don't continue with the hotload attempt
@@ -112,12 +94,12 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     CloseHandle(gameDllFileHandle);
     if (CompareFileTime(&gameDllLastWriteTime, &GameCode->lastWriteTime))
     {
-        Core::Utility::LogMsg("Platform", "Loading game dll!", Core::Utility::LogSeverity::eInfo);
+        Tk::Core::Utility::LogMsg("Platform", "Loading game dll!", Tk::Core::Utility::LogSeverity::eInfo);
 
         // Unload old code
         if (GameCode->GameDll)
         {
-            GameCode->GameDestroy(&g_platformAPIFuncs);
+            GameCode->GameDestroy();
             FreeLibrary(GameCode->GameDll);
             GameCode->GameUpdate = GameUpdateStub;
             GameCode->GameDestroy = GameDestroyStub;
@@ -128,9 +110,9 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
         GameCode->GameDll = LoadLibrary(TINKER_PLATFORM_HOTLOAD_FILENAME);
         if (GameCode->GameDll)
         {
-            GameCode->GameUpdate = (game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
-            GameCode->GameDestroy = (game_destroy*)GetProcAddress(GameCode->GameDll, "GameDestroy");
-            GameCode->GameWindowResize = (game_window_resize*)GetProcAddress(GameCode->GameDll, "GameWindowResize");
+            GameCode->GameUpdate = (Tk::Platform::game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
+            GameCode->GameDestroy = (Tk::Platform::game_destroy*)GetProcAddress(GameCode->GameDll, "GameDestroy");
+            GameCode->GameWindowResize = (Tk::Platform::game_window_resize*)GetProcAddress(GameCode->GameDll, "GameWindowResize");
             GameCode->lastWriteTime = gameDllLastWriteTime;
             return true; // reload successfully
         }
@@ -139,7 +121,22 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     return false; // didn't reload
 }
 
-GET_FILE_SIZE(GetFileSize)
+namespace Tk
+{
+namespace Platform
+{
+
+ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
+{
+#ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
+    g_ThreadPool.EnqueueNewThreadJob(newJob);
+#else
+    (*newJob)();
+    newJob->m_done = true;
+#endif
+}
+
+GET_ENTIRE_FILE_SIZE(GetEntireFileSize)
 {
     HANDLE fileHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
 
@@ -160,7 +157,7 @@ GET_FILE_SIZE(GetFileSize)
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
         return 0;
     }
 }
@@ -181,7 +178,7 @@ READ_ENTIRE_FILE(ReadEntireFile)
         }
         else
         {
-            fileSize = GetFileSize(filename);
+            fileSize = GetEntireFileSize(filename);
         }
 
         DWORD numBytesRead = 0;
@@ -191,7 +188,7 @@ READ_ENTIRE_FILE(ReadEntireFile)
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
     }
 }
 
@@ -212,7 +209,7 @@ WRITE_ENTIRE_FILE(WriteEntireFile)
     else
     {
         DWORD dw = GetLastError();
-        Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", "Unable to create file handle!", Tk::Core::Utility::LogSeverity::eCritical);
     }
 }
 
@@ -220,12 +217,12 @@ INIT_NETWORK_CONNECTION(InitNetworkConnection)
 {
     if (Network::InitClient() != 0)
     {
-        Core::Utility::LogMsg("Platform", "Failed to init network client!", Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", "Failed to init network client!", Tk::Core::Utility::LogSeverity::eCritical);
         return 1;
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "Successfully initialized network client.", Core::Utility::LogSeverity::eInfo);
+        Tk::Core::Utility::LogMsg("Platform", "Successfully initialized network client.", Tk::Core::Utility::LogSeverity::eInfo);
         return 0;
     }
 }
@@ -234,12 +231,12 @@ END_NETWORK_CONNECTION(EndNetworkConnection)
 {
     if (Network::DisconnectFromServer() != 0)
     {
-        Core::Utility::LogMsg("Platform", "Failed to cleanup network client!", Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", "Failed to cleanup network client!", Tk::Core::Utility::LogSeverity::eCritical);
         return 1;
     }
     else
     {
-        Core::Utility::LogMsg("Platform", "Successfully cleaned up network client.", Core::Utility::LogSeverity::eInfo);
+        Tk::Core::Utility::LogMsg("Platform", "Successfully cleaned up network client.", Tk::Core::Utility::LogSeverity::eInfo);
         return 0;
     }
 }
@@ -248,7 +245,7 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
 {
     if (Network::SendMessageToServer() != 0)
     {
-        Core::Utility::LogMsg("Platform", "Failed to send message to server!", Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", "Failed to send message to server!", Tk::Core::Utility::LogSeverity::eCritical);
         return 1;
     }
     else
@@ -257,15 +254,15 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
     }
 }
 
-SYSTEM_COMMAND(SystemCommand)
+EXEC_SYSTEM_COMMAND(ExecSystemCommand)
 {
     STARTUPINFO startupInfo = {};
     PROCESS_INFORMATION processInfo = {};
 
     if (!CreateProcess(NULL, (LPSTR)command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInfo))
     {
-        Core::Utility::LogMsg("Platform", "Failed to create new process to execute system command:", Core::Utility::LogSeverity::eCritical);
-        Core::Utility::LogMsg("Platform", command, Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", "Failed to create new process to execute system command:", Tk::Core::Utility::LogSeverity::eCritical);
+        Tk::Core::Utility::LogMsg("Platform", command, Tk::Core::Utility::LogSeverity::eCritical);
         return 1;
     }
 
@@ -278,6 +275,9 @@ SYSTEM_COMMAND(SystemCommand)
     CloseHandle(processInfo.hThread);
 
     return exitCode;
+}
+
+}
 }
 
 static void LockCursor(HWND windowHandle)
@@ -299,6 +299,9 @@ static void ToggleCursorLocked()
 
 static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
 {
+    using namespace Tk;
+    using namespace Platform;
+    
     uint8 wasDown = (win32Flags & (1 << 30)) == 1;
     uint8 isDown = (win32Flags & (1 << 31)) == 0;
 
@@ -340,19 +343,19 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
         {
             if (isDown)
             {
-                Core::Utility::LogMsg("Platform", "Attempting to hotload shaders...\n", Core::Utility::LogSeverity::eInfo);
+                Tk::Core::Utility::LogMsg("Platform", "Attempting to hotload shaders...\n", Tk::Core::Utility::LogSeverity::eInfo);
 
                 const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
-                if (SystemCommand(shaderCompileCommand) == 0)
+                if (ExecSystemCommand(shaderCompileCommand) == 0)
                 {
-                    g_ShaderManager.ReloadShaders(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    Tk::Core::Graphics::g_ShaderManager.ReloadShaders(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                 }
                 else
                 {
-                    Core::Utility::LogMsg("Platform", "Failed to create shader compile process! Shaders will not be compiled.\n", Core::Utility::LogSeverity::eWarning);
+                    Tk::Core::Utility::LogMsg("Platform", "Failed to create shader compile process! Shaders will not be compiled.\n", Tk::Core::Utility::LogSeverity::eWarning);
                 }
 
-                Core::Utility::LogMsg("Platform", "...Done.\n", Core::Utility::LogSeverity::eInfo);
+                Tk::Core::Utility::LogMsg("Platform", "...Done.\n", Tk::Core::Utility::LogSeverity::eInfo);
             }
 
             gameKeyCode = Keycode::eF10;
@@ -392,6 +395,9 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
 
 static void HandleMouseInput(uint32 mouseCode, int displacement)
 {
+    using namespace Tk;
+    using namespace Platform;
+    
     POINT screenCenter = { (LONG)g_GlobalAppParams.m_windowWidth / 2, (LONG)g_GlobalAppParams.m_windowHeight / 2 };
     int pxDisp = 0;
 
@@ -423,6 +429,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     WPARAM wParam,
     LPARAM lParam)
 {
+    using namespace Tk;
+    using namespace Platform;
+    
     LRESULT result = 0;
 
     switch (uMsg)
@@ -435,7 +444,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         {
             if (wParam == 1) // window minimized - can't create swap chain with size 0
             {
-                Graphics::WindowMinimized();
+                Tk::Core::Graphics::WindowMinimized();
                 g_GlobalAppParams.m_windowWidth = 0;
                 g_GlobalAppParams.m_windowHeight = 0;
             }
@@ -471,18 +480,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
             if (wParam) procPrior = ABOVE_NORMAL_PRIORITY_CLASS;
             if (!SetPriorityClass(GetCurrentProcess(), procPrior))
             {
-                Core::Utility::LogMsg("Platform", "Failed to change process priority when changing window focus!", Core::Utility::LogSeverity::eCritical);
+                Tk::Core::Utility::LogMsg("Platform", "Failed to change process priority when changing window focus!", Tk::Core::Utility::LogSeverity::eCritical);
             }
             else
             {
-                Core::Utility::LogMsg("Platform", "Changing process priority!", Core::Utility::LogSeverity::eInfo);
+                Tk::Core::Utility::LogMsg("Platform", "Changing process priority!", Tk::Core::Utility::LogSeverity::eInfo);
                 if (wParam)
                 {
-                    Core::Utility::LogMsg("Platform", "ABOVE_NORMAL", Core::Utility::LogSeverity::eInfo);
+                    Tk::Core::Utility::LogMsg("Platform", "ABOVE_NORMAL", Tk::Core::Utility::LogSeverity::eInfo);
                 }
                 else
                 {
-                    Core::Utility::LogMsg("Platform", "NORMAL", Core::Utility::LogSeverity::eInfo);
+                    Tk::Core::Utility::LogMsg("Platform", "NORMAL", Tk::Core::Utility::LogSeverity::eInfo);
                 }
             }
 
@@ -568,6 +577,9 @@ wWinMain(HINSTANCE hInstance,
     PWSTR pCmdLine,
     int nCmdShow)
 {
+    using namespace Tk;
+    using namespace Platform;
+    
     {
         TIMED_SCOPED_BLOCK("Platform init");
 
@@ -592,7 +604,7 @@ wWinMain(HINSTANCE hInstance,
         windowClass.lpszClassName = "Tinker Platform Window";
         if (!RegisterClass(&windowClass))
         {
-            Core::Utility::LogMsg("Platform", "Failed to register window class!", Core::Utility::LogSeverity::eCritical);
+            Tk::Core::Utility::LogMsg("Platform", "Failed to register window class!", Tk::Core::Utility::LogSeverity::eCritical);
             return 1;
         }
 
@@ -615,38 +627,26 @@ wWinMain(HINSTANCE hInstance,
 
         if (!g_windowHandle)
         {
-            Core::Utility::LogMsg("Platform", "Failed to create window!", Core::Utility::LogSeverity::eCritical);
+            Tk::Core::Utility::LogMsg("Platform", "Failed to create window!", Tk::Core::Utility::LogSeverity::eCritical);
             return 1;
         }
 
         g_platformWindowHandles = {};
         g_platformWindowHandles.instance = hInstance;
         g_platformWindowHandles.windowHandle = g_windowHandle;
-        Graphics::CreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-        
-        g_platformAPIFuncs = {};
-        g_platformAPIFuncs.EnqueueWorkerThreadJob  = EnqueueWorkerThreadJob;
-        // Generic OS
-        g_platformAPIFuncs.ReadEntireFile          = ReadEntireFile;
-        g_platformAPIFuncs.WriteEntireFile         = WriteEntireFile;
-        g_platformAPIFuncs.GetFileSize             = GetFileSize;
-        g_platformAPIFuncs.SystemCommand           = SystemCommand;
-        // Network
-        g_platformAPIFuncs.InitNetworkConnection   = InitNetworkConnection;
-        g_platformAPIFuncs.EndNetworkConnection    = EndNetworkConnection;
-        g_platformAPIFuncs.SendMessageToServer     = SendMessageToServer;
+        Tk::Core::Graphics::CreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
         g_graphicsCommandStream = {};
         g_graphicsCommandStream.m_numCommands = 0;
         g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-        g_graphicsCommandStream.m_graphicsCommands = (Graphics::GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(Graphics::GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
+        g_graphicsCommandStream.m_graphicsCommands = (Tk::Core::Graphics::GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Core::Graphics::GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
         #endif
 
-        g_ShaderManager.Startup();
-        g_ShaderManager.LoadAllShaderResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+        Tk::Core::Graphics::g_ShaderManager.Startup();
+        Tk::Core::Graphics::g_ShaderManager.LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
         g_GameCode = {};
         bool reloaded = ReloadGameCode(&g_GameCode, GameDllStr);
@@ -672,9 +672,9 @@ wWinMain(HINSTANCE hInstance,
                 //TIMED_SCOPED_BLOCK("Window resize check");
                 if (g_windowResized)
                 {
-                    Graphics::WindowResize();
-                    g_ShaderManager.CreateWindowDependentResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-                    g_GameCode.GameWindowResize(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    Tk::Core::Graphics::WindowResize();
+                    Tk::Core::Graphics::g_ShaderManager.CreateWindowDependentResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    g_GameCode.GameWindowResize(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_windowResized = false;
                 }
             }
@@ -682,7 +682,7 @@ wWinMain(HINSTANCE hInstance,
             bool shouldRenderFrame = false;
             {
                 //TIMED_SCOPED_BLOCK("Acquire Frame");
-                shouldRenderFrame = Graphics::AcquireFrame();
+                shouldRenderFrame = Tk::Core::Graphics::AcquireFrame();
             }
 
             if (shouldRenderFrame)
@@ -690,10 +690,10 @@ wWinMain(HINSTANCE hInstance,
                 {
                     //TIMED_SCOPED_BLOCK("Game Update");
 
-                    int error = g_GameCode.GameUpdate(&g_platformAPIFuncs, &g_graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
+                    int error = g_GameCode.GameUpdate(&g_graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
                     if (error != 0)
                     {
-                        Core::Utility::LogMsg("Platform", "Error occurred in game code! Shutting down application.", Core::Utility::LogSeverity::eCritical);
+                        Tk::Core::Utility::LogMsg("Platform", "Error occurred in game code! Shutting down application.", Tk::Core::Utility::LogSeverity::eCritical);
                         runGame = false;
                         break;
                     }
@@ -702,10 +702,10 @@ wWinMain(HINSTANCE hInstance,
                 // Process command stream
                 {
                     //TIMED_SCOPED_BLOCK("Graphics command stream processing");
-                    Graphics::BeginFrameRecording();
-                    Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
-                    Graphics::EndFrameRecording();
-                    Graphics::SubmitFrameToGPU();
+                    Tk::Core::Graphics::BeginFrameRecording();
+                    Tk::Core::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
+                    Tk::Core::Graphics::EndFrameRecording();
+                    Tk::Core::Graphics::SubmitFrameToGPU();
                 }
             }
         }
@@ -718,21 +718,21 @@ wWinMain(HINSTANCE hInstance,
             g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
             #endif
 
-            Graphics::RecreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-            g_ShaderManager.Shutdown();
-            g_ShaderManager.Startup();
-            g_ShaderManager.LoadAllShaderResources(&g_platformAPIFuncs, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            Tk::Core::Graphics::RecreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            Tk::Core::Graphics::g_ShaderManager.Shutdown();
+            Tk::Core::Graphics::g_ShaderManager.Startup();
+            Tk::Core::Graphics::g_ShaderManager.LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
         }
     }
 
-    g_GameCode.GameDestroy(&g_platformAPIFuncs);
+    g_GameCode.GameDestroy();
 
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     g_ThreadPool.Shutdown();
     #endif
 
-    g_ShaderManager.Shutdown();
-    Graphics::DestroyContext();
+    Tk::Core::Graphics::g_ShaderManager.Shutdown();
+    Tk::Core::Graphics::DestroyContext();
 
     _aligned_free(g_graphicsCommandStream.m_graphicsCommands);
 

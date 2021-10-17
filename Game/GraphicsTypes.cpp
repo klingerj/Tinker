@@ -3,14 +3,14 @@
 #include <string.h>
 
 using namespace Tk;
-using namespace Platform;
+using namespace Core;
 
 void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // Default Quad
     {
         Graphics::ResourceDesc desc;
-        desc.resourceType = Platform::Graphics::ResourceType::eBuffer1D;
+        desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
 
         // Positions
         desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);
@@ -119,7 +119,7 @@ void DestroyDefaultGeometry()
     Graphics::DestroyResource(defaultQuad.m_indexBuffer.gpuBufferHandle);
     defaultQuad.m_indexBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
 
-    //DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad, platformFuncs);
+    //DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
 }
 
 DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {

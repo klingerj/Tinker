@@ -8,13 +8,13 @@ namespace Platform
 {
 
 // I/O
-void PrintDebugString(const char* str)
+PRINT_DEBUG_STRING(PrintDebugString)
 {
     OutputDebugString(str);
 }
 
 // Memory
-void* AllocAligned(size_t size, size_t alignment, const char* filename, int lineNum)
+ALLOC_ALIGNED(AllocAligned)
 {
     #ifdef MEM_TRACKING
     return _aligned_malloc_dbg(size, alignment, filename, lineNum);
@@ -23,7 +23,7 @@ void* AllocAligned(size_t size, size_t alignment, const char* filename, int line
     #endif
 }
 
-void FreeAligned(void* ptr)
+FREE_ALIGNED(FreeAligned)
 {
     _aligned_free(ptr);
 }

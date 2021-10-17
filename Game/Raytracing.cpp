@@ -6,6 +6,7 @@
 #include "GraphicsTypes.h"
 #include "Camera.h"
 #include "AssetManager.h"
+#include "Platform/PlatformGameAPI.h"
 
 #include <string.h>
 
@@ -28,7 +29,7 @@ void RayMeshIntersectNaive(const Tk::Core::Raytracing::Ray& ray, v3f* triData, u
     }
 }
 
-void RaytraceTest(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+void RaytraceTest()
 {
     TIMED_SCOPED_BLOCK("Raytrace test");
 
@@ -157,7 +158,7 @@ void RaytraceTest(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
     // Output image
     Buffer imgBuffer = {};
     Tk::Core::FileLoading::SaveBMP(&imgBuffer, (uint8*)img, width, height, 32);
-    platformFuncs->WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", imgBuffer.m_sizeInBytes, imgBuffer.m_data);
+    Tk::Platform::WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", imgBuffer.m_sizeInBytes, imgBuffer.m_data);
     imgBuffer.Dealloc();
     Tk::Core::CoreFree(img);
 

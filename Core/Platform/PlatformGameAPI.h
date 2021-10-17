@@ -2,69 +2,154 @@
 
 #include "CoreDefines.h"
 #include "PlatformGameThreadAPI.h"
-#include "PlatformGameInputHandlingAPI.h"
 
 namespace Tk
 {
-namespace Platform
+
+namespace Core
 {
-
-// I/O
-TINKER_API void PrintDebugString(const char* str);
-
-// Memory
-TINKER_API void* AllocAligned(size_t size, size_t alignment, const char* filename, int lineNum);
-TINKER_API void FreeAligned(void* ptr);
-
-// Platform File API function
-#define READ_ENTIRE_FILE(name) void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
-typedef READ_ENTIRE_FILE(read_entire_file);
-
-#define WRITE_ENTIRE_FILE(name) void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
-typedef WRITE_ENTIRE_FILE(write_entire_file);
-
-#define GET_FILE_SIZE(name) uint32 name(const char* filename)
-typedef GET_FILE_SIZE(get_file_size);
-
-// Networking
-#define INIT_NETWORK_CONNECTION(name) int name()
-typedef INIT_NETWORK_CONNECTION(init_network_connection);
-
-#define END_NETWORK_CONNECTION(name) int name()
-typedef END_NETWORK_CONNECTION(end_network_connection);
-
-#define SEND_MESSAGE_TO_SERVER(name) int name()
-typedef SEND_MESSAGE_TO_SERVER(send_message_to_server);
-
-#define SYSTEM_COMMAND(name) int name(const char* command)
-typedef SYSTEM_COMMAND(system_command);
-
-// Platform api functions passed from platform layer to game
-struct PlatformAPIFuncs
-{
-    enqueue_worker_thread_job* EnqueueWorkerThreadJob;
-    read_entire_file* ReadEntireFile;
-    write_entire_file* WriteEntireFile;
-    get_file_size* GetFileSize;
-    system_command* SystemCommand;
-    init_network_connection* InitNetworkConnection;
-    end_network_connection* EndNetworkConnection;
-    send_message_to_server* SendMessageToServer;
-};
-
 namespace Graphics
 {
 struct GraphicsCommandStream;
 }
+}
+
+namespace Platform
+{
+
+#define PRINT_DEBUG_STRING(name) TINKER_API void name(const char* str)
+PRINT_DEBUG_STRING(PrintDebugString);
+
+#define ALLOC_ALIGNED(name) TINKER_API void* name(size_t size, size_t alignment, const char* filename, int lineNum)
+ALLOC_ALIGNED(AllocAligned);
+
+#define FREE_ALIGNED(name) TINKER_API void name(void* ptr)
+FREE_ALIGNED(FreeAligned);
+
+#define READ_ENTIRE_FILE(name) TINKER_API void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
+READ_ENTIRE_FILE(ReadEntireFile);
+
+#define WRITE_ENTIRE_FILE(name) TINKER_API void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
+WRITE_ENTIRE_FILE(WriteEntireFile);
+
+#define GET_ENTIRE_FILE_SIZE(name) TINKER_API uint32 name(const char* filename)
+GET_ENTIRE_FILE_SIZE(GetEntireFileSize);
+
+#define INIT_NETWORK_CONNECTION(name) TINKER_API int name()
+INIT_NETWORK_CONNECTION(InitNetworkConnection);
+
+#define END_NETWORK_CONNECTION(name) TINKER_API int name()
+END_NETWORK_CONNECTION(EndNetworkConnection);
+
+#define SEND_MESSAGE_TO_SERVER(name) TINKER_API int name()
+SEND_MESSAGE_TO_SERVER(SendMessageToServer);
+
+#define EXEC_SYSTEM_COMMAND(name) TINKER_API int name(const char* command)
+EXEC_SYSTEM_COMMAND(ExecSystemCommand);
+
+namespace Keycode
+{
+enum : uint32
+{
+    eA = 0,
+    eB,
+    eC,
+    eD,
+    eE,
+    eF,
+    eG,
+    eH,
+    eI,
+    eJ,
+    eK,
+    eL,
+    eM,
+    eN,
+    eO,
+    eP,
+    eQ,
+    eR,
+    eS,
+    eT,
+    eU,
+    eV,
+    eW,
+    eX,
+    eY,
+    eZ,
+    e0,
+    e1,
+    e2,
+    e3,
+    e4,
+    e5,
+    e6,
+    e7,
+    e8,
+    e9,
+    eF1,
+    eF2,
+    eF3,
+    eF4,
+    eF5,
+    eF6,
+    eF7,
+    eF8,
+    eF9,
+    eF10,
+    eF11,
+    eF12,
+    eMax
+};
+}
+
+namespace Mousecode
+{
+enum : uint32
+{
+    eMouseMoveVertical = 0,
+    eMouseMoveHorizontal,
+    // TODO: other mouse controls, e.g. click
+    eMax
+};
+}
+
+typedef struct keycode_state
+{
+    uint8 isDown = false; // is the key currently down
+    uint8 numStateChanges = 0; // number of times the key went up/down
+} KeycodeState;
+
+typedef struct mousecode_state
+{
+    union
+    {
+        int32 displacement; // in pixels, for mouse movement
+        // TODO: add mouse click state data, probably similar to keycode state data
+        // - maybe refactor that into a more general button state, we will probably use it for game pad input too
+    };
+} MousecodeState;
+
+typedef struct input_state_delta
+{
+    // TODO: gamepad input
+
+    // Keyboard input
+    KeycodeState keyCodes[Keycode::eMax];
+
+    // Mouse input
+    MousecodeState mouseCodes[Mousecode::eMax];
+} InputStateDeltas;
+
 
 // Game side
-#define GAME_UPDATE(name) uint32 name(const Tk::Platform::PlatformAPIFuncs* platformFuncs, Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)
+#define GAME_UPDATE(name) uint32 name(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)
 typedef GAME_UPDATE(game_update);
 
-#define GAME_DESTROY(name) void name(const Tk::Platform::PlatformAPIFuncs* platformFuncs)
+#define GAME_DESTROY(name) void name()
 typedef GAME_DESTROY(game_destroy);
 
-#define GAME_WINDOW_RESIZE(name) void name(Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight)
+#define GAME_WINDOW_RESIZE(name) void name(uint32 newWindowWidth, uint32 newWindowHeight)
 typedef GAME_WINDOW_RESIZE(game_window_resize);
 
 }

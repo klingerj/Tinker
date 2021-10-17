@@ -8,12 +8,12 @@
 
 namespace Tk
 {
-namespace Platform
+namespace Core
 {
 namespace Graphics
 {
 
-void CreateContext(const PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
+void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     int result = 0;
 
@@ -26,7 +26,7 @@ void CreateContext(const PlatformWindowHandles* windowHandles, uint32 windowWidt
         Core::Utility::LogMsg("Platform", "Failed to init graphics backend!", Core::Utility::LogSeverity::eCritical);
 }
 
-void RecreateContext(const PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
+void RecreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     #ifdef VULKAN
     DestroyVulkan(&g_vulkanContextResources);

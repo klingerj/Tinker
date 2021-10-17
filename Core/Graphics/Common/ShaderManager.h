@@ -5,7 +5,9 @@
 
 namespace Tk
 {
-namespace Platform
+namespace Core
+{
+namespace Graphics
 {
 
 struct ShaderManager
@@ -17,22 +19,22 @@ public:
     void Startup();
     void Shutdown();
 
-    void LoadAllShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight);
-    void LoadAllShaderResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 windowWidth, uint32 windowHeight);
-    void CreateWindowDependentResources(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight);
-    void ReloadShaders(const Tk::Platform::PlatformAPIFuncs* platformFuncs, uint32 newWindowWidth, uint32 newWindowHeight);
+    void LoadAllShaders(uint32 windowWidth, uint32 windowHeight);
+    void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight);
+    void CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight);
+    void ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight);
 
 private:
-    bool LoadShader(const Tk::Platform::PlatformAPIFuncs* platformFuncs,
-        const char* vertexShaderFileName, const char* fragmentShaderFileName,
+    bool LoadShader(const char* vertexShaderFileName, const char* fragmentShaderFileName,
         uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
         uint32* descLayouts, uint32 numDescLayouts);
-    void CreateAllRenderPasses(const Tk::Platform::PlatformAPIFuncs* platformFuncs);
+    void CreateAllRenderPasses();
 
     Tk::Memory::LinearAllocator<> shaderBytecodeAllocator;
 };
 
 extern ShaderManager g_ShaderManager;
 
+}
 }
 }
