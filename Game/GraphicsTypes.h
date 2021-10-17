@@ -130,7 +130,6 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Core::Graphics::DescriptorHandle descHandles[MAX_BINDINGS_PER_SET] = { geom.m_descriptor, Core::Graphics::DefaultDescHandle_Invalid, Core::Graphics::DefaultDescHandle_Invalid };
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, &descHandles[0], 1, &descDataHandles[0], 1);
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0], 1);
 }
 

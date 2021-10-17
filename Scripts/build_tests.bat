@@ -40,7 +40,10 @@ set CompileIncludePaths=/I ../Core
 
 rem *********************************************************************************************************
 rem TinkerTest - unit testing
-set SourceListTest=../Core/Platform/Win32PlatformGameAPI.cpp ../Test/TestMain.cpp
+set SourceListTest=../Core/Platform/Win32PlatformGameAPI.cpp ../Test/TestMain.cpp 
+set SourceListTest=%SourceListTest% ../Core/DataStructures/Vector.cpp 
+set SourceListTest=%SourceListTest% ../Core/DataStructures/HashMap.cpp 
+set SourceListTest=%SourceListTest% ../Core/Mem.cpp 
 set CompileDefines= 
 
 if "%BuildConfig%" == "Debug" (
