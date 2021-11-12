@@ -38,7 +38,13 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerBenchmark - benchmarking
-set SourceListBenchmark=../Core/Platform/Win32PlatformGameAPI.cpp ../Core/Platform/Win32Logging.cpp ../Benchmark/BenchmarkMain.cpp ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp ../Benchmark/ContainerBenchmarks/HashMapBenchmarks.cpp
+set SourceListBenchmark=../Benchmark/BenchmarkMain.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32PlatformGameAPI.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32Logging.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Core/Mem.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/ContainerBenchmarks/HashMapBenchmarks.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Core/DataStructures/HashMap.cpp 
 set CompileDefines= 
 
 if "%BuildConfig%" == "Debug" (

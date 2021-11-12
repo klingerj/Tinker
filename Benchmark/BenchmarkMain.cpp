@@ -22,20 +22,8 @@ int main()
     //TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M2F * V2F, Scalar", BM_v2_Startup, BM_m2MulV2_fScalar, BM_v2_Shutdown);
     //TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M2F * V2F, Scalar, Multithreaded", BM_m2MulV2_fScalar_MT_Startup, BM_m2MulV2_fScalar_MT, BM_m2MulV2_fScalar_MT_Shutdown);
     //TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M2F * V2F, Vectorized", BM_v2_Startup, BM_m2MulV2_fVectorized, BM_v2_Shutdown);
-
-    //TINKER_BENCHMARK_STARTUP_SHUTDOWN("Hashmap insert 1m uint32", BM_hm_Startup, BM_HMIns1M_fScalar, BM_hm_Shutdown);
-    /*
-    BM_hm_Startup();
-    auto start_ = std::chrono::high_resolution_clock::now();
-    BM_HMIns1M_fScalar();
-    auto elapsed_ = std::chrono::high_resolution_clock::now() - start_;
-    BM_hm_Shutdown();
-    long long microseconds_ = std::chrono::duration_cast<std::chrono::microseconds>(elapsed_).count();
-    std::cout << "Elapsed time: " << microseconds_ << " us" << std::endl;
-    */
-
-    /*
-    for (uint32 i = 0; i < 10; ++i)
+    
+    /*for (uint32 i = 0; i < 10; ++i)
     {
         BM_hm_Startup();
         {
@@ -56,9 +44,8 @@ int main()
             BM_StdHMIns1M_fScalar();
         }
         BM_hm_Shutdown();
-    }
-    */
-
+    }*/
+    
     // V4 mul M4
     //TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M4F * V4F, Scalar", BM_v4_Startup, BM_m4MulV4_fScalar, BM_v4_Shutdown);
     for (uint32 i = 0; i < 10; ++i)
