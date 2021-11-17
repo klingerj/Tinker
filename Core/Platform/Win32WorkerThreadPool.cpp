@@ -57,7 +57,8 @@ void WorkerThreadPool::Startup(uint32 NumThreads)
         m_threads[i].didTerminate = false;
         m_threads[i].threadId = i;
         m_threads[i].semaphoreHandle = (uint64)CreateSemaphoreEx(0, 0, NUM_JOBS_PER_WORKER, 0, 0, SEMAPHORE_ALL_ACCESS);
-        _beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, &m_threads[i]);
+        //_beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, &m_threads[i]);
+        m_threads[i].theThread = new std::thread(WorkerThreadFunction, &m_threads[i]);
     }
 }
 
