@@ -6,7 +6,7 @@ using namespace Tk;
 using namespace Platform;
 using namespace Core;
 
-const uint32 threadCount = 1;
+const uint32 threadCount = 8;
 WorkerThreadPool g_threadpool;
 
 const uint32 numJobs = threadCount;
