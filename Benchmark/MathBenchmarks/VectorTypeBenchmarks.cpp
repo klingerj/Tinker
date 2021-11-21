@@ -1,12 +1,13 @@
 #include "VectorTypeBenchmarks.h"
 
 #include "Platform/Win32WorkerThreadPool.h"
+#include <emmintrin.h>
 
 using namespace Tk;
 using namespace Platform;
 using namespace Core;
 
-const uint32 threadCount = 4;
+const uint32 threadCount = 6;
 WorkerThreadPool g_threadpool;
 
 const uint32 numJobs = threadCount;
@@ -17,7 +18,7 @@ v4f* g_v4s = nullptr;
 v4f* g_v4s_dst = nullptr;
 const uint32 jobSize = (2 << 5);
 const uint32 numVectors = numJobs * jobSize;
-const uint32 numIters = 1000000;
+const uint32 numIters = 10000000;
 
 void BM_v2_Startup()
 {
@@ -192,22 +193,22 @@ void BM_m4MulV4_fScalar_MT()
                 {
                     uint32 index = j + jobOffset;
                     //g_v4s_dst[index] = m * g_v4s[index];
-                    g_v4s_dst[index] = g_v4s[index]         + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 1] = g_v4s[index + 1] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 2] = g_v4s[index + 2] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 3] = g_v4s[index + 3] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 4] = g_v4s[index + 4] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 5] = g_v4s[index + 5] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 6] = g_v4s[index + 6] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 7] = g_v4s[index + 7] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 8] = g_v4s[index + 8] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 9] = g_v4s[index + 9] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 10] = g_v4s[index + 10] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 11] = g_v4s[index + 11] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 12] = g_v4s[index + 12] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 13] = g_v4s[index + 13] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 14] = g_v4s[index + 14] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 15] = g_v4s[index + 15] + v4f(0, 0, 1, 0);
+                    g_v4s_dst[index].z = g_v4s[index].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 1].z = g_v4s[index + 1].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 2].z = g_v4s[index + 2].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 3].z = g_v4s[index + 3].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 4].z = g_v4s[index + 4].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 5].z = g_v4s[index + 5].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 6].z = g_v4s[index + 6].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 7].z = g_v4s[index + 7].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 8].z = g_v4s[index + 8].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 9].z = g_v4s[index + 9].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 10].z = g_v4s[index + 10].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 11].z = g_v4s[index + 11].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 12].z = g_v4s[index + 12].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 13].z = g_v4s[index + 13].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 14].z = g_v4s[index + 14].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 15].z = g_v4s[index + 15].z + v4f(0, 0, 1, 0).z;
                 }
             }
             });
@@ -245,22 +246,22 @@ void BM_m4MulV4_fVectorized_MT()
                 {
                     uint32 index = j + jobOffset;
                     //VectorOps::Mul_SIMD(&g_v4s[index], &m, &g_v4s_dst[index]);
-                    g_v4s_dst[index]     = g_v4s[index]     + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 1] = g_v4s[index + 1] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 2] = g_v4s[index + 2] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 3] = g_v4s[index + 3] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 4] = g_v4s[index + 4] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 5] = g_v4s[index + 5] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 6] = g_v4s[index + 6] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 7] = g_v4s[index + 7] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 8] = g_v4s[index + 8] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 9] = g_v4s[index + 9] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 10] = g_v4s[index + 10] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 11] = g_v4s[index + 11] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 12] = g_v4s[index + 12] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 13] = g_v4s[index + 13] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 14] = g_v4s[index + 14] + v4f(0, 0, 1, 0);
-                    g_v4s_dst[index + 15] = g_v4s[index + 15] + v4f(0, 0, 1, 0);
+                    g_v4s_dst[index].z = g_v4s[index].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 1].z = g_v4s[index + 1].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 2].z = g_v4s[index + 2].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 3].z = g_v4s[index + 3].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 4].z = g_v4s[index + 4].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 5].z = g_v4s[index + 5].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 6].z = g_v4s[index + 6].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 7].z = g_v4s[index + 7].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 8].z = g_v4s[index + 8].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 9].z = g_v4s[index + 9].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 10].z = g_v4s[index + 10].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 11].z = g_v4s[index + 11].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 12].z = g_v4s[index + 12].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 13].z = g_v4s[index + 13].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 14].z = g_v4s[index + 14].z + v4f(0, 0, 1, 0).z;
+                    g_v4s_dst[index + 15].z = g_v4s[index + 15].z + v4f(0, 0, 1, 0).z;
                 }
             }
         });
@@ -297,28 +298,29 @@ void BM_m4MulV4_fScalar()
         for (uint32 i = 0; i < numVectors; i += 16)
         {
             //g_v4s_dst[i] = m * g_v4s[i];
-            g_v4s_dst[i]     = g_v4s[i]     + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 1] = g_v4s[i + 1] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 2] = g_v4s[i + 2] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 3] = g_v4s[i + 3] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 4] = g_v4s[i + 4] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 5] = g_v4s[i + 5] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 6] = g_v4s[i + 6] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 7] = g_v4s[i + 7] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 8] = g_v4s[i + 8] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 9] = g_v4s[i + 9] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 10] = g_v4s[i + 10] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 11] = g_v4s[i + 11] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 12] = g_v4s[i + 12] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 13] = g_v4s[i + 13] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 14] = g_v4s[i + 14] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 15] = g_v4s[i + 15] + v4f(0, 0, 1, 0);
+            g_v4s_dst[i].z = g_v4s[i].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 1].z = g_v4s[i + 1].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 2].z = g_v4s[i + 2].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 3].z = g_v4s[i + 3].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 4].z = g_v4s[i + 4].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 5].z = g_v4s[i + 5].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 6].z = g_v4s[i + 6].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 7].z = g_v4s[i + 7].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 8].z = g_v4s[i + 8].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 9].z = g_v4s[i + 9].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 10].z = g_v4s[i + 10].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 11].z = g_v4s[i + 11].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 12].z = g_v4s[i + 12].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 13].z = g_v4s[i + 13].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 14].z = g_v4s[i + 14].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 15].z = g_v4s[i + 15].z + v4f(0, 0, 1, 0).z;
         }
     }
 }
 
 void BM_m4MulV4_fVectorized()
 {
+    return;
     alignas(16) const m4f m = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f };
 
     for (uint32 iter = 0; iter < numIters; ++iter)
@@ -326,22 +328,22 @@ void BM_m4MulV4_fVectorized()
         for (uint32 i = 0; i < numVectors; i += 16)
         {
             //VectorOps::Mul_SIMD(&g_v4s[i], &m, &g_v4s_dst[i]);
-            g_v4s_dst[i]     = g_v4s[i]     + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 1] = g_v4s[i + 1] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 2] = g_v4s[i + 2] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 3] = g_v4s[i + 3] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 4] = g_v4s[i + 4] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 5] = g_v4s[i + 5] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 6] = g_v4s[i + 6] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 7] = g_v4s[i + 7] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 8] = g_v4s[i + 8] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 9] = g_v4s[i + 9] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 10] = g_v4s[i + 10] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 11] = g_v4s[i + 11] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 12] = g_v4s[i + 12] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 13] = g_v4s[i + 13] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 14] = g_v4s[i + 14] + v4f(0, 0, 1, 0);
-            g_v4s_dst[i + 15] = g_v4s[i + 15] + v4f(0, 0, 1, 0);
+            g_v4s_dst[i].z = g_v4s[i].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 1].z = g_v4s[i + 1].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 2].z = g_v4s[i + 2].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 3].z = g_v4s[i + 3].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 4].z = g_v4s[i + 4].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 5].z = g_v4s[i + 5].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 6].z = g_v4s[i + 6].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 7].z = g_v4s[i + 7].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 8].z = g_v4s[i + 8].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 9].z = g_v4s[i + 9].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 10].z = g_v4s[i + 10].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 11].z = g_v4s[i + 11].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 12].z = g_v4s[i + 12].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 13].z = g_v4s[i + 13].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 14].z = g_v4s[i + 14].z + v4f(0, 0, 1, 0).z;
+            g_v4s_dst[i + 15].z = g_v4s[i + 15].z + v4f(0, 0, 1, 0).z;
         }
     }
 }

@@ -19,9 +19,9 @@ void __cdecl WorkerThreadFunction(void* arg)
 {
     ThreadInfo* info = (ThreadInfo*)(arg);
 
-    //uint64 processorAffinityMask = 1ULL << (info->threadId * 2);
+    //uint64 processorAffinityMask = 1ULL << (info->threadId * 2 + 1);
     //SetThreadAffinityMask(GetCurrentThread(), processorAffinityMask);
-    SetThreadIdealProcessor(GetCurrentThread(), info->threadId);
+    SetThreadIdealProcessor(GetCurrentThread(), info->threadId + 1);
     //SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
 outer_loop:
@@ -43,6 +43,9 @@ outer_loop:
                 job->m_done = true;
                 goto outer_loop; // reset counter until sema
             }
+            _mm_pause();
+            _mm_pause();
+            _mm_pause();
             _mm_pause();
         }
 
