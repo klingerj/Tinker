@@ -19,6 +19,11 @@ void __cdecl WorkerThreadFunction(void* arg)
 {
     ThreadInfo* info = (ThreadInfo*)(arg);
 
+    //uint64 processorAffinityMask = 1ULL << (info->threadId * 2);
+    //SetThreadAffinityMask(GetCurrentThread(), processorAffinityMask);
+    SetThreadIdealProcessor(GetCurrentThread(), info->threadId);
+    //SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+
 outer_loop:
     while (!info->terminate)
     {
@@ -57,8 +62,8 @@ void WorkerThreadPool::Startup(uint32 NumThreads)
         m_threads[i].didTerminate = false;
         m_threads[i].threadId = i;
         m_threads[i].semaphoreHandle = (uint64)CreateSemaphoreEx(0, 0, NUM_JOBS_PER_WORKER, 0, 0, SEMAPHORE_ALL_ACCESS);
-        //_beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, &m_threads[i]);
-        m_threads[i].theThread = new std::thread(WorkerThreadFunction, &m_threads[i]);
+        _beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, &m_threads[i]);
+        //m_threads[i].theThread = new std::thread(WorkerThreadFunction, &m_threads[i]);
     }
 }
 
