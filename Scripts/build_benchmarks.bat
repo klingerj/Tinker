@@ -40,6 +40,7 @@ rem ****************************************************************************
 rem TinkerBenchmark - benchmarking
 set SourceListBenchmark=../Benchmark/BenchmarkMain.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32PlatformGameAPI.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32WorkerThreadPool.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32Logging.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Mem.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp 
