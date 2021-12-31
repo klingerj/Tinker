@@ -9,11 +9,6 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
-if "%2" == "true" (
-    rem Run core engine build script
-    call build_core_engine_lib.bat %BuildConfig%
-    )
-
 echo.
 echo ***** Building Tinker Benchmarks *****
 
@@ -66,7 +61,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerBenchmark.exe...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% TinkerApp.lib Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
 
 :DoneBuild
 popd
