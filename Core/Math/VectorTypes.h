@@ -13,7 +13,7 @@ namespace Core
 // Vector classes
 
 template <typename T>
-class vec2
+struct vec2
 {
     enum
     {
@@ -156,7 +156,7 @@ bool operator!=(const vec2<T>& lhs, const vec2<T>& rhs)
 }
 
 template <typename T>
-class vec3
+struct vec3
 {
     enum
     {
@@ -308,7 +308,7 @@ bool operator!=(const vec3<T>& lhs, const vec3<T>& rhs)
 }
 
 template <typename T>
-class vec4
+struct vec4
 {
     enum
     {
@@ -508,7 +508,7 @@ inline T Dot(const vec4<T>& a, const vec4<T>& b)
 // Matrix classes
 
 template <typename T>
-class mat2
+struct mat2
 {
     enum
     {
@@ -681,7 +681,7 @@ bool operator!=(const mat2<T>& lhs, const mat2<T>& rhs)
 }
 
 template <typename T>
-class mat3
+struct mat3
 {
     enum
     {
@@ -869,7 +869,7 @@ bool operator!=(const mat3<T>& lhs, const mat3<T>& rhs)
 }
 
 template <typename T>
-class mat4
+struct mat4
 {
 
     enum

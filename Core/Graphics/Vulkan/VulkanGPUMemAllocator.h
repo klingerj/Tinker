@@ -28,7 +28,7 @@ enum
 };
 
 // GPU Memory Allocator API
-class GPU_AllocatorBase
+struct GPU_AllocatorBase
 {
 protected:
     uint32 m_numTotalAllocs = 0;
@@ -39,7 +39,7 @@ public:
     virtual void Dealloc(const GPUMemAllocRecord& record) = 0;
 };
 
-class GPU_PassthroughAllocator : public GPU_AllocatorBase
+struct GPU_PassthroughAllocator : public GPU_AllocatorBase
 {
 public:
     GPU_PassthroughAllocator() {}

@@ -7,7 +7,7 @@ namespace Tk
 namespace Platform
 {
 
-class  WorkerJob
+struct  WorkerJob
 {
 public:
     alignas(CACHE_LINE) volatile uint32 m_done = 0;
@@ -17,7 +17,7 @@ public:
 };
 
 template <typename T>
-class JobFunc : public WorkerJob
+struct JobFunc : public WorkerJob
 {
 public:
     alignas(CACHE_LINE) T m_func;
@@ -31,7 +31,7 @@ inline void WaitOnJob(WorkerJob* job)
     while (!job->m_done);
 }
 
-class WorkerJobList
+struct WorkerJobList
 {
 public:
     uint32 m_numJobs;
