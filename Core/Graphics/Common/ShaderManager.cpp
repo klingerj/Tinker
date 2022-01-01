@@ -1,5 +1,7 @@
 #include "Graphics/Common/ShaderManager.h"
 #include "Graphics/Common/GraphicsCommon.h"
+#include "Platform/PlatformGameAPI.h"
+#include "Allocators.h"
 
 #ifdef _SHADERS_SPV_DIR
 #define SHADERS_SPV_PATH STRINGIFY(_SHADERS_SPV_DIR)
@@ -8,6 +10,7 @@
 #endif
 
 static const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 1024 * 100;
+static Tk::Memory::LinearAllocator<> g_ShaderBytecodeAllocator;
 
 namespace Tk
 {
@@ -15,33 +18,30 @@ namespace Core
 {
 namespace Graphics
 {
-
-ShaderManager g_ShaderManager = {};
-
-void ShaderManager::Startup()
+namespace ShaderManager
 {
-    shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
+
+static void CreateAllRenderPasses()
+{
+    bool bOk = false;
+    // Render passes
+    // TODO: make the render pass creation stuff more controllable by the app
+
+    // NOTE: this render pass is created inside the vulkan init code
+    // color, no depth
+    //bOk = Tk::Core::Graphics::CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
+    //TINKER_ASSERT(bOk);
+
+    // depth, no color
+    bOk = Tk::Core::Graphics::CreateRenderPass(Graphics::RENDERPASS_ID_ZPrepass, 0, Graphics::ImageFormat::Invalid, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eUndefined, Graphics::ImageFormat::Depth_32F);
+    TINKER_ASSERT(bOk);
+
+    // color, depth
+    bOk = Tk::Core::Graphics::CreateRenderPass(Graphics::RENDERPASS_ID_MainView, 1, Graphics::ImageFormat::RGBA8_SRGB, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eShaderRead, Graphics::ImageFormat::Depth_32F);
+    TINKER_ASSERT(bOk);
 }
 
-void ShaderManager::Shutdown()
-{
-    shaderBytecodeAllocator.ExplicitFree();
-}
-
-void ShaderManager::ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight)
-{
-    Graphics::DestroyAllPSOPerms();
-    LoadAllShaders(newWindowWidth, newWindowHeight);
-}
-
-void ShaderManager::CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight)
-{
-    CreateAllRenderPasses();
-    // TODO: don't reload the shader every time we resize, need to be able to reference existing bytecode... which we do already store
-    LoadAllShaders(newWindowWidth, newWindowHeight);
-}
-
-bool ShaderManager::LoadShader(const char* vertexShaderFileName, const char* fragmentShaderFileName,
+static bool LoadShader(const char* vertexShaderFileName, const char* fragmentShaderFileName,
     uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
     uint32* descLayouts, uint32 numDescLayouts)
 {
@@ -52,7 +52,7 @@ bool ShaderManager::LoadShader(const char* vertexShaderFileName, const char* fra
     if (vertexShaderFileName)
     {
         vertexShaderFileSize = Tk::Platform::GetEntireFileSize(vertexShaderFileName);
-        vertexShaderBuffer = shaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
+        vertexShaderBuffer = g_ShaderBytecodeAllocator.Alloc(vertexShaderFileSize, 1);
         TINKER_ASSERT(vertexShaderBuffer);
         Tk::Platform::ReadEntireFile(vertexShaderFileName, vertexShaderFileSize, vertexShaderBuffer);
     }
@@ -60,7 +60,7 @@ bool ShaderManager::LoadShader(const char* vertexShaderFileName, const char* fra
     if (fragmentShaderFileName)
     {
         fragmentShaderFileSize = Tk::Platform::GetEntireFileSize(fragmentShaderFileName);
-        fragmentShaderBuffer = shaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
+        fragmentShaderBuffer = g_ShaderBytecodeAllocator.Alloc(fragmentShaderFileSize, 1);
         TINKER_ASSERT(fragmentShaderBuffer);
         Tk::Platform::ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
     }
@@ -72,10 +72,33 @@ bool ShaderManager::LoadShader(const char* vertexShaderFileName, const char* fra
     return created;
 }
 
-void ShaderManager::LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
+void Startup()
 {
-    shaderBytecodeAllocator.ExplicitFree();
-    shaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
+    g_ShaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
+}
+
+void Shutdown()
+{
+    g_ShaderBytecodeAllocator.ExplicitFree();
+}
+
+void ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight)
+{
+    Graphics::DestroyAllPSOPerms();
+    LoadAllShaders(newWindowWidth, newWindowHeight);
+}
+
+void CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight)
+{
+    CreateAllRenderPasses();
+    // TODO: don't reload the shader every time we resize, need to be able to reference existing bytecode... which we do already store
+    LoadAllShaders(newWindowWidth, newWindowHeight);
+}
+
+void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
+{
+    g_ShaderBytecodeAllocator.ExplicitFree();
+    g_ShaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
 
     bool bOk = false;
 
@@ -144,27 +167,7 @@ void ShaderManager::LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     TINKER_ASSERT(bOk);
 }
 
-void ShaderManager::CreateAllRenderPasses()
-{
-    bool bOk = false;
-    // Render passes
-    // TODO: make the render pass creation stuff more controllable by the app
-
-    // NOTE: this render pass is created inside the vulkan init code
-    // color, no depth
-    //bOk = Tk::Core::Graphics::CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
-    //TINKER_ASSERT(bOk);
-
-    // depth, no color
-    bOk = Tk::Core::Graphics::CreateRenderPass(Graphics::RENDERPASS_ID_ZPrepass, 0, Graphics::ImageFormat::Invalid, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eUndefined, Graphics::ImageFormat::Depth_32F);
-    TINKER_ASSERT(bOk);
-
-    // color, depth
-    bOk = Tk::Core::Graphics::CreateRenderPass(Graphics::RENDERPASS_ID_MainView, 1, Graphics::ImageFormat::RGBA8_SRGB, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eShaderRead, Graphics::ImageFormat::Depth_32F);
-    TINKER_ASSERT(bOk);
-}
-
-void ShaderManager::LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
+void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
 {
     bool bOk = false;
 
@@ -235,6 +238,7 @@ void ShaderManager::LoadAllShaderResources(uint32 windowWidth, uint32 windowHeig
     LoadAllShaders(windowWidth, windowHeight);
 }
 
+}
 }
 }
 }

@@ -374,7 +374,7 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
                 const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
                 if (ExecSystemCommand(shaderCompileCommand) == 0)
                 {
-                    Tk::Core::Graphics::g_ShaderManager.ReloadShaders(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    Tk::Core::Graphics::ShaderManager::ReloadShaders(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                 }
                 else
                 {
@@ -671,8 +671,8 @@ wWinMain(HINSTANCE hInstance,
         ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
         #endif
 
-        Tk::Core::Graphics::g_ShaderManager.Startup();
-        Tk::Core::Graphics::g_ShaderManager.LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+        Tk::Core::Graphics::ShaderManager::Startup();
+        Tk::Core::Graphics::ShaderManager::LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
         g_GameCode = {};
         bool reloaded = ReloadGameCode(&g_GameCode, GameDllStr);
@@ -699,7 +699,7 @@ wWinMain(HINSTANCE hInstance,
                 if (g_windowResized)
                 {
                     Tk::Core::Graphics::WindowResize();
-                    Tk::Core::Graphics::g_ShaderManager.CreateWindowDependentResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    Tk::Core::Graphics::ShaderManager::CreateWindowDependentResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_GameCode.GameWindowResize(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_windowResized = false;
                 }
@@ -745,9 +745,9 @@ wWinMain(HINSTANCE hInstance,
             #endif
 
             Tk::Core::Graphics::RecreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-            Tk::Core::Graphics::g_ShaderManager.Shutdown();
-            Tk::Core::Graphics::g_ShaderManager.Startup();
-            Tk::Core::Graphics::g_ShaderManager.LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+            Tk::Core::Graphics::ShaderManager::Shutdown();
+            Tk::Core::Graphics::ShaderManager::Startup();
+            Tk::Core::Graphics::ShaderManager::LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
         }
     }
 
@@ -757,7 +757,7 @@ wWinMain(HINSTANCE hInstance,
     ThreadPool::Shutdown();
     #endif
 
-    Tk::Core::Graphics::g_ShaderManager.Shutdown();
+    Tk::Core::Graphics::ShaderManager::Shutdown();
     Tk::Core::Graphics::DestroyContext();
 
     _aligned_free(g_graphicsCommandStream.m_graphicsCommands);
