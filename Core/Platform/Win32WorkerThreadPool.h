@@ -1,6 +1,6 @@
 #include "PlatformGameAPI.h"
 #include "DataStructures/RingBuffer.h"
-
+#include <thread>
 namespace Tk
 {
 namespace Platform
@@ -13,6 +13,7 @@ typedef struct thread_info
     uint32 threadId = 0;
     alignas(CACHE_LINE) uint64 semaphoreHandle = TINKER_INVALID_HANDLE;
     alignas(CACHE_LINE) Core::RingBuffer<WorkerJob*> jobs;
+    alignas(CACHE_LINE) std::thread* theThread = nullptr;
 } ThreadInfo;
 
 struct WorkerThreadPool
