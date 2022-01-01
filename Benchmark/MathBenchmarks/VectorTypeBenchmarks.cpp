@@ -8,7 +8,6 @@ using namespace Platform;
 using namespace Core;
 
 const uint32 threadCount = 6;
-WorkerThreadPool g_threadpool;
 
 const uint32 numJobs = threadCount;
 WorkerJob* jobs[numJobs];
@@ -88,7 +87,7 @@ void BM_m2MulV2_fScalar()
 
 void BM_m2MulV2_fScalar_MT_Startup()
 {
-    g_threadpool.Startup(threadCount);
+    ThreadPool::Startup(threadCount);
     BM_v2_Startup();
 }
 
@@ -113,12 +112,7 @@ void BM_m2MulV2_fScalar_MT()
 
     for (uint32 i = 0; i < numJobs; ++i)
     {
-        jobs[i]->m_done = false;
-    }
-
-    for (uint32 i = 0; i < numJobs; ++i)
-    {
-        g_threadpool.EnqueueNewThreadJob(jobs[i]);
+        ThreadPool::EnqueueSingleJob(jobs[i]);
     }
 
     for (uint32 i = 0; i < numJobs; ++i)
@@ -129,7 +123,7 @@ void BM_m2MulV2_fScalar_MT()
 
 void BM_m2MulV2_fScalar_MT_Shutdown()
 {
-    g_threadpool.Shutdown();
+    ThreadPool::Shutdown();
     BM_v2_Shutdown();
     for (uint32 i = 0; i < numJobs; ++i)
     {
@@ -174,7 +168,7 @@ void BM_v4_Shutdown()
 
 void BM_v4_MT_Startup()
 {
-    g_threadpool.Startup(threadCount - 1);
+    ThreadPool::Startup(threadCount - 1);
     BM_v4_Startup();
 }
 
@@ -213,18 +207,13 @@ void BM_m4MulV4_fScalar_MT()
             });
     }
 
-    for (uint32 i = 0; i < numJobs; ++i)
-    {
-        jobs[i]->m_done = false;
-    }
-
     for (uint32 i = 1; i < numJobs; ++i)
     {
-        g_threadpool.EnqueueNewThreadJob(jobs[i]);
+        ThreadPool::EnqueueSingleJob(jobs[i]);
     }
 
     (*jobs[0])();
-    jobs[0]->m_done = true;
+    jobs[0]->m_done = 1;
     for (uint32 i = 0; i < numJobs; ++i)
     {
         WaitOnJob(jobs[i]);
@@ -267,18 +256,13 @@ void BM_m4MulV4_fVectorized_MT()
         });
     }
 
-    for (uint32 i = 0; i < numJobs; ++i)
-    {
-        jobs[i]->m_done = false;
-    }
-
     for (uint32 i = 1; i < numJobs; ++i)
     {
-        g_threadpool.EnqueueNewThreadJob(jobs[i]);
+        ThreadPool::EnqueueSingleJob(jobs[i]);
     }
 
     (*jobs[0])();
-    jobs[0]->m_done = true;
+    jobs[0]->m_done = 1;
     for (uint32 i = 0; i < numJobs; ++i)
     {
         WaitOnJob(jobs[i]);
@@ -287,7 +271,7 @@ void BM_m4MulV4_fVectorized_MT()
 
 void BM_v4_MT_Shutdown()
 {
-    g_threadpool.Shutdown();
+    ThreadPool::Shutdown();
     BM_v4_Shutdown();
 }
 

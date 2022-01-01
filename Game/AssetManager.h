@@ -12,8 +12,6 @@
 #define TINKER_MAX_MESHES 64
 #define TINKER_MAX_TEXTURES 64
 
-// TODO: probably heap-allocate all these arrays once things get large enough
-
 class AssetManager
 {
 private:

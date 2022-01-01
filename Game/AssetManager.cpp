@@ -32,10 +32,6 @@ void AssetManager::LoadAllAssets()
         ASSETS_PATH "FireElemental\\fire_elemental.obj",
         ASSETS_PATH "RTX3090\\rtx3090.obj"
     };
-    //const char* dir = ASSETS_DIR;
-    //const char* dir2 = ASSETS_PATH;
-    //Core::Utility::LogMsg("Game", dir, Utility::LogSeverity::eInfo);
-    //Core::Utility::LogMsg("Game", dir2, Utility::LogSeverity::eInfo);
 
     uint32 totalMeshFileBytes = 0;
     uint32 meshFileSizes[numMeshAssets] = {};
@@ -59,7 +55,7 @@ void AssetManager::LoadAllAssets()
     bool multithreadObjLoading = true;
     if (multithreadObjLoading)
     {
-        Platform::WorkerJobList jobs;
+        Tk::Platform::WorkerJobList jobs;
         jobs.Init(numMeshAssets);
         for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
         {
@@ -73,8 +69,10 @@ void AssetManager::LoadAllAssets()
                     currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
                 });
 
-            EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
+            //Tk::Platform::EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
         }
+        //Tk::Platform::EnqueueWorkerThreadJobList_Unassisted(&jobs);
+        Tk::Platform::EnqueueWorkerThreadJobList_Assisted(&jobs);
         jobs.WaitOnJobs();
         jobs.FreeList();
     }

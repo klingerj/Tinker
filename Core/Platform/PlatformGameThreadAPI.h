@@ -7,12 +7,10 @@ namespace Tk
 namespace Platform
 {
 
-// TODO: do an aligned alloc for these jobs via PlatformGameAPI.h
-// should move all this stuff into a cpp file
-class /*alignas(CACHE_LINE)*/ WorkerJob
+class  WorkerJob
 {
 public:
-    alignas(CACHE_LINE) volatile bool m_done = false;
+    alignas(CACHE_LINE) volatile uint32 m_done = 0;
     virtual ~WorkerJob() {}
 
     virtual void operator()() = 0;
@@ -83,11 +81,17 @@ public:
 template <typename T>
 WorkerJob* CreateNewThreadJob(T t)
 {
-    return new JobFunc<T>(t);
+    JobFunc<T>* NewJob = new JobFunc<T>(t);
+    NewJob->m_done = 0;
+    return NewJob;
 }
 
-#define ENQUEUE_WORKER_THREAD_JOB(name) TINKER_API void name(WorkerJob* newJob)
+#define ENQUEUE_WORKER_THREAD_JOB(name) TINKER_API void name(WorkerJob* Job)
 ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob);
+
+#define ENQUEUE_WORKER_THREAD_JOB_LIST(name) TINKER_API void name(WorkerJobList* JobList)
+ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Unassisted);
+ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Assisted);
 
 }
 }
