@@ -10,7 +10,7 @@
 
 int main()
 {
-    SetThreadIdealProcessor(GetCurrentThread(), 0);
+    //SetThreadIdealProcessor(GetCurrentThread(), 0);
 
     //uint64 processorAffinityMask = 1ULL;
     //SetThreadAffinityMask(GetCurrentThread(), processorAffinityMask);
@@ -53,7 +53,7 @@ int main()
     
     // V4 mul M4
     //TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M4F * V4F, Scalar", BM_v4_Startup, BM_m4MulV4_fScalar, BM_v4_Shutdown);
-    for (uint32 i = 0; i < 5; ++i)
+    for (uint32 i = 0; i < 1; ++i)
     {
         BM_v4_Startup();
         {
@@ -65,7 +65,7 @@ int main()
     }
 
     //TINKER_BENCHMARK_STARTUP_SHUTDOWN("VectorType - M4F * V4F, Vectorized", BM_v4_Startup, BM_m4MulV4_fVectorized, BM_v4_Shutdown);
-    for (uint32 i = 0; i < 5; ++i)
+    for (uint32 i = 0; i < 1; ++i)
     {
         BM_v4_Startup();
         {
@@ -76,7 +76,7 @@ int main()
         BM_v4_Shutdown();
     }
 
-    for (uint32 i = 0; i < 5; ++i)
+    for (uint32 i = 0; i < 1; ++i)
     {
         BM_v4_MT_Startup();
         {
@@ -87,7 +87,7 @@ int main()
         BM_v4_MT_Shutdown();
     }
 
-    for (uint32 i = 0; i < 5; ++i)
+    for (uint32 i = 0; i < 1; ++i)
     {
         BM_v4_MT_Startup();
         {
