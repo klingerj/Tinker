@@ -19,7 +19,7 @@ namespace Core
 namespace Utility
 {
 
-class ScopedTimer
+struct ScopedTimer
 {
 private:
     char m_msg[MAX_MSG_LEN + TIMER_MSG_SUFFIX_LEN] = {}; // TODO: use better string system here

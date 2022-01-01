@@ -12,7 +12,7 @@
 #define TINKER_MAX_MESHES 64
 #define TINKER_MAX_TEXTURES 64
 
-class AssetManager
+struct AssetManager
 {
 private:
     // Mesh Buffer data

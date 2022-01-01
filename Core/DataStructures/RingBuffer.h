@@ -11,9 +11,9 @@ namespace Tk
 namespace Core
 {
 
-// Single Producer, Single Consumer wait-free queue
+// Single Producer Single Consumer wait-free queue
 template <typename T, uint32 size = 0> // TODO: assert Size >= 1? or that it is a power of 2?
-class RingBuffer
+struct RingBuffer
 {
 private:
     uint32 _SIZE;

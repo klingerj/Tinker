@@ -8,7 +8,7 @@ namespace Memory
 {
 
 template <size_t Size = 0, uint32 Alignment = 1>
-class LinearAllocator
+struct LinearAllocator
 {
 public:
     size_t m_size;
@@ -102,7 +102,7 @@ struct pool_element
 };
 
 template <typename T, uint32 NumElements = 0, uint32 Alignment = 1>
-class PoolAllocator
+struct PoolAllocator
 {
 private:
     uint32 m_numAllocdElements = 0;
