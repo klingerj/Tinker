@@ -129,10 +129,36 @@ namespace Platform
 ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
 {
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-    g_ThreadPool.EnqueueNewThreadJob(newJob);
+    ThreadPool::EnqueueSingleJob(Job);
 #else
-    (*newJob)();
-    newJob->m_done = true;
+    (*Job)();
+    Job->m_done = 1;
+#endif
+}
+
+ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Unassisted)
+{
+#ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
+    ThreadPool::EnqueueJobList(JobList);
+#else
+    for (uint32 uiJob = 0; uiJob < JobList->m_numJobs; ++uiJob)
+    {
+        (*(JobList->m_jobs[uiJob]))();
+        JobList->m_jobs[uiJob]->m_done = 1;
+    }
+#endif
+}
+
+ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Assisted)
+{
+#ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
+    ThreadPool::EnqueueJobList(JobList);
+#else
+    for (uint32 uiJob = 0; uiJob < JobList->m_numJobs; ++uiJob)
+    {
+        (*(JobList->m_jobs[uiJob]))();
+        JobList->m_jobs[uiJob]->m_done = 1;
+    }
 #endif
 }
 
@@ -642,7 +668,7 @@ wWinMain(HINSTANCE hInstance,
         g_graphicsCommandStream.m_graphicsCommands = (Tk::Core::Graphics::GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Core::Graphics::GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-        g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
+        ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
         #endif
 
         Tk::Core::Graphics::g_ShaderManager.Startup();
@@ -714,8 +740,8 @@ wWinMain(HINSTANCE hInstance,
         {
             // Reset application resources
             #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-            g_ThreadPool.Shutdown();
-            g_ThreadPool.Startup(g_SystemInfo.dwNumberOfProcessors / 2);
+            ThreadPool::Shutdown();
+            ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
             #endif
 
             Tk::Core::Graphics::RecreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
@@ -728,7 +754,7 @@ wWinMain(HINSTANCE hInstance,
     g_GameCode.GameDestroy();
 
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-    g_ThreadPool.Shutdown();
+    ThreadPool::Shutdown();
     #endif
 
     Tk::Core::Graphics::g_ShaderManager.Shutdown();
