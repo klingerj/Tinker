@@ -152,7 +152,21 @@ ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Unassisted)
 ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Assisted)
 {
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-    ThreadPool::EnqueueJobList(JobList);
+    uint32 NumJobs = JobList->m_numJobs;
+    uint32 NumThreads = ThreadPool::NumWorkerThreads() + 1;
+    uint32 NumJobsPerThread = NumJobs / NumThreads;
+    uint32 NumJobsLeftover = NumJobs % NumThreads;
+
+    uint32 NumMainThreadJobs = NumJobsPerThread; // main thread never does any leftover jobs for now
+    ThreadPool::EnqueueJobSubList(JobList, NumJobs - NumMainThreadJobs);
+
+    // Main thread work
+    for (uint32 uiJob = NumJobs - NumMainThreadJobs; uiJob < JobList->m_numJobs; ++uiJob)
+    {
+        (*(JobList->m_jobs[uiJob]))();
+        JobList->m_jobs[uiJob]->m_done = 1;
+    }
+
 #else
     for (uint32 uiJob = 0; uiJob < JobList->m_numJobs; ++uiJob)
     {
