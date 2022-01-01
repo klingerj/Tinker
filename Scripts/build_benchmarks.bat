@@ -19,7 +19,7 @@ del TinkerBenchmark.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHsc /GR- /Gm- /GS- /fp:fast /Zi
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /wd4702 /EHsc /GR- /Gm- /GS- /fp:fast /Zi
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -35,6 +35,7 @@ rem ****************************************************************************
 rem TinkerBenchmark - benchmarking
 set SourceListBenchmark=../Benchmark/BenchmarkMain.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32PlatformGameAPI.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32WorkerThreadPool.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32Logging.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Mem.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp 
