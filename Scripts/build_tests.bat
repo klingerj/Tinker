@@ -37,6 +37,7 @@ rem ****************************************************************************
 rem TinkerTest - unit testing
 set SourceListTest=../Test/TestMain.cpp 
 set SourceListTest=%SourceListTest% ../Core/Platform/Win32PlatformGameAPI.cpp 
+set SourceListTest=%SourceListTest% ../Core/Utility/MemTracker.cpp 
 set SourceListTest=%SourceListTest% ../Core/DataStructures/Vector.cpp 
 set SourceListTest=%SourceListTest% ../Core/DataStructures/HashMap.cpp 
 set SourceListTest=%SourceListTest% ../Core/Mem.cpp 
@@ -44,11 +45,11 @@ set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsTest=/FdTinkerTest.pdb
-    set DebugLinkFlagsTest=/pdb:TinkerTest.pdb
+    set DebugLinkFlagsTest=/pdb:TinkerTest.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
     set DebugCompileFlagsTest=/FdTinkerTest.pdb
-    set DebugLinkFlagsTest=/pdb:TinkerTest.pdb
+    set DebugLinkFlagsTest=/pdb:TinkerTest.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
