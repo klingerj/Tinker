@@ -39,6 +39,7 @@ struct MemTracker
     ~MemTracker()
     {
         //TODO: move this?
+        bEnableAllocRecording = 0;
         DebugOutputAllMemAllocs();
     }
 };
@@ -60,7 +61,7 @@ void RecordMemAlloc(uint64 sizeInBytes, void* memPtr)
 
 void RecordMemDealloc(void* memPtr)
 {
-    if (!g_MemTracker.bEnableAllocRecording)
+    if (!g_MemTracker.bEnableAllocRecording || !memPtr)
         return;
 
     //MemRecord m;
@@ -71,13 +72,15 @@ void RecordMemDealloc(void* memPtr)
     if (index == g_MemTracker.m_AllocRecords.eInvalidIndex)
     {
         // Memory not allocated yet
+        TINKER_ASSERT(0);
     }
     else
     {
         MemRecord& m = g_MemTracker.m_AllocRecords.DataAtIndex(index);
         if (m.bWasDeallocated == 1)
         {
-            // TODO: detect double free
+            // Double free
+            TINKER_ASSERT(0);
         }
         else
         {
@@ -88,27 +91,30 @@ void RecordMemDealloc(void* memPtr)
 
 void DebugOutputAllMemAllocs()
 {
-    // TODO: print info about the allocations
+    // TODO: get rid of this because you can't really track this perfectly due to destructor order not being guaranteed, but cool test
 
     Platform::PrintDebugString("***** Dumping all alloc records that were not deallocated *****\n");
-    /*char buffer[512];
-    for (uint32 i = 0; i < g_MemTracker.m_numRecords; ++i)
+    char buffer[512];
+    for (uint32 i = 0; i < g_MemTracker.m_AllocRecords.Size(); ++i)
     {
-        const MemRecord& record = g_MemTracker.m_AllocRecords[i];
-        if (record.bWasDeallocated) continue;
+        uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(i);
+        if (key == g_MemTracker.m_AllocRecords.GetInvalidKey())
+            continue;
 
-        memset(buffer, 0, ARRAYCOUNT(buffer));
-        
-        // TODO: alloc file/line
+        const MemRecord& record = g_MemTracker.m_AllocRecords.DataAtIndex(i);
+        if (!record.bWasDeallocated)
+        {
+            memset(buffer, 0, ARRAYCOUNT(buffer));
 
-        // Alloc size
-        _itoa_s(record.sizeInBytes, buffer, 10, 10);
-        Platform::PrintDebugString("Alloc size: ");
-        Platform::PrintDebugString(buffer);
+            // TODO: file/line
 
-        //-----
-        Platform::PrintDebugString("\n");
-    }*/
+            // Alloc size
+            _itoa_s((int)record.sizeInBytes, buffer, 10, 10);
+            Platform::PrintDebugString("Alloc size: ");
+            Platform::PrintDebugString(buffer);
+            Platform::PrintDebugString("\n");
+        }
+    }
     Platform::PrintDebugString("********************\n");
 }
 

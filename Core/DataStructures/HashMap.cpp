@@ -59,6 +59,12 @@ void* HashMapBase::DataAtIndex(uint32 index, size_t dataPairSize, size_t dataVal
     return m_data + index * dataPairSize + dataValueOffset;
 }
 
+TINKER_API void* HashMapBase::KeyAtIndex(uint32 index, size_t dataPairSize) const
+{
+    TINKER_ASSERT(index < m_size);
+    return m_data + index * dataPairSize;
+}
+
 uint32 HashMapBase::Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey)
 {
     if (CompareKeysFunc(key, m_InvalidKey))
