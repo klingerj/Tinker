@@ -5,18 +5,13 @@
 
 #include <string.h>
 
-#define CMP_KEY_FUNC(name) bool name(const void* A, const void* B)
-typedef CMP_KEY_FUNC(CompareKeyFunc);
+//#define CMP_KEY_FUNC(name) bool name(const void* A, const void* B)
+//typedef CMP_KEY_FUNC(CompareKeyFunc);
 
-// Define custom compare funcs like so:
-inline CMP_KEY_FUNC(CompareKeyFuncU32)
-{ 
-    return *(uint32*)A == *(uint32*)B;
-}
-
-inline CMP_KEY_FUNC(CompareKeyFuncU64)
+template <typename tKey>
+bool CompareKeys(const void* A, const void* B)
 {
-    return *(uint64*)A == *(uint64*)B;
+    return *(tKey*)A == *(tKey*)B;
 }
 
 // Good hash functions taken from here: https://nullprogram.com/blog/2018/07/31/ 
@@ -65,12 +60,12 @@ protected:
     uint32 m_size;
 
     TINKER_API void Reserve(uint32 numEles, uint32 eleSize);
-    TINKER_API uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare, const void* invalidValue) const;
+    TINKER_API uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, bool CompareKeysFunc(const void*, const void*), const void* m_InvalidKey) const;
     TINKER_API void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const;
-    TINKER_API uint32 Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* invalidValue);
+    TINKER_API uint32 Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey);
 };
 
-template <typename tKey, typename tVal, uint32 HashFunc(tKey), CompareKeyFunc CompareFunc>
+template <typename tKey, typename tVal, uint32 HashFunc(tKey)>
 struct HashMap : public HashMapBase
 {
 private:
@@ -87,7 +82,7 @@ private:
         ePairValOffset = sizeof(Pair) - sizeof(Pair::value), // TODO: struct alignment issues?
     };
 
-    tKey m_InvalidValue;
+    tKey m_InvalidKey;
 
     uint32 Hash(tKey val, uint32 dataSizeMax) const
     {
@@ -99,8 +94,7 @@ public:
     {
         m_data = nullptr;
         m_size = 0;
-
-        memset(&m_InvalidValue, 0xFF, sizeof(tKey));
+        memset(&m_InvalidKey, 0xFF, sizeof(tKey));
     }
     
     void Reserve(uint32 numEles)
@@ -111,7 +105,7 @@ public:
     uint32 FindIndex(tKey key) const
     {
         uint32 index = Hash(key, m_size);
-        return HashMapBase::FindIndex(index, &key, ePairSize, CompareFunc, &m_InvalidValue);
+        return HashMapBase::FindIndex(index, &key, ePairSize, CompareKeys<tKey>, &m_InvalidKey);
     }
 
     const tVal& DataAtIndex(uint32 index) const
@@ -119,16 +113,21 @@ public:
         return *(tVal*)HashMapBase::DataAtIndex(index, ePairSize, ePairValOffset);
     }
 
+    tVal& DataAtIndex(uint32 index)
+    {
+        return *(tVal*)HashMapBase::DataAtIndex(index, ePairSize, ePairValOffset);
+    }
+
     uint32 Insert(tKey key, tVal value)
     {
         uint32 index = Hash(key, m_size);
-        return HashMapBase::Insert(index, &key, &value, CompareFunc, ePairSize, ePairValOffset, ePairValSize, &m_InvalidValue);
+        return HashMapBase::Insert(index, &key, &value, CompareKeys<tKey>, ePairSize, ePairValOffset, ePairValSize, &m_InvalidKey);
     }
 };
 
 // Common hashmap specializations
-typedef HashMap<uint32, uint32, &Hash32, CompareKeyFuncU32> HashMapU32;
-typedef HashMap<uint64, uint64, &Hash64, CompareKeyFuncU64> HashMapU64;
+typedef HashMap<uint32, uint32, Hash32> HashMapU32;
+typedef HashMap<uint64, uint64, Hash64> HashMapU64;
 
 }
 }

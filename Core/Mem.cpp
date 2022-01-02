@@ -6,15 +6,21 @@ namespace Tk
 namespace Core
 {
 
-#if defined(MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
-// TODO: overload operator new to call CoreMalloc functions
+#define ENABLE_MEM_TRACKING
+
+#if defined(ENABLE_MEM_TRACKING) && defined(_WIN32)
+#define MEM_TRACKING
+#endif
+
+#if defined(MEM_TRACKING) && defined(_WIN32)
+// TODO: overload operator new to record memory allocations
 #endif
 
 void* CoreMalloc(size_t size)
 {
     void* ptr = malloc(size);
-    #if defined(MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
-    Utility::RecordMemAlloc((uint32)size, ptr);
+    #if defined(MEM_TRACKING)
+    Utility::RecordMemAlloc((uint64)size, ptr);
     #endif
     return ptr;
 }
@@ -22,7 +28,7 @@ void* CoreMalloc(size_t size)
 void CoreFree(void* ptr)
 {
     free(ptr);
-    #if defined(MEM_TRACKING) && defined(_WIN32) && defined(_DEBUG)
+    #if defined(MEM_TRACKING)
     Utility::RecordMemDealloc(ptr);
     #endif
 }
