@@ -44,8 +44,7 @@ namespace Core
 // Open addressing hashmap
 struct HashMapBase
 {
-    // TODO: assuming uint32 here
-    enum : uint32 { eInvalidIndex = MAX_UINT32 };
+    enum : uint32 { eInvalidIndex = MAX_UINT32 }; // index, not key
     
     TINKER_API ~HashMapBase();
 
@@ -62,6 +61,7 @@ protected:
     TINKER_API void Reserve(uint32 numEles, uint32 eleSize);
     TINKER_API uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, bool CompareKeysFunc(const void*, const void*), const void* m_InvalidKey) const;
     TINKER_API void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const;
+    TINKER_API void* KeyAtIndex(uint32 index, size_t dataPairSize) const;
     TINKER_API uint32 Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey);
 };
 
@@ -96,6 +96,16 @@ public:
         m_size = 0;
         memset(&m_InvalidKey, 0xFF, sizeof(tKey));
     }
+
+    tKey GetInvalidKey() const
+    {
+        return m_InvalidKey;
+    }
+
+    uint32 Size() const
+    {
+        return m_size;
+    }
     
     void Reserve(uint32 numEles)
     {
@@ -106,6 +116,11 @@ public:
     {
         uint32 index = Hash(key, m_size);
         return HashMapBase::FindIndex(index, &key, ePairSize, CompareKeys<tKey>, &m_InvalidKey);
+    }
+
+    const tKey& KeyAtIndex(uint32 index) const
+    {
+        return *(tKey*)HashMapBase::KeyAtIndex(index, ePairSize);
     }
 
     const tVal& DataAtIndex(uint32 index) const
