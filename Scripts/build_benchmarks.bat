@@ -38,6 +38,7 @@ set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32PlatformGame
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32WorkerThreadPool.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32Logging.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Mem.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Core/Utility/MemTracker.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/ContainerBenchmarks/HashMapBenchmarks.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/DataStructures/HashMap.cpp 
@@ -45,11 +46,11 @@ set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb
-    set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb
+    set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
     set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb
-    set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb
+    set DebugLinkFlagsBenchmark=/pdb:TinkerBenchmark.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=0
     )
 

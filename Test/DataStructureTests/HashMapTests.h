@@ -38,7 +38,6 @@ void Test_HashMap_Basic_U32()
         uint32 value_std = map_std.find(key)->second;
         TINKER_ASSERT(value == value_std);
     }
-    // Then induce a hash collision on all the keys
 
     // then change all the vals and overwrite all keys
     for (uint32 i = 0; i < numEles; ++i)
