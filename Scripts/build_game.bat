@@ -47,11 +47,11 @@ set GameDllPdbName=TinkerGame_%BuildTimestamp%.pdb
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsGame=/Fd%GameDllPdbName%
-    set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
+    set DebugLinkFlagsGame=/pdb:%GameDllPdbName% /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
     set DebugCompileFlagsGame=/Fd%GameDllPdbName%
-    set DebugLinkFlagsGame=/pdb:%GameDllPdbName%
+    set DebugLinkFlagsGame=/pdb:%GameDllPdbName% /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 

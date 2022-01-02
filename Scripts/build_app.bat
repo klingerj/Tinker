@@ -56,12 +56,12 @@ set SourceListApp=%SourceListApp%../Core/Raytracing/AccelStructures/Octree.cpp
 set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
 
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsApp=/TinkerApp.pdb
-    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb
+    set DebugCompileFlagsApp=/FdTinkerApp.pdb
+    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%
     ) else (
     set DebugCompileFlagsApp=/FdTinkerApp.pdb
-    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb
+    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%
     )
 
@@ -84,7 +84,7 @@ set OBJDir=%cd%\obj_app\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsPlatform% %SourceListApp% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsPlatform% /out:TinkerApp.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %SourceListApp% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
 
 echo.
 if EXIST TinkerApp.exp (

@@ -38,11 +38,11 @@ set CompileDefines=
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsServer=/FdTinkerServer.pdb
-    set DebugLinkFlagsServer=/pdb:TinkerServer.pdb
+    set DebugLinkFlagsServer=/pdb:TinkerServer.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     ) else (
     set DebugCompileFlagsServer=/FdTinkerServer.pdb
-    set DebugLinkFlagsServer=/pdb:TinkerServer.pdb
+    set DebugLinkFlagsServer=/pdb:TinkerServer.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%/DASSERTS_ENABLE=1
     )
 
