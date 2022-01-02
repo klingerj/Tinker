@@ -33,10 +33,10 @@ void HashMapBase::Reserve(uint32 numEles, uint32 eleSize)
     }
 }
 
-uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare) const
+uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare, const void* invalidValue) const
 {
-    uint32 invalid = eInvalidIndex;
-    if (Compare(key, &invalid)) { return eInvalidIndex; }
+    if (Compare(key, invalidValue))
+        return eInvalidIndex;
 
     uint32 currIndex = index;
     do
@@ -59,11 +59,10 @@ void* HashMapBase::DataAtIndex(uint32 index, size_t dataPairSize, size_t dataVal
     return m_data + index * dataPairSize + dataValueOffset;
 }
 
-uint32 HashMapBase::Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize)
+uint32 HashMapBase::Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* invalidValue)
 {
-    //TODO: don't hard code uint32 here
-    uint32 invalid = eInvalidIndex;
-    if (Compare(key, &invalid)) { return eInvalidIndex; }
+    if (Compare(key, invalidValue))
+        return eInvalidIndex;
 
     uint32 currIndex = index;
     do
@@ -71,7 +70,7 @@ uint32 HashMapBase::Insert(uint32 index, void* key, void* value, CompareKeyFunc 
         void* keyToInsertAt = m_data + currIndex * dataPairSize;
 
         // check if key is marked as invalid (unused) or matches the input key
-        if (Compare(keyToInsertAt, &invalid) || Compare(keyToInsertAt, key))
+        if (Compare(keyToInsertAt, invalidValue) || Compare(keyToInsertAt, key))
         {
             // found a slot
             memcpy(keyToInsertAt, key, dataValueOffset); // write key - assumes that offset is the same as key size
