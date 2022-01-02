@@ -82,6 +82,7 @@ int main()
     TINKER_TEST("MergeSort Integers", Test_SortingIntegers);
 
     TINKER_TEST_PRINT_NAME("HashMap");
-    TINKER_TEST("HashMap Basic", Test_HashMap_Basic);
+    TINKER_TEST("HashMap Basic U32", Test_HashMap_Basic_U32);
+    TINKER_TEST("HashMap Basic U64", Test_HashMap_Basic_U64);
     TINKER_TEST("HashMap Invalid key", Test_HashMap_InvalidKey);
 }
