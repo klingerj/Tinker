@@ -1,5 +1,6 @@
 #include "Utility/MemTracker.h"
 #include "Platform/PlatformGameAPI.h"
+#include "DataStructures/HashMap.h"
 
 #include <string.h>
 
@@ -10,59 +11,90 @@ namespace Core
 namespace Utility
 {
 
-MemTracker g_MemTracker;
-
-void RecordMemAlloc(uint32 sizeInBytes, void* memPtr)
+struct MemRecord
 {
-    MemRecord m;
-    m.sizeInBytes = sizeInBytes;
-    m.memPtr = (size_t)memPtr;
-    m.bWasDeallocated = false;
-    memcpy(&g_MemTracker.m_records[g_MemTracker.m_numRecords++], &m, sizeof(MemRecord));
-}
+    uint64 memPtr = 0;
+    uint64 sizeInBytes = 0;
+    uint8  bWasDeallocated = 0;
 
-uint32 FindRecord(const MemRecord& m)
-{
-    for (uint32 i = 0; i < g_MemTracker.m_numRecords; ++i)
+    bool operator==(const MemRecord& other) const
     {
-        if (g_MemTracker.m_records[i] == m)
-        {
-            return i;
-        }
+        // Only check if memptr is same
+        return (memPtr == other.memPtr);
+    }
+};
+
+#define MAX_ALLOCS_RECORDED 1 << 24
+struct MemTracker
+{
+    HashMap<uint64, MemRecord, Hash64> m_AllocRecords;
+    uint8 bEnableAllocRecording = 0;
+
+    MemTracker()
+    {
+        m_AllocRecords.Reserve(MAX_ALLOCS_RECORDED);
+        bEnableAllocRecording = 1; // prevents this first actual map allocation from being recorded
     }
 
-    return MAX_RECORDS;
+    ~MemTracker()
+    {
+        //TODO: move this?
+        DebugOutputAllMemAllocs();
+    }
+};
+static MemTracker g_MemTracker;
+
+void RecordMemAlloc(uint64 sizeInBytes, void* memPtr)
+{
+    if (!g_MemTracker.bEnableAllocRecording)
+        return;
+
+    uint64 ptrAsU64 = (uint64)memPtr;
+
+    MemRecord m;
+    m.sizeInBytes = sizeInBytes;
+    m.memPtr = ptrAsU64;
+    m.bWasDeallocated = 0;
+    g_MemTracker.m_AllocRecords.Insert(ptrAsU64, m);
 }
 
 void RecordMemDealloc(void* memPtr)
 {
-    MemRecord m;
-    memset(&m, 0, sizeof(MemRecord));
-    m.memPtr = (size_t)memPtr;
-    uint32 index = FindRecord(m);
+    if (!g_MemTracker.bEnableAllocRecording)
+        return;
 
-    if (index == MAX_RECORDS)
+    //MemRecord m;
+    //memset(&m, 0, sizeof(MemRecord));
+    //m.memPtr = (uint64)memPtr;
+    uint32 index = g_MemTracker.m_AllocRecords.FindIndex((uint64)memPtr);
+
+    if (index == g_MemTracker.m_AllocRecords.eInvalidIndex)
     {
-        // Memory not allocated yet, or double free
+        // Memory not allocated yet
     }
     else
     {
-        g_MemTracker.m_records[index].bWasDeallocated = true;
+        MemRecord& m = g_MemTracker.m_AllocRecords.DataAtIndex(index);
+        if (m.bWasDeallocated == 1)
+        {
+            // TODO: detect double free
+        }
+        else
+        {
+            m.bWasDeallocated = 1;
+        }
     }
 }
 
 void DebugOutputAllMemAllocs()
 {
-    if (g_MemTracker.m_numRecords == 0)
-    {
-        return;
-    }
+    // TODO: print info about the allocations
 
     Platform::PrintDebugString("***** Dumping all alloc records that were not deallocated *****\n");
-    char buffer[512];
+    /*char buffer[512];
     for (uint32 i = 0; i < g_MemTracker.m_numRecords; ++i)
     {
-        const MemRecord& record = g_MemTracker.m_records[i];
+        const MemRecord& record = g_MemTracker.m_AllocRecords[i];
         if (record.bWasDeallocated) continue;
 
         memset(buffer, 0, ARRAYCOUNT(buffer));
@@ -76,7 +108,7 @@ void DebugOutputAllMemAllocs()
 
         //-----
         Platform::PrintDebugString("\n");
-    }
+    }*/
     Platform::PrintDebugString("********************\n");
 }
 
