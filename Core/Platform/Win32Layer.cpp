@@ -53,6 +53,11 @@ bool g_cursorLocked = false;
 //#define SCRIPTS_PATH "..\\Scripts\\"
 #endif
 
+#ifdef _GAME_DLL_PATH
+#define GAME_DLL_PATH STRINGIFY(_GAME_DLL_PATH)
+#else
+#endif
+
 typedef struct global_app_params
 {
     uint32 m_windowWidth;
@@ -68,7 +73,7 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     if (!enableDllHotloading)
         return false;
 
-    HANDLE gameDllFileHandle = CreateFile(gameDllSourcePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+    HANDLE gameDllFileHandle = CreateFile(GAME_DLL_PATH, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     if (gameDllFileHandle == INVALID_HANDLE_VALUE)
     {
@@ -679,7 +684,7 @@ wWinMain(HINSTANCE hInstance,
         g_graphicsCommandStream = {};
         g_graphicsCommandStream.m_numCommands = 0;
         g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-        g_graphicsCommandStream.m_graphicsCommands = (Tk::Core::Graphics::GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Core::Graphics::GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
+        g_graphicsCommandStream.m_graphicsCommands = (Tk::Core::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Core::Graphics::GraphicsCommand), CACHE_LINE);
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
@@ -773,12 +778,7 @@ wWinMain(HINSTANCE hInstance,
 
     Tk::Core::Graphics::ShaderManager::Shutdown();
     Tk::Core::Graphics::DestroyContext();
-
-    _aligned_free(g_graphicsCommandStream.m_graphicsCommands);
-
-    #if defined(MEM_TRACKING)
-    _CrtDumpMemoryLeaks();
-    #endif
-
+    Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
+    
     return 0;
 }

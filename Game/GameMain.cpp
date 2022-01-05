@@ -483,8 +483,4 @@ GAME_DESTROY(GameDestroy)
 
         g_AssetManager.FreeMemory();
     }
-
-    #if defined(MEM_TRACKING)
-    _CrtDumpMemoryLeaks();
-    #endif
 }

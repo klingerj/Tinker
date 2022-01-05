@@ -3,6 +3,7 @@
 #include "FileLoading.h"
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Platform/PlatformGameAPI.h"
+#include "Mem.h"
 
 #include <string.h>
 
@@ -16,6 +17,9 @@ void AssetManager::FreeMemory()
 {
     m_meshBufferAllocator.ExplicitFree();
 }
+
+static const uint64 AssetFileMemorySize = 1024 * 1024 * 1024;
+static Tk::Memory::LinearAllocator<AssetFileMemorySize> g_AssetFileScratchMemory;
 
 void AssetManager::LoadAllAssets()
 {
@@ -44,7 +48,7 @@ void AssetManager::LoadAllAssets()
 
     // Allocate one large buffer to store a dump of all obj files.
     // Each obj file's data is separated by a single null byte to mark EOF
-    uint8* objFileDataBuffer = new uint8[totalMeshFileBytes + numMeshAssets]; // + 1 EOF byte for each obj file
+    uint8* objFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalMeshFileBytes + numMeshAssets, 1); // + 1 EOF byte for each obj file -> + numMeshAssets
 
     // Now precalculate the size of the vertex attribute buffers needed to contain the obj data
     uint32 meshBufferSizes[numMeshAssets] = {};
@@ -110,7 +114,7 @@ void AssetManager::LoadAllAssets()
     }
 
     // Allocate exactly enough space for each mesh's vertex buffers, cache-line aligned
-    m_meshBufferAllocator.Init(totalMeshBufferSize, 64);
+    m_meshBufferAllocator.Init(totalMeshBufferSize, CACHE_LINE);
 
     accumFileOffset = 0;
     // Parse each OBJ and populate each mesh's buffer
@@ -133,8 +137,6 @@ void AssetManager::LoadAllAssets()
         accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
         FileLoading::ParseOBJ(positionBuffer, uvBuffer, normalBuffer, indexBuffer, currentObjFile, currentObjFileSize);
     }
-
-    delete objFileDataBuffer;
     //-----
 
     // Textures
@@ -162,7 +164,7 @@ void AssetManager::LoadAllAssets()
     }
 
     // Allocate one large buffer to store a dump of all texture files.
-    uint8* textureFileDataBuffer = new uint8[totalTextureFileBytes];
+    uint8* textureFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalTextureFileBytes, 1);
 
     accumFileOffset = 0;
 
@@ -250,7 +252,7 @@ void AssetManager::LoadAllAssets()
     }
 
     // Allocate exactly enough space for each texture, cache-line aligned
-    m_textureBufferAllocator.Init(totalActualTextureSize, 64);
+    m_textureBufferAllocator.Init(totalActualTextureSize, CACHE_LINE);
 
     accumFileOffset = 0;
     for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
@@ -303,8 +305,6 @@ void AssetManager::LoadAllAssets()
             // TODO: support other file types, e.g. png
         }
     }
-
-    delete textureFileDataBuffer;
 }
 
 void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)

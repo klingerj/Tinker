@@ -45,9 +45,9 @@ void RaytraceTest()
     }
     
     Tk::Core::Raytracing::Octree* octree = nullptr;
-    if (useOctree)
+    if (1)
     {
-        //octree = Tk::Core::Raytracing::CreateEmptyOctree();
+        octree = Tk::Core::Raytracing::CreateEmptyOctree();
         //Tk::Core::Raytracing::BuildOctree(octree, triData, numVerts/3);
     }
 
@@ -154,6 +154,8 @@ void RaytraceTest()
             }
         }
     }
+
+    Tk::Core::Raytracing::DestroyOctree(octree);
 
     // Output image
     Buffer imgBuffer = {};

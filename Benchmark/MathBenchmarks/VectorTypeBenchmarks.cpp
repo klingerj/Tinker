@@ -1,4 +1,5 @@
 #include "VectorTypeBenchmarks.h"
+#include "Platform/PlatformCommon.h"
 
 #include "Platform/Win32WorkerThreadPool.h"
 #include <emmintrin.h>
@@ -21,7 +22,7 @@ const uint32 numIters = 10000000;
 
 void BM_v2_Startup()
 {
-    g_v2s = (v2f*)AllocAligned(numVectors * sizeof(v2f), 64, __FILE__, __LINE__);
+    g_v2s = (v2f*)Tk::Platform::AllocAlignedRaw(numVectors * sizeof(v2f), CACHE_LINE);
     for (uint32 i = 0; i < numVectors; ++i)
     {
         g_v2s[i] = v2f((float)i, (float)(i + 1));
@@ -30,7 +31,7 @@ void BM_v2_Startup()
 
 void BM_v2_Shutdown()
 {
-    FreeAligned(g_v2s);
+    Tk::Platform::FreeAlignedRaw(g_v2s);
     g_v2s = nullptr;
 }
 
@@ -127,7 +128,7 @@ void BM_m2MulV2_fScalar_MT_Shutdown()
     BM_v2_Shutdown();
     for (uint32 i = 0; i < numJobs; ++i)
     {
-        FreeAligned(jobs[i]);
+        Tk::Platform::FreeAlignedRaw(jobs[i]);
     }
 }
 
@@ -145,13 +146,13 @@ void BM_m2MulV2_fVectorized()
 
 void BM_v4_Startup()
 {
-    g_v4s = (v4f*)AllocAligned(numVectors * sizeof(v4f), 64, __FILE__, __LINE__);
+    g_v4s = (v4f*)Tk::Platform::AllocAlignedRaw(numVectors * sizeof(v4f), CACHE_LINE);
     for (uint32 i = 0; i < numVectors; ++i)
     {
         g_v4s[i] = v4f((float)i, (float)(i + 1),(float)(i + 2), (float)(i + 3));
     }
 
-    g_v4s_dst = (v4f*)AllocAligned(numVectors * sizeof(v4f), 64, __FILE__, __LINE__);
+    g_v4s_dst = (v4f*)Tk::Platform::AllocAlignedRaw(numVectors * sizeof(v4f), CACHE_LINE);
     for (uint32 i = 0; i < numVectors; ++i)
     {
         g_v4s_dst[i] = v4f((float)i, (float)(i + 1), (float)(i + 2), (float)(i + 3));
@@ -160,9 +161,9 @@ void BM_v4_Startup()
 
 void BM_v4_Shutdown()
 {
-    FreeAligned(g_v4s);
+    Tk::Platform::FreeAlignedRaw(g_v4s);
     g_v4s = nullptr;
-    FreeAligned(g_v4s_dst);
+    Tk::Platform::FreeAlignedRaw(g_v4s_dst);
     g_v4s_dst = nullptr;
 }
 

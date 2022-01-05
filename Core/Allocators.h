@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Platform/PlatformGameAPI.h"
+#include "CoreDefines.h"
+#include "Mem.h"
 
 namespace Tk
 {
@@ -10,9 +11,8 @@ namespace Memory
 template <size_t Size = 0, uint32 Alignment = 1>
 struct LinearAllocator
 {
-public:
-    size_t m_size;
     uint8* m_ownedMemPtr = nullptr;
+    size_t m_size;
     size_t m_nextAllocOffset = 0;
 
     LinearAllocator()
@@ -38,7 +38,7 @@ public:
     {
         if (m_ownedMemPtr)
         {
-            Platform::FreeAligned(m_ownedMemPtr);
+            Tk::Core::CoreFreeAligned(m_ownedMemPtr);
             m_ownedMemPtr = nullptr;
         }
         m_nextAllocOffset = 0;
@@ -49,10 +49,10 @@ public:
     {
         TINKER_ASSERT(size > 0);
         m_size = size;
-        m_ownedMemPtr = (uint8*)Platform::AllocAligned(m_size, alignment, __FILE__, __LINE__);
+        m_ownedMemPtr = (uint8*)Tk::Core::CoreMallocAligned(m_size, alignment);
     }
 
-    uint8* Alloc(size_t size, size_t alignment)
+    uint8* Alloc(size_t size, uint32 alignment)
     {
         TINKER_ASSERT(ISPOW2(alignment));
 
@@ -104,7 +104,6 @@ struct pool_element
 template <typename T, uint32 NumElements = 0, uint32 Alignment = 1>
 struct PoolAllocator
 {
-private:
     uint32 m_numAllocdElements = 0;
     uint32 m_maxPoolElements = 0;
     uint32 m_freeListHead = 0;
@@ -114,16 +113,6 @@ private:
     PoolElement<T>* m_pool = nullptr;
     uint32 m_elementSizeInBytes = sizeof(PoolElement<T>);
 
-    void InitFreeListPtrs()
-    {
-        for (uint32 uiEle = 0; uiEle < m_maxPoolElements - 1; ++uiEle)
-        {
-            m_pool[uiEle].m_nextFreeEleIdx = uiEle + 1; // point to next element
-        }
-        m_pool[m_maxPoolElements - 1].m_nextFreeEleIdx = TINKER_INVALID_HANDLE;
-    }
-
-public:
     PoolAllocator()
     {
         TINKER_ASSERT(ISPOW2(Alignment));
@@ -146,7 +135,7 @@ public:
     {
         if (m_pool)
         {
-            Platform::FreeAligned(m_pool);
+            Tk::Core::CoreFreeAligned(m_pool);
             m_pool = nullptr;
             m_freeListHead = 0;
             m_maxPoolElements = 0;
@@ -166,9 +155,14 @@ public:
         TINKER_ASSERT(maxPoolElements > 0 && maxPoolElements < TINKER_INVALID_HANDLE);
         m_maxPoolElements = maxPoolElements;
 
-        m_pool = (PoolElement<T>*)Platform::AllocAligned(m_maxPoolElements * m_elementSizeInBytes, alignment, __FILE__, __LINE__);
+        m_pool = (PoolElement<T>*)Tk::Core::CoreMallocAligned(m_maxPoolElements * m_elementSizeInBytes, alignment);
 
-        InitFreeListPtrs();
+        // Init free list
+        for (uint32 uiEle = 0; uiEle < m_maxPoolElements - 1; ++uiEle)
+        {
+            m_pool[uiEle].m_nextFreeEleIdx = uiEle + 1; // point to next element
+        }
+        m_pool[m_maxPoolElements - 1].m_nextFreeEleIdx = TINKER_INVALID_HANDLE;
     }
 
     uint32 Alloc()

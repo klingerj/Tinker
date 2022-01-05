@@ -52,22 +52,20 @@ inline bool ISPOW2(const T& x)
     return x && ((x & (x - 1)) == 0);
 }
 
-template <typename T>
-inline T LOG2(T x)
+// TODO: pow2 roundup can be done with only bitwise ops i think
+inline uint32 LOG2(uint32 x)
 {
-    T i = 1;
+    uint32 i = 1;
     for (; x >> i; ++i) {}
     return i;
 }
 
-template <typename T>
-inline T POW2(T x)
+inline uint32 POW2(uint32 x)
 {
     return 1 << LOG2(x);
 }
 
-template <typename T>
-inline T POW2_ROUNDUP(const T& x)
+inline uint32 POW2_ROUNDUP(uint32 x)
 {
     return ISPOW2(x) ? x : POW2(x);
 }
