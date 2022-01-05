@@ -684,7 +684,7 @@ wWinMain(HINSTANCE hInstance,
         g_graphicsCommandStream = {};
         g_graphicsCommandStream.m_numCommands = 0;
         g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-        g_graphicsCommandStream.m_graphicsCommands = (Tk::Core::Graphics::GraphicsCommand*)_aligned_malloc_dbg(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Core::Graphics::GraphicsCommand), CACHE_LINE, __FILE__, __LINE__);
+        g_graphicsCommandStream.m_graphicsCommands = (Tk::Core::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Core::Graphics::GraphicsCommand), CACHE_LINE);
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
@@ -778,8 +778,7 @@ wWinMain(HINSTANCE hInstance,
 
     Tk::Core::Graphics::ShaderManager::Shutdown();
     Tk::Core::Graphics::DestroyContext();
-
-    _aligned_free(g_graphicsCommandStream.m_graphicsCommands);
+    Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
     
     return 0;
 }

@@ -100,27 +100,29 @@ void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspect
 void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRTs, VkImageView depthRT,
     uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* framebuffer)
 {
-    VkImageView* attachments = nullptr;
-    uint32 numAttachments = numColorRTs + (depthRT != VK_NULL_HANDLE ? 1 : 0);
+    VkImageView attachments[VULKAN_MAX_RENDERTARGETS_WITH_DEPTH];
+    for (uint32 i = 0; i < ARRAYCOUNT(attachments); ++i)
+        attachments[i] = VK_NULL_HANDLE;
+
+    const bool HasDepth = depthRT != VK_NULL_HANDLE;
+    const uint32 numAttachments = numColorRTs + (HasDepth ? 1 : 0);
+
+    if (HasDepth)
+        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS_WITH_DEPTH);
+    else
+        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS);
 
     if (numAttachments == 0)
     {
         Core::Utility::LogMsg("Platform", "No attachments specified for framebuffer!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
-    else
-    {
-        attachments = new VkImageView[numAttachments];
-    }
 
-    if (attachments)
-    {
-        memcpy(attachments, colorRTs, sizeof(VkImageView) * numColorRTs); // memcpy the color render targets in
+    memcpy(attachments, colorRTs, sizeof(VkImageView) * numColorRTs); // memcpy the color RTs in
 
-        if (depthRT != VK_NULL_HANDLE)
-        {
-            attachments[numAttachments - 1] = depthRT;
-        }
+    if (HasDepth)
+    {
+        attachments[numAttachments - 1] = depthRT;
     }
 
     VkFramebufferCreateInfo framebufferCreateInfo = {};
@@ -138,8 +140,6 @@ void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRT
         Core::Utility::LogMsg("Platform", "Failed to create Vulkan framebuffer!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
-
-    delete[] attachments;
 }
 
 void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colorFormat,

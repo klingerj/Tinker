@@ -33,7 +33,7 @@ void CoreFree(void* ptr)
 #ifndef ENABLE_MEM_TRACKING
 void* CoreMallocAligned(size_t size, size_t alignment)
 {
-    return AllocAlignedRaw(size, alignment);
+    return Tk::Platform::AllocAlignedRaw(size, alignment);
 }
 #endif
 
