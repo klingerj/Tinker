@@ -4,7 +4,7 @@
 #include "TinkerTest.h"
 
 using namespace Tk;
-using namespace Memory;
+using namespace Core;
 
 // Linear allocator
 void Test_Linear_NoAlignment()

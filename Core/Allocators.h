@@ -5,7 +5,7 @@
 
 namespace Tk
 {
-namespace Memory
+namespace Core
 {
 
 template <size_t Size = 0, uint32 Alignment = 1>

@@ -1,4 +1,4 @@
-#include "FileLoading.h"
+#include "AssetFileParsing.h"
 #include "Mem.h"
 
 #include <string.h>
@@ -7,7 +7,7 @@ namespace Tk
 {
 namespace Core
 {
-namespace FileLoading
+namespace Asset
 {
 
 void scanLine(uint8* buffer, uint32* currentIndex)

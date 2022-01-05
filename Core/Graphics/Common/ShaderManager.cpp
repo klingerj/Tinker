@@ -10,7 +10,7 @@
 #endif
 
 static const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 1024 * 100;
-static Tk::Memory::LinearAllocator<> g_ShaderBytecodeAllocator;
+static Tk::Core::LinearAllocator<> g_ShaderBytecodeAllocator;
 
 namespace Tk
 {

@@ -28,7 +28,7 @@ namespace Tk
 {
 namespace Core
 {
-namespace FileLoading
+namespace Asset
 {
 // This implementation of OBJ loading is only set up to properly load OBJ files exported from Autodesk Maya.
 // It only loads positions, normals, UVs, and indices.

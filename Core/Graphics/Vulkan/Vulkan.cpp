@@ -26,7 +26,7 @@ namespace Graphics
 {
 
 static const uint32 VULKAN_SCRATCH_MEM_SIZE = 1024 * 1024 * 2;
-static Tk::Memory::LinearAllocator<VULKAN_SCRATCH_MEM_SIZE> g_VulkanDataAllocator;
+static Tk::Core::LinearAllocator<VULKAN_SCRATCH_MEM_SIZE> g_VulkanDataAllocator;
 
 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(

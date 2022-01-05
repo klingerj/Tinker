@@ -1,6 +1,6 @@
 #include "Raytracing.h"
 #include "Mem.h"
-#include "FileLoading.h"
+#include "AssetFileParsing.h"
 #include "Raytracing/AccelStructures/Octree.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
@@ -159,7 +159,7 @@ void RaytraceTest()
 
     // Output image
     Buffer imgBuffer = {};
-    Tk::Core::FileLoading::SaveBMP(&imgBuffer, (uint8*)img, width, height, 32);
+    Tk::Core::Asset::SaveBMP(&imgBuffer, (uint8*)img, width, height, 32);
     Tk::Platform::WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", imgBuffer.m_sizeInBytes, imgBuffer.m_data);
     imgBuffer.Dealloc();
     Tk::Core::CoreFree(img);
