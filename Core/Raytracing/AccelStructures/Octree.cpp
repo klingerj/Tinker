@@ -1,4 +1,5 @@
 #include "Raytracing/AccelStructures/Octree.h"
+#include "Mem.h"
 
 #include <string.h>
 
@@ -22,7 +23,7 @@ struct OctreeNode
         // Intermediate node
         struct
         {
-            uint16 childrenIndex;
+            uint32 childrenIndex;
         };
 
         // Leaf node
@@ -36,48 +37,61 @@ struct OctreeNode
 
     uint8 flags;
     uint8 nodePad[3];
+
+    void InitLeafNode()
+    {
+        flags = 0;
+        flags |= OctreeNode::eIsLeafNode;
+        numTris = 0;
+    }
 };
 // TODO: add a static assert that sizeof(OctreeNode) == CACHE_LINE (or a multiple)
-
 // TODO: allocate mem more better
 
 struct Octree
 {
-    enum { eRootNode = 0 };
+    enum
+    {
+        eRootNode = 0,
+        eMaxNodes = 65536
+    };
 
-    uint16 numNodes;
-    OctreeNode nodes[65536];
-    AABB3D aabbs[65536];
-    const v3f* triangleData;
+    const v3f* triangleData = nullptr;
+    uint32 numNodes = 0;
+    OctreeNode nodes[eMaxNodes];
+    AABB3D aabbs[eMaxNodes];
+
+    void Init()
+    {
+        triangleData = nullptr;
+        numNodes = 1;
+        memset(nodes, 0, sizeof(OctreeNode) * eMaxNodes);
+        for (uint32 i = 0; i < eMaxNodes; ++i)
+        {
+            aabbs[i].InitInvalidMinMax();
+        }
+        nodes[0].InitLeafNode();
+        // TODO: double check this
+    }
 };
-
-void InitLeafNode(OctreeNode& node)
-{
-    node.flags = 0;
-    node.flags |= OctreeNode::eIsLeafNode;
-    node.numTris = 0;
-}
 
 Octree* CreateEmptyOctree()
 {
-    Octree* newOctree = new Octree();
-    memset(newOctree->nodes, 255, 65536 * sizeof(OctreeNode));
-    for (uint32 i = 0; i < 65536; ++i)
-    {
-        newOctree->aabbs[i].InitInvalidMinMax();
-    }
-    InitLeafNode(newOctree->nodes[newOctree->numNodes++]);
-    newOctree->numNodes = 1;
-    newOctree->triangleData = nullptr;
-
+    Octree* newOctree = (Octree*)Tk::Core::CoreMalloc(sizeof(Octree));
+    newOctree->Init();
     return newOctree;
+}
+
+void DestroyOctree(Octree* octree)
+{
+    Tk::Core::CoreFree(octree);
 }
 
 void SubdivideNode(Octree* octree, uint32 nodeIndex)
 {
     OctreeNode& node = octree->nodes[nodeIndex];
     node.childrenIndex = octree->numNodes;
-    TINKER_ASSERT(node.childrenIndex + 7 < 65536);
+    TINKER_ASSERT(node.childrenIndex + 7 < octree->eMaxNodes);
     octree->numNodes += 8; // claim 8 children nodes at once
 
     const AABB3D& aabb = octree->aabbs[nodeIndex];
@@ -85,7 +99,7 @@ void SubdivideNode(Octree* octree, uint32 nodeIndex)
 
     for (uint8 i = 0; i < 8; ++i)
     {
-        InitLeafNode(octree->nodes[node.childrenIndex + i]);
+        octree->nodes[node.childrenIndex + i].InitLeafNode();
         v3ui octant = v3ui();
         octant.x = i & 0x1;
         octant.y = (i >> 1) & 0x1;

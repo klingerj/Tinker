@@ -56,7 +56,7 @@ public:
     {
         _SIZE = POW2_ROUNDUP(size);
         _MASK = _SIZE - 1;
-        m_data = (T*)Tk::Core::CoreMallocAligned(_SIZE * sizeof(T), 64);
+        m_data = (T*)Tk::Core::CoreMallocAligned(_SIZE * sizeof(T), CACHE_LINE);
     }
 
     uint32 Capacity() const
