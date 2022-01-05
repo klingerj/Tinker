@@ -117,9 +117,9 @@ struct VulkanContextResources
 
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     VkSampler linearSampler = VK_NULL_HANDLE;
-    Memory::PoolAllocator<VulkanMemResourceChain> vulkanMemResourcePool;
-    Memory::PoolAllocator<VulkanDescriptorChain> vulkanDescriptorResourcePool;
-    Memory::PoolAllocator<VulkanFramebufferResourceChain> vulkanFramebufferResourcePool;
+    Tk::Core::PoolAllocator<VulkanMemResourceChain> vulkanMemResourcePool;
+    Tk::Core::PoolAllocator<VulkanDescriptorChain> vulkanDescriptorResourcePool;
+    Tk::Core::PoolAllocator<VulkanFramebufferResourceChain> vulkanFramebufferResourcePool;
     VkFence fences[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
     VkFence* imageInFlightFences = nullptr;
     VkSemaphore swapChainImageAvailableSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};

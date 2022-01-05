@@ -1,6 +1,6 @@
 #include "AssetManager.h"
 #include "Utility/Logging.h"
-#include "FileLoading.h"
+#include "AssetFileParsing.h"
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Platform/PlatformGameAPI.h"
 #include "Mem.h"
@@ -13,13 +13,13 @@ using namespace Core;
 
 AssetManager g_AssetManager;
 
+static const uint64 AssetFileMemorySize = 1024 * 1024 * 1024;
+static Tk::Core::LinearAllocator<AssetFileMemorySize> g_AssetFileScratchMemory;
+
 void AssetManager::FreeMemory()
 {
     m_meshBufferAllocator.ExplicitFree();
 }
-
-static const uint64 AssetFileMemorySize = 1024 * 1024 * 1024;
-static Tk::Memory::LinearAllocator<AssetFileMemorySize> g_AssetFileScratchMemory;
 
 void AssetManager::LoadAllAssets()
 {
@@ -101,7 +101,7 @@ void AssetManager::LoadAllAssets()
         uint32 currentObjFileSize = meshFileSizes[uiAsset];
         accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
 
-        uint32 numObjVerts = FileLoading::GetOBJVertCount(currentObjFile, currentObjFileSize);
+        uint32 numObjVerts = Asset::GetOBJVertCount(currentObjFile, currentObjFileSize);
         TINKER_ASSERT(numObjVerts > 0);
 
         m_allMeshData[uiAsset].m_numVertices = numObjVerts;
@@ -135,7 +135,7 @@ void AssetManager::LoadAllAssets()
         uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
         uint32 currentObjFileSize = meshFileSizes[uiAsset];
         accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
-        FileLoading::ParseOBJ(positionBuffer, uvBuffer, normalBuffer, indexBuffer, currentObjFile, currentObjFileSize);
+        Asset::ParseOBJ(positionBuffer, uvBuffer, normalBuffer, indexBuffer, currentObjFile, currentObjFileSize);
     }
     //-----
 
@@ -217,7 +217,7 @@ void AssetManager::LoadAllAssets()
 
         if (strncmp(fileExt, "bmp", 3) == 0)
         {
-            FileLoading::BMPInfo info = FileLoading::GetBMPInfo(currentTextureFile);
+            Asset::BMPInfo info = Asset::GetBMPInfo(currentTextureFile);
 
             // If it's a 24-bit bmp, pad to 32 bits. The 4th byte will be 255 (alpha of 1).
             uint32 bpp = 0;
@@ -265,7 +265,7 @@ void AssetManager::LoadAllAssets()
 
         if (strncmp(fileExt, "bmp", 3) == 0)
         {
-            uint8* textureBytesStart = currentTextureFile + sizeof(FileLoading::BMPHeader) + sizeof(FileLoading::BMPInfo);
+            uint8* textureBytesStart = currentTextureFile + sizeof(Asset::BMPHeader) + sizeof(Asset::BMPInfo);
 
             // Copy the bmp bytes in - no parsing for bmp
             // If the bits per pixel is 24, copy pixel by pixel and write a 0xFF byte for each alpha byte;

@@ -2,7 +2,7 @@
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Allocators.h"
 #include "Math/VectorTypes.h"
-#include "FileLoading.h"
+#include "AssetFileParsing.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
 #include "RenderPass.h"
@@ -23,7 +23,8 @@ using namespace Core;
 static bool isGameInitted = false;
 static const bool isMultiplayer = false;
 static bool connectedToServer = false;
-uint32 currentWindowWidth = 0, currentWindowHeight = 0;
+static uint32 currentWindowWidth = 0;
+static uint32 currentWindowHeight = 0;
 
 static GameGraphicsData gameGraphicsData = {};
 static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
@@ -69,7 +70,7 @@ INPUT_CALLBACK(RaytraceTestCallback)
     Platform::PrintDebugString("...Done.\n");
 }
 
-void DestroyDescriptors()
+static void DestroyDescriptors()
 {
     Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
     gameGraphicsData.m_swapChainBlitDescHandle = Graphics::DefaultDescHandle_Invalid;
@@ -87,7 +88,7 @@ void DestroyDescriptors()
     Graphics::DestroyAllDescriptors(); // destroys descriptor pool
 }
 
-void WriteSwapChainBlitResources()
+static void WriteSwapChainBlitResources()
 {
     Graphics::DescriptorSetDataHandles blitHandles = {};
     blitHandles.InitInvalid();
@@ -102,7 +103,7 @@ void WriteSwapChainBlitResources()
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, defaultQuad.m_descriptor, &vbHandles, 1);
 }
 
-void CreateAllDescriptors()
+static void CreateAllDescriptors()
 {
     // Swap chain blit
     gameGraphicsData.m_swapChainBlitDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
@@ -133,7 +134,7 @@ void CreateAllDescriptors()
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, gameGraphicsData.m_DescData_Instance, &descDataHandles[0], 1);
 }
 
-void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
+static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
 {
     Graphics::ResourceDesc desc;
     desc.resourceType = Graphics::ResourceType::eImage2D;
@@ -165,7 +166,7 @@ void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
 }
 
-uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
+static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
@@ -433,7 +434,7 @@ GAME_UPDATE(GameUpdate)
     return 0;
 }
 
-void DestroyWindowResizeDependentResources()
+static void DestroyWindowResizeDependentResources()
 {
     for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
     {
