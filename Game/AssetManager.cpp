@@ -3,6 +3,7 @@
 #include "FileLoading.h"
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Platform/PlatformGameAPI.h"
+#include "Mem.h"
 
 #include <string.h>
 
@@ -134,7 +135,7 @@ void AssetManager::LoadAllAssets()
         FileLoading::ParseOBJ(positionBuffer, uvBuffer, normalBuffer, indexBuffer, currentObjFile, currentObjFileSize);
     }
 
-    delete objFileDataBuffer;
+    delete[] objFileDataBuffer;
     //-----
 
     // Textures
@@ -304,7 +305,7 @@ void AssetManager::LoadAllAssets()
         }
     }
 
-    delete textureFileDataBuffer;
+    delete[] textureFileDataBuffer;
 }
 
 void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)

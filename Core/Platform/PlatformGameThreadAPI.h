@@ -61,7 +61,7 @@ public:
                     delete(m_jobs[i]);
                 }
             }
-            delete m_jobs;
+            delete[] m_jobs;
             m_jobs = nullptr;
         }
     }
