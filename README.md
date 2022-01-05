@@ -13,6 +13,7 @@ Successor to the Joe Engine. Nearly everything written from scratch.
 * Shader pipeline state object (PSO) permutations
 * Simple thread-job system with lockless queue
 * Custom memory allocators
+* Memory allocation tracking
 * Custom data structures
   * Vector
   * Hash map
