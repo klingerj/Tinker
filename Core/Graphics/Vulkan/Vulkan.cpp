@@ -25,6 +25,9 @@ namespace Core
 namespace Graphics
 {
 
+static const uint32 VULKAN_SCRATCH_MEM_SIZE = 1024 * 1024 * 2;
+static Tk::Memory::LinearAllocator<VULKAN_SCRATCH_MEM_SIZE> g_VulkanDataAllocator;
+
 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -116,14 +119,13 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     uint32 numAvailableExtensions = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &numAvailableExtensions, nullptr);
     
-    VkExtensionProperties* availableExtensions = new VkExtensionProperties[numAvailableExtensions];
+    VkExtensionProperties* availableExtensions = (VkExtensionProperties*)g_VulkanDataAllocator.Alloc(sizeof(VkExtensionProperties) * numAvailableExtensions, 1);
     vkEnumerateInstanceExtensionProperties(nullptr, &numAvailableExtensions, availableExtensions);
     Core::Utility::LogMsg("Platform", "******** Available Instance Extensions: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiAvailExt = 0; uiAvailExt < numAvailableExtensions; ++uiAvailExt)
     {
         Core::Utility::LogMsg("Platform", availableExtensions[uiAvailExt].extensionName, Core::Utility::LogSeverity::eInfo);
     }
-    delete availableExtensions;
 
     // Validation layers
     #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
@@ -147,7 +149,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         TINKER_ASSERT(0);
     }
 
-    VkLayerProperties* availableLayers = new VkLayerProperties[numAvailableLayers];
+    VkLayerProperties* availableLayers = (VkLayerProperties*)g_VulkanDataAllocator.Alloc(sizeof(VkLayerProperties) * numAvailableLayers, 1);
     vkEnumerateInstanceLayerProperties(&numAvailableLayers, availableLayers);
 
     Core::Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
@@ -168,8 +170,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
             }
         }
     }
-
-    delete availableLayers;
 
     for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
     {
@@ -255,7 +255,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         TINKER_ASSERT(0);
     }
 
-    VkPhysicalDevice* physicalDevices = new VkPhysicalDevice[numPhysicalDevices];
+    VkPhysicalDevice* physicalDevices = (VkPhysicalDevice*)g_VulkanDataAllocator.Alloc(sizeof(VkPhysicalDevice) * numPhysicalDevices, 1);
     vkEnumeratePhysicalDevices(g_vulkanContextResources.instance, &numPhysicalDevices, physicalDevices);
 
     const uint32 numRequiredPhysicalDeviceExtensions = 1;
@@ -284,7 +284,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
             uint32 numQueueFamilies = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(currPhysicalDevice, &numQueueFamilies, nullptr);
 
-            VkQueueFamilyProperties* queueFamilyProperties = new VkQueueFamilyProperties[numQueueFamilies];
+            VkQueueFamilyProperties* queueFamilyProperties = (VkQueueFamilyProperties*)g_VulkanDataAllocator.Alloc(sizeof(VkQueueFamilyProperties) * numQueueFamilies, 1);
             vkGetPhysicalDeviceQueueFamilyProperties(currPhysicalDevice, &numQueueFamilies, queueFamilyProperties);
 
             bool graphicsSupport = false;
@@ -311,7 +311,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
                     g_vulkanContextResources.presentationQueueIndex = uiQueueFamily;
                 }
             }
-            delete queueFamilyProperties;
 
             uint32 numAvailablePhysicalDeviceExtensions = 0;
             vkEnumerateDeviceExtensionProperties(currPhysicalDevice,
@@ -325,7 +324,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
                 TINKER_ASSERT(0);
             }
 
-            VkExtensionProperties* availablePhysicalDeviceExtensions = new VkExtensionProperties[numAvailablePhysicalDeviceExtensions];
+            VkExtensionProperties* availablePhysicalDeviceExtensions = (VkExtensionProperties*)g_VulkanDataAllocator.Alloc(sizeof(VkExtensionProperties) * numAvailablePhysicalDeviceExtensions, 1);
             vkEnumerateDeviceExtensionProperties(currPhysicalDevice,
                 nullptr,
                 &numAvailablePhysicalDeviceExtensions,
@@ -348,7 +347,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
                     }
                 }
             }
-            delete availablePhysicalDeviceExtensions;
 
             for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
             {
@@ -369,7 +367,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
             }
         }
     }
-    delete physicalDevices;
 
     if (g_vulkanContextResources.physicalDevice == VK_NULL_HANDLE)
     {
@@ -533,7 +530,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     }
 
     // Command buffers for per-frame submission
-    g_vulkanContextResources.commandBuffers = new VkCommandBuffer[g_vulkanContextResources.numSwapChainImages];
+    g_vulkanContextResources.commandBuffers = (VkCommandBuffer*)g_VulkanDataAllocator.Alloc(sizeof(VkCommandBuffer) * g_vulkanContextResources.numSwapChainImages, 1);
 
     VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
     commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -601,7 +598,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         }
     }
     
-    g_vulkanContextResources.imageInFlightFences = new VkFence[g_vulkanContextResources.numSwapChainImages];
+    g_vulkanContextResources.imageInFlightFences = (VkFence*)g_VulkanDataAllocator.Alloc(sizeof(VkFence) * g_vulkanContextResources.numSwapChainImages, 1);
     for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
     {
         g_vulkanContextResources.imageInFlightFences[uiImage] = VK_NULL_HANDLE;
@@ -653,7 +650,7 @@ void VulkanCreateSwapChain()
         TINKER_ASSERT(0);
     }
 
-    VkSurfaceFormatKHR* availableSurfaceFormats = new VkSurfaceFormatKHR[numAvailableSurfaceFormats];
+    VkSurfaceFormatKHR* availableSurfaceFormats = (VkSurfaceFormatKHR*)g_VulkanDataAllocator.Alloc(sizeof(VkSurfaceFormatKHR) * numAvailableSurfaceFormats, 1);
     vkGetPhysicalDeviceSurfaceFormatsKHR(g_vulkanContextResources.physicalDevice,
         g_vulkanContextResources.surface,
         &numAvailableSurfaceFormats,
@@ -668,7 +665,6 @@ void VulkanCreateSwapChain()
             chosenFormat = availableSurfaceFormats[uiAvailFormat];
         }
     }
-    delete availableSurfaceFormats;
 
     uint32 numAvailablePresentModes = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(g_vulkanContextResources.physicalDevice,
@@ -682,7 +678,7 @@ void VulkanCreateSwapChain()
         TINKER_ASSERT(0);
     }
 
-    VkPresentModeKHR* availablePresentModes = new VkPresentModeKHR[numAvailablePresentModes];
+    VkPresentModeKHR* availablePresentModes = (VkPresentModeKHR*)g_VulkanDataAllocator.Alloc(sizeof(VkPresentModeKHR) * numAvailablePresentModes, 1);
     vkGetPhysicalDeviceSurfacePresentModesKHR(g_vulkanContextResources.physicalDevice,
         g_vulkanContextResources.surface,
         &numAvailablePresentModes,
@@ -696,7 +692,6 @@ void VulkanCreateSwapChain()
             chosenPresentMode = availablePresentModes[uiAvailPresMode];
         }
     }
-    delete availablePresentModes;
 
     g_vulkanContextResources.swapChainExtent = optimalExtent;
     g_vulkanContextResources.swapChainFormat = chosenFormat.format;
@@ -1501,17 +1496,15 @@ FramebufferHandle VulkanCreateFramebuffer(
 {
     TINKER_ASSERT(numRTColorHandles <= VULKAN_MAX_RENDERTARGETS);
 
-    bool hasDepth = rtDepthHandle != DefaultResHandle_Invalid;
+    bool HasDepth = rtDepthHandle != DefaultResHandle_Invalid;
 
     // Alloc handle
     uint32 newFramebufferHandle = g_vulkanContextResources.vulkanFramebufferResourcePool.Alloc();
     TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
 
-    VkImageView* attachments = nullptr;
-    if (numRTColorHandles > 0)
-    {
-        attachments = new VkImageView[numRTColorHandles];
-    }
+    VkImageView attachments[VULKAN_MAX_RENDERTARGETS_WITH_DEPTH];
+    for (uint32 i = 0; i < ARRAYCOUNT(attachments); ++i)
+        attachments[i] = VK_NULL_HANDLE;
 
     for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
     {
@@ -1526,7 +1519,7 @@ FramebufferHandle VulkanCreateFramebuffer(
         }
 
         VkImageView depthImageView = VK_NULL_HANDLE;
-        if (hasDepth)
+        if (HasDepth)
         {
             depthImageView = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resourceChain[uiImage].imageView;
         }
@@ -1540,7 +1533,7 @@ FramebufferHandle VulkanCreateFramebuffer(
         }
         uint32 numClearValues = numRTColorHandles;
 
-        if (hasDepth)
+        if (HasDepth)
         {
             newFramebuffer->clearValues[numRTColorHandles].depthStencil = { 1.0f, 0 };
             ++numClearValues;
@@ -1548,7 +1541,6 @@ FramebufferHandle VulkanCreateFramebuffer(
 
         newFramebuffer->numClearValues = numClearValues;
     }
-    delete attachments;
 
     return FramebufferHandle(newFramebufferHandle);
 }
@@ -1761,16 +1753,13 @@ void VulkanDestroyResource( ResourceHandle handle)
 void DestroyVulkan()
 {
     if (!g_vulkanContextResources.isInitted)
-    {
         return;
-    }
 
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
     VulkanDestroySwapChain();
 
     vkDestroyCommandPool(g_vulkanContextResources.device, g_vulkanContextResources.commandPool, nullptr);
-    delete g_vulkanContextResources.commandBuffers;
     g_vulkanContextResources.commandBuffers = nullptr;
 
     VulkanDestroyAllPSOPerms();
@@ -1783,7 +1772,6 @@ void DestroyVulkan()
         vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.swapChainImageAvailableSemaphores[uiImage], nullptr);
         vkDestroyFence(g_vulkanContextResources.device, g_vulkanContextResources.fences[uiImage], nullptr);
     }
-    delete g_vulkanContextResources.imageInFlightFences;
 
     vkDestroySampler(g_vulkanContextResources.device, g_vulkanContextResources.linearSampler, nullptr);
 

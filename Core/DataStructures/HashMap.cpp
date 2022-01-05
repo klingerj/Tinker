@@ -33,16 +33,16 @@ void HashMapBase::Reserve(uint32 numEles, uint32 eleSize)
     }
 }
 
-uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, CompareKeyFunc Compare, const void* invalidValue) const
+uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, bool CompareKeysFunc(const void*, const void*), const void* m_InvalidKey) const
 {
-    if (Compare(key, invalidValue))
+    if (CompareKeysFunc(key, m_InvalidKey))
         return eInvalidIndex;
 
     uint32 currIndex = index;
     do
     {
         void* dataKey  = m_data + currIndex * dataPairSize;
-        if (Compare(dataKey, key))
+        if (CompareKeysFunc(dataKey, key))
         {
             return currIndex;
         }
@@ -59,9 +59,15 @@ void* HashMapBase::DataAtIndex(uint32 index, size_t dataPairSize, size_t dataVal
     return m_data + index * dataPairSize + dataValueOffset;
 }
 
-uint32 HashMapBase::Insert(uint32 index, void* key, void* value, CompareKeyFunc Compare, size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* invalidValue)
+TINKER_API void* HashMapBase::KeyAtIndex(uint32 index, size_t dataPairSize) const
 {
-    if (Compare(key, invalidValue))
+    TINKER_ASSERT(index < m_size);
+    return m_data + index * dataPairSize;
+}
+
+uint32 HashMapBase::Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey)
+{
+    if (CompareKeysFunc(key, m_InvalidKey))
         return eInvalidIndex;
 
     uint32 currIndex = index;
@@ -70,7 +76,7 @@ uint32 HashMapBase::Insert(uint32 index, void* key, void* value, CompareKeyFunc 
         void* keyToInsertAt = m_data + currIndex * dataPairSize;
 
         // check if key is marked as invalid (unused) or matches the input key
-        if (Compare(keyToInsertAt, invalidValue) || Compare(keyToInsertAt, key))
+        if (CompareKeysFunc(keyToInsertAt, m_InvalidKey) || CompareKeysFunc(keyToInsertAt, key))
         {
             // found a slot
             memcpy(keyToInsertAt, key, dataValueOffset); // write key - assumes that offset is the same as key size

@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "FileLoading.h"
 #include "Mem.h"
 
@@ -247,7 +245,7 @@ void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, ui
         }
     }
 
-    delete attrReadBuffer;
+    delete[] attrReadBuffer;
 }
 
 BMPInfo GetBMPInfo(uint8* entireFileBuffer)
