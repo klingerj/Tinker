@@ -32,28 +32,33 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerApp - primary exe
-set SourceListApp=
-set SourceListApp=%SourceListApp%../Core/Platform/Win32Layer.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Win32WorkerThreadPool.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Win32PlatformGameAPI.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Win32Logging.cpp 
-set SourceListApp=%SourceListApp%../Core/Platform/Win32Client.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/Vulkan.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/VulkanCmds.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/VulkanTypes.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/Vulkan/VulkanGPUMemAllocator.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/Common/GraphicsCommon.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/Common/ShaderManager.cpp 
-set SourceListApp=%SourceListApp%../Core/Graphics/Common/VirtualTexture.cpp 
-set SourceListApp=%SourceListApp%../Core/Math/VectorTypes.cpp 
-set SourceListApp=%SourceListApp%../Core/FileLoading.cpp 
-set SourceListApp=%SourceListApp%../Core/DataStructures/Vector.cpp 
-set SourceListApp=%SourceListApp%../Core/DataStructures/HashMap.cpp 
-set SourceListApp=%SourceListApp%../Core/Utility/MemTracker.cpp 
-set SourceListApp=%SourceListApp%../Core/Mem.cpp 
-set SourceListApp=%SourceListApp%../Core/Raytracing/RayIntersection.cpp 
-set SourceListApp=%SourceListApp%../Core/Raytracing/AccelStructures/Octree.cpp 
-set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ /D_SCRIPTS_DIR=..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
+set AbsolutePathPrefix=%cd%
+
+set SourceListApp= 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32Layer.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32WorkerThreadPool.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32PlatformGameAPI.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32Logging.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32Client.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Vulkan/Vulkan.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCmds.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanTypes.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanGPUMemAllocator.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Common/ShaderManager.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Common/VirtualTexture.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Math/VectorTypes.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/FileLoading.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Vector.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/HashMap.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/AccelStructures/Octree.cpp 
+
+rem Calculate absolute path prefix for application path parameters here
+set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
+set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsApp=/FdTinkerApp.pdb

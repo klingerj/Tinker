@@ -16,6 +16,18 @@ struct MemRecord
     uint64 memPtr = 0;
     uint64 sizeInBytes = 0;
     uint8  bWasDeallocated = 0;
+    int lineNum = 0;
+    
+    enum
+    {
+        FILENAME_LEN_MAX = 128, // TODO: if this is 256, memtracker crashes when inserting. Need to intern the strings
+    };
+    char filename[FILENAME_LEN_MAX];
+
+    MemRecord()
+    {
+        memset(filename, 0, ARRAYCOUNT(filename));
+    }
 
     bool operator==(const MemRecord& other) const
     {
@@ -32,8 +44,10 @@ struct MemTracker
 
     MemTracker()
     {
+        #ifdef ENABLE_MEM_TRACKING
         m_AllocRecords.Reserve(MAX_ALLOCS_RECORDED);
         bEnableAllocRecording = 1; // prevents this first actual map allocation from being recorded
+        #endif
     }
 
     ~MemTracker()
@@ -45,7 +59,7 @@ struct MemTracker
 };
 static MemTracker g_MemTracker;
 
-void RecordMemAlloc(uint64 sizeInBytes, void* memPtr)
+void RecordMemAlloc(uint64 sizeInBytes, void* memPtr, const char* filename, int lineNum)
 {
     if (!g_MemTracker.bEnableAllocRecording)
         return;
@@ -56,6 +70,8 @@ void RecordMemAlloc(uint64 sizeInBytes, void* memPtr)
     m.sizeInBytes = sizeInBytes;
     m.memPtr = ptrAsU64;
     m.bWasDeallocated = 0;
+    m.lineNum = lineNum;
+    memcpy(m.filename, filename, strlen(filename));
     g_MemTracker.m_AllocRecords.Insert(ptrAsU64, m);
 }
 
@@ -93,8 +109,7 @@ void DebugOutputAllMemAllocs()
 {
     // TODO: get rid of this because you can't really track this perfectly due to destructor order not being guaranteed, but cool test
 
-    Platform::PrintDebugString("***** Dumping all alloc records that were not deallocated *****\n");
-    char buffer[512];
+    Platform::PrintDebugString("***** Dumping all alloc records *****\n"); //that were not deallocated
     for (uint32 i = 0; i < g_MemTracker.m_AllocRecords.Size(); ++i)
     {
         uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(i);
@@ -102,16 +117,20 @@ void DebugOutputAllMemAllocs()
             continue;
 
         const MemRecord& record = g_MemTracker.m_AllocRecords.DataAtIndex(i);
-        if (!record.bWasDeallocated)
+        //if (!record.bWasDeallocated)
         {
-            memset(buffer, 0, ARRAYCOUNT(buffer));
+            Platform::PrintDebugString(record.filename);
+            Platform::PrintDebugString(": ");
 
-            // TODO: file/line
+            char buffer[10];
+            memset(buffer, 0, ARRAYCOUNT(buffer));
+            _itoa_s((int)record.lineNum, buffer, 10, 10);
 
             // Alloc size
+            memset(buffer, 0, ARRAYCOUNT(buffer));
             _itoa_s((int)record.sizeInBytes, buffer, 10, 10);
-            Platform::PrintDebugString("Alloc size: ");
             Platform::PrintDebugString(buffer);
+            Platform::PrintDebugString(" bytes");
             Platform::PrintDebugString("\n");
         }
     }

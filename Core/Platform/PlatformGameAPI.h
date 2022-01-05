@@ -20,12 +20,6 @@ namespace Platform
 #define PRINT_DEBUG_STRING(name) TINKER_API void name(const char* str)
 PRINT_DEBUG_STRING(PrintDebugString);
 
-#define ALLOC_ALIGNED(name) TINKER_API void* name(size_t size, size_t alignment, const char* filename, int lineNum)
-ALLOC_ALIGNED(AllocAligned);
-
-#define FREE_ALIGNED(name) TINKER_API void name(void* ptr)
-FREE_ALIGNED(FreeAligned);
-
 #define READ_ENTIRE_FILE(name) TINKER_API void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
 READ_ENTIRE_FILE(ReadEntireFile);
 

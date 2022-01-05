@@ -1,26 +1,23 @@
-#include "Utility/MemTracker.h"
 #include "Mem.h"
+#include "Platform/PlatformCommon.h"
 
 namespace Tk
 {
 namespace Core
 {
 
-#define ENABLE_MEM_TRACKING
-
-#if defined(ENABLE_MEM_TRACKING) && defined(_WIN32)
-#define MEM_TRACKING
-#endif
-
-#if defined(MEM_TRACKING) && defined(_WIN32)
-// TODO: overload operator new to record memory allocations
-#endif
-
+#ifndef ENABLE_MEM_TRACKING
 void* CoreMalloc(size_t size)
 {
+    return malloc(size);
+}
+#endif
+
+void* CoreMallocDbg(size_t size, const char* filename, int lineNum)
+{
     void* ptr = malloc(size);
-    #if defined(MEM_TRACKING)
-    Utility::RecordMemAlloc((uint64)size, ptr);
+    #ifdef ENABLE_MEM_TRACKING
+    Utility::RecordMemAlloc((uint64)size, ptr, filename, lineNum);
     #endif
     return ptr;
 }
@@ -28,7 +25,31 @@ void* CoreMalloc(size_t size)
 void CoreFree(void* ptr)
 {
     free(ptr);
-    #if defined(MEM_TRACKING)
+    #ifdef ENABLE_MEM_TRACKING
+    Utility::RecordMemDealloc(ptr);
+    #endif
+}
+
+#ifndef ENABLE_MEM_TRACKING
+void* CoreMallocAligned(size_t size, size_t alignment)
+{
+    return AllocAlignedRaw(size, alignment);
+}
+#endif
+
+void* CoreMallocAlignedDbg(size_t size, size_t alignment, const char* filename, int lineNum)
+{
+    void* ptr = Tk::Platform::AllocAlignedRaw(size, alignment);
+    #ifdef ENABLE_MEM_TRACKING
+    Utility::RecordMemAlloc((uint64)size, ptr, filename, lineNum);
+    #endif
+    return ptr;
+}
+
+void CoreFreeAligned(void* ptr)
+{
+    Tk::Platform::FreeAlignedRaw(ptr);
+    #ifdef ENABLE_MEM_TRACKING
     Utility::RecordMemDealloc(ptr);
     #endif
 }

@@ -21,5 +21,19 @@ struct PlatformWindowHandles
 
 };
 
+inline void* AllocAlignedRaw(size_t size, size_t alignment)
+{
+    #ifdef _WIN32
+    return _aligned_malloc(size, alignment);
+    #endif
+}
+
+inline void FreeAlignedRaw(void* ptr)
+{
+    #ifdef _WIN32
+    _aligned_free(ptr);
+    #endif
+}
+
 }
 }

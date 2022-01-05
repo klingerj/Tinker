@@ -139,7 +139,7 @@ void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRT
         TINKER_ASSERT(0);
     }
 
-    delete attachments;
+    delete[] attachments;
 }
 
 void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colorFormat,

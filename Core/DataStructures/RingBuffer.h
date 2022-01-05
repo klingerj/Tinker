@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreDefines.h"
-#include "Platform/PlatformGameAPI.h"
+#include "Mem.h"
 
 #include <atomic>
 #include <xmmintrin.h>
@@ -45,7 +45,7 @@ public:
     {
         if (m_data)
         {
-            Platform::FreeAligned(m_data);
+            Tk::Core::CoreFreeAligned(m_data);
             m_data = nullptr;
             _SIZE = 0;
             _MASK = 0;
@@ -56,7 +56,7 @@ public:
     {
         _SIZE = POW2_ROUNDUP(size);
         _MASK = _SIZE - 1;
-        m_data = (T*)Platform::AllocAligned(_SIZE * sizeof(T), 64, __FILE__, __LINE__);
+        m_data = (T*)Tk::Core::CoreMallocAligned(_SIZE * sizeof(T), 64);
     }
 
     uint32 Capacity() const

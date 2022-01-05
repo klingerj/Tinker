@@ -35,8 +35,21 @@ set CompileIncludePaths=/I ../Core
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
-set SourceListGame=../Game/GameMain.cpp ../Game/GraphicsTypes.cpp ../Game/AssetManager.cpp ../Game/RenderPass.cpp ../Game/Raytracing.cpp ../Game/View.cpp ../Game/Camera.cpp ../Game/InputManager.cpp
-set CompileDefines=/DTINKER_GAME /D_ASSETS_DIR=..\\Assets\\ 
+set AbsolutePathPrefix=%cd%
+
+set SourceListGame= 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GameMain.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GraphicsTypes.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/AssetManager.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPass.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Raytracing.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/View.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Camera.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cpp 
+
+rem Calculate absolute path prefix for application path parameters here
+set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
+set CompileDefines=/DTINKER_GAME /D_ASSETS_DIR=%AbsolutePathPrefix%\\..\\Assets\\ 
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%
