@@ -122,13 +122,13 @@ void DebugOutputAllMemAllocs()
             Platform::PrintDebugString(record.filename);
             Platform::PrintDebugString(": ");
 
-            char buffer[10];
+            char buffer[64];
             memset(buffer, 0, ARRAYCOUNT(buffer));
-            _itoa_s((int)record.lineNum, buffer, 10, 10);
+            _itoa_s((int)record.lineNum, buffer, ARRAYCOUNT(buffer), 10);
 
             // Alloc size
             memset(buffer, 0, ARRAYCOUNT(buffer));
-            _itoa_s((int)record.sizeInBytes, buffer, 10, 10);
+            _itoa_s((int)record.sizeInBytes, buffer, ARRAYCOUNT(buffer), 10);
             Platform::PrintDebugString(buffer);
             Platform::PrintDebugString(" bytes");
             Platform::PrintDebugString("\n");

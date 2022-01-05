@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreDefines.h"
+#include "Mem.h"
 
 namespace Tk
 {
@@ -81,7 +82,8 @@ public:
 template <typename T>
 WorkerJob* CreateNewThreadJob(T t)
 {
-    JobFunc<T>* NewJob = new JobFunc<T>(t);
+    uint8* NewJobMem = (uint8*)Tk::Core::CoreMallocAligned(sizeof(JobFunc<T>), CACHE_LINE);
+    JobFunc<T>* NewJob = new (NewJobMem) JobFunc<T>(t);
     NewJob->m_done = 0;
     return NewJob;
 }
