@@ -684,13 +684,14 @@ void VulkanCreateSwapChain()
         &numAvailablePresentModes,
         availablePresentModes);
 
-    VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    // TODO: hook this up to vsync/framerate settings
+    VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR; // waits for vsync
     for (uint32 uiAvailPresMode = 0; uiAvailPresMode < numAvailablePresentModes; ++uiAvailPresMode)
     {
-        if (availablePresentModes[uiAvailPresMode] == VK_PRESENT_MODE_IMMEDIATE_KHR/*VK_PRESENT_MODE_MAILBOX_KHR*/)
+        /*if (availablePresentModes[uiAvailPresMode] == VK_PRESENT_MODE_IMMEDIATE_KHR)
         {
             chosenPresentMode = availablePresentModes[uiAvailPresMode];
-        }
+        }*/
     }
 
     g_vulkanContextResources.swapChainExtent = optimalExtent;

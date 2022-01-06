@@ -37,6 +37,11 @@ const bool enableDllHotloading = true;
 
 volatile bool runGame = true;
 
+struct
+{
+    float msPerFrame;
+} g_FramerateSettings[2];
+
 HWND g_windowHandle = NULL;
 Tk::Core::Graphics::GraphicsCommandStream g_graphicsCommandStream;
 bool g_windowResized = false;
@@ -680,6 +685,11 @@ wWinMain(HINSTANCE hInstance,
             Tk::Core::Utility::LogMsg("Platform", "Failed to create window!", Tk::Core::Utility::LogSeverity::eCritical);
             return 1;
         }
+
+        g_FramerateSettings[0].msPerFrame = 1000.0f / 60.0f;
+        g_FramerateSettings[1].msPerFrame = 1000.0f / 144.0f;
+        const uint32 FramerateTarget = 1;
+        //timeBeginPeriod(1);
 
         g_platformWindowHandles = {};
         g_platformWindowHandles.instance = hInstance;
