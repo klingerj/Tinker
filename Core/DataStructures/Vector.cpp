@@ -20,7 +20,8 @@ void VectorBase::Reserve(uint32 numEles, uint32 eleSize)
 {
     if (numEles > m_capacity)
     {
-        TINKER_ASSERT(numEles * eleSize <= MAX_UINT32);
+        const size_t BytesToAllocate = (size_t)numEles * (size_t)eleSize;
+        TINKER_ASSERT(BytesToAllocate <= (size_t)MAX_UINT32);
         void* newData = CoreMalloc(numEles * eleSize);
         if (m_data && m_size > 0)
         {
