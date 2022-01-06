@@ -33,7 +33,6 @@ typedef struct win32_game_code
 } Win32GameCode;
 
 Win32GameCode g_GameCode;
-const char* GameDllStr = "TinkerGame.dll";
 const bool enableDllHotloading = true;
 
 volatile bool runGame = true;
@@ -58,6 +57,11 @@ bool g_cursorLocked = false;
 #else
 #endif
 
+#ifdef _GAME_DLL_HOTLOADCOPY_PATH
+#define GAME_DLL_HOTLOADCOPY_PATH STRINGIFY(_GAME_DLL_HOTLOADCOPY_PATH)
+#else
+#endif
+
 typedef struct global_app_params
 {
     uint32 m_windowWidth;
@@ -68,7 +72,7 @@ GlobalAppParams g_GlobalAppParams;
 SYSTEM_INFO g_SystemInfo;
 Tk::Platform::PlatformWindowHandles g_platformWindowHandles;
 
-static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePath)
+static bool ReloadGameCode(Win32GameCode* GameCode)
 {
     if (!enableDllHotloading)
         return false;
@@ -100,6 +104,7 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
     if (CompareFileTime(&gameDllLastWriteTime, &GameCode->lastWriteTime))
     {
         Tk::Core::Utility::LogMsg("Platform", "Loading game dll!", Tk::Core::Utility::LogSeverity::eInfo);
+        Tk::Core::Utility::LogMsg("Platform", GAME_DLL_PATH, Tk::Core::Utility::LogSeverity::eInfo);
 
         // Unload old code
         if (GameCode->GameDll)
@@ -111,8 +116,8 @@ static bool ReloadGameCode(Win32GameCode* GameCode, const char* gameDllSourcePat
             GameCode->GameWindowResize = GameWindowResizeStub;
         }
 
-        CopyFile(gameDllSourcePath, TINKER_PLATFORM_HOTLOAD_FILENAME, FALSE);
-        GameCode->GameDll = LoadLibrary(TINKER_PLATFORM_HOTLOAD_FILENAME);
+        CopyFile(GAME_DLL_PATH, GAME_DLL_HOTLOADCOPY_PATH, FALSE);
+        GameCode->GameDll = LoadLibrary(GAME_DLL_HOTLOADCOPY_PATH);
         if (GameCode->GameDll)
         {
             GameCode->GameUpdate = (Tk::Platform::game_update*)GetProcAddress(GameCode->GameDll, "GameUpdate");
@@ -694,7 +699,7 @@ wWinMain(HINSTANCE hInstance,
         Tk::Core::Graphics::ShaderManager::LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
         g_GameCode = {};
-        bool reloaded = ReloadGameCode(&g_GameCode, GameDllStr);
+        bool reloaded = ReloadGameCode(&g_GameCode);
 
         // Input handling
         g_inputStateDeltas = {};
@@ -755,7 +760,7 @@ wWinMain(HINSTANCE hInstance,
             }
         }
 
-        if (ReloadGameCode(&g_GameCode, GameDllStr))
+        if (ReloadGameCode(&g_GameCode))
         {
             // Reset application resources
             #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD

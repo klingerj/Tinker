@@ -58,7 +58,7 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/AccelS
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
+set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsApp=/FdTinkerApp.pdb
