@@ -19,10 +19,15 @@ void HashMapBase::Reserve(uint32 numEles, uint32 eleSize)
 {
     if (numEles > m_size)
     {
+        TINKER_ASSERT(numEles * eleSize <= MAX_UINT32);
         void* newData = CoreMalloc(numEles * eleSize);
-        memcpy(newData, m_data, m_size * eleSize);
 
-        CoreFree(m_data); // free old data
+        if (m_data && m_size > 0)
+        {
+            memcpy(newData, m_data, m_size * eleSize);
+            CoreFree(m_data); // free old data
+        }
+
         m_data = (uint8*)newData;
 
         // Init all other elements to invalid
