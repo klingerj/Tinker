@@ -20,7 +20,7 @@ struct MemRecord
     
     enum
     {
-        FILENAME_LEN_MAX = 128,
+        FILENAME_LEN_MAX = 256,
     };
     char filename[FILENAME_LEN_MAX]; // TODO: Need to intern the strings
 
