@@ -21,6 +21,8 @@ template <typename T>
 struct JobFunc : public WorkerJob
 {
 public:
+    virtual ~JobFunc() {}
+
     alignas(CACHE_LINE) T m_func;
 
     JobFunc(T func) : m_func(func) {}
@@ -36,16 +38,15 @@ struct WorkerJobList
 {
 public:
     uint32 m_numJobs;
-    WorkerJob** m_jobs;
+    WorkerJob* m_jobs[256]; // TODO: make this a templated sized array or something
 
-    WorkerJobList() : m_numJobs(0), m_jobs(nullptr) {}
+    WorkerJobList() : m_numJobs(0) {}
     ~WorkerJobList() {}
 
     void Init(uint32 numJobs)
     {
         m_numJobs = numJobs;
-        m_jobs = (WorkerJob**)new WorkerJob*[m_numJobs];
-        for (uint32 i = 0; i < m_numJobs; ++i)
+        for (uint32 i = 0; i < ARRAYCOUNT(m_jobs); ++i)
         {
             m_jobs[i] = nullptr;
         }
@@ -59,11 +60,10 @@ public:
             {
                 if (m_jobs[i])
                 {
-                    delete(m_jobs[i]);
+                    m_jobs[i]->~WorkerJob();
+                    Tk::Core::CoreFreeAligned(m_jobs[i]);
                 }
             }
-            delete[] m_jobs;
-            m_jobs = nullptr;
         }
     }
 
