@@ -107,7 +107,7 @@ void VulkanSubmitFrame()
 
     g_vulkanContextResources.currentFrame = (g_vulkanContextResources.currentFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
 
-    vkQueueWaitIdle(g_vulkanContextResources.presentationQueue);
+    //vkQueueWaitIdle(g_vulkanContextResources.presentationQueue);
 }
 
 void BeginVulkanCommandRecording()

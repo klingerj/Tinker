@@ -715,12 +715,6 @@ wWinMain(HINSTANCE hInstance,
             return 1;
         }
 
-        if (timeBeginPeriod(1) != TIMERR_NOERROR)
-        {
-            Tk::Core::Utility::LogMsg("Platform", "Failed to set timer resolution to 1 ms!", Tk::Core::Utility::LogSeverity::eCritical);
-            return 1;
-        }
-
         g_platformWindowHandles = {};
         g_platformWindowHandles.instance = hInstance;
         g_platformWindowHandles.windowHandle = g_windowHandle;
@@ -747,11 +741,18 @@ wWinMain(HINSTANCE hInstance,
         ShowCursor(FALSE);
     }
 
+    bool CanSleepAt1MS = timeBeginPeriod(1) == TIMERR_NOERROR;
+    if (!CanSleepAt1MS)
+    {
+        Tk::Core::Utility::LogMsg("Platform", "Failed to set timer resolution to 1 ms!", Tk::Core::Utility::LogSeverity::eCritical);
+        return 1;
+    }
+
     // Main loop
-    std::chrono::time_point<std::chrono::steady_clock> FrameStartTime = {};
+    std::chrono::time_point<std::chrono::steady_clock> FrameStartTime = std::chrono::steady_clock::now();
     while (runGame)
     {
-        FrameStartTime = std::chrono::steady_clock::now();
+        //FrameStartTime = std::chrono::steady_clock::now();
 
         {
             //TIMED_SCOPED_BLOCK("-----> Total Frame");
@@ -804,17 +805,36 @@ wWinMain(HINSTANCE hInstance,
         }
 
         std::chrono::time_point<std::chrono::steady_clock> FrameEndTime = std::chrono::steady_clock::now();
-        std::chrono::milliseconds ElapsedDuration = std::chrono::duration_cast<std::chrono::milliseconds>(FrameEndTime - FrameStartTime);
-        uint32 FrameElapsedMS = (uint32)(ElapsedDuration.count());
-        while ((float)FrameElapsedMS < g_FramerateSettings[g_FramerateTarget].msPerFrame)
+        std::chrono::nanoseconds ElapsedDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(FrameEndTime - FrameStartTime);
+        float FrameElapsedMS = (ElapsedDuration.count() / 1000000.0f);
+
+        // Sleep for most/all of remaining frame time
+        if (CanSleepAt1MS && FrameElapsedMS < g_FramerateSettings[g_FramerateTarget].msPerFrame)
         {
             const uint32 MSToWait = (uint32)(g_FramerateSettings[g_FramerateTarget].msPerFrame - (float)FrameElapsedMS);
-            //Sleep(MSToWait);
+            //Sleep(MSToWait); // TODO: this saves some power, but Windows sleep the process for too long sometimes, need to play with this
 
             FrameEndTime = std::chrono::steady_clock::now();
-            ElapsedDuration = std::chrono::duration_cast<std::chrono::milliseconds>(FrameEndTime - FrameStartTime);
-            FrameElapsedMS = (uint32)(ElapsedDuration.count());
+            ElapsedDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(FrameEndTime - FrameStartTime);
+            FrameElapsedMS = (ElapsedDuration.count() / 1000000.0f);
         }
+
+        // Spin for leftover time
+        while (FrameElapsedMS < g_FramerateSettings[g_FramerateTarget].msPerFrame)
+        {
+            FrameEndTime = std::chrono::steady_clock::now();
+            ElapsedDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(FrameEndTime - FrameStartTime);
+            FrameElapsedMS = (ElapsedDuration.count() / 1000000.0f);
+        }
+
+        std::chrono::time_point<std::chrono::steady_clock> FrameEndTime2 = std::chrono::steady_clock::now();
+        ElapsedDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(FrameEndTime2 - FrameStartTime);
+        char buf[16];
+        memset(buf, 0, 16);
+        sprintf_s(buf, 16, "%f\n", ElapsedDuration.count() / 1000000.0f);
+        //OutputDebugString(buf);
+
+        FrameStartTime = std::chrono::steady_clock::now();
 
         if (ReloadGameCode(&g_GameCode))
         {
@@ -829,6 +849,8 @@ wWinMain(HINSTANCE hInstance,
             Tk::Core::Graphics::ShaderManager::Startup();
             Tk::Core::Graphics::ShaderManager::LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
         }
+
+        //FrameStartTime = std::chrono::steady_clock::now();
     }
 
     g_GameCode.GameDestroy();
