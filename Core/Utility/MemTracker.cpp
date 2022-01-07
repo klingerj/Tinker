@@ -20,9 +20,9 @@ struct MemRecord
     
     enum
     {
-        FILENAME_LEN_MAX = 128, // TODO: if this is 256, memtracker crashes when inserting. Need to intern the strings
+        FILENAME_LEN_MAX = 256,
     };
-    char filename[FILENAME_LEN_MAX];
+    char filename[FILENAME_LEN_MAX]; // TODO: Need to intern the strings
 
     MemRecord()
     {
@@ -36,7 +36,7 @@ struct MemRecord
     }
 };
 
-#define MAX_ALLOCS_RECORDED 1 << 24
+#define MAX_ALLOCS_RECORDED 65536
 struct MemTracker
 {
     HashMap<uint64, MemRecord, Hash64> m_AllocRecords;
@@ -80,9 +80,6 @@ void RecordMemDealloc(void* memPtr)
     if (!g_MemTracker.bEnableAllocRecording || !memPtr)
         return;
 
-    //MemRecord m;
-    //memset(&m, 0, sizeof(MemRecord));
-    //m.memPtr = (uint64)memPtr;
     uint32 index = g_MemTracker.m_AllocRecords.FindIndex((uint64)memPtr);
 
     if (index == g_MemTracker.m_AllocRecords.eInvalidIndex)
