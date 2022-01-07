@@ -42,6 +42,7 @@ struct
 {
     float msPerFrame;
 } g_FramerateSettings[2];
+uint32 g_FramerateTarget = 0;
 
 HWND g_windowHandle = NULL;
 Tk::Core::Graphics::GraphicsCommandStream g_graphicsCommandStream;
@@ -687,9 +688,6 @@ wWinMain(HINSTANCE hInstance,
             return 1;
         }
 
-        g_FramerateSettings[0].msPerFrame = 1000.0f / 60.0f;
-        g_FramerateSettings[1].msPerFrame = 1000.0f / 144.0f;
-        uint32 FramerateTarget = 0;
         if (timeBeginPeriod(1) != TIMERR_NOERROR)
         {
             Tk::Core::Utility::LogMsg("Platform", "Failed to set timer resolution to 1 ms!", Tk::Core::Utility::LogSeverity::eCritical);
@@ -721,6 +719,9 @@ wWinMain(HINSTANCE hInstance,
         g_cursorLocked = true;
         ShowCursor(FALSE);
     }
+
+    g_FramerateSettings[0].msPerFrame = 1000.0f / 60.0f;
+    g_FramerateSettings[1].msPerFrame = 1000.0f / 144.0f;
 
     // Main loop
     std::chrono::time_point<std::chrono::steady_clock> FrameStartTime = {};
@@ -781,9 +782,11 @@ wWinMain(HINSTANCE hInstance,
         std::chrono::time_point<std::chrono::steady_clock> FrameEndTime = std::chrono::steady_clock::now();
         std::chrono::milliseconds ElapsedDuration = std::chrono::duration_cast<std::chrono::milliseconds>(FrameEndTime - FrameStartTime);
         uint32 FrameElapsedMS = (uint32)(ElapsedDuration.count());
-        while ((float)FrameElapsedMS < 1000.0f/60.0f)
+        while ((float)FrameElapsedMS < g_FramerateSettings[g_FramerateTarget].msPerFrame)
         {
-            Sleep(1);
+            const uint32 MSToWait = (uint32)(g_FramerateSettings[g_FramerateTarget].msPerFrame - (float)FrameElapsedMS);
+            Sleep(MSToWait);
+
             FrameEndTime = std::chrono::steady_clock::now();
             ElapsedDuration = std::chrono::duration_cast<std::chrono::milliseconds>(FrameEndTime - FrameStartTime);
             FrameElapsedMS = (uint32)(ElapsedDuration.count());
