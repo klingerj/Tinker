@@ -10,6 +10,7 @@
 
 #include <windows.h>
 #include <Windowsx.h>
+#include <timeapi.h>
 
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
@@ -625,7 +626,7 @@ static void ProcessWindowMessages()
         }
     }
 }
-
+#include <chrono>
 int WINAPI
 wWinMain(HINSTANCE hInstance,
     HINSTANCE hPrevInstance,
@@ -688,8 +689,12 @@ wWinMain(HINSTANCE hInstance,
 
         g_FramerateSettings[0].msPerFrame = 1000.0f / 60.0f;
         g_FramerateSettings[1].msPerFrame = 1000.0f / 144.0f;
-        const uint32 FramerateTarget = 1;
-        //timeBeginPeriod(1);
+        uint32 FramerateTarget = 0;
+        if (timeBeginPeriod(1) != TIMERR_NOERROR)
+        {
+            Tk::Core::Utility::LogMsg("Platform", "Failed to set timer resolution to 1 ms!", Tk::Core::Utility::LogSeverity::eCritical);
+            return 1;
+        }
 
         g_platformWindowHandles = {};
         g_platformWindowHandles.instance = hInstance;
@@ -718,8 +723,11 @@ wWinMain(HINSTANCE hInstance,
     }
 
     // Main loop
+    std::chrono::time_point<std::chrono::steady_clock> FrameStartTime = {};
     while (runGame)
     {
+        FrameStartTime = std::chrono::steady_clock::now();
+
         {
             //TIMED_SCOPED_BLOCK("-----> Total Frame");
 
@@ -768,6 +776,17 @@ wWinMain(HINSTANCE hInstance,
                     Tk::Core::Graphics::SubmitFrameToGPU();
                 }
             }
+        }
+
+        std::chrono::time_point<std::chrono::steady_clock> FrameEndTime = std::chrono::steady_clock::now();
+        std::chrono::milliseconds ElapsedDuration = std::chrono::duration_cast<std::chrono::milliseconds>(FrameEndTime - FrameStartTime);
+        uint32 FrameElapsedMS = (uint32)(ElapsedDuration.count());
+        while ((float)FrameElapsedMS < 1000.0f/60.0f)
+        {
+            Sleep(1);
+            FrameEndTime = std::chrono::steady_clock::now();
+            ElapsedDuration = std::chrono::duration_cast<std::chrono::milliseconds>(FrameEndTime - FrameStartTime);
+            FrameElapsedMS = (uint32)(ElapsedDuration.count());
         }
 
         if (ReloadGameCode(&g_GameCode))

@@ -71,7 +71,7 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set CompileIncludePaths=/I ../Core 
-set LibsToLink=user32.lib ws2_32.lib 
+set LibsToLink=user32.lib ws2_32.lib winmm.lib
 
 echo.
 echo Building TinkerApp.exe...
