@@ -38,11 +38,21 @@ const bool enableDllHotloading = true;
 
 volatile bool runGame = true;
 
+enum : uint32
+{
+    ResFramerate_800x600_60Hz,
+    ResFramerate_800x600_144Hz,
+    ResFramerate_1280x720_60Hz,
+    ResFramerate_1280x720_144Hz,
+    ResFramerate_Max,
+};
 struct
 {
+    uint32 windowWidth;
+    uint32 windowHeight;
     float msPerFrame;
-} g_FramerateSettings[2];
-uint32 g_FramerateTarget = 0;
+} g_FramerateSettings[ResFramerate_Max];
+const uint32 g_FramerateTarget = ResFramerate_800x600_144Hz;
 
 HWND g_windowHandle = NULL;
 Tk::Core::Graphics::GraphicsCommandStream g_graphicsCommandStream;
@@ -640,10 +650,27 @@ wWinMain(HINSTANCE hInstance,
     {
         TIMED_SCOPED_BLOCK("Platform init");
 
-        // TODO: load from settings file
+        g_FramerateSettings[ResFramerate_800x600_60Hz].windowWidth = 800;
+        g_FramerateSettings[ResFramerate_800x600_60Hz].windowHeight = 600;
+        g_FramerateSettings[ResFramerate_800x600_60Hz].msPerFrame = 1000.0f / 60.0f;
+
+        g_FramerateSettings[ResFramerate_800x600_144Hz].windowWidth = 800;
+        g_FramerateSettings[ResFramerate_800x600_144Hz].windowHeight = 600;
+        g_FramerateSettings[ResFramerate_800x600_144Hz].msPerFrame = 1000.0f / 144.0f;
+
+        g_FramerateSettings[ResFramerate_1280x720_60Hz].windowWidth = 1280;
+        g_FramerateSettings[ResFramerate_1280x720_60Hz].windowHeight = 720;
+        g_FramerateSettings[ResFramerate_1280x720_60Hz].msPerFrame = 1000.0f / 60.0f;
+
+        g_FramerateSettings[ResFramerate_1280x720_144Hz].windowWidth = 1280;
+        g_FramerateSettings[ResFramerate_1280x720_144Hz].windowHeight = 720;
+        g_FramerateSettings[ResFramerate_1280x720_144Hz].msPerFrame = 1000.0f / 144.0f;
+
         g_GlobalAppParams = {};
-        g_GlobalAppParams.m_windowWidth = 800;
-        g_GlobalAppParams.m_windowHeight = 600;
+
+        TINKER_ASSERT(g_FramerateTarget < ResFramerate_Max);
+        g_GlobalAppParams.m_windowWidth = g_FramerateSettings[g_FramerateTarget].windowWidth;
+        g_GlobalAppParams.m_windowHeight = g_FramerateSettings[g_FramerateTarget].windowHeight;
 
         // Get system info
         g_SystemInfo = {};
@@ -720,9 +747,6 @@ wWinMain(HINSTANCE hInstance,
         ShowCursor(FALSE);
     }
 
-    g_FramerateSettings[0].msPerFrame = 1000.0f / 60.0f;
-    g_FramerateSettings[1].msPerFrame = 1000.0f / 144.0f;
-
     // Main loop
     std::chrono::time_point<std::chrono::steady_clock> FrameStartTime = {};
     while (runGame)
@@ -785,7 +809,7 @@ wWinMain(HINSTANCE hInstance,
         while ((float)FrameElapsedMS < g_FramerateSettings[g_FramerateTarget].msPerFrame)
         {
             const uint32 MSToWait = (uint32)(g_FramerateSettings[g_FramerateTarget].msPerFrame - (float)FrameElapsedMS);
-            Sleep(MSToWait);
+            //Sleep(MSToWait);
 
             FrameEndTime = std::chrono::steady_clock::now();
             ElapsedDuration = std::chrono::duration_cast<std::chrono::milliseconds>(FrameEndTime - FrameStartTime);
