@@ -26,7 +26,10 @@ typedef struct static_mesh_data
 typedef struct mesh_attribute_data
 {
     uint32 m_numVertices;
-    uint8* m_vertexBufferData; // positions, uvs, normals, indices
+    uint8* m_vertexBufferData_Pos;
+    uint8* m_vertexBufferData_UV;
+    uint8* m_vertexBufferData_Normal;
+    uint8* m_vertexBufferData_Index;
 } MeshAttributeData;
 
 typedef struct texture_metadata

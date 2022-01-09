@@ -40,7 +40,7 @@ void RaytraceTest()
     v3f* triData = (v3f*)Tk::Core::CoreMalloc(numVerts * sizeof(v3f));
     for (uint32 i = 0; i < numVerts; ++i)
     {
-        const v4f& ptVec4 = ((v4f*)data.m_vertexBufferData)[i];
+        const v4f& ptVec4 = ((v4f*)data.m_vertexBufferData_Pos)[i];
         triData[i] = v3f(ptVec4.x, ptVec4.y, ptVec4.z);
     }
     
@@ -119,7 +119,7 @@ void RaytraceTest()
 
             if (isx.t > 0.0f)
             {
-                v3f* meshNormals = (v3f*)(data.m_vertexBufferData + numVerts * (sizeof(v4f) + sizeof(v2f))); // skip pos and uvs in buffer
+                v3f* meshNormals = (v3f*)data.m_vertexBufferData_Normal; // skip pos and uvs in buffer
                 v3f interpNormal = meshNormals[isx.hitTri * 3] * isx.bary[0] +
                     meshNormals[isx.hitTri * 3 + 1] * isx.bary[1] +
                     meshNormals[isx.hitTri * 3 + 2] * isx.bary[2];
@@ -160,7 +160,7 @@ void RaytraceTest()
     // Output image
     Buffer imgBuffer = {};
     Tk::Core::Asset::SaveBMP(&imgBuffer, (uint8*)img, width, height, 32);
-    Tk::Platform::WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", imgBuffer.m_sizeInBytes, imgBuffer.m_data);
+    Tk::Platform::WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", (uint32)imgBuffer.m_sizeInBytes, imgBuffer.m_data);
     imgBuffer.Dealloc();
     Tk::Core::CoreFree(img);
 
