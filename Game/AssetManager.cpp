@@ -4,6 +4,7 @@
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Platform/PlatformGameAPI.h"
 #include "Mem.h"
+#include "Utility/ScopedTimer.h"
 
 #include <string.h>
 
@@ -14,7 +15,16 @@ using namespace Core;
 AssetManager g_AssetManager;
 
 static const uint64 AssetFileMemorySize = 1024 * 1024 * 1024;
-static Tk::Core::LinearAllocator<AssetFileMemorySize> g_AssetFileScratchMemory;
+static Tk::Core::LinearAllocator g_AssetFileScratchMemory;
+
+// For storing dumping obj vertex data during parsing
+static Tk::Core::Asset::OBJParseScratchBuffers ScratchBuffers;
+
+// For storing final obj vertex data
+static Tk::Core::LinearAllocator VertPosAllocator;
+static Tk::Core::LinearAllocator VertUVAllocator;
+static Tk::Core::LinearAllocator VertNormalAllocator;
+static Tk::Core::LinearAllocator VertIndexAllocator;
 
 void AssetManager::FreeMemory()
 {
@@ -23,6 +33,8 @@ void AssetManager::FreeMemory()
 
 void AssetManager::LoadAllAssets()
 {
+    g_AssetFileScratchMemory.Init(AssetFileMemorySize, CACHE_LINE);
+
     // Meshes
     const uint32 numMeshAssets = 4;
     TINKER_ASSERT(numMeshAssets <= TINKER_MAX_MESHES);
@@ -48,7 +60,7 @@ void AssetManager::LoadAllAssets()
 
     // Allocate one large buffer to store a dump of all obj files.
     // Each obj file's data is separated by a single null byte to mark EOF
-    uint8* objFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalMeshFileBytes + numMeshAssets, 1); // + 1 EOF byte for each obj file -> + numMeshAssets
+    uint8* objFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalMeshFileBytes + numMeshAssets, CACHE_LINE); // + 1 EOF byte for each obj file -> + numMeshAssets
 
     // Now precalculate the size of the vertex attribute buffers needed to contain the obj data
     uint32 meshBufferSizes[numMeshAssets] = {};
@@ -56,86 +68,81 @@ void AssetManager::LoadAllAssets()
 
     uint32 accumFileOffset = 0;
 
-    bool multithreadObjLoading = true;
-    if (multithreadObjLoading)
     {
-        Tk::Platform::WorkerJobList jobs;
-        jobs.Init(numMeshAssets);
+        TIMED_SCOPED_BLOCK("Load OBJ files from disk - multithreaded");
+
+        bool multithreadObjLoading = true;
+        if (multithreadObjLoading)
+        {
+            Tk::Platform::WorkerJobList jobs;
+            jobs.Init(numMeshAssets);
+            for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
+            {
+                uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
+                uint32 currentObjFileSize = meshFileSizes[uiAsset];
+                accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
+
+                jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
+                    {
+                        ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
+                        currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
+                    });
+
+            }
+            Tk::Platform::EnqueueWorkerThreadJobList_Assisted(&jobs);
+            jobs.WaitOnJobs();
+            jobs.FreeList();
+        }
+        else
+        {
+            for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
+            {
+                uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
+                uint32 currentObjFileSize = meshFileSizes[uiAsset];
+                accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
+
+                currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
+                ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
+            }
+        }
+    }
+
+    // Parse OBJs
+    {
+        TIMED_SCOPED_BLOCK("Parse OBJ Files - single threaded");
+
+        const uint32 MAX_VERT_BUFFER_SIZE = 1024 * 1024 * 128; // TODO: reduce this when we don't have to store all the attr buffers in the same linear allocator by doing graphics right here
+        VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+        VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+        VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+        VertIndexAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+
+        ScratchBuffers = {};
+        ScratchBuffers.VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+        ScratchBuffers.VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+        ScratchBuffers.VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+
+        accumFileOffset = 0;
+        uint32 accumNumVerts = 0;
         for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
         {
-            uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
+            const uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
             uint32 currentObjFileSize = meshFileSizes[uiAsset];
             accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
 
-            jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
-                {
-                    ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
-                    currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
-                });
+            uint32 numObjVerts = 0;
+            Tk::Core::Asset::ParseOBJ(VertPosAllocator, VertUVAllocator, VertNormalAllocator, VertIndexAllocator, ScratchBuffers, currentObjFile, currentObjFileSize, &numObjVerts);
+            TINKER_ASSERT(numObjVerts);
+            m_allMeshData[uiAsset].m_numVertices = numObjVerts;
+            m_allMeshData[uiAsset].m_vertexBufferData_Pos = VertPosAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts;
+            m_allMeshData[uiAsset].m_vertexBufferData_UV = VertUVAllocator.m_ownedMemPtr + sizeof(v2f) * accumNumVerts;
+            m_allMeshData[uiAsset].m_vertexBufferData_Normal = VertNormalAllocator.m_ownedMemPtr + sizeof(v3f) * accumNumVerts;
+            m_allMeshData[uiAsset].m_vertexBufferData_Index = VertIndexAllocator.m_ownedMemPtr + sizeof(uint32) * accumNumVerts;
+            // TODO: create the graphics buffers right away and don't bother storing m_allMeshData at all
 
-            //Tk::Platform::EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
+            ScratchBuffers.ResetState();
+            accumNumVerts += numObjVerts;
         }
-        //Tk::Platform::EnqueueWorkerThreadJobList_Unassisted(&jobs);
-        Tk::Platform::EnqueueWorkerThreadJobList_Assisted(&jobs);
-        jobs.WaitOnJobs();
-        jobs.FreeList();
-    }
-    else
-    {
-        for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-        {
-            uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-            uint32 currentObjFileSize = meshFileSizes[uiAsset];
-            accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
-
-            currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
-            ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
-        }
-    }
-
-    accumFileOffset = 0;
-    // Calculate the size of each mesh buffer - positions, normals, uvs, indices
-    for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-    {
-        uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-        uint32 currentObjFileSize = meshFileSizes[uiAsset];
-        accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
-
-        uint32 numObjVerts = Asset::GetOBJVertCount(currentObjFile, currentObjFileSize);
-        TINKER_ASSERT(numObjVerts > 0);
-
-        m_allMeshData[uiAsset].m_numVertices = numObjVerts;
-        uint32 numPositionBytes  = numObjVerts * sizeof(v4f);
-        uint32 numNormalBytes    = numObjVerts * sizeof(v3f);
-        uint32 numUVBytes        = numObjVerts * sizeof(v2f);
-        uint32 numIndexBytes     = numObjVerts * sizeof(uint32);
-        meshBufferSizes[uiAsset] = numPositionBytes + numNormalBytes + numUVBytes + numIndexBytes;
-        totalMeshBufferSize += meshBufferSizes[uiAsset];
-    }
-
-    // Allocate exactly enough space for each mesh's vertex buffers, cache-line aligned
-    m_meshBufferAllocator.Init(totalMeshBufferSize, CACHE_LINE);
-
-    accumFileOffset = 0;
-    // Parse each OBJ and populate each mesh's buffer
-    for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-    {
-        m_allMeshData[uiAsset].m_vertexBufferData = m_meshBufferAllocator.Alloc(meshBufferSizes[uiAsset], 1);
-
-        uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
-        uint32 numUVBytes       = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
-        uint32 numNormalBytes   = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
-        uint32 numIndexBytes    = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
-
-        v4f* positionBuffer = (v4f*) m_allMeshData[uiAsset].m_vertexBufferData;
-        v2f* uvBuffer       = (v2f*)((uint8*)positionBuffer + numPositionBytes);
-        v3f* normalBuffer   = (v3f*)((uint8*)uvBuffer + numUVBytes);
-        uint32* indexBuffer = (uint32*)((uint8*)normalBuffer + numNormalBytes);
-
-        uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-        uint32 currentObjFileSize = meshFileSizes[uiAsset];
-        accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
-        Asset::ParseOBJ(positionBuffer, uvBuffer, normalBuffer, indexBuffer, currentObjFile, currentObjFileSize);
     }
     //-----
 
@@ -164,7 +171,7 @@ void AssetManager::LoadAllAssets()
     }
 
     // Allocate one large buffer to store a dump of all texture files.
-    uint8* textureFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalTextureFileBytes, 1);
+    uint8* textureFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalTextureFileBytes, CACHE_LINE);
 
     accumFileOffset = 0;
 
@@ -361,15 +368,15 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         CreateVertexBufferDescriptor(uiAsset);
 
         // Memcpy data into staging buffer
-        uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
-        uint32 numUVBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
-        uint32 numNormalBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
-        uint32 numIndexBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
+        const uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
+        const uint32 numUVBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
+        const uint32 numNormalBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
+        const uint32 numIndexBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
 
-        v4f* positionBuffer = (v4f*)m_allMeshData[uiAsset].m_vertexBufferData;
-        v2f* uvBuffer       = (v2f*)((uint8*)positionBuffer + numPositionBytes);
-        v3f* normalBuffer   = (v3f*)((uint8*)uvBuffer + numUVBytes);
-        uint32* indexBuffer = (uint32*)((uint8*)normalBuffer + numNormalBytes);
+        v4f* positionBuffer = (v4f*)m_allMeshData[uiAsset].m_vertexBufferData_Pos;
+        v2f* uvBuffer       = (v2f*)m_allMeshData[uiAsset].m_vertexBufferData_UV;
+        v3f* normalBuffer   = (v3f*)m_allMeshData[uiAsset].m_vertexBufferData_Normal;
+        uint32* indexBuffer = (uint32*)m_allMeshData[uiAsset].m_vertexBufferData_Index;
         memcpy(stagingBufferMemPtr_Pos, positionBuffer, numPositionBytes);
         memcpy(stagingBufferMemPtr_UV, uvBuffer, numUVBytes);
         //memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);

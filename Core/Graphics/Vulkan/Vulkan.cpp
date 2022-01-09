@@ -26,7 +26,7 @@ namespace Graphics
 {
 
 static const uint32 VULKAN_SCRATCH_MEM_SIZE = 1024 * 1024 * 2;
-static Tk::Core::LinearAllocator<VULKAN_SCRATCH_MEM_SIZE> g_VulkanDataAllocator;
+static Tk::Core::LinearAllocator g_VulkanDataAllocator;
 
 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
@@ -44,6 +44,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 
 int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height)
 {
+    g_VulkanDataAllocator.Init(VULKAN_SCRATCH_MEM_SIZE, 1);
+
     g_vulkanContextResources.vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     g_vulkanContextResources.vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     g_vulkanContextResources.vulkanFramebufferResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);

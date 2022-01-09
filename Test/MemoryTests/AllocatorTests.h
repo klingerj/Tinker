@@ -9,7 +9,8 @@ using namespace Core;
 // Linear allocator
 void Test_Linear_NoAlignment()
 {
-    LinearAllocator<1024> allocator;
+    LinearAllocator allocator;
+    allocator.Init(1024, 1);
     for (uint16 i = 0; i < 1024; ++i)
     {
         uint8* ptr = (uint8*)allocator.Alloc(1, 1);
@@ -21,7 +22,8 @@ void Test_Linear_NoAlignment()
 
 void Test_Linear_Alignment()
 {
-    LinearAllocator<1024, 2> allocator;
+    LinearAllocator allocator;
+    allocator.Init(1024, 2);
     for (uint16 i = 0; i < 1024 / 16; i += 16)
     {
         uint8* ptr = (uint8*)allocator.Alloc(1, 16);
@@ -33,7 +35,8 @@ void Test_Linear_Alignment()
 
 void Test_Linear_NoAlignment_WithDealloc()
 {
-    LinearAllocator<1024> allocator;
+    LinearAllocator allocator;
+    allocator.Init(1024, 1);
     for (uint16 i = 0; i < 1024; ++i)
     {
         uint8* ptr = (uint8*)allocator.Alloc(1, 1);
@@ -42,7 +45,7 @@ void Test_Linear_NoAlignment_WithDealloc()
     uint8* ptr = (uint8*)allocator.Alloc(1, 1);
     TINKER_TEST_ASSERT(!ptr);
 
-    allocator.Dealloc();
+    allocator.ResetState();
 
     for (uint16 i = 0; i < 1024; ++i)
     {

@@ -10,200 +10,134 @@ namespace Core
 namespace Asset
 {
 
-void scanLine(uint8* buffer, uint32* currentIndex)
+static const char LineEndingChars[2] = { '\n', '\r' };
+static const char EOFChar = '\0';
+static const char WhiteSpaceChars[2] = { ' ', '/' };
+#define MAX_SCRATCH_WORD_LEN 32
+
+static bool HitSpecialChar(char TheChar, const char* SpecialCharList, uint32 NumCharsToCheck)
 {
-    startScan:
-    while (buffer[*currentIndex] != '\n' && buffer[*currentIndex] != '\r')
+    for (uint32 i = 0; i < NumCharsToCheck; ++i)
     {
-        if (buffer[*currentIndex] == '\0') return; // marks EOF
+        if (TheChar == SpecialCharList[i])
+            return true;
+    }
+    return false;
+}
+
+static void scanLine(const uint8* buffer, uint64* currentIndex)
+{
+    // Scan up to the line ending
+    while (!HitSpecialChar(buffer[*currentIndex], LineEndingChars, ARRAYCOUNT(LineEndingChars)))
+    {
+        if (HitSpecialChar(buffer[*currentIndex], &EOFChar, 1))
+            return; // marks EOF
 
         ++*currentIndex;
     }
 
-    ++*currentIndex; // move one past the newline
-
-    // Consume all consecutive '\n' and '\r' characters
-    if (buffer[*currentIndex] == '\n' || buffer[*currentIndex] == '\r')
+    // Scan to the first character after the line ending
+    while (HitSpecialChar(buffer[*currentIndex], LineEndingChars, ARRAYCOUNT(LineEndingChars)))
     {
-        goto startScan;
+        if (HitSpecialChar(buffer[*currentIndex], &EOFChar, 1))
+            return; // marks EOF
+
+        ++* currentIndex;
     }
 }
 
-bool LineStartsWith(uint8* buffer, uint32 currentIndex, const char* twoCharPrefix)
+static void scanWord(const uint8* buffer, uint64* currentIndex)
 {
-    return buffer[currentIndex] == twoCharPrefix[0] && buffer[currentIndex + 1] == twoCharPrefix[1];
-}
-
-uint32 CountLinesWithPrefix(uint8* entireFileBuffer, uint32 bufferSizeInBytes, const char* twoCharPrefix)
-{
-    // Counter gets advanced as we scan lines of the files
-    uint32 currentIndex = 0;
-
-    uint32 numLines = 0;
-    while (1)
-    {
-        scanLine(entireFileBuffer, &currentIndex);
-
-        if (currentIndex >= bufferSizeInBytes)
-        {
-            break;
-        }
-
-        if (LineStartsWith(entireFileBuffer, currentIndex, twoCharPrefix))
-        {
-            ++numLines;
-        }
-    }
-    return numLines;
-}
-
-uint32 GetOBJVertCount(uint8* entireFileBuffer, uint32 bufferSizeInBytes)
-{
-    const char facePrefix[2] = { 'f', ' ' };
-    return CountLinesWithPrefix(entireFileBuffer, bufferSizeInBytes, facePrefix) * 3;
-}
-
-void scanWord(uint8* buffer, uint32* currentIndex)
-{
-    while (buffer[*currentIndex] != ' '  &&
-           buffer[*currentIndex] != '/'  &&
-           buffer[*currentIndex] != '\n' &&
-           buffer[*currentIndex] != '\r')
+    while (!HitSpecialChar(buffer[*currentIndex], LineEndingChars, ARRAYCOUNT(LineEndingChars)) &&
+           !HitSpecialChar(buffer[*currentIndex], WhiteSpaceChars, ARRAYCOUNT(WhiteSpaceChars)))
     {
         ++*currentIndex;
     }
 }
 
-void scanWhiteSpace(uint8* buffer, uint32* currentIndex)
+static void scanWhiteSpace(const uint8* buffer, uint64* currentIndex)
 {
-    while (buffer[*currentIndex] == ' ' ||
-           buffer[*currentIndex] == '/')
+    while (HitSpecialChar(buffer[*currentIndex], WhiteSpaceChars, ARRAYCOUNT(WhiteSpaceChars)))
     {
         ++*currentIndex;
     }
 }
 
-void scanWordIntoBuffer(uint8* buffer, uint32* currentIndex, char* nextWord)
+static void scanWordIntoBuffer(const uint8* buffer, uint64* currentIndex, char* NextWord, uint32 NextWordMaxLen)
 {
     // Scan to the next word separated by white space
     scanWhiteSpace(buffer, currentIndex);
 
     // We are now on the first character of the word
-    uint32 wordStartIndex = *currentIndex;
+    uint64 wordStartIndex = *currentIndex;
 
     // Scan to the end of the word
     scanWord(buffer, currentIndex);
 
-    // TODO: fix this hardcodedness
-    for (uint8 i = 0; i < 32; ++i)
+    uint32 numBytesToCopy = (uint32)(*currentIndex - wordStartIndex);
+    numBytesToCopy = min(NextWordMaxLen, numBytesToCopy);
+    memcpy(NextWord, buffer + wordStartIndex, numBytesToCopy);
+}
+
+static void ReadWordsIntoVertBuffer(uint32 NumWords, float* OutVertexData, const uint8* EntireFileBuffer, uint64* currentIndex)
+{
+    for (uint32 uiWord = 0; uiWord < NumWords; ++uiWord)
     {
-        nextWord[i] = '\0';
-    }
-    for (uint32 uiChar = 0; wordStartIndex + uiChar < *currentIndex; ++uiChar)
-    {
-        nextWord[uiChar] = buffer[wordStartIndex + uiChar];
+        char NextWord[MAX_SCRATCH_WORD_LEN];
+        memset(NextWord, 0, ARRAYCOUNT(NextWord) * sizeof(char));
+        scanWordIntoBuffer(EntireFileBuffer, currentIndex, NextWord, ARRAYCOUNT(NextWord));
+        OutVertexData[uiWord] = (float)atof(NextWord);
     }
 }
 
-void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, uint32* dstIndexBuffer,
-    uint8* entireFileBuffer, uint32 bufferSizeInBytes)
+void ParseOBJ(Tk::Core::LinearAllocator& PosAllocator, Tk::Core::LinearAllocator& UVAllocator,
+    Tk::Core::LinearAllocator& NormalAllocator, Tk::Core::LinearAllocator& IndexAllocator,
+    OBJParseScratchBuffers& ScratchBuffers, const uint8* EntireFileBuffer, uint64 FileSize, uint32* OutVertCount)
 {
-    TINKER_ASSERT(dstPositionBuffer);
-    TINKER_ASSERT(dstNormalBuffer);
-    TINKER_ASSERT(dstUVBuffer);
-    TINKER_ASSERT(dstIndexBuffer);
-    TINKER_ASSERT(entireFileBuffer);
+    // Counter gets advanced as we scan lines of the files
+    uint64 currentIndex = 0;
 
-    // Count the number of each attribute and allocate buffers to contain the data as we read it
-    // TODO: count multiple prefixes at once rather than scanning the entire file for each
-    // TODO: custom/faster allocation
-    char prefix[2] = { 'v', ' ' };
-    uint32 numPositionsInFile = CountLinesWithPrefix(entireFileBuffer, bufferSizeInBytes, prefix);
-    prefix[0] = 'v';
-    prefix[1] = 't';
-    uint32 numUVsInFile = CountLinesWithPrefix(entireFileBuffer, bufferSizeInBytes, prefix);
-    prefix[0] = 'v';
-    prefix[1] = 'n';
-    uint32 numNormalsInFile = CountLinesWithPrefix(entireFileBuffer, bufferSizeInBytes, prefix);
-    uint8* attrReadBuffer = new uint8[sizeof(v4f) * numPositionsInFile + sizeof(v3f) * numNormalsInFile + sizeof(v2f) * numUVsInFile];
-    v4f* posReadBuffer = (v4f*)attrReadBuffer;
-    v2f* uvReadBuffer = (v2f*)((uint8*)posReadBuffer + sizeof(v4f) * numPositionsInFile);
-    v3f* normReadBuffer = (v3f*)((uint8*)uvReadBuffer + sizeof(v2f) * numUVsInFile);
-
-    // Count as we write values to each buffer
-    uint32 posBufCtr = 0;
-    uint32 normBufCtr = 0;
-    uint32 uvBufCtr = 0;
-
+    // Keep a counter for number of vertices
+    *OutVertCount = 0;
+    
     // Need global counter for indices
     uint32 indicesCounter = 0;
 
-    // Counter gets advanced as we scan lines of the files
-    uint32 currentIndex = 0;
-
-    // Scan until we hit the null terminator which is used here to mark EOF
-    while (entireFileBuffer[currentIndex] != '\0')
+    // Scan until we hit the null terminator which is used here to mark EOF, and for safety, stay within file size
+    while (currentIndex < FileSize && !HitSpecialChar(EntireFileBuffer[currentIndex], &EOFChar, 1))
     {
-        if (entireFileBuffer[currentIndex] == 'v' && entireFileBuffer[currentIndex + 1] == ' ')
+        if (EntireFileBuffer[currentIndex] == 'v' && EntireFileBuffer[currentIndex + 1] == ' ') // Vertex positions
         {
-            // Vertex positions
-
             // skip the 'v'
-            scanWord(entireFileBuffer, &currentIndex);
+            scanWord(EntireFileBuffer, &currentIndex);
 
-            v4f newVertPos = v4f(0.0f, 0.0f, 0.0f, 1.0f);
-            const uint8 numWordsPerVert = 3;
-            for (uint8 uiWord = 0; uiWord < numWordsPerVert; ++uiWord)
-            {
-                char nextWord[32];
-                scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
-                newVertPos[uiWord] = (float)atof(nextWord);
-            }
-
-            posReadBuffer[posBufCtr++] = newVertPos;
+            v4f* VertBufferPtr = (v4f*)ScratchBuffers.VertPosAllocator.Alloc(sizeof(v4f), 1);
+            const uint32 numWordsPerVert = 3;
+            ReadWordsIntoVertBuffer(numWordsPerVert, (float*)VertBufferPtr, EntireFileBuffer, &currentIndex);
+            (*VertBufferPtr)[numWordsPerVert] = 1.0f; // set homogeneous coord to 1
         }
-        else if (entireFileBuffer[currentIndex] == 'v' && entireFileBuffer[currentIndex + 1] == 't')
+        else if (EntireFileBuffer[currentIndex] == 'v' && EntireFileBuffer[currentIndex + 1] == 't') // Vertex texture coordinates
         {
-            // Vertex texture coordinates
-
             // skip the 'vt'
-            scanWord(entireFileBuffer, &currentIndex);
+            scanWord(EntireFileBuffer, &currentIndex);
 
-            v2f newVertUV = v2f(0.0f, 0.0f);
-            const uint8 numWordsPerVert = 2;
-            for (uint8 uiWord = 0; uiWord < numWordsPerVert; ++uiWord)
-            {
-                char nextWord[32];
-                scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
-                newVertUV[uiWord] = (float)atof(nextWord);
-            }
-
-            uvReadBuffer[uvBufCtr++] = newVertUV;
+            v2f* VertBufferPtr = (v2f*)ScratchBuffers.VertUVAllocator.Alloc(sizeof(v2f), 1);
+            const uint32 numWordsPerVert = 2;
+            ReadWordsIntoVertBuffer(numWordsPerVert, (float*)VertBufferPtr, EntireFileBuffer, &currentIndex);
         }
-        else if (entireFileBuffer[currentIndex] == 'v' && entireFileBuffer[currentIndex + 1] == 'n')
+        else if (EntireFileBuffer[currentIndex] == 'v' && EntireFileBuffer[currentIndex + 1] == 'n') // Vertex normals
         {
-            // Vertex normals
-
             // skip the 'vn'
-            scanWord(entireFileBuffer, &currentIndex);
+            scanWord(EntireFileBuffer, &currentIndex);
 
-            v3f newVertNormal = v3f(0.0f, 0.0f, 0.0f);
-            const uint8 numWordsPerVert = 3;
-            for (uint8 uiWord = 0; uiWord < numWordsPerVert; ++uiWord)
-            {
-                char nextWord[32];
-                scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
-                newVertNormal[uiWord] = (float)atof(nextWord);
-            }
-
-            normReadBuffer[normBufCtr++] = newVertNormal;
+            v3f* VertBufferPtr = (v3f*)ScratchBuffers.VertNormalAllocator.Alloc(sizeof(v3f), 1);
+            const uint32 numWordsPerVert = 3;
+            ReadWordsIntoVertBuffer(numWordsPerVert, (float*)VertBufferPtr, EntireFileBuffer, &currentIndex);
         }
-        else if (entireFileBuffer[currentIndex] == 'f' && entireFileBuffer[currentIndex + 1] == ' ')
+        else if (EntireFileBuffer[currentIndex] == 'f' && EntireFileBuffer[currentIndex + 1] == ' ') // Indices
         {
-            // Indices
-
             // skip the 'f'
-            scanWord(entireFileBuffer, &currentIndex);
+            scanWord(EntireFileBuffer, &currentIndex);
 
             const uint8 numWordsPerFace = 3;
             for (uint8 uiWord = 0; uiWord < numWordsPerFace; ++uiWord)
@@ -212,28 +146,30 @@ void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, ui
                 uint32 newIndices[numIndicesPerFace];
 
                 // NOTE: '/' characters are treated as white space when scanning chars
-                char nextWord[32];
-
-                scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
-                newIndices[0] = (uint32)atoi(nextWord);
-
-                scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
-                newIndices[1] = (uint32)atoi(nextWord);
-
-                scanWordIntoBuffer(entireFileBuffer, &currentIndex, nextWord);
-                newIndices[2] = (uint32)atoi(nextWord);
+                char NextWord[MAX_SCRATCH_WORD_LEN];
+                memset(NextWord, 0, ARRAYCOUNT(NextWord) * sizeof(char));
 
                 // Normalize indices to start from 0, OBJ convention is to start from 1
-                for (uint8 i = 0; i < numIndicesPerFace; ++i)
-                {
-                    --newIndices[i];
-                }
+                scanWordIntoBuffer(EntireFileBuffer, &currentIndex, NextWord, ARRAYCOUNT(NextWord));
+                newIndices[0] = (uint32)atoi(NextWord) - 1;
 
-                // reach into the given attribute buffers and write them to the dst buffers
-                dstPositionBuffer[indicesCounter] = posReadBuffer[newIndices[0]];
-                dstUVBuffer[indicesCounter] = uvReadBuffer[newIndices[1]];
-                dstNormalBuffer[indicesCounter] = normReadBuffer[newIndices[2]];
-                dstIndexBuffer[indicesCounter] = indicesCounter;
+                scanWordIntoBuffer(EntireFileBuffer, &currentIndex, NextWord, ARRAYCOUNT(NextWord));
+                newIndices[1] = (uint32)atoi(NextWord) - 1;
+
+                scanWordIntoBuffer(EntireFileBuffer, &currentIndex, NextWord, ARRAYCOUNT(NextWord));
+                newIndices[2] = (uint32)atoi(NextWord) - 1;
+
+                v4f*    FinalVertPosBufferPtr    = (v4f*)PosAllocator.Alloc(sizeof(v4f), 1);
+                v2f*    FinalVertUVBufferPtr     = (v2f*)UVAllocator.Alloc(sizeof(v2f), 1);
+                v3f*    FinalVertNormalBufferPtr = (v3f*)NormalAllocator.Alloc(sizeof(v3f), 1);
+                uint32* FinalVertIndexBufferPtr  = (uint32*)IndexAllocator.Alloc(sizeof(uint32), 1);
+
+                *FinalVertPosBufferPtr = ((v4f*)ScratchBuffers.VertPosAllocator.m_ownedMemPtr)[newIndices[0]];
+                *FinalVertUVBufferPtr = ((v2f*)ScratchBuffers.VertUVAllocator.m_ownedMemPtr)[newIndices[1]];
+                *FinalVertNormalBufferPtr = ((v3f*)ScratchBuffers.VertNormalAllocator.m_ownedMemPtr)[newIndices[2]];
+                *FinalVertIndexBufferPtr = indicesCounter;
+
+                // TODO: no vertex deduplication currently happens
 
                 ++indicesCounter;
             }
@@ -241,11 +177,11 @@ void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, ui
         else
         {
             // Proceed to next line
-            scanLine(entireFileBuffer, &currentIndex);
+            scanLine(EntireFileBuffer, &currentIndex);
         }
     }
 
-    delete[] attrReadBuffer;
+    *OutVertCount = indicesCounter;
 }
 
 BMPInfo GetBMPInfo(uint8* entireFileBuffer)

@@ -8,26 +8,13 @@ namespace Tk
 namespace Core
 {
 
-template <size_t Size = 0, uint32 Alignment = 1>
 struct LinearAllocator
 {
     uint8* m_ownedMemPtr = nullptr;
-    size_t m_size;
+    size_t m_capacity;
     size_t m_nextAllocOffset = 0;
 
-    LinearAllocator()
-    {
-        TINKER_ASSERT(ISPOW2(Alignment));
-        m_size = Size;
-        if (Size > 0)
-        {
-            Init(Size, Alignment);
-        }
-        else
-        {
-            // User must specify alloc'd memory with Init()
-        }
-    }
+    LinearAllocator() {}
 
     ~LinearAllocator()
     {
@@ -42,25 +29,19 @@ struct LinearAllocator
             m_ownedMemPtr = nullptr;
         }
         m_nextAllocOffset = 0;
-        m_size = 0;
+        m_capacity = 0;
     }
 
-    void Init(size_t size, uint32 alignment)
+    void Init(size_t capacity, uint32 alignment)
     {
-        TINKER_ASSERT(size > 0);
-        m_size = size;
-        m_ownedMemPtr = (uint8*)Tk::Core::CoreMallocAligned(m_size, alignment);
+        TINKER_ASSERT(capacity > 0);
+        m_capacity = capacity;
+        m_ownedMemPtr = (uint8*)Tk::Core::CoreMallocAligned(m_capacity, alignment);
     }
 
     uint8* Alloc(size_t size, uint32 alignment)
     {
         TINKER_ASSERT(ISPOW2(alignment));
-
-        if (!((m_size - m_nextAllocOffset) >= size))
-        {
-            // Not enough space - allocation fails, but don't assert
-            return nullptr;
-        }
 
         size_t memPtrAsNum = (size_t)((uint8*)m_ownedMemPtr + m_nextAllocOffset);
 
@@ -69,9 +50,10 @@ struct LinearAllocator
         size_t alignedPtrAsNum = (memPtrAsNum >> alignmentBits) << alignmentBits;
         if (alignedPtrAsNum != memPtrAsNum)alignedPtrAsNum += alignment;
         
-        // Check that the allocator has room for this allocation
-        size_t allocSize = alignedPtrAsNum - memPtrAsNum + size;
-        if (allocSize > m_size - m_nextAllocOffset) return nullptr;
+        // Check that there is room for this size allocation
+        size_t allocSize = size + (alignedPtrAsNum - memPtrAsNum);
+        if (allocSize > m_capacity - m_nextAllocOffset)
+            return nullptr; // fail, no assert
 
         // Return new pointer
         uint8* newAllocPtr = (uint8*)alignedPtrAsNum;
@@ -79,7 +61,7 @@ struct LinearAllocator
         return newAllocPtr;
     }
 
-    void Dealloc()
+    void ResetState()
     {
         m_nextAllocOffset = 0;
     }

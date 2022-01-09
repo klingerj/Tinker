@@ -2,15 +2,16 @@
 
 #include "CoreDefines.h"
 #include "Math/VectorTypes.h"
+#include "Allocators.h"
 
 // TODO: put this somewhere else
 #include "Mem.h"
 struct Buffer
 {
     uint8* m_data = nullptr;
-    uint32 m_sizeInBytes = 0;
+    uint64 m_sizeInBytes = 0;
 
-    void Alloc(uint32 sizeInBytes)
+    void Alloc(uint64 sizeInBytes)
     {
         m_data = (uint8*)Tk::Core::CoreMalloc(sizeInBytes);
         m_sizeInBytes = sizeInBytes;
@@ -30,18 +31,29 @@ namespace Core
 {
 namespace Asset
 {
-// This implementation of OBJ loading is only set up to properly load OBJ files exported from Autodesk Maya.
+// This implementation of OBJ loading is only set up to properly load well-formed OBJ files exported from Autodesk Maya.
 // It only loads positions, normals, UVs, and indices.
 // It also assumes the mesh has been triangulated already!
 // It is generally free to crash or misbehave when loading a nonconforming OBJ file.
 
-// Returns the number of vertices in the obj file
-// Counts the number of rows that start with f, times 3 (assumes triangulated mesh)
-TINKER_API uint32 GetOBJVertCount(uint8* entireFileBuffer, uint32 bufferSizeInBytes);
+struct OBJParseScratchBuffers
+{
+    Tk::Core::LinearAllocator VertPosAllocator;
+    Tk::Core::LinearAllocator VertUVAllocator;
+    Tk::Core::LinearAllocator VertNormalAllocator;
+
+    void ResetState()
+    {
+        VertPosAllocator.ResetState();
+        VertUVAllocator.ResetState();
+        VertNormalAllocator.ResetState();
+    }
+};
 
 // Parse the OBJ file and populate existing vertex attribute buffers
-TINKER_API void ParseOBJ(v4f* dstPositionBuffer, v2f* dstUVBuffer, v3f* dstNormalBuffer, uint32* dstIndexBuffer,
-    uint8* entireFileBuffer, uint32 bufferSizeInBytes);
+TINKER_API void ParseOBJ(Tk::Core::LinearAllocator& PosAllocator, Tk::Core::LinearAllocator& UVAllocator,
+    Tk::Core::LinearAllocator& NormalAllocator, Tk::Core::LinearAllocator& IndexAllocator,
+    OBJParseScratchBuffers& ScratchBuffers, const uint8* EntireFileBuffer, uint64 FileSize, uint32* OutVertCount);
 
 // Loading of various texture types
 #pragma pack(push, 1)
@@ -85,4 +97,3 @@ TINKER_API void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, ui
 }
 }
 }
-
