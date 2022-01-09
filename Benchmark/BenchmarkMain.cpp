@@ -1,7 +1,7 @@
 #include "TinkerBenchmark.h"
 
 #include "MathBenchmarks/VectorTypeBenchmarks.h"
-#include "ContainerBenchmarks/HashMapBenchmarks.h"
+#include "DataStructureBenchmarks/HashMapBenchmarks.h"
 #include "Utility/ScopedTimer.h"
 
 #include <timeapi.h>
