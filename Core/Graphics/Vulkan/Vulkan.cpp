@@ -129,10 +129,11 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
 
     // Validation layers
     #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
-    const uint32 numRequestedLayers = 1;
+    const uint32 numRequestedLayers = 2;
     const char* requestedLayersStr[numRequestedLayers] =
     {
-        "VK_LAYER_KHRONOS_validation"
+        "VK_LAYER_KHRONOS_validation",
+        "VK_LAYER_LUNARG_monitor"
     };
     Core::Utility::LogMsg("Platform", "******** Requested Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
@@ -684,13 +685,14 @@ void VulkanCreateSwapChain()
         &numAvailablePresentModes,
         availablePresentModes);
 
-    VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR; // required to be supported!
     for (uint32 uiAvailPresMode = 0; uiAvailPresMode < numAvailablePresentModes; ++uiAvailPresMode)
     {
-        if (availablePresentModes[uiAvailPresMode] == VK_PRESENT_MODE_IMMEDIATE_KHR/*VK_PRESENT_MODE_MAILBOX_KHR*/)
+        /*if (availablePresentModes[uiAvailPresMode] == VK_PRESENT_MODE_MAILBOX_KHR)
         {
             chosenPresentMode = availablePresentModes[uiAvailPresMode];
-        }
+            break;
+        }*/
     }
 
     g_vulkanContextResources.swapChainExtent = optimalExtent;
