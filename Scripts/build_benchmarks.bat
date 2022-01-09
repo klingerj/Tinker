@@ -40,7 +40,7 @@ set SourceListBenchmark=%SourceListBenchmark% ../Core/Platform/Win32Logging.cpp
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Mem.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/Utility/MemTracker.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp 
-set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/ContainerBenchmarks/HashMapBenchmarks.cpp 
+set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/DataStructureBenchmarks/HashMapBenchmarks.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/DataStructures/HashMap.cpp 
 set CompileDefines= 
 
