@@ -2,7 +2,6 @@
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Allocators.h"
 #include "Math/VectorTypes.h"
-#include "AssetFileParsing.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
 #include "RenderPass.h"

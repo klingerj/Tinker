@@ -48,7 +48,8 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Common/G
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Common/ShaderManager.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Common/VirtualTexture.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Math/VectorTypes.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/AssetFileParsing.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Asset/FileParsing.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Asset/AssetLoader.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Vector.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/HashMap.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 
@@ -58,7 +59,7 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/AccelS
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /DASSERTS_ENABLE=1 /DVULKAN 
+set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /D_ASSETS_DIR=%AbsolutePathPrefix%\\..\\Assets\\ /DASSERTS_ENABLE=1 /DVULKAN 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsApp=/FdTinkerApp.pdb

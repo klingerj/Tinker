@@ -1,21 +1,18 @@
 #include "AssetManager.h"
-#include "Utility/Logging.h"
-#include "AssetFileParsing.h"
-#include "Graphics/Common/GraphicsCommon.h"
 #include "Platform/PlatformGameAPI.h"
-#include "Mem.h"
+#include "Graphics/Common/GraphicsCommon.h"
+#include "Asset/FileParsing.h"
+#include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
+#include "Mem.h"
+#include "Asset/AssetLoader.h"
 
 #include <string.h>
 
 using namespace Tk;
-using namespace Platform;
 using namespace Core;
 
 AssetManager g_AssetManager;
-
-static const uint64 AssetFileMemorySize = 1024 * 1024 * 1024;
-static Tk::Core::LinearAllocator g_AssetFileScratchMemory;
 
 // For storing dumping obj vertex data during parsing
 static Tk::Core::Asset::OBJParseScratchBuffers ScratchBuffers;
@@ -33,85 +30,16 @@ void AssetManager::FreeMemory()
 
 void AssetManager::LoadAllAssets()
 {
-    g_AssetFileScratchMemory.Init(AssetFileMemorySize, CACHE_LINE);
+    Tk::Core::Asset::LoadAllAssets();
 
     // Meshes
-    const uint32 numMeshAssets = 4;
-    TINKER_ASSERT(numMeshAssets <= TINKER_MAX_MESHES);
-
-    m_numMeshAssets = numMeshAssets;
-
-    const char* meshFilePaths[numMeshAssets] =
-    {
-        ASSETS_PATH "UnitSphere\\sphere.obj",
-        ASSETS_PATH "UnitCube\\cube.obj",
-        ASSETS_PATH "FireElemental\\fire_elemental.obj",
-        ASSETS_PATH "RTX3090\\rtx3090.obj"
-    };
-
-    uint32 totalMeshFileBytes = 0;
-    uint32 meshFileSizes[numMeshAssets] = {};
-    for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-    {
-        uint32 fileSize = GetEntireFileSize(meshFilePaths[uiAsset]); // + 1 byte for manual EOF byte
-        meshFileSizes[uiAsset] = fileSize;
-        totalMeshFileBytes += fileSize;
-    }
-
-    // Allocate one large buffer to store a dump of all obj files.
-    // Each obj file's data is separated by a single null byte to mark EOF
-    uint8* objFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalMeshFileBytes + numMeshAssets, CACHE_LINE); // + 1 EOF byte for each obj file -> + numMeshAssets
-
-    // Now precalculate the size of the vertex attribute buffers needed to contain the obj data
-    uint32 meshBufferSizes[numMeshAssets] = {};
-    uint32 totalMeshBufferSize = 0;
-
-    uint32 accumFileOffset = 0;
-
-    {
-        TIMED_SCOPED_BLOCK("Load OBJ files from disk - multithreaded");
-
-        bool multithreadObjLoading = true;
-        if (multithreadObjLoading)
-        {
-            Tk::Platform::WorkerJobList jobs;
-            jobs.Init(numMeshAssets);
-            for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-            {
-                uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-                uint32 currentObjFileSize = meshFileSizes[uiAsset];
-                accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
-
-                jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
-                    {
-                        ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
-                        currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
-                    });
-
-            }
-            Tk::Platform::EnqueueWorkerThreadJobList_Assisted(&jobs);
-            jobs.WaitOnJobs();
-            jobs.FreeList();
-        }
-        else
-        {
-            for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-            {
-                uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-                uint32 currentObjFileSize = meshFileSizes[uiAsset];
-                accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
-
-                currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
-                ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
-            }
-        }
-    }
+    m_numMeshAssets = 4;
 
     // Parse OBJs
     {
         TIMED_SCOPED_BLOCK("Parse OBJ Files - single threaded");
 
-        const uint32 MAX_VERT_BUFFER_SIZE = 1024 * 1024 * 128; // TODO: reduce this when we don't have to store all the attr buffers in the same linear allocator by doing graphics right here
+        const uint32 MAX_VERT_BUFFER_SIZE = 1024 * 1024 * 128;
         VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
         VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
         VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
@@ -146,70 +74,9 @@ void AssetManager::LoadAllAssets()
     }
     //-----
 
+    m_numTextureAssets = 2;
+
     // Textures
-    const uint32 numTextureAssets = 2;
-    TINKER_ASSERT(numTextureAssets <= TINKER_MAX_TEXTURES);
-
-    m_numTextureAssets = numTextureAssets;
-
-    const char* textureFilePaths[numTextureAssets] =
-    {
-        ASSETS_PATH "checkerboard512.bmp",
-        ASSETS_PATH "checkerboardRGB512.bmp"
-    };
-    // Compute the actual size of the texture data to be allocated and copied to the GPU
-    // TODO: get file extension from string
-    const char* fileExt = "bmp";
-
-    uint32 totalTextureFileBytes = 0;
-    uint32 textureFileSizes[numTextureAssets] = {};
-    for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
-    {
-        uint32 fileSize = GetEntireFileSize(textureFilePaths[uiAsset]);
-        textureFileSizes[uiAsset] = fileSize;
-        totalTextureFileBytes += fileSize;
-    }
-
-    // Allocate one large buffer to store a dump of all texture files.
-    uint8* textureFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalTextureFileBytes, CACHE_LINE);
-
-    accumFileOffset = 0;
-
-    bool multithreadTextureLoading = true;
-    if (multithreadTextureLoading)
-    {
-        Platform::WorkerJobList jobs;
-        jobs.Init(numTextureAssets);
-        for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
-        {
-            uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
-            uint32 currentTextureFileSize = textureFileSizes[uiAsset];
-            accumFileOffset += currentTextureFileSize;
-
-            jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
-                {
-                    ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
-                });
-
-            EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
-        }
-        jobs.WaitOnJobs();
-        jobs.FreeList();
-    }
-    else
-    {
-        // Dump each file into the one big buffer
-        for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
-        {
-            uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
-            uint32 currentTextureFileSize = textureFileSizes[uiAsset];
-            accumFileOffset += currentTextureFileSize;
-
-            // Read each file into the buffer
-            ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
-        }
-    }
-
     accumFileOffset = 0;
     uint32 totalActualTextureSize = 0;
     uint32 actualTextureSizes[numTextureAssets] = {};

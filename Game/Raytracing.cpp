@@ -1,6 +1,6 @@
 #include "Raytracing.h"
 #include "Mem.h"
-#include "AssetFileParsing.h"
+#include "Asset/FileParsing.h"
 #include "Raytracing/AccelStructures/Octree.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
