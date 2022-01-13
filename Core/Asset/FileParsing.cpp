@@ -203,7 +203,7 @@ void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, uint32 height
     header.fileSizeInBytes = imgSize;
     header.offsetToBMPBytes = sizeof(BMPHeader) + sizeof(BMPInfo);
 
-    outputBuffer->Alloc(imgSize + header.offsetToBMPBytes);
+    Alloc(outputBuffer, imgSize + header.offsetToBMPBytes);
     uint8* data = outputBuffer->m_data;
 
     BMPInfo info;

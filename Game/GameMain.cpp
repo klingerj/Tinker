@@ -207,8 +207,8 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
 
     {
         TIMED_SCOPED_BLOCK("Load game assets");
-        g_AssetManager.LoadAllAssets();
-        g_AssetManager.InitAssetGraphicsResources(graphicsCommandStream);
+        g_AssetManager.LoadAllAssets(graphicsCommandStream);
+        //g_AssetManager.InitAssetGraphicsResources(graphicsCommandStream);
     }
 
     CreateDefaultGeometry(graphicsCommandStream);
@@ -480,7 +480,5 @@ GAME_DESTROY(GameDestroy)
         {
             EndNetworkConnection();
         }
-
-        g_AssetManager.FreeMemory();
     }
 }

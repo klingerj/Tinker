@@ -54,6 +54,19 @@ void CoreFreeAligned(void* ptr)
     #endif
 }
 
+void Alloc(Buffer* buffer, uint64 sizeInBytes)
+{
+    buffer->m_data = (uint8*)Tk::Core::CoreMalloc(sizeInBytes);
+    buffer->m_sizeInBytes = sizeInBytes;
+}
+
+void Dealloc(Buffer* buffer)
+{
+    Tk::Core::CoreFree(buffer->m_data);
+    buffer->m_data = nullptr;
+    buffer->m_sizeInBytes = 0;
+}
+
 }
 }
 

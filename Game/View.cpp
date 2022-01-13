@@ -142,7 +142,7 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Graphics::
                 // TODO: hard-coded index
                 descriptors[2] = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID)->m_descriptor;
 
-                StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
+                const StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
                 DrawMeshDataCommand(graphicsCommandStream,
                         meshData->m_numIndices,
                         currentNumInstances,

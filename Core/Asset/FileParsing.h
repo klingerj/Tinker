@@ -4,27 +4,6 @@
 #include "Math/VectorTypes.h"
 #include "Allocators.h"
 
-// TODO: put this somewhere else
-#include "Mem.h"
-struct Buffer
-{
-    uint8* m_data = nullptr;
-    uint64 m_sizeInBytes = 0;
-
-    void Alloc(uint64 sizeInBytes)
-    {
-        m_data = (uint8*)Tk::Core::CoreMalloc(sizeInBytes);
-        m_sizeInBytes = sizeInBytes;
-    }
-
-    void Dealloc()
-    {
-        Tk::Core::CoreFree(m_data);
-        m_data = nullptr;
-        m_sizeInBytes = 0;
-    }
-};
-
 namespace Tk
 {
 namespace Core

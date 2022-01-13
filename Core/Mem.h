@@ -26,5 +26,9 @@ TINKER_API void* CoreMallocAlignedDbg(size_t size, size_t alignment, const char*
 
 TINKER_API void CoreFreeAligned(void* ptr);
 
+TINKER_API void Alloc(Buffer* buffer, uint64 sizeInBytes);
+
+TINKER_API void Dealloc(Buffer* buffer);
+
 }
 }

@@ -94,3 +94,17 @@ inline uint32 SafeTruncateUint64(uint64 value)
 #else
 #define TINKER_API
 #endif
+
+namespace Tk
+{
+namespace Core
+{
+
+struct Buffer
+{
+    uint8* m_data = nullptr;
+    uint64 m_sizeInBytes = 0;
+};
+
+}
+}

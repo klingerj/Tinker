@@ -158,10 +158,10 @@ void RaytraceTest()
     Tk::Core::Raytracing::DestroyOctree(octree);
 
     // Output image
-    Buffer imgBuffer = {};
+    Tk::Core::Buffer imgBuffer = {};
     Tk::Core::Asset::SaveBMP(&imgBuffer, (uint8*)img, width, height, 32);
     Tk::Platform::WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", (uint32)imgBuffer.m_sizeInBytes, imgBuffer.m_data);
-    imgBuffer.Dealloc();
+    Dealloc(&imgBuffer);
     Tk::Core::CoreFree(img);
 
     Tk::Core::CoreFree(triData);

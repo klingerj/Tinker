@@ -14,6 +14,12 @@ using namespace Core;
 
 AssetManager g_AssetManager;
 
+// Mesh graphics resources
+StaticMeshData g_allStaticMeshGraphicsHandles[TINKER_MAX_MESHES];
+
+static Tk::Core::LinearAllocator g_MeshBufferAllocator; // Persists after meshes are uploaded to the GPU
+static Tk::Core::LinearAllocator g_TextureBufferAllocator; // Dealloc'd after all textures are uploaded to the GPU
+
 // For storing dumping obj vertex data during parsing
 static Tk::Core::Asset::OBJParseScratchBuffers ScratchBuffers;
 
@@ -23,19 +29,160 @@ static Tk::Core::LinearAllocator VertUVAllocator;
 static Tk::Core::LinearAllocator VertNormalAllocator;
 static Tk::Core::LinearAllocator VertIndexAllocator;
 
-void AssetManager::FreeMemory()
+static void CreateVertexBufferDescriptor(uint32 meshID)
 {
-    m_meshBufferAllocator.ExplicitFree();
+    StaticMeshData* data = &g_allStaticMeshGraphicsHandles[meshID];
+    data->m_descriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS);
+
+    Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    descDataHandles[0].InitInvalid();
+    descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
+    descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;
+    descDataHandles[0].handles[2] = data->m_normalBuffer.gpuBufferHandle;
+    descDataHandles[1].InitInvalid();
+    descDataHandles[2].InitInvalid();
+
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, data->m_descriptor, &descDataHandles[0], 1);
 }
 
-void AssetManager::LoadAllAssets()
+static void CreateMeshOnGPU(uint32 AssetID,
+    const uint8* PosBuffer,
+    const uint8* UVBuffer,
+    const uint8* NormalBuffer,
+    const uint8* IndexBuffer,
+    uint32 NumVertices,
+    Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
-    Tk::Core::Asset::LoadAllAssets();
+    // Create buffer handles
+    Graphics::ResourceDesc desc;
+    desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
 
-    // Meshes
-    m_numMeshAssets = 4;
+    Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
+    void* stagingBufferMemPtr_Pos, * stagingBufferMemPtr_UV, * stagingBufferMemPtr_Norm, * stagingBufferMemPtr_Idx;
 
-    // Parse OBJs
+    // Positions
+    desc.dims = v3ui(NumVertices * sizeof(v4f), 0, 0);
+    desc.bufferUsage = Graphics::BufferUsage::eVertex;
+    g_allStaticMeshGraphicsHandles[AssetID].m_positionBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+
+    desc.bufferUsage = Graphics::BufferUsage::eStaging;
+    stagingBufferHandle_Pos = Graphics::CreateResource(desc);
+    stagingBufferMemPtr_Pos = Graphics::MapResource(stagingBufferHandle_Pos);
+
+    // UVs
+    desc.dims = v3ui(NumVertices * sizeof(v2f), 0, 0);
+    desc.bufferUsage = Graphics::BufferUsage::eVertex;
+    g_allStaticMeshGraphicsHandles[AssetID].m_uvBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+
+    desc.bufferUsage = Graphics::BufferUsage::eStaging;
+    stagingBufferHandle_UV = Graphics::CreateResource(desc);
+    stagingBufferMemPtr_UV = Graphics::MapResource(stagingBufferHandle_UV);
+
+    // Normals
+    desc.dims = v3ui(NumVertices * sizeof(v4f), 0, 0);
+    desc.bufferUsage = Graphics::BufferUsage::eVertex;
+    g_allStaticMeshGraphicsHandles[AssetID].m_normalBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+
+    desc.bufferUsage = Graphics::BufferUsage::eStaging;
+    stagingBufferHandle_Norm = Graphics::CreateResource(desc);
+    stagingBufferMemPtr_Norm = Graphics::MapResource(stagingBufferHandle_Norm);
+
+    // Indices
+    desc.dims = v3ui(NumVertices * sizeof(uint32), 0, 0);
+    desc.bufferUsage = Graphics::BufferUsage::eIndex;
+    g_allStaticMeshGraphicsHandles[AssetID].m_indexBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+
+    desc.bufferUsage = Graphics::BufferUsage::eStaging;
+    stagingBufferHandle_Idx = Graphics::CreateResource(desc);
+    stagingBufferMemPtr_Idx = Graphics::MapResource(stagingBufferHandle_Idx);
+
+    g_allStaticMeshGraphicsHandles[AssetID].m_numIndices = NumVertices;
+
+    // Descriptor
+    CreateVertexBufferDescriptor(AssetID);
+
+    // Memcpy data into staging buffer
+    const uint32 numPositionBytes = NumVertices * sizeof(v4f);
+    const uint32 numUVBytes = NumVertices * sizeof(v2f);
+    const uint32 numNormalBytes = NumVertices * sizeof(v3f);
+    const uint32 numIndexBytes = NumVertices * sizeof(uint32);
+
+    v4f* positionBuffer = (v4f*)PosBuffer;
+    v2f* uvBuffer = (v2f*)UVBuffer;
+    v3f* normalBuffer = (v3f*)NormalBuffer;
+    uint32* indexBuffer = (uint32*)IndexBuffer;
+    memcpy(stagingBufferMemPtr_Pos, positionBuffer, numPositionBytes);
+    memcpy(stagingBufferMemPtr_UV, uvBuffer, numUVBytes);
+    //memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
+    for (uint32 i = 0; i < NumVertices; ++i)
+    {
+        memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, normalBuffer + i, sizeof(v3f));
+        memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, 1);
+    }
+    memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
+    //-----
+
+    // Create, submit, and execute the buffer copy commands
+    {
+        // Graphics command to copy from staging buffer to gpu local buffer
+        Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
+        // Position buffer copy
+        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->debugLabel = "Update Asset Vtx Pos Buf";
+        command->m_sizeInBytes = NumVertices * sizeof(v4f);
+        command->m_srcBufferHandle = stagingBufferHandle_Pos;
+        command->m_dstBufferHandle = g_allStaticMeshGraphicsHandles[AssetID].m_positionBuffer.gpuBufferHandle;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        // UV buffer copy
+        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->debugLabel = "Update Asset Vtx UV Buf";
+        command->m_sizeInBytes = NumVertices * sizeof(v2f);
+        command->m_srcBufferHandle = stagingBufferHandle_UV;
+        command->m_dstBufferHandle = g_allStaticMeshGraphicsHandles[AssetID].m_uvBuffer.gpuBufferHandle;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        // Normal buffer copy
+        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->debugLabel = "Update Asset Vtx Norm Buf";
+        command->m_sizeInBytes = NumVertices * sizeof(v4f);
+        command->m_srcBufferHandle = stagingBufferHandle_Norm;
+        command->m_dstBufferHandle = g_allStaticMeshGraphicsHandles[AssetID].m_normalBuffer.gpuBufferHandle;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        // Index buffer copy
+        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->debugLabel = "Update Asset Vtx Idx Buf";
+        command->m_sizeInBytes = NumVertices * sizeof(uint32);
+        command->m_srcBufferHandle = stagingBufferHandle_Idx;
+        command->m_dstBufferHandle = g_allStaticMeshGraphicsHandles[AssetID].m_indexBuffer.gpuBufferHandle;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        // Perform the copies
+        Graphics::SubmitCmdsImmediate(graphicsCommandStream);
+        graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+    }
+
+    // Unmap the buffer resource
+    Graphics::UnmapResource(stagingBufferHandle_Pos);
+    Graphics::UnmapResource(stagingBufferHandle_UV);
+    Graphics::UnmapResource(stagingBufferHandle_Norm);
+    Graphics::UnmapResource(stagingBufferHandle_Idx);
+
+    // Destroy the staging buffer resources
+    Graphics::DestroyResource(stagingBufferHandle_Pos);
+    Graphics::DestroyResource(stagingBufferHandle_UV);
+    Graphics::DestroyResource(stagingBufferHandle_Norm);
+    Graphics::DestroyResource(stagingBufferHandle_Idx);
+}
+
+static void ParseAllMeshes(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 NumMeshAssets)
+{
     {
         TIMED_SCOPED_BLOCK("Parse OBJ Files - single threaded");
 
@@ -50,32 +197,40 @@ void AssetManager::LoadAllAssets()
         ScratchBuffers.VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
         ScratchBuffers.VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
 
-        accumFileOffset = 0;
         uint32 accumNumVerts = 0;
-        for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
+        for (uint32 uiAsset = 0; uiAsset < NumMeshAssets; ++uiAsset)
         {
-            const uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-            uint32 currentObjFileSize = meshFileSizes[uiAsset];
-            accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
+            const Tk::Core::Buffer* FileBuffer = Tk::Core::Asset::GetMeshFileBuffer(uiAsset);
 
             uint32 numObjVerts = 0;
-            Tk::Core::Asset::ParseOBJ(VertPosAllocator, VertUVAllocator, VertNormalAllocator, VertIndexAllocator, ScratchBuffers, currentObjFile, currentObjFileSize, &numObjVerts);
-            TINKER_ASSERT(numObjVerts);
-            m_allMeshData[uiAsset].m_numVertices = numObjVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_Pos = VertPosAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_UV = VertUVAllocator.m_ownedMemPtr + sizeof(v2f) * accumNumVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_Normal = VertNormalAllocator.m_ownedMemPtr + sizeof(v3f) * accumNumVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_Index = VertIndexAllocator.m_ownedMemPtr + sizeof(uint32) * accumNumVerts;
-            // TODO: create the graphics buffers right away and don't bother storing m_allMeshData at all
+            Tk::Core::Asset::ParseOBJ(VertPosAllocator, VertUVAllocator, VertNormalAllocator, VertIndexAllocator, ScratchBuffers, FileBuffer->m_data, FileBuffer->m_sizeInBytes, &numObjVerts);
+
+            CreateMeshOnGPU(uiAsset,
+                VertPosAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts,
+                VertUVAllocator.m_ownedMemPtr + sizeof(v2f) * accumNumVerts,
+                VertNormalAllocator.m_ownedMemPtr + sizeof(v3f) * accumNumVerts,
+                VertIndexAllocator.m_ownedMemPtr + sizeof(uint32) * accumNumVerts,
+                numObjVerts,
+                graphicsCommandStream);
 
             ScratchBuffers.ResetState();
             accumNumVerts += numObjVerts;
         }
     }
-    //-----
+}
+
+
+void AssetManager::LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
+{
+    Tk::Core::Asset::LoadAllAssets();
+
+    // Meshes
+    m_numMeshAssets = 4;
+
+    ParseAllMeshes(graphicsCommandStream, m_numMeshAssets);
 
     m_numTextureAssets = 2;
-
+    /*
     // Textures
     accumFileOffset = 0;
     uint32 totalActualTextureSize = 0;
@@ -178,140 +333,15 @@ void AssetManager::LoadAllAssets()
             TINKER_ASSERT(0);
             // TODO: support other file types, e.g. png
         }
-    }
+    }*/
 }
 
-void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
+/*void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // Meshes
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
     {
-        // Create buffer handles
-        Graphics::ResourceDesc desc;
-        desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
-
-        Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
-        void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
-
-        // Positions
-        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
-        desc.bufferUsage = Graphics::BufferUsage::eVertex;
-        m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
-
-        desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        stagingBufferHandle_Pos = Graphics::CreateResource(desc);
-        stagingBufferMemPtr_Pos = Graphics::MapResource(stagingBufferHandle_Pos);
-
-        // UVs
-        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), 0, 0);
-        desc.bufferUsage = Graphics::BufferUsage::eVertex;
-        m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
         
-        desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        stagingBufferHandle_UV = Graphics::CreateResource(desc);
-        stagingBufferMemPtr_UV = Graphics::MapResource(stagingBufferHandle_UV);
-
-        // Normals
-        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
-        desc.bufferUsage = Graphics::BufferUsage::eVertex;
-        m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
-        
-        desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        stagingBufferHandle_Norm = Graphics::CreateResource(desc);
-        stagingBufferMemPtr_Norm = Graphics::MapResource(stagingBufferHandle_Norm);
-
-        // Indices
-        desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), 0, 0);
-        desc.bufferUsage = Graphics::BufferUsage::eIndex;
-        m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
-        
-        desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        stagingBufferHandle_Idx = Graphics::CreateResource(desc);
-        stagingBufferMemPtr_Idx = Graphics::MapResource(stagingBufferHandle_Idx);
-
-        m_allStaticMeshGraphicsHandles[uiAsset].m_numIndices = m_allMeshData[uiAsset].m_numVertices;
-
-        // Descriptor
-        CreateVertexBufferDescriptor(uiAsset);
-
-        // Memcpy data into staging buffer
-        const uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
-        const uint32 numUVBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
-        const uint32 numNormalBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
-        const uint32 numIndexBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
-
-        v4f* positionBuffer = (v4f*)m_allMeshData[uiAsset].m_vertexBufferData_Pos;
-        v2f* uvBuffer       = (v2f*)m_allMeshData[uiAsset].m_vertexBufferData_UV;
-        v3f* normalBuffer   = (v3f*)m_allMeshData[uiAsset].m_vertexBufferData_Normal;
-        uint32* indexBuffer = (uint32*)m_allMeshData[uiAsset].m_vertexBufferData_Index;
-        memcpy(stagingBufferMemPtr_Pos, positionBuffer, numPositionBytes);
-        memcpy(stagingBufferMemPtr_UV, uvBuffer, numUVBytes);
-        //memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
-        for (uint32 i = 0; i < m_allMeshData[uiAsset].m_numVertices; ++i)
-        {
-            memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, normalBuffer + i, sizeof(v3f));
-            memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, 1);
-        }
-        memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
-        //-----
-
-        // Create, submit, and execute the buffer copy commands
-        {
-            // Graphics command to copy from staging buffer to gpu local buffer
-            Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-
-            // Position buffer copy
-            command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
-            command->debugLabel = "Update Asset Vtx Pos Buf";
-            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
-            command->m_srcBufferHandle = stagingBufferHandle_Pos;
-            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle;
-            ++graphicsCommandStream->m_numCommands;
-            ++command;
-
-            // UV buffer copy
-            command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
-            command->debugLabel = "Update Asset Vtx UV Buf";
-            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
-            command->m_srcBufferHandle = stagingBufferHandle_UV;
-            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle;
-            ++graphicsCommandStream->m_numCommands;
-            ++command;
-
-            // Normal buffer copy
-            command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
-            command->debugLabel = "Update Asset Vtx Norm Buf";
-            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
-            command->m_srcBufferHandle = stagingBufferHandle_Norm;
-            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle;
-            ++graphicsCommandStream->m_numCommands;
-            ++command;
-
-            // Index buffer copy
-            command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
-            command->debugLabel = "Update Asset Vtx Idx Buf";
-            command->m_sizeInBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
-            command->m_srcBufferHandle = stagingBufferHandle_Idx;
-            command->m_dstBufferHandle = m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle;
-            ++graphicsCommandStream->m_numCommands;
-            ++command;
-
-            // Perform the copies
-            Graphics::SubmitCmdsImmediate(graphicsCommandStream);
-            graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
-        }
-
-        // Unmap the buffer resource
-        Graphics::UnmapResource(stagingBufferHandle_Pos);
-        Graphics::UnmapResource(stagingBufferHandle_UV);
-        Graphics::UnmapResource(stagingBufferHandle_Norm);
-        Graphics::UnmapResource(stagingBufferHandle_Idx);
-
-        // Destroy the staging buffer resources
-        Graphics::DestroyResource(stagingBufferHandle_Pos);
-        Graphics::DestroyResource(stagingBufferHandle_UV);
-        Graphics::DestroyResource(stagingBufferHandle_Norm);
-        Graphics::DestroyResource(stagingBufferHandle_Idx);
     }
 
     // Textures
@@ -383,13 +413,13 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
     }
 
     m_textureBufferAllocator.ExplicitFree();
-}
+}*/
 
 void AssetManager::DestroyAllMeshData()
 {
     for (uint32 uiAssetID = 0; uiAssetID < m_numMeshAssets; ++uiAssetID)
     {
-        StaticMeshData* meshData = GetMeshGraphicsDataByID(uiAssetID);
+        StaticMeshData* meshData = &g_allStaticMeshGraphicsHandles[uiAssetID];
 
         Graphics::DestroyResource(meshData->m_positionBuffer.gpuBufferHandle);
         meshData->m_positionBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
@@ -414,27 +444,11 @@ void AssetManager::DestroyAllTextureData()
     }
 }
 
-void AssetManager::CreateVertexBufferDescriptor(uint32 meshID)
-{
-    StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
-    data->m_descriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS);
-
-    Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
-    descDataHandles[0].InitInvalid();
-    descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
-    descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;
-    descDataHandles[0].handles[2] = data->m_normalBuffer.gpuBufferHandle;
-    descDataHandles[1].InitInvalid();
-    descDataHandles[2].InitInvalid();
-
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, data->m_descriptor, &descDataHandles[0], 1);
-}
-
-StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)
+const StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)
 {
     TINKER_ASSERT(meshID != TINKER_INVALID_HANDLE);
     TINKER_ASSERT(meshID < TINKER_MAX_MESHES);
-    return &m_allStaticMeshGraphicsHandles[meshID];
+    return &g_allStaticMeshGraphicsHandles[meshID];
 }
 
 Graphics::ResourceHandle AssetManager::GetTextureGraphicsDataByID(uint32 textureID) const
