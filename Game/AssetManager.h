@@ -26,7 +26,7 @@ public:
     void DestroyAllMeshData();
     void DestroyAllTextureData();
     // TODO: declare a mapping of ID to each asset file
-    const StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
+    const Tk::Core::Graphics::StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
     Tk::Core::Graphics::ResourceHandle GetTextureGraphicsDataByID(uint32 textureID) const;
     const MeshAttributeData& GetMeshAttrDataByID(uint32 meshID) const;
 };

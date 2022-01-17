@@ -15,7 +15,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         // Positions
         desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
-        defaultQuad.m_positionBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+        defaultQuad.m_positionBuffer = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
         Graphics::ResourceHandle stagingBufferHandle_Pos = Graphics::CreateResource(desc);
@@ -24,7 +24,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         // UVs
         desc.dims = v3ui(sizeof(defaultQuad.m_uvs), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
-        defaultQuad.m_uvBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+        defaultQuad.m_uvBuffer = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
         Graphics::ResourceHandle stagingBufferHandle_UV = Graphics::CreateResource(desc);
@@ -33,7 +33,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         // Normals
         desc.dims = v3ui(sizeof(defaultQuad.m_normals), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
-        defaultQuad.m_normalBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+        defaultQuad.m_normalBuffer = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
         Graphics::ResourceHandle stagingBufferHandle_Norm = Graphics::CreateResource(desc);
@@ -42,7 +42,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         // Indices
         desc.dims = v3ui(sizeof(defaultQuad.m_indices), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eIndex;
-        defaultQuad.m_indexBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
+        defaultQuad.m_indexBuffer = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
         Graphics::ResourceHandle stagingBufferHandle_Idx = Graphics::CreateResource(desc);
@@ -62,7 +62,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Pos Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_points);
-        command->m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
+        command->m_dstBufferHandle = defaultQuad.m_positionBuffer;
         command->m_srcBufferHandle = stagingBufferHandle_Pos;
         ++graphicsCommandStream->m_numCommands;
         ++command;
@@ -70,7 +70,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx UV Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_uvs);
-        command->m_dstBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
+        command->m_dstBufferHandle = defaultQuad.m_uvBuffer;
         command->m_srcBufferHandle = stagingBufferHandle_UV;
         ++graphicsCommandStream->m_numCommands;
         ++command;
@@ -78,7 +78,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Norm Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_normals);
-        command->m_dstBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
+        command->m_dstBufferHandle = defaultQuad.m_normalBuffer;
         command->m_srcBufferHandle = stagingBufferHandle_Norm;
         ++graphicsCommandStream->m_numCommands;
         ++command;
@@ -86,7 +86,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Idx Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_indices);
-        command->m_dstBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
+        command->m_dstBufferHandle = defaultQuad.m_indexBuffer;
         command->m_srcBufferHandle = stagingBufferHandle_Idx;
         ++graphicsCommandStream->m_numCommands;
         ++command;
@@ -110,14 +110,14 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
 void DestroyDefaultGeometry()
 {
     // Default quad
-    Graphics::DestroyResource(defaultQuad.m_positionBuffer.gpuBufferHandle);
-    defaultQuad.m_positionBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
-    Graphics::DestroyResource(defaultQuad.m_uvBuffer.gpuBufferHandle);
-    defaultQuad.m_uvBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
-    Graphics::DestroyResource(defaultQuad.m_normalBuffer.gpuBufferHandle);
-    defaultQuad.m_normalBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
-    Graphics::DestroyResource(defaultQuad.m_indexBuffer.gpuBufferHandle);
-    defaultQuad.m_indexBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
+    Graphics::DestroyResource(defaultQuad.m_positionBuffer);
+    defaultQuad.m_positionBuffer = Graphics::DefaultResHandle_Invalid;
+    Graphics::DestroyResource(defaultQuad.m_uvBuffer);
+    defaultQuad.m_uvBuffer = Graphics::DefaultResHandle_Invalid;
+    Graphics::DestroyResource(defaultQuad.m_normalBuffer);
+    defaultQuad.m_normalBuffer = Graphics::DefaultResHandle_Invalid;
+    Graphics::DestroyResource(defaultQuad.m_indexBuffer);
+    defaultQuad.m_indexBuffer = Graphics::DefaultResHandle_Invalid;
 
     //DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
 }

@@ -4,12 +4,19 @@ namespace Tk
 {
 namespace Core
 {
+
+namespace Graphics
+{
+struct GraphicsCommandStream;
+}
+
 namespace Asset
 {
 
-TINKER_API void LoadAllAssets();
+TINKER_API void LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
 
-TINKER_API inline const Tk::Core::Buffer* GetMeshFileBuffer(uint32 uiMesh); //TODO: get rid of this
+struct AssetLibrary;
+TINKER_API void AddStreamedAssetsToAssetLibrary(AssetLibrary* AssetLib, uint32* NumAssetsStreamed);
 
 }
 }

@@ -50,6 +50,7 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Graphics/Common/V
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Math/VectorTypes.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Asset/FileParsing.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Asset/AssetLoader.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Asset/AssetLibrary.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Vector.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/HashMap.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 

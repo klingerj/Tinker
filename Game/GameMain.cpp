@@ -1,5 +1,6 @@
 #include "Platform/PlatformGameAPI.h"
 #include "Graphics/Common/GraphicsCommon.h"
+#include "Asset/AssetLoader.h"
 #include "Allocators.h"
 #include "Math/VectorTypes.h"
 #include "Utility/ScopedTimer.h"
@@ -59,6 +60,8 @@ INPUT_CALLBACK(GameCameraRotateVerticalCallback)
 
 //Core::Graphics::VirtualTexture vt;
 
+static uint32 g_MeshStreamCounter = 0;
+
 #define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
 
@@ -96,9 +99,9 @@ static void WriteSwapChainBlitResources()
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
-    vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
-    vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
-    vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
+    vbHandles.handles[0] = defaultQuad.m_positionBuffer;
+    vbHandles.handles[1] = defaultQuad.m_uvBuffer;
+    vbHandles.handles[2] = defaultQuad.m_normalBuffer;
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, defaultQuad.m_descriptor, &vbHandles, 1);
 }
 
@@ -207,6 +210,7 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
 
     {
         TIMED_SCOPED_BLOCK("Load game assets");
+        Tk::Core::Asset::LoadAllAssets(graphicsCommandStream);
         g_AssetManager.LoadAllAssets(graphicsCommandStream);
         //g_AssetManager.InitAssetGraphicsResources(graphicsCommandStream);
     }
@@ -304,6 +308,8 @@ GAME_UPDATE(GameUpdate)
         isGameInitted = true;
     }
 
+    Tk::Core::Asset::AddStreamedAssetsToAssetLibrary(&MainView.m_AssetLib, &g_MeshStreamCounter);
+
     UpdateAxisVectors(&g_gameCamera);
 
     currentWindowWidth = windowWidth;
@@ -400,7 +406,7 @@ GAME_UPDATE(GameUpdate)
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_numInstances = 1;
-    command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
+    command->m_indexBufferHandle = defaultQuad.m_indexBuffer;
     command->m_shader = Graphics::SHADER_ID_SWAP_CHAIN_BLIT;
     command->m_blendState = Graphics::BlendState::eReplace;
     command->m_depthState = Graphics::DepthState::eOff;

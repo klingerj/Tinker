@@ -427,6 +427,19 @@ void BeginFrameRecording();
 void EndFrameRecording();
 void SubmitFrameToGPU();
 
+// Buffer that has no persistent staging buffer
+// Meant to updated once with a staging buffer which should
+// then be destroyed.
+typedef struct static_mesh_data
+{
+    Tk::Core::Graphics::DescriptorHandle m_descriptor;
+    Tk::Core::Graphics::ResourceHandle m_positionBuffer;
+    Tk::Core::Graphics::ResourceHandle m_uvBuffer;
+    Tk::Core::Graphics::ResourceHandle m_normalBuffer;
+    Tk::Core::Graphics::ResourceHandle m_indexBuffer;
+    uint32 m_numIndices;
+} StaticMeshData;
+
 }
 }
 }

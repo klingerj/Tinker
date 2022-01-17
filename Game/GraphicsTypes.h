@@ -5,24 +5,6 @@
 #include "Platform/PlatformGameAPI.h"
 #include "Graphics/Common/GraphicsCommon.h"
 
-// Buffer that has no persistent staging buffer
-// Meant to updated once with a staging buffer which should
-// then be destroyed.
-typedef struct static_buffer_data
-{
-    Tk::Core::Graphics::ResourceHandle gpuBufferHandle;
-} StaticBuffer;
-
-typedef struct static_mesh_data
-{
-    Tk::Core::Graphics::DescriptorHandle m_descriptor;
-    StaticBuffer m_positionBuffer;
-    StaticBuffer m_uvBuffer;
-    StaticBuffer m_normalBuffer;
-    StaticBuffer m_indexBuffer;
-    uint32 m_numIndices;
-} StaticMeshData;
-
 typedef struct mesh_attribute_data
 {
     uint32 m_numVertices;
@@ -91,10 +73,10 @@ typedef struct descriptor_global_data
 template <uint32 numPoints, uint32 numIndices>
 struct default_geometry
 {
-    StaticBuffer m_positionBuffer;
-    StaticBuffer m_uvBuffer;
-    StaticBuffer m_normalBuffer;
-    StaticBuffer m_indexBuffer;
+    Tk::Core::Graphics::ResourceHandle m_positionBuffer;
+    Tk::Core::Graphics::ResourceHandle m_uvBuffer;
+    Tk::Core::Graphics::ResourceHandle m_normalBuffer;
+    Tk::Core::Graphics::ResourceHandle m_indexBuffer;
     Tk::Core::Graphics::DescriptorHandle m_descriptor;
     v4f m_points[numPoints];
     v2f m_uvs[numPoints];
@@ -127,9 +109,9 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
 
     Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
-    descDataHandles[0].handles[0] = geom.m_positionBuffer.gpuBufferHandle;
-    descDataHandles[0].handles[1] = geom.m_uvBuffer.gpuBufferHandle;
-    descDataHandles[0].handles[2] = geom.m_normalBuffer.gpuBufferHandle;
+    descDataHandles[0].handles[0] = geom.m_positionBuffer;
+    descDataHandles[0].handles[1] = geom.m_uvBuffer;
+    descDataHandles[0].handles[2] = geom.m_normalBuffer;
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Platform/PlatformGameAPI.h"
+#include "Asset/AssetLibrary.h"
 #include "Math/VectorTypes.h"
 #include "DataStructures/Vector.h"
 #include "GraphicsTypes.h"
@@ -18,6 +19,8 @@ struct Instance
 
 struct View
 {
+    Tk::Core::Asset::AssetLibrary m_AssetLib;
+
     alignas(CACHE_LINE) m4f m_viewMatrix;
     alignas(CACHE_LINE) m4f m_projMatrix;
     alignas(CACHE_LINE) m4f m_viewProjMatrix;

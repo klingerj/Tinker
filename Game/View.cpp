@@ -1,5 +1,4 @@
 #include "View.h"
-#include "AssetManager.h"
 #include "RenderPass.h"
 #include "Sorting.h"
 #include "Graphics/Common/GraphicsCommon.h"
@@ -20,6 +19,8 @@ void Init(View* view, uint32 maxInstances)
 
     view->m_instances_sorted.Resize(maxInstances);
     view->m_instanceData_sorted.Resize(maxInstances);
+
+    view->m_AssetLib.Init();
 }
 
 CMP_LT_FUNC(CompareLessThan_InstanceByAssetID)
@@ -139,19 +140,26 @@ void RecordRenderPassCommands(View* view, GameRenderPass* renderPass, Graphics::
             if (!finalDrawCall) nextAssetID = view->m_instances_sorted[uiInstance].m_assetID;
             if (finalDrawCall || nextAssetID != currentAssetID)
             {
-                // TODO: hard-coded index
-                descriptors[2] = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID)->m_descriptor;
+                const Tk::Core::Graphics::StaticMeshData* MeshData = view->m_AssetLib.FindMesh(currentAssetID);// g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
+                if (MeshData)
+                {
+                    // TODO: hard-coded index
+                    descriptors[2] = MeshData->m_descriptor;
 
-                const StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
-                DrawMeshDataCommand(graphicsCommandStream,
-                        meshData->m_numIndices,
+                    DrawMeshDataCommand(graphicsCommandStream,
+                        MeshData->m_numIndices,
                         currentNumInstances,
-                        meshData->m_indexBuffer.gpuBufferHandle,
+                        MeshData->m_indexBuffer,
                         shaderID,
                         blendState,
                         depthState,
                         descriptors,
                         "Draw asset");
+                }
+                else
+                {
+                    //TODO: log
+                }
 
                 currentNumInstances = 1;
                 currentAssetID = nextAssetID;
