@@ -1,5 +1,6 @@
 #include "FileParsing.h"
 #include "Mem.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 #include <string.h>
 
@@ -184,11 +185,47 @@ void ParseOBJ(Tk::Core::LinearAllocator& PosAllocator, Tk::Core::LinearAllocator
     *OutVertCount = indicesCounter;
 }
 
-BMPInfo GetBMPInfo(uint8* entireFileBuffer)
+const BMPInfo* GetBMPInfo(uint8* entireFileBuffer)
 {
     // NOTE: assumes the buffer is a well-formed bmp file
     // Skips the file header, which is immediately followed by the bmp info
-    return *(BMPInfo*)(entireFileBuffer + sizeof(BMPHeader));
+    return (const BMPInfo*)(entireFileBuffer + sizeof(BMPHeader));
+}
+
+TINKER_API const uint8* GetDataFromBMPInfo(const BMPInfo* info)
+{
+    return (const uint8*)info + info->structSize;
+}
+
+Tk::Core::Graphics::ResourceDesc GetResourceDescFromBMPInfo(const BMPInfo* info)
+{
+    Tk::Core::Graphics::ResourceDesc ResDesc = {};
+
+    ResDesc.resourceType = Graphics::ResourceType::eImage2D;
+    ResDesc.dims.x = info->width;
+    ResDesc.dims.y = info->height;
+    ResDesc.dims.z = 1;
+
+    ResDesc.arrayEles = 1;
+
+    uint32 format = Graphics::ImageFormat::eMax;
+    switch (info->bitsPerPixel)
+    {
+        case 24: // pad 24bpp to 32bpp
+        case 32:
+        {
+            format = Graphics::ImageFormat::RGBA8_SRGB;
+            break;
+        }
+
+        default:
+        {
+            // Unsupported bmp variant
+            TINKER_ASSERT(0);
+        }
+    }
+    ResDesc.imageFormat = format;
+    return ResDesc;
 }
 
 void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, uint32 height, uint16 bitsPerPx)

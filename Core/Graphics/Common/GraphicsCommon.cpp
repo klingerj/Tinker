@@ -14,6 +14,14 @@ namespace Core
 namespace Graphics
 {
 
+uint32 g_BPPFromFormat[ImageFormat::eMax] =
+{
+    32,
+    32,
+    32,
+    0
+};
+
 void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     int result = 0;

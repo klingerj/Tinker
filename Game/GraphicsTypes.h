@@ -14,13 +14,6 @@ typedef struct mesh_attribute_data
     uint8* m_vertexBufferData_Index;
 } MeshAttributeData;
 
-typedef struct texture_metadata
-{
-    v3ui m_dims;
-    uint16 m_bitsPerPixel;
-    // TODO: file type/ext?
-} TextureMetadata;
-
 enum
 {
     eRenderPass_ZPrePass = 0,

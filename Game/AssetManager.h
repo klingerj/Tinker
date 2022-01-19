@@ -12,7 +12,6 @@ private:
     MeshAttributeData m_allMeshData[TINKER_MAX_MESHES];
 
     // Texture data
-    TextureMetadata m_allTextureMetadata[TINKER_MAX_TEXTURES];
     Tk::Core::Graphics::ResourceHandle m_allTextureGraphicsHandles[TINKER_MAX_TEXTURES];
 
 public:

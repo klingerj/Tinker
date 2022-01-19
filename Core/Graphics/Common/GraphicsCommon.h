@@ -146,7 +146,7 @@ struct ResourceHandle
 };
 #define DefaultResHandle_Invalid ResourceHandle()
 
-typedef struct graphics_resource_description
+struct ResourceDesc
 {
     v3ui dims;
     uint32 resourceType;
@@ -163,7 +163,7 @@ typedef struct graphics_resource_description
             uint32 arrayEles;
         };
     };
-} ResourceDesc;
+};
 
 struct FramebufferHandle
 {
@@ -413,6 +413,12 @@ CREATE_RENDERPASS(CreateRenderPass);
 
 #define DESTROY_GRAPHICS_PIPELINE(name) TINKER_API void name(uint32 shaderID)
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
+
+extern uint32 g_BPPFromFormat[ImageFormat::eMax];
+inline TINKER_API uint32 GetBPPFromFormat(uint32 format)
+{
+    return g_BPPFromFormat[format];
+}
 
 void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
 void RecreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);

@@ -1,13 +1,18 @@
 #pragma once
 
 #include "CoreDefines.h"
-#include "Math/VectorTypes.h"
 #include "Allocators.h"
 
 namespace Tk
 {
 namespace Core
 {
+
+namespace Graphics
+{
+    struct ResourceDesc;
+}
+
 namespace Asset
 {
 // This implementation of OBJ loading is only set up to properly load well-formed OBJ files exported from Autodesk Maya.
@@ -69,7 +74,9 @@ typedef struct bmp_info
 } BMPInfo;
 #pragma pack(pop)
 
-TINKER_API BMPInfo GetBMPInfo(uint8* entireFileBuffer);
+TINKER_API const BMPInfo* GetBMPInfo(uint8* entireFileBuffer);
+TINKER_API const uint8* GetDataFromBMPInfo(const BMPInfo* info);
+TINKER_API Tk::Core::Graphics::ResourceDesc GetResourceDescFromBMPInfo(const BMPInfo* info);
 
 TINKER_API void SaveBMP(Buffer* outputBuffer, uint8* inputData, uint32 width, uint32 height, uint16 bitsPerPx);
 

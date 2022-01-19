@@ -36,11 +36,19 @@ static Tk::Core::HashMap<uint32, Tk::Core::Buffer, Hash32> g_MeshIDToFileBufferM
 static uint8* g_TextureFileDataBuffer = nullptr;
 static Tk::Core::HashMap<uint32, Tk::Core::Buffer, Hash32> g_TextureIDToFileBufferMap;
 
-// Mesh graphics resources
+static Tk::Core::HashMap<uint32, Tk::Core::Buffer, Hash32> g_TextureIDToDataBufferMap;
+
 #define TINKER_MAX_MESHES 64
 static Tk::Core::Vector<Tk::Core::Graphics::StaticMeshData> g_allStaticMeshGraphicsHandles;
 static uint32 g_MeshStreamCounter = 0;
 
+#define TINKER_MAX_TEXTURES 64
+static Tk::Core::Vector<Tk::Core::Graphics::ResourceHandle> g_allTextureGraphicsHandles;
+
+static const uint32 MAX_TEXTURE_BUFFER_SIZE = 1024 * 1024 * 128;
+static Tk::Core::LinearAllocator g_TextureDataAllocator;
+
+static const uint32 MAX_VERT_BUFFER_SIZE = 1024 * 1024 * 128;
 // For storing dumping obj vertex data during parsing
 static Tk::Core::Asset::OBJParseScratchBuffers ScratchBuffers;
 
@@ -57,6 +65,15 @@ static const Tk::Core::Buffer* GetMeshFileBuffer(uint32 uiMesh)
         return nullptr;
     else
         return &g_MeshIDToFileBufferMap.DataAtIndex(index);
+}
+
+static const Tk::Core::Buffer* GetTextureFileBuffer(uint32 uiTexture)
+{
+    uint32 index = g_TextureIDToFileBufferMap.FindIndex(uiTexture);
+    if (index == g_TextureIDToFileBufferMap.eInvalidIndex)
+        return nullptr;
+    else
+        return &g_TextureIDToFileBufferMap.DataAtIndex(index);
 }
 
 static void CreateVertexBufferDescriptor(uint32 meshID)
@@ -88,7 +105,7 @@ static void CreateMeshOnGPU(uint32 AssetID,
     desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
 
     Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
-    void* stagingBufferMemPtr_Pos, * stagingBufferMemPtr_UV, * stagingBufferMemPtr_Norm, * stagingBufferMemPtr_Idx;
+    void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
 
     // Positions
     desc.dims = v3ui(NumVertices * sizeof(v4f), 0, 0);
@@ -216,7 +233,6 @@ static void ParseAllMeshes(Tk::Core::Graphics::GraphicsCommandStream* graphicsCo
     {
         TIMED_SCOPED_BLOCK("Parse OBJ Files - single threaded");
 
-        const uint32 MAX_VERT_BUFFER_SIZE = 1024 * 1024 * 128;
         VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
         VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
         VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
@@ -251,6 +267,113 @@ static void ParseAllMeshes(Tk::Core::Graphics::GraphicsCommandStream* graphicsCo
     }
 }
 
+static void CreateTextureOnGPU(uint32 uiTexture, const Graphics::ResourceDesc& ResDesc, const uint8* TextureBuffer, Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
+{
+    // Create texture handle
+    g_allTextureGraphicsHandles[uiTexture] = Graphics::CreateResource(ResDesc);
+
+    const uint32 textureSizeInBytes = ResDesc.dims.x * ResDesc.dims.y * Graphics::GetBPPFromFormat(ResDesc.imageFormat) / 8;
+    Graphics::ResourceDesc desc = {};
+    desc.dims = v3ui(textureSizeInBytes, 0, 0);
+    desc.resourceType = Graphics::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
+    desc.bufferUsage = Graphics::BufferUsage::eStaging;
+
+    Graphics::ResourceHandle imageStagingBufferHandle = Graphics::CreateResource(desc);
+    void* stagingBufferMemPtr = Graphics::MapResource(imageStagingBufferHandle);
+    memcpy(stagingBufferMemPtr, TextureBuffer, textureSizeInBytes);
+
+    // Graphics command to copy from staging buffer to gpu local buffer
+    Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
+    // Create, submit, and execute the buffer copy commands
+    {
+        // Transition to transfer dst optimal layout
+        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->debugLabel = "Transition image layout to transfer dst optimal";
+        command->m_imageHandle = g_allTextureGraphicsHandles[uiTexture];
+        command->m_startLayout = Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
+        ++command;
+        ++graphicsCommandStream->m_numCommands;
+
+        // Texture buffer copy
+        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->debugLabel = "Update Asset Texture Data";
+        command->m_sizeInBytes = textureSizeInBytes;
+        command->m_srcBufferHandle = imageStagingBufferHandle;
+        command->m_dstBufferHandle = g_allTextureGraphicsHandles[uiTexture];
+        ++command;
+        ++graphicsCommandStream->m_numCommands;
+
+        // TODO: transition image to shader read optimal?
+    }
+
+    // Perform the copies
+    Graphics::SubmitCmdsImmediate(graphicsCommandStream);
+    graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+
+    // Destroy the staging buffers
+    Graphics::UnmapResource(imageStagingBufferHandle);
+    Graphics::DestroyResource(imageStagingBufferHandle);
+}
+
+static void ParseAllTextures(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 NumTextureAssets)
+{
+    {
+        TIMED_SCOPED_BLOCK("Parse Texture Files - single threaded");
+
+        for (uint32 uiAsset = 0; uiAsset < NumTextureAssets; ++uiAsset)
+        {
+            const Tk::Core::Buffer* FileBuffer = GetTextureFileBuffer(uiAsset);
+
+            uint8* CurrentTextureBuffer = nullptr;
+
+            Graphics::ResourceDesc desc = {};
+
+            // TODO: support other filetypes
+            const char* fileExt = "bmp";
+            if (strncmp(fileExt, "bmp", 3) == 0)
+            {
+                const Asset::BMPInfo* info = Asset::GetBMPInfo(FileBuffer->m_data);
+                desc = GetResourceDescFromBMPInfo(info);
+                const uint8* TextureFileDataRaw = Asset::GetDataFromBMPInfo(info);
+
+                uint32 TextureDataSize = desc.dims.x * desc.dims.y * Graphics::GetBPPFromFormat(desc.imageFormat) / 8;
+                CurrentTextureBuffer = g_TextureDataAllocator.Alloc(TextureDataSize, 1);
+
+                uint32 BytesWritten = 0;
+                uint32 BytesRead = 0;
+                switch (info->bitsPerPixel)
+                {
+                    case 24:
+                    {
+                        while (BytesWritten < TextureDataSize)
+                        {
+                            memcpy(CurrentTextureBuffer + BytesWritten, TextureFileDataRaw + BytesRead, 3);
+                            BytesWritten += 3;
+                            BytesRead += 3;
+                            memset(CurrentTextureBuffer + BytesWritten, 255, 1); // fill with opaque alpha channel
+                            BytesWritten += 1;
+                        }
+                        break;
+                    }
+
+                    case 32:
+                    {
+                        memcpy(CurrentTextureBuffer, TextureFileDataRaw, TextureDataSize);
+                    }
+                }
+            }
+            else
+            {
+                TINKER_ASSERT(0);
+            }
+
+            CreateTextureOnGPU(uiAsset, desc, CurrentTextureBuffer, graphicsCommandStream);
+        } 
+    }
+}
+
 void LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // Models
@@ -266,8 +389,10 @@ void LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStr
 
     g_AssetFileScratchMemory.Init(AssetFileMemorySize, CACHE_LINE);
     g_allStaticMeshGraphicsHandles.Resize(TINKER_MAX_MESHES);
+    g_allTextureGraphicsHandles.Resize(TINKER_MAX_TEXTURES); //TODO: default initialize all the handles in these vectors
     g_MeshIDToFileBufferMap.Reserve(64);
     g_TextureIDToFileBufferMap.Reserve(64);
+    g_TextureDataAllocator.Init(MAX_TEXTURE_BUFFER_SIZE, CACHE_LINE);
     
     uint32 meshBufferSizes[numMeshAssets];
     memset(meshBufferSizes, 0, ARRAYCOUNT(meshBufferSizes) * sizeof(uint32));
@@ -347,9 +472,6 @@ void LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStr
         ASSETS_PATH "checkerboard512.bmp",
         ASSETS_PATH "checkerboardRGB512.bmp"
     };
-    // Compute the actual size of the texture data to be allocated and copied to the GPU
-    // TODO: get file extension from string
-    const char* fileExt = "bmp";
 
     uint32 totalTextureFileBytes = 0;
     uint32 textureFileSizes[numTextureAssets] = {};
@@ -373,7 +495,7 @@ void LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStr
         buffer.m_sizeInBytes = fileSize;
         g_TextureIDToFileBufferMap.Insert(uiAsset, buffer);
 
-        totalMeshFileBytes += fileSize;
+        totalTextureFileBytes += fileSize;
     }
 
     accumFileOffset = 0;
@@ -392,9 +514,9 @@ void LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStr
                 {
                     Tk::Platform::ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
                 });
-
-            EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
         }
+        Tk::Platform::EnqueueWorkerThreadJobList_Assisted(&jobs);
+
         #ifndef ENABLE_ASSET_STREAMING
         jobs.WaitOnJobs();
         #else
@@ -414,6 +536,8 @@ void LoadAllAssets(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStr
             Tk::Platform::ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
         }
     }
+
+    ParseAllTextures(graphicsCommandStream, numTextureAssets);
 }
 
 void AddStreamedAssetsToAssetLibrary(AssetLibrary* AssetLib, uint32* NumAssetsStreamed)
