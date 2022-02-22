@@ -3,7 +3,7 @@
 My second game engine project. Made with things learned from Handmade Hero, coworkers, and lessons learned from the older [Joe Engine](https://github.com/klingerj/Joe-Engine). Everything written from scratch. The Joe Engine has more graphics features (for the moment), but Tinker has superior software architecture, no dependencies, compiles faster, and has other debatably cooler features and capabilities.
 
 Currently, the project renders a few instanced models (fairly barebones graphics-wise):  
-![](Output/TestImages/GameScreenshot.bmp)
+![](Output/TestImages/gameScreenshot.bmp)
 
 Output from the SPIR-V virtual machine, evaluating a very simple Lambertian shader:  
 ![](Output/TestImages/spirv_output.bmp)
@@ -57,7 +57,7 @@ Raytraced | Rasterized
   * tested to evaluate simple SPIR-V shaders, produced Output/TestImages/spirv_output.bmp
 * Simple CPU-side raytracing framework (Octree WIP)
 
-#### Roadmap of future features:
+### Roadmap of future features:
 * Compute shader support
 * Threading of file loading/parsing, streaming of models
 * PBR shaders
@@ -68,7 +68,7 @@ Raytraced | Rasterized
 * DX12 graphics backend
 * IMGUI
 
-#### Build instructions
+### Build instructions
 You will need to have installed:
 * Visual Studio 2019, because the project will look for  
 <code>C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat</code>  
@@ -80,12 +80,12 @@ To Build:
 * In that shell window, run <code>ez-build_release.bat</code>. This will build every Tinker project.
 You should now be able to run the game via <code>run_game.bat</code>.
 
-#### Platforms supported currently:
+### Platforms supported currently:
 * Windows 10 / x86
 
-#### Graphics API backends supported currently:
+### Graphics API backends supported currently:
 * Vulkan
 
-#### Assets used:  
+### Assets used:  
 * [CGTrader - Fire Elemental by inalaatzu](https://www.cgtrader.com/free-3d-models/character/fantasy/fire-elemental-29c02a51-2d44-4c4b-9e73-fc5899cd690d)  
 * [CGTrader - RTX 3090 by bemtevi3d](https://www.cgtrader.com/free-3d-models/electronics/computer/rtx-3090-graphic-card-3d-model)
