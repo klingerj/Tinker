@@ -3,7 +3,7 @@
 My second game engine project. Made with things learned from Handmade Hero, coworkers, and lessons learned from the older [Joe Engine](https://github.com/klingerj/Joe-Engine). Everything written from scratch. The Joe Engine has more graphics features (for the moment), but Tinker has superior software architecture, no dependencies, compiles faster, and has other debatably cooler features and capabilities.
 
 Currently, the project renders a few instanced models (fairly barebones graphics-wise):  
-![](Output/TestImages/gameScreenshot.bmp)
+![](Output/TestImages/gameScreenshot.png)
 
 Output from the SPIR-V virtual machine, evaluating a very simple Lambertian shader:  
 ![](Output/TestImages/spirv_output.bmp)
