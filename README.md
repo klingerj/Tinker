@@ -21,7 +21,7 @@ Raytraced | Rasterized
   * <code>DataStructures/</code> - data structures, e.g. vector and hashmap
   * <code>Graphics/</code> - graphics api layer as well as backends, e.g. Vulkan
   * <code>Math/</code> - math ops, e.g. matrix multiply (SIMD-accelerated)
-  * <code>Platform/</code> - platform/threading api layer as wellh as application main, e.g. Windows
+  * <code>Platform/</code> - platform/threading api layer as well as application main, e.g. Windows
   * <code>Raytracing/</code> - (WIP, not done!) minimal raytracing and octree code
   * <code>Utility/</code> - logging, mem alloc tracking, code block timing
 * <code>Game/</code> - all game code, builds as dll
