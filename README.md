@@ -80,6 +80,11 @@ To Build:
 * In that shell window, run <code>ez-build_release.bat</code>. This will build every Tinker project.
 You should now be able to run the game via <code>run_game.bat</code>.
 
+### Game Demo Controls:
+<code>Esc</code> - lock/unlock cursor  
+<code>WASD</code> - move camera  
+<code>Mouse</code> - look around  
+
 ### Platforms supported currently:
 * Windows 10 / x86
 
