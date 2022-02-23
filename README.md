@@ -54,7 +54,7 @@ Raytraced | Rasterized
   * Hash map
   * Ring buffer
 * SPIR-V virtual machine (WIP)
-  * tested to evaluate simple SPIR-V shaders, produced Output/TestImages/spirv_output.bmp
+  * tested to evaluate some simple SPIR-V shaders, may become part of a full software renderer one day
 * Simple CPU-side raytracing framework (Octree WIP)
 
 ### Roadmap of future features:
