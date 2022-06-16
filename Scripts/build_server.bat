@@ -19,16 +19,16 @@ echo ***** Building Tinker Server *****
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi
+set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
     echo Debug mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd /fp:fast
+    set CommonCompileFlags=%CommonCompileFlags% /Zi /Od /MTd 
     set CommonLinkFlags=%CommonLinkFlags% /debug:full
     ) else (
     echo Release mode specified.
-    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT /fp:fast
+    set CommonCompileFlags=%CommonCompileFlags% /O2 /MT 
     )
 
 rem *********************************************************************************************************
