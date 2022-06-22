@@ -533,13 +533,13 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     }
 
     // Command buffers for per-frame submission
-    g_vulkanContextResources.commandBuffers = (VkCommandBuffer*)g_VulkanDataAllocator.Alloc(sizeof(VkCommandBuffer) * g_vulkanContextResources.numSwapChainImages, 1);
+    g_vulkanContextResources.commandBuffers = (VkCommandBuffer*)g_VulkanDataAllocator.Alloc(sizeof(VkCommandBuffer) * VULKAN_MAX_FRAMES_IN_FLIGHT, 1);
 
     VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
     commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     commandBufferAllocInfo.commandPool = g_vulkanContextResources.commandPool;
     commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocInfo.commandBufferCount = g_vulkanContextResources.numSwapChainImages;
+    commandBufferAllocInfo.commandBufferCount = VULKAN_MAX_FRAMES_IN_FLIGHT;
 
     result = vkAllocateCommandBuffers(g_vulkanContextResources.device,
         &commandBufferAllocInfo,
@@ -563,28 +563,29 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         TINKER_ASSERT(0);
     }
 
-    // Semaphores
+    // Virtual frame synchronization data initialization - 2 semaphores and fence
     VkSemaphoreCreateInfo semaphoreCreateInfo = {};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         result = vkCreateSemaphore(g_vulkanContextResources.device,
             &semaphoreCreateInfo,
             nullptr,
-            &g_vulkanContextResources.swapChainImageAvailableSemaphores[uiImage]);
+            &g_vulkanContextResources.virtualFrameSyncData[uiFrame].GPUWorkCompleteSema);
+
         if (result != VK_SUCCESS)
         {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Core::Utility::LogSeverity::eCritical);
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan gpu work complete semaphore!", Core::Utility::LogSeverity::eCritical);
         }
 
         result = vkCreateSemaphore(g_vulkanContextResources.device,
             &semaphoreCreateInfo,
             nullptr,
-            &g_vulkanContextResources.renderCompleteSemaphores[uiImage]);
+            &g_vulkanContextResources.virtualFrameSyncData[uiFrame].PresentCompleteSema);
+
         if (result != VK_SUCCESS)
         {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan semaphore!", Core::Utility::LogSeverity::eCritical);
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan present semaphore!", Core::Utility::LogSeverity::eCritical);
         }
     }
 
@@ -592,25 +593,18 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
-        result = vkCreateFence(g_vulkanContextResources.device, &fenceCreateInfo, nullptr, &g_vulkanContextResources.fences[uiImage]);
+        result = vkCreateFence(g_vulkanContextResources.device, &fenceCreateInfo, nullptr, &g_vulkanContextResources.virtualFrameSyncData[uiFrame].Fence);
         if (result != VK_SUCCESS)
         {
             Core::Utility::LogMsg("Platform", "Failed to create Vulkan fence!", Core::Utility::LogSeverity::eCritical);
         }
     }
-    
-    g_vulkanContextResources.imageInFlightFences = (VkFence*)g_VulkanDataAllocator.Alloc(sizeof(VkFence) * g_vulkanContextResources.numSwapChainImages, 1);
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
-    {
-        g_vulkanContextResources.imageInFlightFences[uiImage] = VK_NULL_HANDLE;
-    }
 
     CreateSamplers();
 
     g_vulkanContextResources.isInitted = true;
-
     return 0;
 }
 
@@ -639,7 +633,6 @@ void VulkanCreateSwapChain()
     {
         numSwapChainImages = min(numSwapChainImages, capabilities.maxImageCount);
     }
-    numSwapChainImages = min(numSwapChainImages, VULKAN_MAX_SWAP_CHAIN_IMAGES);
 
     uint32 numAvailableSurfaceFormats;
     vkGetPhysicalDeviceSurfaceFormatsKHR(g_vulkanContextResources.physicalDevice,
@@ -748,15 +741,19 @@ void VulkanCreateSwapChain()
         g_vulkanContextResources.swapChain,
         &numSwapChainImages,
         nullptr);
+    TINKER_ASSERT(numSwapChainImages != 0);
 
-    for (uint32 i = 0; i < ARRAYCOUNT(g_vulkanContextResources.swapChainImages); ++i)
+    g_vulkanContextResources.swapChainImages = (VkImage*)g_VulkanDataAllocator.Alloc(sizeof(VkImage) * numSwapChainImages, 1);
+    g_vulkanContextResources.swapChainImageViews = (VkImageView*)g_VulkanDataAllocator.Alloc(sizeof(VkImageView) * numSwapChainImages, 1);
+
+    for (uint32 i = 0; i < numSwapChainImages; ++i)
         g_vulkanContextResources.swapChainImages[i] = VK_NULL_HANDLE;
     vkGetSwapchainImagesKHR(g_vulkanContextResources.device,
         g_vulkanContextResources.swapChain,
         &numSwapChainImages,
         g_vulkanContextResources.swapChainImages);
 
-    for (uint32 i = 0; i < ARRAYCOUNT(g_vulkanContextResources.swapChainImages); ++i)
+    for (uint32 i = 0; i < numSwapChainImages; ++i)
         g_vulkanContextResources.swapChainImageViews[i] = VK_NULL_HANDLE;
     for (uint32 uiImageView = 0; uiImageView < numSwapChainImages; ++uiImageView)
     {
@@ -1171,7 +1168,7 @@ void VulkanDestroyAllRenderPasses()
 void* VulkanMapResource( ResourceHandle handle)
 {
     VulkanMemResource* resource =
-        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentSwapChainImage];
+        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
 
     void* newMappedMem;
     VkResult result = vkMapMemory(g_vulkanContextResources.device, resource->deviceMemory, 0, VK_WHOLE_SIZE, 0, &newMappedMem);
@@ -1189,7 +1186,7 @@ void* VulkanMapResource( ResourceHandle handle)
 void VulkanUnmapResource( ResourceHandle handle)
 {
     VulkanMemResource* resource =
-        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentSwapChainImage];
+        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
 
     // Flush right before unmapping
     VkMappedMemoryRange memoryRange = {};
@@ -1770,11 +1767,11 @@ void DestroyVulkan()
     DestroyAllDescLayouts();
     VulkanDestroyAllRenderPasses();
 
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
-        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.renderCompleteSemaphores[uiImage], nullptr);
-        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.swapChainImageAvailableSemaphores[uiImage], nullptr);
-        vkDestroyFence(g_vulkanContextResources.device, g_vulkanContextResources.fences[uiImage], nullptr);
+        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].GPUWorkCompleteSema, nullptr);
+        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].PresentCompleteSema, nullptr);
+        vkDestroyFence(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].Fence, nullptr);
     }
 
     vkDestroySampler(g_vulkanContextResources.device, g_vulkanContextResources.linearSampler, nullptr);
