@@ -17,7 +17,6 @@
 #define VULKAN_MAX_RENDERTARGETS_WITH_DEPTH VULKAN_MAX_RENDERTARGETS + 1 // +1 for depth
 // TODO: support multiple render targets more fully
 
-#define VULKAN_MAX_SWAP_CHAIN_IMAGES 3
 #define VULKAN_MAX_FRAMES_IN_FLIGHT 2
 
 namespace Tk
@@ -59,18 +58,18 @@ typedef struct vulkan_descriptor_resource
 // Chains of resources for multiple swap chain images
 typedef struct
 {
-    VulkanMemResource resourceChain[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+    VulkanMemResource resourceChain[VULKAN_MAX_FRAMES_IN_FLIGHT];
     ResourceDesc resDesc;
 } VulkanMemResourceChain;
 
 typedef struct
 {
-    VulkanFramebufferResource resourceChain[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+    VulkanFramebufferResource resourceChain[VULKAN_MAX_FRAMES_IN_FLIGHT];
 } VulkanFramebufferResourceChain;
 
 typedef struct
 {
-    VulkanDescriptorResource resourceChain[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+    VulkanDescriptorResource resourceChain[VULKAN_MAX_FRAMES_IN_FLIGHT];
 } VulkanDescriptorChain;
 
 typedef struct
@@ -86,6 +85,13 @@ typedef struct
     bool hasDepth;
 } VulkanRenderPass;
 
+typedef struct
+{
+    VkFence Fence;
+    VkSemaphore GPUWorkCompleteSema;
+    VkSemaphore PresentCompleteSema;
+} VulkanVirtualFrameSyncData;
+
 struct VulkanContextResources
 {
     bool isInitted = false;
@@ -96,22 +102,25 @@ struct VulkanContextResources
     PFN_vkCmdBeginDebugUtilsLabelEXT pfnCmdBeginDebugUtilsLabelEXT = NULL;
     PFN_vkCmdEndDebugUtilsLabelEXT pfnCmdEndDebugUtilsLabelEXT = NULL;
     PFN_vkCmdInsertDebugUtilsLabelEXT pfnCmdInsertDebugUtilsLabelEXT = NULL;
+
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     uint32 graphicsQueueIndex = TINKER_INVALID_HANDLE;
     uint32 presentationQueueIndex = TINKER_INVALID_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue presentationQueue = VK_NULL_HANDLE;
+
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     VkSwapchainKHR swapChain = VK_NULL_HANDLE;
     VkExtent2D swapChainExtent = { 0, 0 };
     VkFormat swapChainFormat = VK_FORMAT_UNDEFINED;
-    VkImage swapChainImages[VULKAN_MAX_SWAP_CHAIN_IMAGES];
-    VkImageView swapChainImageViews[VULKAN_MAX_SWAP_CHAIN_IMAGES];
+    VkImage* swapChainImages = nullptr;
+    VkImageView* swapChainImageViews = nullptr;
     FramebufferHandle swapChainFramebufferHandle = DefaultFramebufferHandle_Invalid;
+
     uint32 numSwapChainImages = 0;
-    uint32 currentSwapChainImage = 0;
-    uint32 currentFrame = 0;
+    uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
+    uint32 currentVirtualFrame = 0;
     uint32 windowWidth = 0;
     uint32 windowHeight = 0;
 
@@ -120,10 +129,7 @@ struct VulkanContextResources
     Tk::Core::PoolAllocator<VulkanMemResourceChain> vulkanMemResourcePool;
     Tk::Core::PoolAllocator<VulkanDescriptorChain> vulkanDescriptorResourcePool;
     Tk::Core::PoolAllocator<VulkanFramebufferResourceChain> vulkanFramebufferResourcePool;
-    VkFence fences[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
-    VkFence* imageInFlightFences = nullptr;
-    VkSemaphore swapChainImageAvailableSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
-    VkSemaphore renderCompleteSemaphores[VULKAN_MAX_FRAMES_IN_FLIGHT] = {};
+    VulkanVirtualFrameSyncData virtualFrameSyncData[VULKAN_MAX_FRAMES_IN_FLIGHT];
     VkCommandBuffer* commandBuffers = nullptr;
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;

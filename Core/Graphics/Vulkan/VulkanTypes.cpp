@@ -27,6 +27,7 @@ void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMe
             (memProperties.memoryTypes[uiMemType].propertyFlags & memPropertyFlags) == memPropertyFlags)
         {
             memTypeIndex = uiMemType;
+            break;
         }
     }
     if (memTypeIndex == 0xffffffff)

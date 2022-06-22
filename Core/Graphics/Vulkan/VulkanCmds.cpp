@@ -12,22 +12,32 @@ namespace Graphics
 
 bool VulkanAcquireFrame()
 {
-    vkWaitForFences(g_vulkanContextResources.device, 1, &g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame], VK_TRUE, (uint64)-1);
+    const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
+
+    VkResult result = vkWaitForFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence, VK_FALSE, (uint64)-1);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Waiting for virtual frame fence took too long!", Core::Utility::LogSeverity::eInfo);
+        return false;
+    }
+    vkResetFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence);
 
     uint32 currentSwapChainImageIndex = TINKER_INVALID_HANDLE;
 
-    VkResult result = vkAcquireNextImageKHR(g_vulkanContextResources.device,
+    result = vkAcquireNextImageKHR(g_vulkanContextResources.device,
         g_vulkanContextResources.swapChain,
         (uint64)-1,
-        g_vulkanContextResources.swapChainImageAvailableSemaphores[g_vulkanContextResources.currentFrame],
+        virtualFrameSyncData.PresentCompleteSema,
         VK_NULL_HANDLE,
         &currentSwapChainImageIndex);
 
-    if (result != VK_SUCCESS)
+    // Error checking
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
     {
         Core::Utility::LogMsg("Platform", "Failed to acquire next swap chain image!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
+            TINKER_ASSERT(0); // untested code path
             Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
             VulkanDestroySwapChain();
             VulkanCreateSwapChain();
@@ -42,34 +52,31 @@ bool VulkanAcquireFrame()
         return false;
     }
 
-    if (g_vulkanContextResources.imageInFlightFences[currentSwapChainImageIndex] != VK_NULL_HANDLE)
-        vkWaitForFences(g_vulkanContextResources.device, 1, &g_vulkanContextResources.imageInFlightFences[currentSwapChainImageIndex], VK_TRUE, (uint64)-1);
-
-    g_vulkanContextResources.imageInFlightFences[currentSwapChainImageIndex] = g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame];
     g_vulkanContextResources.currentSwapChainImage = currentSwapChainImageIndex;
     return true;
 }
 
 void VulkanSubmitFrame()
 {
+    const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
+
     // Submit
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[1] = { g_vulkanContextResources.swapChainImageAvailableSemaphores[g_vulkanContextResources.currentFrame] };
+    VkSemaphore waitSemaphores[1] = { virtualFrameSyncData.PresentCompleteSema };
     VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage];
+    submitInfo.pCommandBuffers = &g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame];
 
-    VkSemaphore signalSemaphores[1] = { g_vulkanContextResources.renderCompleteSemaphores[g_vulkanContextResources.currentFrame] };
+    VkSemaphore signalSemaphores[1] = { virtualFrameSyncData.GPUWorkCompleteSema };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    vkResetFences(g_vulkanContextResources.device, 1, &g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame]);
-    VkResult result = vkQueueSubmit(g_vulkanContextResources.graphicsQueue, 1, &submitInfo, g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame]);
+    VkResult result = vkQueueSubmit(g_vulkanContextResources.graphicsQueue, 1, &submitInfo, virtualFrameSyncData.Fence);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::LogSeverity::eCritical);
@@ -92,11 +99,11 @@ void VulkanSubmitFrame()
         Core::Utility::LogMsg("Platform", "Failed to present swap chain!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {
-            TINKER_ASSERT(0);
-            /*Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
-            VulkanDestroySwapChain(g_vulkanContextResources);
-            VulkanCreateSwapChain(g_vulkanContextResources);
-            return; // Don't present on this frame*/
+            TINKER_ASSERT(0); // untested code path
+            Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
+            VulkanDestroySwapChain();
+            VulkanCreateSwapChain();
+            return;
         }
         else
         {
@@ -105,9 +112,7 @@ void VulkanSubmitFrame()
         }
     }
 
-    g_vulkanContextResources.currentFrame = (g_vulkanContextResources.currentFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
-
-    vkQueueWaitIdle(g_vulkanContextResources.presentationQueue);
+    g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
 }
 
 void BeginVulkanCommandRecording()
@@ -117,7 +122,7 @@ void BeginVulkanCommandRecording()
     commandBufferBeginInfo.flags = 0;
     commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
-    VkResult result = vkBeginCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage], &commandBufferBeginInfo);
+    VkResult result = vkBeginCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame], &commandBufferBeginInfo);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
@@ -127,12 +132,12 @@ void BeginVulkanCommandRecording()
 
 void EndVulkanCommandRecording()
 {
-    if (g_vulkanContextResources.currentSwapChainImage == TINKER_INVALID_HANDLE)
+    if (g_vulkanContextResources.currentSwapChainImage == TINKER_INVALID_HANDLE || g_vulkanContextResources.currentVirtualFrame == TINKER_INVALID_HANDLE)
     {
         TINKER_ASSERT(0);
     }
 
-    VkResult result = vkEndCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage]);
+    VkResult result = vkEndCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame]);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
@@ -183,8 +188,8 @@ VkCommandBuffer ChooseAppropriateCommandBuffer(bool immediateSubmit)
 
     if (!immediateSubmit)
     {
-        TINKER_ASSERT(g_vulkanContextResources.currentSwapChainImage != TINKER_INVALID_HANDLE);
-        commandBuffer = g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage];
+        TINKER_ASSERT(g_vulkanContextResources.currentSwapChainImage != TINKER_INVALID_HANDLE && g_vulkanContextResources.currentVirtualFrame != TINKER_INVALID_HANDLE);
+        commandBuffer = g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame];
     }
 
     return commandBuffer;
@@ -208,13 +213,11 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-    uint32 currentSwapChainImage = g_vulkanContextResources.currentSwapChainImage;
-
     // Index buffer
     VulkanMemResourceChain* indexBufferResource = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
     //uint32 indexBufferSize = indexBufferResource->resDesc.dims.x;
     //TODO: bad indexing
-    VkBuffer& indexBuffer = indexBufferResource->resourceChain[g_vulkanContextResources.currentSwapChainImage].buffer;
+    VkBuffer& indexBuffer = indexBufferResource->resourceChain[g_vulkanContextResources.currentVirtualFrame].buffer;
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
@@ -248,7 +251,7 @@ void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 de
         if (descHandle != DefaultDescHandle_Invalid)
         {
             VkDescriptorSet* descSet =
-                &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentSwapChainImage].descriptorSet;
+                &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
 
             vkCmdBindDescriptorSets(commandBuffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -274,7 +277,7 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
 #endif
 
     VulkanMemResourceChain* dstResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes);
-    VulkanMemResource* dstResource = &dstResourceChain->resourceChain[g_vulkanContextResources.currentSwapChainImage];
+    VulkanMemResource* dstResource = &dstResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
 
     switch (dstResourceChain->resDesc.resourceType)
     {
@@ -357,7 +360,7 @@ void VulkanRecordCommandRenderPassBegin(FramebufferHandle framebufferHandle, uin
         renderPassBeginInfo.renderArea.extent = g_vulkanContextResources.swapChainExtent;
     }
     VulkanFramebufferResource* framebufferPtr =
-        &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer)->resourceChain[g_vulkanContextResources.currentSwapChainImage];
+        &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
     renderPassBeginInfo.framebuffer = framebufferPtr->framebuffer;
     renderPassBeginInfo.renderPass = g_vulkanContextResources.renderPasses[renderPassID].renderPassVk;
 
@@ -558,7 +561,7 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
 #endif
 
     VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-    VulkanMemResource* memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentSwapChainImage];
+    VulkanMemResource* memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
 
     VkClearColorValue clearColor = {};
     VkClearDepthStencilValue clearDepth = {};
