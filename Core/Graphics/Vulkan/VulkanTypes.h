@@ -118,7 +118,6 @@ struct VulkanContextResources
     VkImageView* swapChainImageViews = nullptr;
     FramebufferHandle swapChainFramebufferHandle = DefaultFramebufferHandle_Invalid;
 
-    uint32 numSwapChainImages = 0;
     uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
     uint32 currentVirtualFrame = 0;
     uint32 windowWidth = 0;

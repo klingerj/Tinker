@@ -692,7 +692,6 @@ void VulkanCreateSwapChain()
 
     g_vulkanContextResources.swapChainExtent = optimalExtent;
     g_vulkanContextResources.swapChainFormat = chosenFormat.format;
-    g_vulkanContextResources.numSwapChainImages = numSwapChainImages;
 
     VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
     swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -779,7 +778,7 @@ void VulkanCreateSwapChain()
     TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
     g_vulkanContextResources.swapChainFramebufferHandle = FramebufferHandle(newFramebufferHandle);
 
-    for (uint32 uiFramebuffer = 0; uiFramebuffer < g_vulkanContextResources.numSwapChainImages; ++uiFramebuffer)
+    for (uint32 uiFramebuffer = 0; uiFramebuffer < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFramebuffer)
     {
         VulkanFramebufferResource* newFramebuffer =
             &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiFramebuffer];
@@ -806,7 +805,7 @@ void VulkanDestroySwapChain()
 
     VulkanDestroyFramebuffer(g_vulkanContextResources.swapChainFramebufferHandle);
 
-    for (uint32 uiImageView = 0; uiImageView < g_vulkanContextResources.numSwapChainImages; ++uiImageView)
+    for (uint32 uiImageView = 0; uiImageView < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImageView)
     {
         vkDestroyImageView(g_vulkanContextResources.device, g_vulkanContextResources.swapChainImageViews[uiImageView], nullptr);
     }
@@ -1217,7 +1216,7 @@ ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
     bool oneBufferOnly = false;
     bool perSwapChainSize = false;
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages && !oneBufferOnly; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT && !oneBufferOnly; ++uiImage)
     {
         VulkanMemResource* newResource = &newResourceChain->resourceChain[uiImage];
 
@@ -1281,7 +1280,7 @@ ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
         }
 
         // allocate buffer resource size in bytes equal to one buffer per swap chain image
-        uint32 numBytesToAllocate = perSwapChainSize ? sizeInBytes * g_vulkanContextResources.numSwapChainImages : sizeInBytes;
+        uint32 numBytesToAllocate = perSwapChainSize ? sizeInBytes * VULKAN_MAX_FRAMES_IN_FLIGHT : sizeInBytes;
 
         CreateBuffer(g_vulkanContextResources.physicalDevice,
             g_vulkanContextResources.device,
@@ -1305,7 +1304,7 @@ DescriptorHandle VulkanCreateDescriptor( uint32 descriptorLayoutID)
     
     uint32 newDescriptorHandle = g_vulkanContextResources.vulkanDescriptorResourcePool.Alloc();
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         const VkDescriptorSetLayout& descriptorSetLayout = g_vulkanContextResources.descLayouts[descriptorLayoutID].layout;
         TINKER_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
@@ -1335,7 +1334,7 @@ DescriptorHandle VulkanCreateDescriptor( uint32 descriptorLayoutID)
 void VulkanDestroyDescriptor( DescriptorHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         // TODO: destroy something?
     }
@@ -1354,7 +1353,7 @@ void VulkanWriteDescriptor( uint32 descriptorLayoutID, DescriptorHandle descSetH
 
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VkDescriptorSet* descriptorSet =
             &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiImage].descriptorSet;
@@ -1507,7 +1506,7 @@ FramebufferHandle VulkanCreateFramebuffer(
     for (uint32 i = 0; i < ARRAYCOUNT(attachments); ++i)
         attachments[i] = VK_NULL_HANDLE;
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VulkanFramebufferResource* newFramebuffer =
             &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiImage];
@@ -1550,7 +1549,7 @@ ResourceHandle VulkanCreateImageResource( uint32 imageFormat, uint32 width, uint
 {
     uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VulkanMemResourceChain* newResourceChain =
             g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
@@ -1680,7 +1679,7 @@ void VulkanDestroyImageResource( ResourceHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiImage];
         vkDestroyImage(g_vulkanContextResources.device, resource->image, nullptr);
@@ -1695,7 +1694,7 @@ void VulkanDestroyFramebuffer( FramebufferHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VulkanFramebufferResource* framebuffer = &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(handle.m_hFramebuffer)->resourceChain[uiImage];
         vkDestroyFramebuffer(g_vulkanContextResources.device, framebuffer->framebuffer, nullptr);
@@ -1708,7 +1707,7 @@ void VulkanDestroyBuffer( ResourceHandle handle, uint32 bufferUsage)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    for (uint32 uiImage = 0; uiImage < g_vulkanContextResources.numSwapChainImages; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiImage];
 
