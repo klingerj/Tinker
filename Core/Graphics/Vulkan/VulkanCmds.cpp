@@ -285,7 +285,7 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
         {
             VkBufferCopy bufferCopy = {};
 
-            for (uint32 uiBuf = 0; uiBuf < g_vulkanContextResources.numSwapChainImages; ++uiBuf)
+            for (uint32 uiBuf = 0; uiBuf < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiBuf)
             {
                 bufferCopy.srcOffset = 0; // TODO: make this a function param?
                 bufferCopy.size = sizeInBytes;
@@ -320,7 +320,7 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
                 }
             }
 
-            for (uint32 uiImg = 0; uiImg < g_vulkanContextResources.numSwapChainImages; ++uiImg)
+            for (uint32 uiImg = 0; uiImg < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImg)
             {
                 VkBuffer& srcBuffer = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
                 VkImage& dstImage = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[uiImg].image;
@@ -417,7 +417,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
 
     VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
 
-    for (uint32 uiImg = 0; uiImg < g_vulkanContextResources.numSwapChainImages; ++uiImg)
+    for (uint32 uiImg = 0; uiImg < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImg)
     {
         VulkanMemResource* memResource = &memResourceChain->resourceChain[uiImg];
 
