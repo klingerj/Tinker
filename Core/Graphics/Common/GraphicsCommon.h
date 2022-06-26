@@ -94,6 +94,7 @@ namespace ImageLayout
         eUndefined = 0,
         eShaderRead,
         eTransferDst,
+        eRenderOptimal,
         eDepthOptimal,
         ePresent,
         eMax

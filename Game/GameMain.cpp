@@ -388,6 +388,15 @@ GAME_UPDATE(GameUpdate)
     // FINAL BLIT TO SCREEN
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
+    // Transition of swap chain from present to render optimal
+    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->debugLabel = "Transition swap chain to render_optimal";
+    command->m_imageHandle = Graphics::DefaultResHandle_Invalid; // Invalid indicates swap chain image
+    command->m_startLayout = Graphics::ImageLayout::eUndefined;
+    command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
+
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
     command->m_framebufferHandle = Graphics::DefaultFramebufferHandle_Invalid;
@@ -415,6 +424,15 @@ GAME_UPDATE(GameUpdate)
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
+
+    // Transition of swap chain from render optimal to present
+    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->debugLabel = "Transition swap chain to present";
+    command->m_imageHandle = Graphics::DefaultResHandle_Invalid; // Invalid indicates swap chain image
+    command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
+    command->m_endLayout = Graphics::ImageLayout::ePresent;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 

@@ -744,6 +744,7 @@ void VulkanCreateSwapChain()
 
     g_vulkanContextResources.swapChainImages = (VkImage*)g_VulkanDataAllocator.Alloc(sizeof(VkImage) * numSwapChainImages, 1);
     g_vulkanContextResources.swapChainImageViews = (VkImageView*)g_VulkanDataAllocator.Alloc(sizeof(VkImageView) * numSwapChainImages, 1);
+    g_vulkanContextResources.numSwapChainImages = numSwapChainImages;
 
     for (uint32 i = 0; i < numSwapChainImages; ++i)
         g_vulkanContextResources.swapChainImages[i] = VK_NULL_HANDLE;
@@ -764,35 +765,24 @@ void VulkanCreateSwapChain()
             1);
     }
 
-    // Swap chain framebuffers
-    const uint32 numColorRTs = 1; // TODO: support multiple RTs
-
     // Render pass
     VulkanRenderPass& renderPass = g_vulkanContextResources.renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT];
     renderPass.numColorRTs = 1;
     renderPass.hasDepth = false;
     const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
-    CreateRenderPass(g_vulkanContextResources.device, numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, depthFormat, &renderPass.renderPassVk);
+    CreateRenderPass(g_vulkanContextResources.device, renderPass.numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, depthFormat, &renderPass.renderPassVk);
 
-    uint32 newFramebufferHandle = g_vulkanContextResources.vulkanFramebufferResourcePool.Alloc();
-    TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
-    g_vulkanContextResources.swapChainFramebufferHandle = FramebufferHandle(newFramebufferHandle);
+    // Swap chain framebuffers
+    g_vulkanContextResources.swapChainFramebuffers = (VkFramebuffer*)g_VulkanDataAllocator.Alloc(sizeof(VkFramebuffer) * numSwapChainImages, 1);
 
-    for (uint32 uiFramebuffer = 0; uiFramebuffer < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFramebuffer)
+    for (uint32 uiImg = 0; uiImg < numSwapChainImages; ++uiImg)
     {
-        VulkanFramebufferResource* newFramebuffer =
-            &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiFramebuffer];
-
-        for (uint32 i = 0; i < numColorRTs; ++i)
-        {
-            newFramebuffer->clearValues[i] = { 0.0f, 0.0f, 0.0f, 1.0f };
-        }
-        newFramebuffer->numClearValues = numColorRTs;
+        VkFramebuffer* newFramebuffer = &g_vulkanContextResources.swapChainFramebuffers[uiImg];
 
         // Framebuffer
         const VkImageView depthImageView = VK_NULL_HANDLE; // no depth buffer for swap chain
-        CreateFramebuffer(g_vulkanContextResources.device, &g_vulkanContextResources.swapChainImageViews[uiFramebuffer], 1, depthImageView,
-            g_vulkanContextResources.swapChainExtent.width, g_vulkanContextResources.swapChainExtent.height, g_vulkanContextResources.renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT].renderPassVk, &newFramebuffer->framebuffer);
+        CreateFramebuffer(g_vulkanContextResources.device, &g_vulkanContextResources.swapChainImageViews[uiImg], 1, depthImageView,
+            g_vulkanContextResources.swapChainExtent.width, g_vulkanContextResources.swapChainExtent.height, g_vulkanContextResources.renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT].renderPassVk, newFramebuffer);
     }
 
     g_vulkanContextResources.isSwapChainValid = true;
@@ -803,11 +793,11 @@ void VulkanDestroySwapChain()
     g_vulkanContextResources.isSwapChainValid = false;
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    VulkanDestroyFramebuffer(g_vulkanContextResources.swapChainFramebufferHandle);
-
-    for (uint32 uiImageView = 0; uiImageView < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImageView)
+    // Don't have to destroy swap chain VkImages
+    for (uint32 uiImg = 0; uiImg < g_vulkanContextResources.numSwapChainImages; ++uiImg)
     {
-        vkDestroyImageView(g_vulkanContextResources.device, g_vulkanContextResources.swapChainImageViews[uiImageView], nullptr);
+        vkDestroyImageView(g_vulkanContextResources.device, g_vulkanContextResources.swapChainImageViews[uiImg], nullptr);
+        vkDestroyFramebuffer(g_vulkanContextResources.device, g_vulkanContextResources.swapChainFramebuffers[uiImg], nullptr);
     }
     
     vkDestroySwapchainKHR(g_vulkanContextResources.device, g_vulkanContextResources.swapChain, nullptr);
