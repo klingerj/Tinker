@@ -146,21 +146,22 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
     // Depth-only pass
-    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = Graphics::CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_ZPrepass);
+    //gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = Graphics::CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_ZPrepass);
 
     // Color and depth
-    gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = Graphics::CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView);
+    //gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = Graphics::CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView);
 
-    gameRenderPasses[eRenderPass_ZPrePass] = {};
-    gameRenderPasses[eRenderPass_ZPrePass].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
-    gameRenderPasses[eRenderPass_ZPrePass].renderPassID = Graphics::RENDERPASS_ID_ZPrepass;
+    gameRenderPasses[eRenderPass_ZPrePass].Init();
+    gameRenderPasses[eRenderPass_ZPrePass].numColorRTs = 0;
+    gameRenderPasses[eRenderPass_ZPrePass].depthRT = gameGraphicsData.m_rtDepthHandle;
     gameRenderPasses[eRenderPass_ZPrePass].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_ZPrePass].renderHeight = windowHeight;
     gameRenderPasses[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
 
-    gameRenderPasses[eRenderPass_MainView] = {};
-    gameRenderPasses[eRenderPass_MainView].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
-    gameRenderPasses[eRenderPass_MainView].renderPassID = Graphics::RENDERPASS_ID_MainView;
+    gameRenderPasses[eRenderPass_MainView].Init();
+    gameRenderPasses[eRenderPass_MainView].numColorRTs = 1;
+    gameRenderPasses[eRenderPass_MainView].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPasses[eRenderPass_MainView].depthRT = gameGraphicsData.m_rtDepthHandle;
     gameRenderPasses[eRenderPass_MainView].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_MainView].renderHeight = windowHeight;
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
@@ -399,8 +400,11 @@ GAME_UPDATE(GameUpdate)
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
-    command->m_framebufferHandle = Graphics::DefaultFramebufferHandle_Invalid;
-    command->m_renderPassID = Graphics::RENDERPASS_ID_SWAP_CHAIN_BLIT;
+    //command->m_framebufferHandle = Graphics::DefaultFramebufferHandle_Invalid;
+    //command->m_renderPassID = Graphics::RENDERPASS_ID_SWAP_CHAIN_BLIT;
+    command->m_numColorRTs = 1;
+    command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
+    command->m_depthRT = Graphics::DefaultResHandle_Invalid;
     command->m_renderWidth = 0;
     command->m_renderHeight = 0;
     ++graphicsCommandStream->m_numCommands;

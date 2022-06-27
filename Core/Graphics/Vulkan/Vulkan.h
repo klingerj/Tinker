@@ -88,9 +88,8 @@ void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 de
     const DescriptorHandle* descSetHandles, bool immediateSubmit);
 void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
     const char* debugLabel, bool immediateSubmit);
-void VulkanRecordCommandRenderPassBegin(FramebufferHandle framebufferHandle, uint32 renderPassID,
-    uint32 renderWidth, uint32 renderHeight,
-    const char* debugLabel, bool immediateSubmit);
+void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT,
+    uint32 renderWidth, uint32 renderHeight, const char* debugLabel, bool immediateSubmit);
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit);
 void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout,
     const char* debugLabel, bool immediateSubmit);
