@@ -393,7 +393,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     }
 
     VkRenderingInfo renderingInfo = {};
-    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
     renderingInfo.renderArea = { 0, 0, renderWidth, renderHeight };
     renderingInfo.layerCount = 1;
     renderingInfo.colorAttachmentCount = numColorRTs;

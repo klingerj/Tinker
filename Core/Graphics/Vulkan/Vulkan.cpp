@@ -5,7 +5,7 @@
 
 #include <iostream>
 // TODO: move this to be a compile define
-//#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 #define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 #ifdef _WIN32
@@ -78,7 +78,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     applicationInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     applicationInfo.pEngineName = "Tinker Engine";
     applicationInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    applicationInfo.apiVersion = VK_API_VERSION_1_0;
+    applicationInfo.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo instanceCreateInfo = {};
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -272,14 +272,29 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         Core::Utility::LogMsg("Platform", requiredPhysicalDeviceExtensions[uiReqExt], Core::Utility::LogSeverity::eInfo);
     }
 
+    VkPhysicalDeviceProperties physicalDeviceProperties = {};
+    VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = {};
+    VkPhysicalDeviceVulkan13Features physicalDeviceVulkan13Features = {};
+
     for (uint32 uiPhysicalDevice = 0; uiPhysicalDevice < numPhysicalDevices; ++uiPhysicalDevice)
     {
         VkPhysicalDevice currPhysicalDevice = physicalDevices[uiPhysicalDevice];
 
-        VkPhysicalDeviceProperties physicalDeviceProperties;
-        VkPhysicalDeviceFeatures physicalDeviceFeatures;
+        physicalDeviceProperties = {};
         vkGetPhysicalDeviceProperties(currPhysicalDevice, &physicalDeviceProperties);
-        vkGetPhysicalDeviceFeatures(currPhysicalDevice, &physicalDeviceFeatures);
+
+        physicalDeviceFeatures2 = {};
+        physicalDeviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        physicalDeviceVulkan13Features = {};
+        physicalDeviceFeatures2.pNext = &physicalDeviceVulkan13Features;
+        vkGetPhysicalDeviceFeatures2(currPhysicalDevice, &physicalDeviceFeatures2);
+        //TODO: dynamic rendering not being enabled
+        // Required device feature - can't use this device if not available
+        /*if (physicalDeviceVulkan13Features.dynamicRendering == VK_FALSE)
+        {
+            Core::Utility::LogMsg("Platform", "Graphics device feature dynamic rendering not available!", Core::Utility::LogSeverity::eCritical);
+            continue;
+        }*/
 
         if (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
@@ -458,6 +473,8 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     deviceCreateInfo.ppEnabledLayerNames = nullptr;
     deviceCreateInfo.enabledExtensionCount = numRequiredPhysicalDeviceExtensions;
     deviceCreateInfo.ppEnabledExtensionNames = requiredPhysicalDeviceExtensions;
+    physicalDeviceVulkan13Features.dynamicRendering = VK_TRUE;
+    deviceCreateInfo.pNext = &physicalDeviceFeatures2;
 
     result = vkCreateDevice(g_vulkanContextResources.physicalDevice,
         &deviceCreateInfo,
