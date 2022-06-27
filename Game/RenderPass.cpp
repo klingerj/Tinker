@@ -32,8 +32,12 @@ void StartRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = renderPass->debugLabel;
-    command->m_framebufferHandle = renderPass->framebuffer;
-    command->m_renderPassID = renderPass->renderPassID;
+    
+    uint32 numColorRTs = renderPass->numColorRTs;
+    command->m_numColorRTs = numColorRTs;
+    if (numColorRTs)
+        memcpy(command->m_colorRTs, renderPass->colorRTs, sizeof(Graphics::ResourceHandle) * numColorRTs);
+    command->m_depthRT = renderPass->depthRT;
     command->m_renderWidth = renderPass->renderWidth;
     command->m_renderHeight = renderPass->renderHeight;
     ++graphicsCommandStream->m_numCommands;

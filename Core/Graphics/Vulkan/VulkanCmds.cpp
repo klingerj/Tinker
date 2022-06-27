@@ -344,11 +344,72 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
     }
 }
 
-void VulkanRecordCommandRenderPassBegin(FramebufferHandle framebufferHandle, uint32 renderPassID, uint32 renderWidth, uint32 renderHeight,
+void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT, uint32 renderWidth, uint32 renderHeight,
     const char* debugLabel, bool immediateSubmit)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+    const bool HasDepth = depthRT.m_hRes != TINKER_INVALID_HANDLE;
+    const uint32 numAttachments = numColorRTs + (HasDepth ? 1u : 0u);
 
+    if (HasDepth)
+        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS_WITH_DEPTH);
+    else
+        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS);
+
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+    
+    VkRenderingAttachmentInfo colorAttachments[VULKAN_MAX_RENDERTARGETS] = {};
+    for (uint32 i = 0; i < numColorRTs; ++i)
+    {
+        VkRenderingAttachmentInfo& colorAttachment = colorAttachments[i];
+        colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.clearValue.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+        if (colorRTs[i] == IMAGE_HANDLE_SWAP_CHAIN)
+        {
+            colorAttachment.imageView = g_vulkanContextResources.swapChainImageViews[g_vulkanContextResources.currentSwapChainImage];
+        }
+        else
+        {
+            VulkanMemResource* resource =
+                &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+            colorAttachment.imageView = resource->imageView;
+        }
+    }
+
+    VkRenderingAttachmentInfo depthAttachment = {};
+    depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.clearValue.color = { 1.0f, 0 };
+    if (HasDepth)
+    {
+        VulkanMemResource* resource =
+            &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(depthRT.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        depthAttachment.imageView = resource->imageView;
+    }
+
+    VkRenderingInfo renderingInfo = {};
+    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    renderingInfo.renderArea = { 0, 0, renderWidth, renderHeight };
+    renderingInfo.layerCount = 1;
+    renderingInfo.colorAttachmentCount = numColorRTs;
+    renderingInfo.pColorAttachments = numColorRTs ? colorAttachments : nullptr;
+    renderingInfo.pDepthAttachment = HasDepth ? &depthAttachment : nullptr;
+    renderingInfo.pStencilAttachment = nullptr;
+
+    vkCmdBeginRendering(commandBuffer, &renderingInfo);
+
+    VkViewport viewport = { (float)renderWidth, (float)renderHeight, 0.0f, 1.0f };
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor = { (int32)renderWidth, (int32)renderHeight, 0, 0 };
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+
+    /*
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.renderArea.extent = VkExtent2D({ renderWidth, renderHeight });
@@ -371,7 +432,7 @@ void VulkanRecordCommandRenderPassBegin(FramebufferHandle framebufferHandle, uin
         renderPassBeginInfo.clearValueCount = framebufferPtr->numClearValues;
         renderPassBeginInfo.pClearValues = framebufferPtr->clearValues;
     }
-    renderPassBeginInfo.renderPass = g_vulkanContextResources.renderPasses[renderPassID].renderPassVk;
+    renderPassBeginInfo.renderPass = g_vulkanContextResources.renderPasses[renderPassID].renderPassVk;*/
 
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
     VkDebugUtilsLabelEXT label =
@@ -384,18 +445,21 @@ void VulkanRecordCommandRenderPassBegin(FramebufferHandle framebufferHandle, uin
     g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
 #endif
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    //vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-    vkCmdEndRenderPass(commandBuffer);
+    vkCmdEndRendering(commandBuffer);
+    //vkCmdEndRenderPass(commandBuffer);
 
+/*
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
     g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
 #endif
+*/
 }
 
 void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,

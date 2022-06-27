@@ -141,7 +141,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 {
                     instanceCount = 0;
                     #ifdef VULKAN
-                    Graphics::VulkanRecordCommandRenderPassBegin(currentCmd.m_framebufferHandle, currentCmd.m_renderPassID,
+                    Graphics::VulkanRecordCommandRenderPassBegin(currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
                         currentCmd.m_renderWidth, currentCmd.m_renderHeight,
                         currentCmd.debugLabel, immediateSubmit);
                     #endif

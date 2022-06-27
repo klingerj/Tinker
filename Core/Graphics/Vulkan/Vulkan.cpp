@@ -5,7 +5,7 @@
 
 #include <iostream>
 // TODO: move this to be a compile define
-#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+//#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 #define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 #ifdef _WIN32
@@ -1687,10 +1687,10 @@ void VulkanDestroyFramebuffer( FramebufferHandle handle)
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VulkanFramebufferResource* framebuffer = &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(handle.m_hFramebuffer)->resourceChain[uiImage];
-        vkDestroyFramebuffer(g_vulkanContextResources.device, framebuffer->framebuffer, nullptr);
+        //vkDestroyFramebuffer(g_vulkanContextResources.device, framebuffer->framebuffer, nullptr);
     }
     
-    g_vulkanContextResources.vulkanFramebufferResourcePool.Dealloc(handle.m_hFramebuffer);
+    //g_vulkanContextResources.vulkanFramebufferResourcePool.Dealloc(handle.m_hFramebuffer);
 }
 
 void VulkanDestroyBuffer( ResourceHandle handle, uint32 bufferUsage)

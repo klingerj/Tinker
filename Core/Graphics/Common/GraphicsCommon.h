@@ -257,6 +257,10 @@ typedef struct descriptor_set_data_handles
     }
 } DescriptorSetDataHandles;
 
+#define MAX_MULTIPLE_RENDERTARGETS 8
+
+#define IMAGE_HANDLE_SWAP_CHAIN ResourceHandle(0xFFFFFFFE) // INVALID_HANDLE - 1 reserved to refer to the swap chain image 
+
 typedef struct graphics_command
 {
     const char* debugLabel = "Default Label";
@@ -287,17 +291,18 @@ typedef struct graphics_command
         // Begin render pass
         struct
         {
-            FramebufferHandle m_framebufferHandle;
-            uint32 m_renderPassID;
             uint32 m_renderWidth;
             uint32 m_renderHeight;
+            uint32 m_numColorRTs;
+            ResourceHandle m_colorRTs[MAX_MULTIPLE_RENDERTARGETS];
+            ResourceHandle m_depthRT;
         };
 
         // End render pass
-        // NOTE: For now, no data
-        /*struct
+        // NOTE: no actual data required
+        /* struct
         {
-        };*/
+        }; */
 
         // Image Layout Transition
         struct
