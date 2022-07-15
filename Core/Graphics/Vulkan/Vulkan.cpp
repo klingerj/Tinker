@@ -474,7 +474,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     deviceCreateInfo.enabledExtensionCount = numRequiredPhysicalDeviceExtensions;
     deviceCreateInfo.ppEnabledExtensionNames = requiredPhysicalDeviceExtensions;
     physicalDeviceVulkan13Features.dynamicRendering = VK_TRUE;
-    deviceCreateInfo.pNext = &physicalDeviceFeatures2;
+    deviceCreateInfo.pNext = &physicalDeviceVulkan13Features;
 
     result = vkCreateDevice(g_vulkanContextResources.physicalDevice,
         &deviceCreateInfo,
@@ -1017,8 +1017,7 @@ bool VulkanCreateGraphicsPipeline(
             pipelineCreateInfo.pColorBlendState = &colorBlending;
             pipelineCreateInfo.pDynamicState = nullptr;
             pipelineCreateInfo.layout = pipelineLayout;
-
-            pipelineCreateInfo.renderPass = renderPass.renderPassVk;
+            pipelineCreateInfo.renderPass = VK_NULL_HANDLE;// renderPass.renderPassVk;
             pipelineCreateInfo.subpass = 0;
             pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
             pipelineCreateInfo.basePipelineIndex = -1;
