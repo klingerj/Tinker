@@ -79,10 +79,11 @@ namespace ImageFormat
 {
     enum : uint32
     {
-        BGRA8_SRGB = 0,
+        Invalid = 0,
+        BGRA8_SRGB,
         RGBA8_SRGB,
         Depth_32F,
-        Invalid,
+        TheSwapChainFormat,
         eMax
     };
 }
@@ -357,14 +358,6 @@ enum
 
 enum
 {
-    RENDERPASS_ID_SWAP_CHAIN_BLIT = 0,
-    RENDERPASS_ID_ZPrepass,
-    RENDERPASS_ID_MainView,
-    RENDERPASS_ID_MAX
-};
-
-enum
-{
     SHADER_ID_SWAP_CHAIN_BLIT = 0,
     SHADER_ID_BASIC_ZPrepass,
     SHADER_ID_BASIC_MainView,
@@ -392,7 +385,7 @@ CREATE_FRAMEBUFFER(CreateFramebuffer);
 #define DESTROY_FRAMEBUFFER(name) TINKER_API void name(FramebufferHandle handle)
 DESTROY_FRAMEBUFFER(DestroyFramebuffer);
 
-#define CREATE_GRAPHICS_PIPELINE(name) TINKER_API bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID, uint32* descriptorHandles, uint32 numDescriptorHandles)
+#define CREATE_GRAPHICS_PIPELINE(name) TINKER_API bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat, uint32* descriptorHandles, uint32 numDescriptorHandles)
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline);
 
 #define CREATE_DESCRIPTOR(name) TINKER_API DescriptorHandle name(uint32 descLayoutID)
@@ -413,9 +406,6 @@ SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate);
 // Not meant for the user
 #define CREATE_DESCRIPTOR_LAYOUT(name) TINKER_API bool name(uint32 descLayoutID, const DescriptorLayout* descLayout)
 CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout);
-
-#define CREATE_RENDERPASS(name) TINKER_API bool name(uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
-CREATE_RENDERPASS(CreateRenderPass);
 
 #define DESTROY_GRAPHICS_PIPELINE(name) TINKER_API void name(uint32 shaderID)
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);

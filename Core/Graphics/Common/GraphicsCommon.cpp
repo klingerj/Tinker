@@ -38,7 +38,6 @@ void WindowResize()
 {
     #ifdef VULKAN
     VulkanDestroyAllPSOPerms();
-    VulkanDestroyAllRenderPasses();
     VulkanDestroySwapChain();
     VulkanCreateSwapChain();
     #endif
@@ -251,8 +250,9 @@ UNMAP_RESOURCE(UnmapResource)
 CREATE_FRAMEBUFFER(CreateFramebuffer)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateFramebuffer(rtColorHandles, numRTColorHandles, rtDepthHandle,
-        width, height, renderPassID);
+    /*return Graphics::VulkanCreateFramebuffer(rtColorHandles, numRTColorHandles, rtDepthHandle,
+        width, height, renderPassID);*/
+    return DefaultFramebufferHandle_Invalid;
     #endif
 }
 
@@ -267,7 +267,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     #ifdef VULKAN
     return Graphics::VulkanCreateGraphicsPipeline(vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
-        shaderID, viewportWidth, viewportHeight, renderPassID, descriptorHandles, numDescriptorHandles);
+        shaderID, viewportWidth, viewportHeight, numColorRTs, colorRTFormats, depthFormat, descriptorHandles, numDescriptorHandles);
     #endif
 }
 
@@ -303,13 +303,6 @@ CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
 {
     #ifdef VULKAN
     return Graphics::VulkanCreateDescriptorLayout(descLayoutID, descLayout);
-    #endif
-}
-
-CREATE_RENDERPASS(CreateRenderPass)
-{
-    #ifdef VULKAN
-    return Graphics::VulkanCreateRenderPass(renderPassID, numColorRTs, colorFormat, startLayout, endLayout, depthFormat);
     #endif
 }
 

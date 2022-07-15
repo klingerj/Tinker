@@ -444,8 +444,6 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     };
     g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
 #endif
-
-    //vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
@@ -453,7 +451,6 @@ void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
     vkCmdEndRendering(commandBuffer);
-    //vkCmdEndRenderPass(commandBuffer);
 
 /*
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)

@@ -53,20 +53,16 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     g_vulkanContextResources.windowWidth = width;
     g_vulkanContextResources.windowHeight = height;
 
-    InitVulkanDataTypesPerEnum();
-
-    // Shader pso permutations
+    // Init shader pso permutations
     for (uint32 sid = 0; sid < VulkanContextResources::eMaxShaders; ++sid)
     {
-        VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[sid];
-        pipelineLayout = VK_NULL_HANDLE;
+        g_vulkanContextResources.psoPermutations.pipelineLayout[sid] = VK_NULL_HANDLE;
 
         for (uint32 bs = 0; bs < VulkanContextResources::eMaxBlendStates; ++bs)
         {
             for (uint32 ds = 0; ds < VulkanContextResources::eMaxDepthStates; ++ds)
             {
-                VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[sid][bs][ds];
-                graphicsPipeline = VK_NULL_HANDLE;
+                g_vulkanContextResources.psoPermutations.graphicsPipeline[sid][bs][ds] = VK_NULL_HANDLE;
             }
         }
     }
@@ -621,6 +617,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
 
     CreateSamplers();
 
+    InitVulkanDataTypesPerEnum();
     g_vulkanContextResources.isInitted = true;
     return 0;
 }
@@ -669,8 +666,9 @@ void VulkanCreateSwapChain()
         &numAvailableSurfaceFormats,
         availableSurfaceFormats);
 
-    VkSurfaceFormatKHR chosenFormat = availableSurfaceFormats[0];
-    for (uint32 uiAvailFormat = 1; uiAvailFormat < numAvailableSurfaceFormats; ++uiAvailFormat)
+    VkSurfaceFormatKHR chosenFormat = {};
+    chosenFormat.format = VK_FORMAT_UNDEFINED;
+    for (uint32 uiAvailFormat = 0; uiAvailFormat < numAvailableSurfaceFormats; ++uiAvailFormat)
     {
         if (availableSurfaceFormats[uiAvailFormat].format == VK_FORMAT_B8G8R8A8_SRGB &&
             availableSurfaceFormats[uiAvailFormat].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
@@ -678,7 +676,8 @@ void VulkanCreateSwapChain()
             chosenFormat = availableSurfaceFormats[uiAvailFormat];
         }
     }
-
+    TINKER_ASSERT(chosenFormat.format != VK_FORMAT_UNDEFINED);
+    
     uint32 numAvailablePresentModes = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(g_vulkanContextResources.physicalDevice,
         g_vulkanContextResources.surface,
@@ -782,15 +781,8 @@ void VulkanCreateSwapChain()
             1);
     }
 
-    // Render pass
-    VulkanRenderPass& renderPass = g_vulkanContextResources.renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT];
-    renderPass.numColorRTs = 1;
-    renderPass.hasDepth = false;
-    const VkFormat depthFormat = VK_FORMAT_UNDEFINED; // no depth buffer for swap chain
-    CreateRenderPass(g_vulkanContextResources.device, renderPass.numColorRTs, VK_FORMAT_B8G8R8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, depthFormat, &renderPass.renderPassVk);
-
     // Swap chain framebuffers
-    g_vulkanContextResources.swapChainFramebuffers = (VkFramebuffer*)g_VulkanDataAllocator.Alloc(sizeof(VkFramebuffer) * numSwapChainImages, 1);
+    /*g_vulkanContextResources.swapChainFramebuffers = (VkFramebuffer*)g_VulkanDataAllocator.Alloc(sizeof(VkFramebuffer) * numSwapChainImages, 1);
 
     for (uint32 uiImg = 0; uiImg < numSwapChainImages; ++uiImg)
     {
@@ -800,7 +792,7 @@ void VulkanCreateSwapChain()
         const VkImageView depthImageView = VK_NULL_HANDLE; // no depth buffer for swap chain
         CreateFramebuffer(g_vulkanContextResources.device, &g_vulkanContextResources.swapChainImageViews[uiImg], 1, depthImageView,
             g_vulkanContextResources.swapChainExtent.width, g_vulkanContextResources.swapChainExtent.height, g_vulkanContextResources.renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT].renderPassVk, newFramebuffer);
-    }
+    }*/
 
     g_vulkanContextResources.isSwapChainValid = true;
 }
@@ -823,7 +815,8 @@ void VulkanDestroySwapChain()
 bool VulkanCreateGraphicsPipeline(
     void* vertexShaderCode, uint32 numVertexShaderBytes,
     void* fragmentShaderCode, uint32 numFragmentShaderBytes,
-    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
+    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight,
+    uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat,
     uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles)
 {
     VkShaderModule vertexShaderModule = VK_NULL_HANDLE;
@@ -980,7 +973,6 @@ bool VulkanCreateGraphicsPipeline(
         TINKER_ASSERT(0);
     }
 
-    const VulkanRenderPass& renderPass = g_vulkanContextResources.renderPasses[renderPassID];
     for (uint32 blendState = 0; blendState < VulkanContextResources::eMaxBlendStates; ++blendState)
     {
         for (uint32 depthState = 0; depthState < VulkanContextResources::eMaxDepthStates; ++depthState)
@@ -992,20 +984,31 @@ bool VulkanCreateGraphicsPipeline(
 
             if (blendState == BlendState::eNoColorAttachment)
             {
-                if (renderPass.numColorRTs > 0)
-                    continue;
                 colorBlending.attachmentCount = 0;
                 colorBlending.pAttachments = nullptr;
             }
             else
             {
-                // TODO: support multiple RTs here too
-                colorBlending.attachmentCount = 1;
+                colorBlending.attachmentCount = numColorRTs;
                 colorBlending.pAttachments = &colorBlendAttachment;
             }
 
+            VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
+            pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+            pipelineRenderingCreateInfo.colorAttachmentCount = numColorRTs;
+            VkFormat formats[MAX_MULTIPLE_RENDERTARGETS] = {};
+            for (uint32 uiFmt = 0; uiFmt < min(numColorRTs, ARRAYCOUNT(formats)); ++uiFmt)
+            {
+                formats[uiFmt] = GetVkImageFormat(colorRTFormats[uiFmt]);
+            }
+            pipelineRenderingCreateInfo.pColorAttachmentFormats = formats;
+
+            pipelineRenderingCreateInfo.depthAttachmentFormat = GetVkImageFormat(depthFormat);
+            pipelineRenderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
             VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
             pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+            pipelineCreateInfo.pNext = &pipelineRenderingCreateInfo; // for dynamic rendering
             pipelineCreateInfo.stageCount = numStages;
             pipelineCreateInfo.pStages = shaderStages;
             pipelineCreateInfo.pVertexInputState = &vertexInputInfo;
@@ -1017,7 +1020,7 @@ bool VulkanCreateGraphicsPipeline(
             pipelineCreateInfo.pColorBlendState = &colorBlending;
             pipelineCreateInfo.pDynamicState = nullptr;
             pipelineCreateInfo.layout = pipelineLayout;
-            pipelineCreateInfo.renderPass = VK_NULL_HANDLE;// renderPass.renderPassVk;
+            pipelineCreateInfo.renderPass = VK_NULL_HANDLE; // for dynamic rendering
             pipelineCreateInfo.subpass = 0;
             pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
             pipelineCreateInfo.basePipelineIndex = -1;
@@ -1153,19 +1156,6 @@ void DestroyAllDescLayouts()
         {
             vkDestroyDescriptorSetLayout(g_vulkanContextResources.device, descLayout, nullptr);
             descLayout = VK_NULL_HANDLE;
-        }
-    }
-}
-
-void VulkanDestroyAllRenderPasses()
-{
-    for (uint32 rp = 0; rp < VulkanContextResources::eMaxRenderPasses; ++rp)
-    {
-        VkRenderPass& renderPass = g_vulkanContextResources.renderPasses[rp].renderPassVk;
-        if (renderPass != VK_NULL_HANDLE)
-        {
-            vkDestroyRenderPass(g_vulkanContextResources.device, renderPass, nullptr);
-            renderPass = VK_NULL_HANDLE;
         }
     }
 }
@@ -1487,15 +1477,6 @@ void CreateSamplers()
     }
 }
 
-bool VulkanCreateRenderPass( uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
-{
-    VulkanRenderPass& renderPass = g_vulkanContextResources.renderPasses[renderPassID];
-    CreateRenderPass(g_vulkanContextResources.device, numColorRTs, GetVkImageFormat(colorFormat), GetVkImageLayout(startLayout), GetVkImageLayout(endLayout), GetVkImageFormat(depthFormat), &renderPass.renderPassVk);
-    renderPass.numColorRTs = numColorRTs;
-    renderPass.hasDepth = (depthFormat != ImageFormat::Invalid);
-    return true;
-}
-
 FramebufferHandle VulkanCreateFramebuffer(
     ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle,
     uint32 width, uint32 height, uint32 renderPassID)
@@ -1530,7 +1511,7 @@ FramebufferHandle VulkanCreateFramebuffer(
             depthImageView = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resourceChain[uiImage].imageView;
         }
 
-        CreateFramebuffer(g_vulkanContextResources.device, attachments, numRTColorHandles, depthImageView, width, height, g_vulkanContextResources.renderPasses[renderPassID].renderPassVk, &newFramebuffer->framebuffer);
+        //CreateFramebuffer(g_vulkanContextResources.device, attachments, numRTColorHandles, depthImageView, width, height, g_vulkanContextResources.renderPasses[renderPassID].renderPassVk, &newFramebuffer->framebuffer);
 
         for (uint32 uiRT = 0; uiRT < numRTColorHandles; ++uiRT)
         {
@@ -1770,7 +1751,6 @@ void DestroyVulkan()
 
     VulkanDestroyAllPSOPerms();
     DestroyAllDescLayouts();
-    VulkanDestroyAllRenderPasses();
 
     for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {

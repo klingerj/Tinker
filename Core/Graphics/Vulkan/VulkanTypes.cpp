@@ -143,85 +143,6 @@ void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRT
     }
 }
 
-void CreateRenderPass(VkDevice device, uint32 numColorAttachments, VkFormat colorFormat,
-    VkImageLayout startLayout, VkImageLayout endLayout, VkFormat depthFormat, VkRenderPass* renderPass)
-{
-    VkAttachmentDescription attachments[VULKAN_MAX_RENDERTARGETS_WITH_DEPTH] = {};
-    VkAttachmentReference colorAttachmentRefs[VULKAN_MAX_RENDERTARGETS] = {};
-    VkAttachmentReference depthAttachmentRef = {};
-
-    for (uint32 uiRT = 0; uiRT < numColorAttachments; ++uiRT)
-    {
-        attachments[uiRT] = {};
-        attachments[uiRT].format = colorFormat;
-        attachments[uiRT].samples = VK_SAMPLE_COUNT_1_BIT;
-        attachments[uiRT].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachments[uiRT].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachments[uiRT].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachments[uiRT].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachments[uiRT].initialLayout = startLayout;
-        attachments[uiRT].finalLayout = endLayout;
-
-        colorAttachmentRefs[uiRT] = {};
-        colorAttachmentRefs[uiRT].attachment = uiRT;
-        colorAttachmentRefs[uiRT].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-    bool hasDepthAttachment = depthFormat != VK_FORMAT_UNDEFINED;
-
-    attachments[numColorAttachments].format = depthFormat;
-    attachments[numColorAttachments].samples = VK_SAMPLE_COUNT_1_BIT;
-    attachments[numColorAttachments].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachments[numColorAttachments].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachments[numColorAttachments].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachments[numColorAttachments].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachments[numColorAttachments].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachments[numColorAttachments].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    depthAttachmentRef.attachment = numColorAttachments;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    // Subpass
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = numColorAttachments;
-    subpass.pColorAttachments = colorAttachmentRefs;
-    subpass.pDepthStencilAttachment = hasDepthAttachment ? &depthAttachmentRef : nullptr;
-
-    const uint32 numSubpassDependencies = 2;
-    VkSubpassDependency subpassDependencies[numSubpassDependencies] = {};
-    subpassDependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    subpassDependencies[0].srcAccessMask = 0;
-    subpassDependencies[0].dstSubpass = 0;
-    subpassDependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    subpassDependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | (hasDepthAttachment ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : 0);
-
-    subpassDependencies[1].srcSubpass = 0;
-    subpassDependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    subpassDependencies[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | (hasDepthAttachment ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : 0);
-    subpassDependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    subpassDependencies[1].dstAccessMask = 0;
-    // TODO: check if these subpass dependencies are correct at some point
-
-    VkRenderPassCreateInfo renderPassCreateInfo = {};
-    renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassCreateInfo.attachmentCount = hasDepthAttachment ? numColorAttachments + 1 : numColorAttachments;
-    renderPassCreateInfo.pAttachments = attachments;
-    renderPassCreateInfo.subpassCount = 1;
-    renderPassCreateInfo.pSubpasses = &subpass;
-    renderPassCreateInfo.dependencyCount = numSubpassDependencies;
-    renderPassCreateInfo.pDependencies = subpassDependencies;
-
-    VkResult result = vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, renderPass);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan render pass!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-}
-
 VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VkDevice device)
 {
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
@@ -291,10 +212,11 @@ void InitVulkanDataTypesPerEnum()
     VulkanImageLayouts[ImageLayout::eRenderOptimal] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     VulkanImageLayouts[ImageLayout::ePresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
+    VulkanImageFormats[ImageFormat::Invalid] = VK_FORMAT_UNDEFINED;
     VulkanImageFormats[ImageFormat::BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
     VulkanImageFormats[ImageFormat::RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
     VulkanImageFormats[ImageFormat::Depth_32F] = VK_FORMAT_D32_SFLOAT;
-    VulkanImageFormats[ImageFormat::Invalid] = VK_FORMAT_UNDEFINED;
+    VulkanImageFormats[ImageFormat::TheSwapChainFormat] = g_vulkanContextResources.swapChainFormat;
 
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;

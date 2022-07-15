@@ -139,7 +139,6 @@ struct VulkanContextResources
         eMaxBlendStates  = BlendState::eMax,
         eMaxDepthStates  = DepthState::eMax,
         eMaxDescLayouts  = DESCLAYOUT_ID_MAX,
-        eMaxRenderPasses = RENDERPASS_ID_MAX,
     };
     struct PSOPerms
     {
@@ -147,8 +146,6 @@ struct VulkanContextResources
         VkPipelineLayout pipelineLayout[eMaxShaders];
     } psoPermutations;
     VulkanDescriptorLayout descLayouts[eMaxDescLayouts];
-
-    VulkanRenderPass renderPasses[eMaxRenderPasses];
 };
 extern VulkanContextResources g_vulkanContextResources;
 

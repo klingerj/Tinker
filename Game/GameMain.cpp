@@ -405,8 +405,8 @@ GAME_UPDATE(GameUpdate)
     command->m_numColorRTs = 1;
     command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_depthRT = Graphics::DefaultResHandle_Invalid;
-    command->m_renderWidth = 0;
-    command->m_renderHeight = 0;
+    command->m_renderWidth = windowWidth;
+    command->m_renderHeight = windowHeight;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
