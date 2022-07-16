@@ -145,12 +145,6 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.imageFormat = Graphics::ImageFormat::Depth_32F;
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
-    // Depth-only pass
-    //gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = Graphics::CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_ZPrepass);
-
-    // Color and depth
-    //gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = Graphics::CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView);
-
     gameRenderPasses[eRenderPass_ZPrePass].Init();
     gameRenderPasses[eRenderPass_ZPrePass].numColorRTs = 0;
     gameRenderPasses[eRenderPass_ZPrePass].depthRT = gameGraphicsData.m_rtDepthHandle;
@@ -400,8 +394,6 @@ GAME_UPDATE(GameUpdate)
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
-    //command->m_framebufferHandle = Graphics::DefaultFramebufferHandle_Invalid;
-    //command->m_renderPassID = Graphics::RENDERPASS_ID_SWAP_CHAIN_BLIT;
     command->m_numColorRTs = 1;
     command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_depthRT = Graphics::DefaultResHandle_Invalid;
@@ -458,10 +450,6 @@ GAME_UPDATE(GameUpdate)
 
 static void DestroyWindowResizeDependentResources()
 {
-    for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
-    {
-        Graphics::DestroyFramebuffer(gameGraphicsData.m_framebufferHandles[uiPass]);
-    }
     Graphics::DestroyResource(gameGraphicsData.m_rtColorHandle);
     Graphics::DestroyResource(gameGraphicsData.m_rtDepthHandle);
 }

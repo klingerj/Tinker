@@ -48,7 +48,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
 
     g_vulkanContextResources.vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     g_vulkanContextResources.vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
-    g_vulkanContextResources.vulkanFramebufferResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
 
     g_vulkanContextResources.windowWidth = width;
     g_vulkanContextResources.windowHeight = height;
@@ -282,15 +281,15 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         physicalDeviceFeatures2 = {};
         physicalDeviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         physicalDeviceVulkan13Features = {};
+        physicalDeviceVulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
         physicalDeviceFeatures2.pNext = &physicalDeviceVulkan13Features;
         vkGetPhysicalDeviceFeatures2(currPhysicalDevice, &physicalDeviceFeatures2);
-        //TODO: dynamic rendering not being enabled
+        
         // Required device feature - can't use this device if not available
-        /*if (physicalDeviceVulkan13Features.dynamicRendering == VK_FALSE)
+        if (physicalDeviceVulkan13Features.dynamicRendering == VK_FALSE)
         {
-            Core::Utility::LogMsg("Platform", "Graphics device feature dynamic rendering not available!", Core::Utility::LogSeverity::eCritical);
             continue;
-        }*/
+        }
 
         if (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
@@ -781,19 +780,6 @@ void VulkanCreateSwapChain()
             1);
     }
 
-    // Swap chain framebuffers
-    /*g_vulkanContextResources.swapChainFramebuffers = (VkFramebuffer*)g_VulkanDataAllocator.Alloc(sizeof(VkFramebuffer) * numSwapChainImages, 1);
-
-    for (uint32 uiImg = 0; uiImg < numSwapChainImages; ++uiImg)
-    {
-        VkFramebuffer* newFramebuffer = &g_vulkanContextResources.swapChainFramebuffers[uiImg];
-
-        // Framebuffer
-        const VkImageView depthImageView = VK_NULL_HANDLE; // no depth buffer for swap chain
-        CreateFramebuffer(g_vulkanContextResources.device, &g_vulkanContextResources.swapChainImageViews[uiImg], 1, depthImageView,
-            g_vulkanContextResources.swapChainExtent.width, g_vulkanContextResources.swapChainExtent.height, g_vulkanContextResources.renderPasses[RENDERPASS_ID_SWAP_CHAIN_BLIT].renderPassVk, newFramebuffer);
-    }*/
-
     g_vulkanContextResources.isSwapChainValid = true;
 }
 
@@ -806,7 +792,6 @@ void VulkanDestroySwapChain()
     for (uint32 uiImg = 0; uiImg < g_vulkanContextResources.numSwapChainImages; ++uiImg)
     {
         vkDestroyImageView(g_vulkanContextResources.device, g_vulkanContextResources.swapChainImageViews[uiImg], nullptr);
-        vkDestroyFramebuffer(g_vulkanContextResources.device, g_vulkanContextResources.swapChainFramebuffers[uiImg], nullptr);
     }
     
     vkDestroySwapchainKHR(g_vulkanContextResources.device, g_vulkanContextResources.swapChain, nullptr);
@@ -982,7 +967,7 @@ bool VulkanCreateGraphicsPipeline(
             VkPipelineDepthStencilStateCreateInfo depthStencilState = GetVkDepthState(depthState);
             VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
-            if (blendState == BlendState::eNoColorAttachment)
+            if (numColorRTs == 0)
             {
                 colorBlending.attachmentCount = 0;
                 colorBlending.pAttachments = nullptr;
@@ -1477,61 +1462,6 @@ void CreateSamplers()
     }
 }
 
-FramebufferHandle VulkanCreateFramebuffer(
-    ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle,
-    uint32 width, uint32 height, uint32 renderPassID)
-{
-    TINKER_ASSERT(numRTColorHandles <= VULKAN_MAX_RENDERTARGETS);
-
-    bool HasDepth = rtDepthHandle != DefaultResHandle_Invalid;
-
-    // Alloc handle
-    uint32 newFramebufferHandle = g_vulkanContextResources.vulkanFramebufferResourcePool.Alloc();
-    TINKER_ASSERT(newFramebufferHandle != TINKER_INVALID_HANDLE);
-
-    VkImageView attachments[VULKAN_MAX_RENDERTARGETS_WITH_DEPTH];
-    for (uint32 i = 0; i < ARRAYCOUNT(attachments); ++i)
-        attachments[i] = VK_NULL_HANDLE;
-
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
-    {
-        VulkanFramebufferResource* newFramebuffer =
-            &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(newFramebufferHandle)->resourceChain[uiImage];
-
-        // Create framebuffer
-        for (uint32 uiImageView = 0; uiImageView < numRTColorHandles; ++uiImageView)
-        {
-            attachments[uiImageView] =
-                g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(rtColorHandles[uiImageView].m_hRes)->resourceChain[uiImage].imageView;
-        }
-
-        VkImageView depthImageView = VK_NULL_HANDLE;
-        if (HasDepth)
-        {
-            depthImageView = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(rtDepthHandle.m_hRes)->resourceChain[uiImage].imageView;
-        }
-
-        //CreateFramebuffer(g_vulkanContextResources.device, attachments, numRTColorHandles, depthImageView, width, height, g_vulkanContextResources.renderPasses[renderPassID].renderPassVk, &newFramebuffer->framebuffer);
-
-        for (uint32 uiRT = 0; uiRT < numRTColorHandles; ++uiRT)
-        {
-            // TODO: pass clear value as parameter
-            newFramebuffer->clearValues[uiRT].color = { 0.0f, 0.0f, 0.0f, 1.0f };
-        }
-        uint32 numClearValues = numRTColorHandles;
-
-        if (HasDepth)
-        {
-            newFramebuffer->clearValues[numRTColorHandles].depthStencil = { 1.0f, 0 };
-            ++numClearValues;
-        }
-
-        newFramebuffer->numClearValues = numClearValues;
-    }
-
-    return FramebufferHandle(newFramebufferHandle);
-}
-
 ResourceHandle VulkanCreateImageResource( uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles)
 {
     uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
@@ -1677,19 +1607,6 @@ void VulkanDestroyImageResource( ResourceHandle handle)
     g_vulkanContextResources.vulkanMemResourcePool.Dealloc(handle.m_hRes);
 }
 
-void VulkanDestroyFramebuffer( FramebufferHandle handle)
-{
-    vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
-
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
-    {
-        VulkanFramebufferResource* framebuffer = &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(handle.m_hFramebuffer)->resourceChain[uiImage];
-        //vkDestroyFramebuffer(g_vulkanContextResources.device, framebuffer->framebuffer, nullptr);
-    }
-    
-    //g_vulkanContextResources.vulkanFramebufferResourcePool.Dealloc(handle.m_hFramebuffer);
-}
-
 void VulkanDestroyBuffer( ResourceHandle handle, uint32 bufferUsage)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
@@ -1783,7 +1700,6 @@ void DestroyVulkan()
 
     g_vulkanContextResources.vulkanMemResourcePool.ExplicitFree();
     g_vulkanContextResources.vulkanDescriptorResourcePool.ExplicitFree();
-    g_vulkanContextResources.vulkanFramebufferResourcePool.ExplicitFree();
 }
 
 }
