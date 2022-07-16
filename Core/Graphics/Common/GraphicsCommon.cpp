@@ -247,22 +247,6 @@ UNMAP_RESOURCE(UnmapResource)
     #endif
 }
 
-CREATE_FRAMEBUFFER(CreateFramebuffer)
-{
-    #ifdef VULKAN
-    /*return Graphics::VulkanCreateFramebuffer(rtColorHandles, numRTColorHandles, rtDepthHandle,
-        width, height, renderPassID);*/
-    return DefaultFramebufferHandle_Invalid;
-    #endif
-}
-
-DESTROY_FRAMEBUFFER(DestroyFramebuffer)
-{
-    #ifdef VULKAN
-    Graphics::VulkanDestroyFramebuffer(handle);
-    #endif
-}
-
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     #ifdef VULKAN

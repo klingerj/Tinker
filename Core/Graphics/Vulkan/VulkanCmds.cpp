@@ -358,7 +358,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
     
     VkRenderingAttachmentInfo colorAttachments[VULKAN_MAX_RENDERTARGETS] = {};
-    for (uint32 i = 0; i < numColorRTs; ++i)
+    for (uint32 i = 0; i < min(numColorRTs, VULKAN_MAX_RENDERTARGETS); ++i)
     {
         VkRenderingAttachmentInfo& colorAttachment = colorAttachments[i];
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -384,7 +384,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
     depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    depthAttachment.clearValue.color = { 1.0f, 0 };
+    depthAttachment.clearValue.color = { DEPTH_MAX, 0 };
     if (HasDepth)
     {
         VulkanMemResource* resource =
@@ -403,10 +403,10 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
 
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
-    VkViewport viewport = { (float)renderWidth, (float)renderHeight, 0.0f, 1.0f };
+    VkViewport viewport = { 0, 0, (float)renderWidth, (float)renderHeight, DEPTH_MIN, DEPTH_MAX };
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor = { (int32)renderWidth, (int32)renderHeight, 0, 0 };
+    VkRect2D scissor = { 0, 0, renderWidth, renderHeight };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
     /*

@@ -55,10 +55,6 @@ void EndVulkanCommandRecordingImmediate();
 ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc);
 void VulkanDestroyResource(ResourceHandle handle);
 
-FramebufferHandle VulkanCreateFramebuffer(ResourceHandle* rtColorHandles, uint32 numRTColorHandles,
-    ResourceHandle rtDepthHandle, uint32 width, uint32 height, uint32 renderPassID);
-void VulkanDestroyFramebuffer(FramebufferHandle handle);
-
 bool VulkanCreateGraphicsPipeline(void* vertexShaderCode, uint32 numVertexShaderBytes,
     void* fragmentShaderCode, uint32 numFragmentShaderBytes,
     uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight,

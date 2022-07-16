@@ -98,51 +98,6 @@ void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspect
     }
 }
 
-void CreateFramebuffer(VkDevice device, VkImageView* colorRTs, uint32 numColorRTs, VkImageView depthRT,
-    uint32 width, uint32 height, VkRenderPass renderPass, VkFramebuffer* framebuffer)
-{
-    VkImageView attachments[VULKAN_MAX_RENDERTARGETS_WITH_DEPTH];
-    for (uint32 i = 0; i < ARRAYCOUNT(attachments); ++i)
-        attachments[i] = VK_NULL_HANDLE;
-
-    const bool HasDepth = depthRT != VK_NULL_HANDLE;
-    const uint32 numAttachments = numColorRTs + (HasDepth ? 1 : 0);
-
-    if (HasDepth)
-        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS_WITH_DEPTH);
-    else
-        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS);
-
-    if (numAttachments == 0)
-    {
-        Core::Utility::LogMsg("Platform", "No attachments specified for framebuffer!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-
-    memcpy(attachments, colorRTs, sizeof(VkImageView) * numColorRTs); // memcpy the color RTs in
-
-    if (HasDepth)
-    {
-        attachments[numAttachments - 1] = depthRT;
-    }
-
-    VkFramebufferCreateInfo framebufferCreateInfo = {};
-    framebufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferCreateInfo.renderPass = renderPass;
-    framebufferCreateInfo.attachmentCount = numAttachments;
-    framebufferCreateInfo.pAttachments = attachments;
-    framebufferCreateInfo.width = width;
-    framebufferCreateInfo.height = height;
-    framebufferCreateInfo.layers = 1;
-
-    VkResult result = vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, framebuffer);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan framebuffer!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-}
-
 VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VkDevice device)
 {
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
@@ -186,12 +141,17 @@ void InitVulkanDataTypesPerEnum()
     VulkanBlendStates[BlendState::eReplace] = blendStateProperties;
     VulkanBlendStates[BlendState::eNoColorAttachment] = {};
 
+    VkCompareOp depthCompareOps[DepthCompareOp::eMax] = {};
+    depthCompareOps[DepthCompareOp::eLeOrEqual] = VK_COMPARE_OP_LESS_OR_EQUAL;
+    depthCompareOps[DepthCompareOp::eGeOrEqual] = VK_COMPARE_OP_GREATER_OR_EQUAL;
+    TINKER_ASSERT(DEPTH_OP < ARRAYCOUNT(depthCompareOps));
+
     VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
     depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL; // TODO: strictly less?
+    depthStencilState.depthCompareOp = depthCompareOps[DEPTH_OP];
     depthStencilState.depthBoundsTestEnable = VK_FALSE;
-    depthStencilState.minDepthBounds = 0.0f;
-    depthStencilState.maxDepthBounds = 1.0f;
+    depthStencilState.minDepthBounds = DEPTH_MIN;
+    depthStencilState.maxDepthBounds = DEPTH_MAX;
     depthStencilState.stencilTestEnable = VK_FALSE;
     depthStencilState.front = {};
     depthStencilState.back = {};

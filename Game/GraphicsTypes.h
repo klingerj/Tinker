@@ -63,7 +63,6 @@ typedef struct game_graphics_data
 {
     Tk::Core::Graphics::ResourceHandle m_rtColorHandle;
     Tk::Core::Graphics::ResourceHandle m_rtDepthHandle;
-    Tk::Core::Graphics::FramebufferHandle m_framebufferHandles[eRenderPass_Max];
 
     Tk::Core::Graphics::DescriptorHandle m_DescData_Instance;
     Tk::Core::Graphics::ResourceHandle m_DescDataBufferHandle_Instance;

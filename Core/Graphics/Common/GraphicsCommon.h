@@ -117,6 +117,17 @@ namespace GraphicsCmd
     };
 }
 
+namespace DepthCompareOp
+{
+    enum : uint32
+    {
+        eLeOrEqual = 0,
+        eGeOrEqual,
+        // TODO: support strictly less than for normal rendering?
+        eMax
+    };
+}
+
 
 // Concrete type for resource handle to catch errors at compile time, e.g.
 // Try to free a descriptor set with a resource handle, which can happen if all handles
@@ -258,9 +269,22 @@ typedef struct descriptor_set_data_handles
     }
 } DescriptorSetDataHandles;
 
-#define MAX_MULTIPLE_RENDERTARGETS 8
+#define MAX_MULTIPLE_RENDERTARGETS 8u
 
 #define IMAGE_HANDLE_SWAP_CHAIN ResourceHandle(0xFFFFFFFE) // INVALID_HANDLE - 1 reserved to refer to the swap chain image 
+
+
+//#define DEPTH_REVERSED
+#ifndef DEPTH_REVERSED
+#define DEPTH_MIN 0.0f
+#define DEPTH_MAX 1.0f
+#define DEPTH_OP DepthCompareOp::eLeOrEqual
+#else
+// TODO: untested
+#define DEPTH_MIN 1.0f
+#define DEPTH_MAX 0.0f
+#define DEPTH_OP DepthCompareOp::eGeOrEqual
+#endif
 
 typedef struct graphics_command
 {
@@ -378,12 +402,6 @@ MAP_RESOURCE(MapResource);
 
 #define UNMAP_RESOURCE(name) TINKER_API void name(ResourceHandle handle)
 UNMAP_RESOURCE(UnmapResource);
-
-#define CREATE_FRAMEBUFFER(name) TINKER_API FramebufferHandle name(ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle, uint32 width, uint32 height, uint32 renderPassID)
-CREATE_FRAMEBUFFER(CreateFramebuffer);
-
-#define DESTROY_FRAMEBUFFER(name) TINKER_API void name(FramebufferHandle handle)
-DESTROY_FRAMEBUFFER(DestroyFramebuffer);
 
 #define CREATE_GRAPHICS_PIPELINE(name) TINKER_API bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat, uint32* descriptorHandles, uint32 numDescriptorHandles)
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline);
