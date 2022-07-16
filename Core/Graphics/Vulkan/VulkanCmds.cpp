@@ -363,7 +363,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
         VkRenderingAttachmentInfo& colorAttachment = colorAttachments[i];
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.clearValue.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 
