@@ -63,11 +63,6 @@ typedef struct
 
 typedef struct
 {
-    VulkanFramebufferResource resourceChain[VULKAN_MAX_FRAMES_IN_FLIGHT];
-} VulkanFramebufferResourceChain;
-
-typedef struct
-{
     VulkanDescriptorResource resourceChain[VULKAN_MAX_FRAMES_IN_FLIGHT];
 } VulkanDescriptorChain;
 

@@ -361,7 +361,7 @@ GAME_UPDATE(GameUpdate)
     {
         Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-        // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
+        // Transition from layout undefined to transfer_dst (required for clear command)
         command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition color to transfer_dst";
         command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
@@ -370,15 +370,14 @@ GAME_UPDATE(GameUpdate)
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        // Clear depth buffer - before z-prepass
         command->m_commandType = Graphics::GraphicsCmd::eClearImage;
         command->debugLabel = "Clear color buffer";
         command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_clearValue = v4f(0.0f, 0.0f, 0.0f, 0.0f);
+        command->m_clearValue = v4f(0.0f, 1.0f, 0.0f, 0.0f);
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        // Transition of depth buffer from transfer dst to depth_attachment_optimal
+        // Transition from transfer dst to depth_attachment_optimal
         command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition color to render_optimal";
         command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
@@ -396,19 +395,19 @@ GAME_UPDATE(GameUpdate)
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
-        StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
+        /*StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
         RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn, descriptors);
-        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
+        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);*/
 
-        StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        //StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
+        //RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
 
-        UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
+        //UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
+        //DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
 
         //DrawTerrain(graphicsCommandStream);
 
-        EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
+        //EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
 
     // FINAL BLIT TO SCREEN
@@ -423,10 +422,10 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
-    // Transition of swap chain from present to render optimal
+    // Transition of swap chain to render optimal
     command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
     command->debugLabel = "Transition swap chain to render_optimal";
-    command->m_imageHandle = Graphics::DefaultResHandle_Invalid; // Invalid indicates swap chain image
+    command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_startLayout = Graphics::ImageLayout::eUndefined;
     command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
     ++graphicsCommandStream->m_numCommands;
@@ -466,7 +465,7 @@ GAME_UPDATE(GameUpdate)
     // Transition of swap chain from render optimal to present
     command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
     command->debugLabel = "Transition swap chain to present";
-    command->m_imageHandle = Graphics::DefaultResHandle_Invalid; // Invalid indicates swap chain image
+    command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
     command->m_endLayout = Graphics::ImageLayout::ePresent;
     ++graphicsCommandStream->m_numCommands;

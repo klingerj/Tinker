@@ -16,7 +16,7 @@
 // NOTE: The convention in this project to is flip the viewport upside down since a left-handed projection
 // matrix is often used. However, doing this flip causes the application to not render properly when run
 // in RenderDoc for some reason. To debug with RenderDoc, you should turn on this #define.
-#define WORK_WITH_RENDERDOC
+//#define WORK_WITH_RENDERDOC
 
 namespace Tk
 {
@@ -854,7 +854,7 @@ bool VulkanCreateGraphicsPipeline(
     viewport.height = (float)viewportHeight; //TODO: this looks wrong, doesnt use the params
     #else
     viewport.y = (float)viewportHeight;
-    viewport.height = -viewportHeight;
+    viewport.height = -(float)viewportHeight;
     #endif
 
     viewport.x = 0.0f;
