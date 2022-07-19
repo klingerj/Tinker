@@ -5,18 +5,13 @@
 
 #include <iostream>
 // TODO: move this to be a compile define
-//#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 #define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 #ifdef _WIN32
 #include <vulkan/vulkan_win32.h>
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
-
-// NOTE: The convention in this project to is flip the viewport upside down since a left-handed projection
-// matrix is often used. However, doing this flip causes the application to not render properly when run
-// in RenderDoc for some reason. To debug with RenderDoc, you should turn on this #define.
-//#define WORK_WITH_RENDERDOC
 
 namespace Tk
 {
@@ -35,9 +30,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
-    OutputDebugString("VALIDATION LAYER:\n");
-    OutputDebugString(pCallbackData->pMessage);
-    OutputDebugString("\n");
+    if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) | (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
+    {
+        OutputDebugString("VALIDATION LAYER:\n");
+        OutputDebugString(pCallbackData->pMessage);
+        OutputDebugString("\n");
+    }
+
     return VK_FALSE;
 }
 #endif
@@ -79,35 +78,30 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCreateInfo.pApplicationInfo = &applicationInfo;
 
-    const uint32 numRequestedExtensions = 
-    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) || defined(ENABLE_VULKAN_DEBUG_LABELS)
-    3
-    #else
-    2
-    #endif
-    ;
-    const char* requestedExtensionNames[numRequestedExtensions] = {
+    // Instance extensions
+    const char* enabledExtensionNames[] = {
         VK_KHR_SURFACE_EXTENSION_NAME,
 
         #if defined(_WIN32)
-        VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
         #else
         // TODO: different platform surface extension
         #endif
-
         
         #if defined(ENABLE_VULKAN_VALIDATION_LAYERS) || defined(ENABLE_VULKAN_DEBUG_LABELS)
-        , VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+        VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
         #endif
     };
+    const uint32 numEnabledExtensions = ARRAYCOUNT(enabledExtensionNames);
+
     Core::Utility::LogMsg("Platform", "******** Requested Instance Extensions: ********", Core::Utility::LogSeverity::eInfo);
-    for (uint32 uiReqExt = 0; uiReqExt < numRequestedExtensions; ++uiReqExt)
+    for (uint32 uiReqExt = 0; uiReqExt < numEnabledExtensions; ++uiReqExt)
     {
-        Core::Utility::LogMsg("Platform", requestedExtensionNames[uiReqExt], Core::Utility::LogSeverity::eInfo);
+        Core::Utility::LogMsg("Platform", enabledExtensionNames[uiReqExt], Core::Utility::LogSeverity::eInfo);
     }
     
-    instanceCreateInfo.enabledExtensionCount = numRequestedExtensions;
-    instanceCreateInfo.ppEnabledExtensionNames = requestedExtensionNames;
+    instanceCreateInfo.enabledExtensionCount = numEnabledExtensions;
+    instanceCreateInfo.ppEnabledExtensionNames = enabledExtensionNames;
 
     instanceCreateInfo.enabledLayerCount = 0;
     instanceCreateInfo.ppEnabledLayerNames = nullptr;
@@ -118,20 +112,23 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     
     VkExtensionProperties* availableExtensions = (VkExtensionProperties*)g_VulkanDataAllocator.Alloc(sizeof(VkExtensionProperties) * numAvailableExtensions, 1);
     vkEnumerateInstanceExtensionProperties(nullptr, &numAvailableExtensions, availableExtensions);
-    Core::Utility::LogMsg("Platform", "******** Available Instance Extensions: ********", Core::Utility::LogSeverity::eInfo);
-    for (uint32 uiAvailExt = 0; uiAvailExt < numAvailableExtensions; ++uiAvailExt)
-    {
-        Core::Utility::LogMsg("Platform", availableExtensions[uiAvailExt].extensionName, Core::Utility::LogSeverity::eInfo);
-    }
+    //Core::Utility::LogMsg("Platform", "******** Available Instance Extensions: ********", Core::Utility::LogSeverity::eInfo);
+    //for (uint32 uiAvailExt = 0; uiAvailExt < numAvailableExtensions; ++uiAvailExt)
+    //{
+        //Core::Utility::LogMsg("Platform", availableExtensions[uiAvailExt].extensionName, Core::Utility::LogSeverity::eInfo);
+    //}
 
-    // Validation layers
-    #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
-    const uint32 numRequestedLayers = 2;
-    const char* requestedLayersStr[numRequestedLayers] =
+    // Instance layers
+    const char* requestedLayersStr[] =
     {
+        "VK_LAYER_LUNARG_monitor",
+
+        #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
         "VK_LAYER_KHRONOS_validation",
-        "VK_LAYER_LUNARG_monitor"
+        #endif
     };
+    const uint32 numRequestedLayers = ARRAYCOUNT(requestedLayersStr);
+
     Core::Utility::LogMsg("Platform", "******** Requested Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
     {
@@ -150,20 +147,20 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     VkLayerProperties* availableLayers = (VkLayerProperties*)g_VulkanDataAllocator.Alloc(sizeof(VkLayerProperties) * numAvailableLayers, 1);
     vkEnumerateInstanceLayerProperties(&numAvailableLayers, availableLayers);
 
-    Core::Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
-    for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
-    {
-        Core::Utility::LogMsg("Platform", availableLayers[uiAvailLayer].layerName, Core::Utility::LogSeverity::eInfo);
-    }
+    //Core::Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
+    //for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
+    //{
+        //Core::Utility::LogMsg("Platform", availableLayers[uiAvailLayer].layerName, Core::Utility::LogSeverity::eInfo);
+    //}
 
-    bool layersSupported[numRequestedLayers] = { false };
+    uint32 layersSupported[numRequestedLayers] = {};
     for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
     {
         for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
         {
             if (!strcmp(availableLayers[uiAvailLayer].layerName, requestedLayersStr[uiReqLayer]))
             {
-                layersSupported[uiReqLayer] = true;
+                layersSupported[uiReqLayer] = 1u;
                 break;
             }
         }
@@ -181,7 +178,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
 
     instanceCreateInfo.enabledLayerCount = numRequestedLayers;
     instanceCreateInfo.ppEnabledLayerNames = requestedLayersStr;
-    #endif
 
     VkResult result = vkCreateInstance(&instanceCreateInfo,
         nullptr,
@@ -333,11 +329,11 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
                 &numAvailablePhysicalDeviceExtensions,
                 availablePhysicalDeviceExtensions);
 
-            Core::Utility::LogMsg("Platform", "******** Available Device Extensions: ********", Core::Utility::LogSeverity::eInfo);
-            for (uint32 uiAvailExt = 0; uiAvailExt < numAvailablePhysicalDeviceExtensions; ++uiAvailExt)
-            {
-                Core::Utility::LogMsg("Platform", availablePhysicalDeviceExtensions[uiAvailExt].extensionName, Core::Utility::LogSeverity::eInfo);
-            }
+            //Core::Utility::LogMsg("Platform", "******** Available Device Extensions: ********", Core::Utility::LogSeverity::eInfo);
+            //for (uint32 uiAvailExt = 0; uiAvailExt < numAvailablePhysicalDeviceExtensions; ++uiAvailExt)
+            //{
+                //Core::Utility::LogMsg("Platform", availablePhysicalDeviceExtensions[uiAvailExt].extensionName, Core::Utility::LogSeverity::eInfo);
+            //}
 
             for (uint32 uiReqExt = 0; uiReqExt < numRequiredPhysicalDeviceExtensions; ++uiReqExt)
             {
@@ -378,55 +374,58 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     }
 
     // Physical device memory heaps
-    VkPhysicalDeviceMemoryProperties memoryProperties = {};
-    vkGetPhysicalDeviceMemoryProperties(g_vulkanContextResources.physicalDevice, &memoryProperties);
+    if (0)
     {
-        Core::Utility::LogMsg("Platform", "******** Device Memory Properties: ********", Core::Utility::LogSeverity::eInfo);
-
-        for (uint32 uiMemType = 0; uiMemType < memoryProperties.memoryTypeCount; ++uiMemType)
+        VkPhysicalDeviceMemoryProperties memoryProperties = {};
+        vkGetPhysicalDeviceMemoryProperties(g_vulkanContextResources.physicalDevice, &memoryProperties);
         {
+            Core::Utility::LogMsg("Platform", "******** Device Memory Properties: ********", Core::Utility::LogSeverity::eInfo);
+
+            for (uint32 uiMemType = 0; uiMemType < memoryProperties.memoryTypeCount; ++uiMemType)
+            {
+                Core::Utility::LogMsg("Platform", "****************", Core::Utility::LogSeverity::eInfo);
+
+                // Heap properties
+                // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryPropertyFlagBits.html
+                VkMemoryPropertyFlags propertyFlags = memoryProperties.memoryTypes[uiMemType].propertyFlags;
+
+                Core::Utility::LogMsg("Platform", "Heap Properties:", Core::Utility::LogSeverity::eInfo);
+                if (propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+                {
+                    Core::Utility::LogMsg("Platform", "- Device local", Core::Utility::LogSeverity::eInfo);
+                }
+                if (propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+                {
+                    Core::Utility::LogMsg("Platform", "- Host visible", Core::Utility::LogSeverity::eInfo);
+                }
+                if (propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+                {
+                    Core::Utility::LogMsg("Platform", "- Host coherent", Core::Utility::LogSeverity::eInfo);
+                }
+                if (propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+                {
+                    Core::Utility::LogMsg("Platform", "- Host cached", Core::Utility::LogSeverity::eInfo);
+                }
+                if (propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
+                {
+                    Core::Utility::LogMsg("Platform", "- Lazily allocated", Core::Utility::LogSeverity::eInfo);
+                }
+
+                // Heap size
+                uint32 heapIndex = memoryProperties.memoryTypes[uiMemType].heapIndex;
+                char buffer[16] = {};
+                _ui64toa_s(memoryProperties.memoryHeaps[heapIndex].size, buffer, 16, 10);
+
+                Core::Utility::LogMsg("Platform", "Heap Size:", Core::Utility::LogSeverity::eInfo);
+                Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eInfo);
+
+                // Heap flags
+                // memoryProperties.memoryHeaps[heapIndex].flags
+                // Don't really care about these I think
+                // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryHeapFlagBits.html
+            }
             Core::Utility::LogMsg("Platform", "****************", Core::Utility::LogSeverity::eInfo);
-
-            // Heap properties
-            // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryPropertyFlagBits.html
-            VkMemoryPropertyFlags propertyFlags = memoryProperties.memoryTypes[uiMemType].propertyFlags;
-
-            Core::Utility::LogMsg("Platform", "Heap Properties:", Core::Utility::LogSeverity::eInfo);
-            if (propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-            {
-                Core::Utility::LogMsg("Platform", "- Device local", Core::Utility::LogSeverity::eInfo);
-            }
-            if (propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-            {
-                Core::Utility::LogMsg("Platform", "- Host visible", Core::Utility::LogSeverity::eInfo);
-            }
-            if (propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-            {
-                Core::Utility::LogMsg("Platform", "- Host coherent", Core::Utility::LogSeverity::eInfo);
-            }
-            if (propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
-            {
-                Core::Utility::LogMsg("Platform", "- Host cached", Core::Utility::LogSeverity::eInfo);
-            }
-            if (propertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
-            {
-                Core::Utility::LogMsg("Platform", "- Lazily allocated", Core::Utility::LogSeverity::eInfo);
-            }
-
-            // Heap size
-            uint32 heapIndex = memoryProperties.memoryTypes[uiMemType].heapIndex;
-            char buffer[16] = {};
-            _ui64toa_s(memoryProperties.memoryHeaps[heapIndex].size, buffer, 16, 10);
-
-            Core::Utility::LogMsg("Platform", "Heap Size:", Core::Utility::LogSeverity::eInfo);
-            Core::Utility::LogMsg("Platform", buffer, Core::Utility::LogSeverity::eInfo);
-
-            // Heap flags
-            // memoryProperties.memoryHeaps[heapIndex].flags
-            // Don't really care about these I think
-            // https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkMemoryHeapFlagBits.html
         }
-        Core::Utility::LogMsg("Platform", "****************", Core::Utility::LogSeverity::eInfo);
     }
 
     // Logical device
@@ -817,17 +816,10 @@ bool VulkanCreateGraphicsPipeline(
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     VkViewport viewport = {};
-
-    #ifdef WORK_WITH_RENDERDOC
-    viewport.y = 0.0f;
-    viewport.height = (float)viewportHeight; //TODO: this looks wrong, doesnt use the params
-    #else
-    viewport.y = (float)viewportHeight;
-    viewport.height = -(float)viewportHeight;
-    #endif
-
     viewport.x = 0.0f;
+    viewport.y = (float)viewportHeight;
     viewport.width = (float)viewportWidth;
+    viewport.height = -(float)viewportHeight;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
