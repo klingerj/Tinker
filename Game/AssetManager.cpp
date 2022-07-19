@@ -382,8 +382,8 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         //memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
         for (uint32 i = 0; i < m_allMeshData[uiAsset].m_numVertices; ++i)
         {
-            memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, normalBuffer + i, sizeof(v3f));
-            memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, 1);
+            memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, &normalBuffer[i], sizeof(v3f));
+            memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, sizeof(float)); // add 0 as 4th channel of normal vector
         }
         memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
         //-----
