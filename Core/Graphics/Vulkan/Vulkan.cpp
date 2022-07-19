@@ -5,7 +5,7 @@
 
 #include <iostream>
 // TODO: move this to be a compile define
-#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+//#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 #define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 #ifdef _WIN32
@@ -310,18 +310,8 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
                 if (queueFamilyProperties[uiQueueFamily].queueFlags & VK_QUEUE_GRAPHICS_BIT)
                 {
                     graphicsSupport = true;
-                    g_vulkanContextResources.graphicsQueueIndex = uiQueueFamily;
-                }
-
-                VkBool32 presentSupport;
-                vkGetPhysicalDeviceSurfaceSupportKHR(currPhysicalDevice,
-                    uiQueueFamily,
-                    g_vulkanContextResources.surface,
-                    &presentSupport);
-                if (presentSupport)
-                {
                     presentationSupport = true;
-                    g_vulkanContextResources.presentationQueueIndex = uiQueueFamily;
+                    g_vulkanContextResources.graphicsQueueIndex = uiQueueFamily;
                 }
             }
 
@@ -440,7 +430,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     }
 
     // Logical device
-    const uint32 numQueues = 2;
+    const uint32 numQueues = 1;
     VkDeviceQueueCreateInfo deviceQueueCreateInfos[numQueues] = {};
 
     // Create graphics queue
@@ -449,13 +439,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     deviceQueueCreateInfos[0].queueCount = 1;
     float graphicsQueuePriority = 1.0f;
     deviceQueueCreateInfos[0].pQueuePriorities = &graphicsQueuePriority;
-
-    // Create presentation queue
-    deviceQueueCreateInfos[1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    deviceQueueCreateInfos[1].queueFamilyIndex = g_vulkanContextResources.presentationQueueIndex;
-    deviceQueueCreateInfos[1].queueCount = 1;
-    float presentationQueuePriority = 1.0f;
-    deviceQueueCreateInfos[1].pQueuePriorities = &presentationQueuePriority;
 
     VkDeviceCreateInfo deviceCreateInfo = {};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -519,10 +502,6 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         g_vulkanContextResources.graphicsQueueIndex,
         0,
         &g_vulkanContextResources.graphicsQueue);
-    vkGetDeviceQueue(g_vulkanContextResources.device,
-        g_vulkanContextResources.presentationQueueIndex,
-        0, 
-        &g_vulkanContextResources.presentationQueue);
 
     // Swap chain
     VulkanCreateSwapChain();
@@ -721,25 +700,15 @@ void VulkanCreateSwapChain()
     swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     swapChainCreateInfo.presentMode = chosenPresentMode;
 
-    const uint32 numQueueFamilyIndices = 2;
+    const uint32 numQueueFamilyIndices = 1;
     const uint32 queueFamilyIndices[numQueueFamilyIndices] =
     {
         g_vulkanContextResources.graphicsQueueIndex,
-        g_vulkanContextResources.presentationQueueIndex
     };
 
-    if (g_vulkanContextResources.graphicsQueueIndex != g_vulkanContextResources.presentationQueueIndex)
-    {
-        swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapChainCreateInfo.queueFamilyIndexCount = numQueueFamilyIndices;
-        swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
-    }
-    else
-    {
-        swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        swapChainCreateInfo.queueFamilyIndexCount = 0;
-        swapChainCreateInfo.pQueueFamilyIndices = nullptr;
-    }
+    swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapChainCreateInfo.queueFamilyIndexCount = 0;
+    swapChainCreateInfo.pQueueFamilyIndices = nullptr;
 
     VkResult result = vkCreateSwapchainKHR(g_vulkanContextResources.device,
         &swapChainCreateInfo,
