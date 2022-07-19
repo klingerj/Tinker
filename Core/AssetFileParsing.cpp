@@ -86,7 +86,8 @@ static void ReadWordsIntoVertBuffer(uint32 NumWords, float* OutVertexData, const
         char NextWord[MAX_SCRATCH_WORD_LEN];
         memset(NextWord, 0, ARRAYCOUNT(NextWord) * sizeof(char));
         scanWordIntoBuffer(EntireFileBuffer, currentIndex, NextWord, ARRAYCOUNT(NextWord));
-        OutVertexData[uiWord] = (float)atof(NextWord);
+        float WordAsFloat = (float)atof(NextWord);
+        OutVertexData[uiWord] = WordAsFloat;
     }
 }
 
@@ -143,19 +144,21 @@ void ParseOBJ(Tk::Core::LinearAllocator& PosAllocator, Tk::Core::LinearAllocator
             for (uint8 uiWord = 0; uiWord < numWordsPerFace; ++uiWord)
             {
                 const uint8 numIndicesPerFace = 3;
-                uint32 newIndices[numIndicesPerFace];
+                uint32 newIndices[numIndicesPerFace] = {};
 
                 // NOTE: '/' characters are treated as white space when scanning chars
                 char NextWord[MAX_SCRATCH_WORD_LEN];
-                memset(NextWord, 0, ARRAYCOUNT(NextWord) * sizeof(char));
 
                 // Normalize indices to start from 0, OBJ convention is to start from 1
+                memset(NextWord, 0, ARRAYCOUNT(NextWord) * sizeof(char));
                 scanWordIntoBuffer(EntireFileBuffer, &currentIndex, NextWord, ARRAYCOUNT(NextWord));
                 newIndices[0] = (uint32)atoi(NextWord) - 1;
 
+                memset(NextWord, 0, ARRAYCOUNT(NextWord) * sizeof(char));
                 scanWordIntoBuffer(EntireFileBuffer, &currentIndex, NextWord, ARRAYCOUNT(NextWord));
                 newIndices[1] = (uint32)atoi(NextWord) - 1;
 
+                memset(NextWord, 0, ARRAYCOUNT(NextWord) * sizeof(char));
                 scanWordIntoBuffer(EntireFileBuffer, &currentIndex, NextWord, ARRAYCOUNT(NextWord));
                 newIndices[2] = (uint32)atoi(NextWord) - 1;
 
