@@ -373,7 +373,7 @@ GAME_UPDATE(GameUpdate)
         command->m_commandType = Graphics::GraphicsCmd::eClearImage;
         command->debugLabel = "Clear color buffer";
         command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_clearValue = v4f(0.0f, 1.0f, 0.0f, 0.0f);
+        command->m_clearValue = v4f(0.0f, 0.0f, 0.0f, 0.0f);
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
@@ -395,19 +395,19 @@ GAME_UPDATE(GameUpdate)
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
-        /*StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
+        StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
         RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn, descriptors);
-        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);*/
+        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
 
-        //StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
-        //RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
+        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
 
-        //UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-        //DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
+        UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
+        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
 
         //DrawTerrain(graphicsCommandStream);
 
-        //EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
+        EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
 
     // FINAL BLIT TO SCREEN

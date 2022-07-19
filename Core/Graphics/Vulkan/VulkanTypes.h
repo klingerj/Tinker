@@ -74,13 +74,6 @@ typedef struct
 
 typedef struct
 {
-    VkRenderPass renderPassVk;
-    uint32 numColorRTs;
-    bool hasDepth;
-} VulkanRenderPass;
-
-typedef struct
-{
     VkFence Fence;
     VkSemaphore GPUWorkCompleteSema;
     VkSemaphore PresentCompleteSema;
@@ -99,7 +92,6 @@ struct VulkanContextResources
 
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     uint32 graphicsQueueIndex = TINKER_INVALID_HANDLE;
-    uint32 presentationQueueIndex = TINKER_INVALID_HANDLE;
     VkDevice device = VK_NULL_HANDLE;
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue presentationQueue = VK_NULL_HANDLE;

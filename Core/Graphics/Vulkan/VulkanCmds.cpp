@@ -91,7 +91,7 @@ void VulkanSubmitFrame()
     presentInfo.pSwapchains = &g_vulkanContextResources.swapChain;
     presentInfo.pImageIndices = &g_vulkanContextResources.currentSwapChainImage;
 
-    result = vkQueuePresentKHR(g_vulkanContextResources.presentationQueue, &presentInfo);
+    result = vkQueuePresentKHR(g_vulkanContextResources.graphicsQueue, &presentInfo);
 
     if (result != VK_SUCCESS)
     {
