@@ -90,7 +90,6 @@ void VulkanSubmitFrame()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &g_vulkanContextResources.swapChain;
     presentInfo.pImageIndices = &g_vulkanContextResources.currentSwapChainImage;
-    presentInfo.pResults = nullptr;
 
     result = vkQueuePresentKHR(g_vulkanContextResources.presentationQueue, &presentInfo);
 
@@ -581,7 +580,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
 
         case ImageLayout::ePresent:
         {
-            barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+            barrier.dstAccessMask = 0;
             dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             break;
         }
