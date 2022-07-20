@@ -6,7 +6,7 @@
 #include <iostream>
 // TODO: move this to be a compile define
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
-#define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
+//#define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 #ifdef _WIN32
 #include <vulkan/vulkan_win32.h>
@@ -40,6 +40,35 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
     return VK_FALSE;
 }
 #endif
+
+static void CreateSamplers()
+{
+    VkSamplerCreateInfo samplerCreateInfo = {};
+    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.anisotropyEnable = VK_FALSE; // VK_TRUE;
+    samplerCreateInfo.maxAnisotropy = 1.0f;
+    //samplerCreateInfo.maxAnisotropy = 16.0f;
+    samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerCreateInfo.compareEnable = VK_FALSE;
+    samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerCreateInfo.mipLodBias = 0.0f;
+    samplerCreateInfo.minLod = 0.0f;
+    samplerCreateInfo.maxLod = 0.0f;
+
+    VkResult result = vkCreateSampler(g_vulkanContextResources.device, &samplerCreateInfo, nullptr, &g_vulkanContextResources.linearSampler);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create sampler!", Core::Utility::LogSeverity::eCritical);
+        return;
+    }
+}
 
 int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height)
 {
@@ -571,7 +600,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         result = vkCreateSemaphore(g_vulkanContextResources.device,
             &semaphoreCreateInfo,
             nullptr,
-            &g_vulkanContextResources.virtualFrameSyncData[uiFrame].PresentCompleteSema);
+            &g_vulkanContextResources.virtualFrameSyncData[uiFrame].ImageAvailableSema);
 
         if (result != VK_SUCCESS)
         {
@@ -992,7 +1021,7 @@ bool VulkanCreateGraphicsPipeline(
     return true;
 }
 
-bool VulkanCreateDescriptorLayout( uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout)
+bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout)
 {
     // Descriptor layout
     VkDescriptorSetLayoutBinding descLayoutBinding[MAX_BINDINGS_PER_SET] = {};
@@ -1044,7 +1073,7 @@ bool VulkanCreateDescriptorLayout( uint32 descriptorLayoutID, const DescriptorLa
     return true;
 }
 
-void DestroyPSOPerms( uint32 shaderID)
+void DestroyPSOPerms(uint32 shaderID)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
@@ -1106,7 +1135,7 @@ void DestroyAllDescLayouts()
     }
 }
 
-void* VulkanMapResource( ResourceHandle handle)
+void* VulkanMapResource(ResourceHandle handle)
 {
     VulkanMemResource* resource =
         &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
@@ -1124,7 +1153,7 @@ void* VulkanMapResource( ResourceHandle handle)
     return newMappedMem;
 }
 
-void VulkanUnmapResource( ResourceHandle handle)
+void VulkanUnmapResource(ResourceHandle handle)
 {
     VulkanMemResource* resource =
         &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
@@ -1146,7 +1175,7 @@ void VulkanUnmapResource( ResourceHandle handle)
     vkUnmapMemory(g_vulkanContextResources.device, resource->deviceMemory);
 }
 
-ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
+static ResourceHandle VulkanCreateBufferResource(uint32 sizeInBytes, uint32 bufferUsage)
 {
     uint32 newResourceHandle =
         g_vulkanContextResources.vulkanMemResourcePool.Alloc();
@@ -1154,13 +1183,12 @@ ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
     VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
 
-    // TODO: do or do not have a resource chain for buffers.
-    bool oneBufferOnly = false;
-    bool perSwapChainSize = false;
+    uint32 isMultiBufferedResource = IsBufferUsageMultiBuffered(bufferUsage);
+    const uint32 NumCopies = isMultiBufferedResource ? VULKAN_MAX_FRAMES_IN_FLIGHT : 1u;
 
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT && !oneBufferOnly; ++uiImage)
+    for (uint32 uiBuf = 0; uiBuf < NumCopies; ++uiBuf)
     {
-        VulkanMemResource* newResource = &newResourceChain->resourceChain[uiImage];
+        VulkanMemResource* newResource = &newResourceChain->resourceChain[uiBuf];
 
         VkBufferUsageFlags usageFlags = {};
         VkMemoryPropertyFlagBits propertyFlags = {};
@@ -1176,8 +1204,6 @@ ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
 
             case BufferUsage::eIndex:
             {
-                //oneBufferOnly = true;
-                //perSwapChainSize = true;
                 usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
                 propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
                 break;
@@ -1199,8 +1225,6 @@ ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
 
             case BufferUsage::eStaging:
             {
-                oneBufferOnly = true;
-                perSwapChainSize = false;
                 usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
                 propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
                 break;
@@ -1221,12 +1245,9 @@ ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
             }
         }
 
-        // allocate buffer resource size in bytes equal to one buffer per swap chain image
-        uint32 numBytesToAllocate = perSwapChainSize ? sizeInBytes * VULKAN_MAX_FRAMES_IN_FLIGHT : sizeInBytes;
-
         CreateBuffer(g_vulkanContextResources.physicalDevice,
             g_vulkanContextResources.device,
-            numBytesToAllocate,
+            sizeInBytes,
             usageFlags,
             propertyFlags,
             &newResource->buffer,
@@ -1236,7 +1257,31 @@ ResourceHandle VulkanCreateBuffer( uint32 sizeInBytes, uint32 bufferUsage)
     return ResourceHandle(newResourceHandle);
 }
 
-DescriptorHandle VulkanCreateDescriptor( uint32 descriptorLayoutID)
+static void InitDescriptorPool()
+{
+    VkDescriptorPoolSize descPoolSizes[VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES] = {};
+    descPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descPoolSizes[0].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS;
+    descPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    descPoolSizes[1].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
+    descPoolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    descPoolSizes[2].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS;
+
+    VkDescriptorPoolCreateInfo descPoolCreateInfo = {};
+    descPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    descPoolCreateInfo.poolSizeCount = VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES;
+    descPoolCreateInfo.pPoolSizes = descPoolSizes;
+    descPoolCreateInfo.maxSets = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS + VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
+
+    VkResult result = vkCreateDescriptorPool(g_vulkanContextResources.device, &descPoolCreateInfo, nullptr, &g_vulkanContextResources.descriptorPool);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create descriptor pool!", Core::Utility::LogSeverity::eInfo);
+        return;
+    }
+}
+
+DescriptorHandle VulkanCreateDescriptor(uint32 descriptorLayoutID)
 {
     if (g_vulkanContextResources.descriptorPool == VK_NULL_HANDLE)
     {
@@ -1273,7 +1318,7 @@ DescriptorHandle VulkanCreateDescriptor( uint32 descriptorLayoutID)
     return DescriptorHandle(newDescriptorHandle);
 }
 
-void VulkanDestroyDescriptor( DescriptorHandle handle)
+void VulkanDestroyDescriptor(DescriptorHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
@@ -1289,7 +1334,7 @@ void VulkanDestroyAllDescriptors()
     g_vulkanContextResources.descriptorPool = VK_NULL_HANDLE;
 }
 
-void VulkanWriteDescriptor( uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
+void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
 {
     TINKER_ASSERT(descSetDataCount <= MAX_BINDINGS_PER_SET);
 
@@ -1315,7 +1360,9 @@ void VulkanWriteDescriptor( uint32 descriptorLayoutID, DescriptorHandle descSetH
             uint32 type = descLayout->params[uiDesc].type;
             if (type != DescriptorType::eMax)
             {
-                VulkanMemResource* res = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes)->resourceChain[uiImage];
+                VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes);
+                uint32 resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
+                VulkanMemResource* res = &resChain->resourceChain[resIndex];
 
                 switch (type)
                 {
@@ -1370,67 +1417,16 @@ void VulkanWriteDescriptor( uint32 descriptorLayoutID, DescriptorHandle descSetH
     }
 }
 
-void InitDescriptorPool()
-{
-    VkDescriptorPoolSize descPoolSizes[VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES] = {};
-    descPoolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    descPoolSizes[0].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS;
-    descPoolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    descPoolSizes[1].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
-    descPoolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    descPoolSizes[2].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS;
-
-    VkDescriptorPoolCreateInfo descPoolCreateInfo = {};
-    descPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    descPoolCreateInfo.poolSizeCount = VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES;
-    descPoolCreateInfo.pPoolSizes = descPoolSizes;
-    descPoolCreateInfo.maxSets = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS + VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
-
-    VkResult result = vkCreateDescriptorPool(g_vulkanContextResources.device, &descPoolCreateInfo, nullptr, &g_vulkanContextResources.descriptorPool);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to create descriptor pool!", Core::Utility::LogSeverity::eInfo);
-        return;
-    }
-}
-
-void CreateSamplers()
-{
-    VkSamplerCreateInfo samplerCreateInfo = {};
-    samplerCreateInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
-    samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
-    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerCreateInfo.anisotropyEnable = VK_FALSE; // VK_TRUE;
-    samplerCreateInfo.maxAnisotropy = 1.0f;
-    //samplerCreateInfo.maxAnisotropy = 16.0f;
-    samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerCreateInfo.compareEnable = VK_FALSE;
-    samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerCreateInfo.mipLodBias = 0.0f;
-    samplerCreateInfo.minLod = 0.0f;
-    samplerCreateInfo.maxLod = 0.0f;
-
-    VkResult result = vkCreateSampler(g_vulkanContextResources.device, &samplerCreateInfo, nullptr, &g_vulkanContextResources.linearSampler);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to create sampler!", Core::Utility::LogSeverity::eCritical);
-        return;
-    }
-}
-
-ResourceHandle VulkanCreateImageResource( uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles)
+static ResourceHandle VulkanCreateImageResource(uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles)
 {
     uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
+    TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
+    VulkanMemResourceChain* newResourceChain =
+        g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
+    *newResourceChain = {};
 
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
-        VulkanMemResourceChain* newResourceChain =
-            g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
         VulkanMemResource* newResource = &newResourceChain->resourceChain[uiImage];
 
         // Create image
@@ -1521,7 +1517,7 @@ ResourceHandle VulkanCreateImageResource( uint32 imageFormat, uint32 width, uint
     return ResourceHandle(newResourceHandle);
 }
 
-ResourceHandle VulkanCreateResource( const ResourceDesc& resDesc)
+ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc)
 {
     ResourceHandle newHandle = DefaultResHandle_Invalid;
 
@@ -1529,7 +1525,7 @@ ResourceHandle VulkanCreateResource( const ResourceDesc& resDesc)
     {
         case ResourceType::eBuffer1D:
         {
-            newHandle = VulkanCreateBuffer(resDesc.dims.x, resDesc.bufferUsage);
+            newHandle = VulkanCreateBufferResource(resDesc.dims.x, resDesc.bufferUsage);
             break;
         }
 
@@ -1553,28 +1549,32 @@ ResourceHandle VulkanCreateResource( const ResourceDesc& resDesc)
     return newHandle;
 }
 
-void VulkanDestroyImageResource( ResourceHandle handle)
+void VulkanDestroyImageResource(ResourceHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
-        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiImage];
-        vkDestroyImage(g_vulkanContextResources.device, resource->image, nullptr);
-        vkFreeMemory(g_vulkanContextResources.device, resource->deviceMemory, nullptr);
-        vkDestroyImageView(g_vulkanContextResources.device, resource->imageView, nullptr);
+        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiFrame];
+
+        if (resource->image != VK_NULL_HANDLE)
+        {
+            vkDestroyImage(g_vulkanContextResources.device, resource->image, nullptr);
+            vkFreeMemory(g_vulkanContextResources.device, resource->deviceMemory, nullptr);
+            vkDestroyImageView(g_vulkanContextResources.device, resource->imageView, nullptr);
+        }
     }
 
     g_vulkanContextResources.vulkanMemResourcePool.Dealloc(handle.m_hRes);
 }
 
-void VulkanDestroyBuffer( ResourceHandle handle, uint32 bufferUsage)
+void VulkanDestroyBuffer(ResourceHandle handle, uint32 bufferUsage)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
-        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiImage];
+        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiFrame];
 
         // Only destroy/free memory if it's a validly created buffer
         if (resource->buffer != VK_NULL_HANDLE)
@@ -1582,18 +1582,12 @@ void VulkanDestroyBuffer( ResourceHandle handle, uint32 bufferUsage)
             vkDestroyBuffer(g_vulkanContextResources.device, resource->buffer, nullptr);
             vkFreeMemory(g_vulkanContextResources.device, resource->deviceMemory, nullptr);
         }
-        else
-        {
-            // TODO: this is currently happening since vertex buffers are only alloc'd once, but
-            // currently the architecture stores a chain of buffer objects.
-            //Core::Utility::LogMsg("Platform", "Freeing a null buffer", Core::Utility::LogSeverity::eWarning);
-        }
     }
 
     g_vulkanContextResources.vulkanMemResourcePool.Dealloc(handle.m_hRes);
 }
 
-void VulkanDestroyResource( ResourceHandle handle)
+void VulkanDestroyResource(ResourceHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
@@ -1633,7 +1627,7 @@ void DestroyVulkan()
     for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].GPUWorkCompleteSema, nullptr);
-        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].PresentCompleteSema, nullptr);
+        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].ImageAvailableSema, nullptr);
         vkDestroyFence(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].Fence, nullptr);
     }
 
