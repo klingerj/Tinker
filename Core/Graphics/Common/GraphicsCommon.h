@@ -128,6 +128,12 @@ namespace DepthCompareOp
     };
 }
 
+extern uint32 MultiBufferedStatusFromBufferUsage[BufferUsage::eMax];
+inline uint32 IsBufferUsageMultiBuffered(uint32 bufferUsage)
+{
+    TINKER_ASSERT(bufferUsage < BufferUsage::eMax);
+    return MultiBufferedStatusFromBufferUsage[bufferUsage];
+}
 
 // Concrete type for resource handle to catch errors at compile time, e.g.
 // Try to free a descriptor set with a resource handle, which can happen if all handles
@@ -161,8 +167,8 @@ struct ResourceHandle
 
 typedef struct graphics_resource_description
 {
-    v3ui dims;
-    uint32 resourceType;
+    v3ui dims = {};
+    uint32 resourceType = ResourceType::eMax;
 
     union
     {
@@ -272,7 +278,6 @@ typedef struct descriptor_set_data_handles
 #define MAX_MULTIPLE_RENDERTARGETS 8u
 
 #define IMAGE_HANDLE_SWAP_CHAIN ResourceHandle(0xFFFFFFFE) // INVALID_HANDLE - 1 reserved to refer to the swap chain image 
-
 
 //#define DEPTH_REVERSED
 #ifndef DEPTH_REVERSED

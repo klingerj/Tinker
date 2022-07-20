@@ -14,7 +14,9 @@ bool VulkanAcquireFrame()
 {
     const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
 
-    VkResult result = vkWaitForFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence, VK_FALSE, (uint64)-1);
+    VkResult result;
+
+    result = vkWaitForFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence, VK_FALSE, (uint64)-1);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Waiting for virtual frame fence took too long!", Core::Utility::LogSeverity::eInfo);
@@ -27,7 +29,7 @@ bool VulkanAcquireFrame()
     result = vkAcquireNextImageKHR(g_vulkanContextResources.device,
         g_vulkanContextResources.swapChain,
         (uint64)-1,
-        virtualFrameSyncData.PresentCompleteSema,
+        virtualFrameSyncData.ImageAvailableSema,
         VK_NULL_HANDLE,
         &currentSwapChainImageIndex);
 
@@ -64,7 +66,7 @@ void VulkanSubmitFrame()
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[1] = { virtualFrameSyncData.PresentCompleteSema };
+    VkSemaphore waitSemaphores[1] = { virtualFrameSyncData.ImageAvailableSema };
     VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -214,9 +216,7 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
 
     // Index buffer
     VulkanMemResourceChain* indexBufferResource = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
-    //uint32 indexBufferSize = indexBufferResource->resDesc.dims.x;
-    //TODO: bad indexing
-    VkBuffer& indexBuffer = indexBufferResource->resourceChain[g_vulkanContextResources.currentVirtualFrame].buffer;
+    VkBuffer& indexBuffer = indexBufferResource->resourceChain[0].buffer; // [g_vulkanContextResources.currentVirtualFrame]
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
@@ -276,25 +276,22 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
 #endif
 
     VulkanMemResourceChain* dstResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes);
-    VulkanMemResource* dstResource = &dstResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+    VulkanMemResourceChain* srcResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes);
 
     switch (dstResourceChain->resDesc.resourceType)
     {
         case ResourceType::eBuffer1D:
         {
             VkBufferCopy bufferCopy = {};
+            bufferCopy.srcOffset = 0; // TODO: make this stuff a function param?
+            bufferCopy.size = sizeInBytes;
+            bufferCopy.dstOffset = 0;
 
-            for (uint32 uiBuf = 0; uiBuf < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiBuf)
-            {
-                bufferCopy.srcOffset = 0; // TODO: make this a function param?
-                bufferCopy.size = sizeInBytes;
-                bufferCopy.dstOffset = 0;
-
-                // TODO:bad indexing, assumes staging buffers are only one copy
-                VkBuffer srcBuffer = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
-                VkBuffer dstBuffer = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[uiBuf].buffer;
-                vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
-            }
+            uint32 srcIndex = IsBufferUsageMultiBuffered(srcResourceChain->resDesc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0u;
+            uint32 dstIndex = IsBufferUsageMultiBuffered(dstResourceChain->resDesc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0u;
+            VkBuffer srcBuffer = srcResourceChain->resourceChain[srcIndex].buffer;
+            VkBuffer dstBuffer = dstResourceChain->resourceChain[dstIndex].buffer;
+            vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
 
             break;
         }
@@ -319,12 +316,12 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
                 }
             }
 
-            for (uint32 uiImg = 0; uiImg < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImg)
             {
+                // TODO: currently no images are duplicated per frame in flight
                 VkBuffer& srcBuffer = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
-                VkImage& dstImage = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[uiImg].image;
+                VkImage& dstImage = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[0].image;
 
-                // TODO: make some of these function params
+                // TODO: make some of these into function params
                 VkBufferImageCopy region = {};
                 region.bufferOffset = 0;
                 region.bufferRowLength = 0;

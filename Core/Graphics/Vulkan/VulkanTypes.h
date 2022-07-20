@@ -42,13 +42,6 @@ typedef struct vulkan_mem_resource
     };
 } VulkanMemResource;
 
-typedef struct vulkan_framebuffer_resource
-{
-    VkFramebuffer framebuffer;
-    VkClearValue clearValues[VULKAN_MAX_RENDERTARGETS_WITH_DEPTH]; // + 1 for depth
-    uint32 numClearValues;
-} VulkanFramebufferResource;
-
 typedef struct vulkan_descriptor_resource
 {
     VkDescriptorSet descriptorSet;
@@ -76,7 +69,7 @@ typedef struct
 {
     VkFence Fence;
     VkSemaphore GPUWorkCompleteSema;
-    VkSemaphore PresentCompleteSema;
+    VkSemaphore ImageAvailableSema;
 } VulkanVirtualFrameSyncData;
 
 struct VulkanContextResources

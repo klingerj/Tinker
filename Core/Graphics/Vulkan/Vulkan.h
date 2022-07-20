@@ -40,7 +40,6 @@ void DestroyVulkan();
 
 void VulkanCreateSwapChain();
 void VulkanDestroySwapChain();
-void CreateSamplers();
 
 // Frame command recording
 bool VulkanAcquireFrame();
@@ -69,7 +68,6 @@ DescriptorHandle VulkanCreateDescriptor(uint32 descriptorLayoutID);
 void VulkanDestroyDescriptor(DescriptorHandle handle);
 void VulkanDestroyAllDescriptors();
 void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount);
-void InitDescriptorPool();
 
 // Memory mapping - probably just for staging buffers
 void* VulkanMapResource(ResourceHandle handle);

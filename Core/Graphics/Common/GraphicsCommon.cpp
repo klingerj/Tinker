@@ -14,6 +14,17 @@ namespace Core
 namespace Graphics
 {
 
+uint32 MultiBufferedStatusFromBufferUsage[] = 
+{
+    0u,
+    0u,
+    1u,
+    1u,
+    0u,
+    1u,
+};
+static_assert(ARRAYCOUNT(MultiBufferedStatusFromBufferUsage) == BufferUsage::eMax); // Don't forget to add one here if enum is added to
+
 void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     int result = 0;
