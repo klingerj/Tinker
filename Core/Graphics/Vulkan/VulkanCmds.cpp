@@ -116,6 +116,129 @@ void VulkanSubmitFrame()
     g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
 }
 
+void* VulkanMapResource(ResourceHandle handle)
+{
+    VulkanMemResource* resource =
+        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+
+    void* newMappedMem;
+    VkResult result = vkMapMemory(g_vulkanContextResources.device, resource->deviceMemory, 0, VK_WHOLE_SIZE, 0, &newMappedMem);
+
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+        return nullptr;
+    }
+
+    return newMappedMem;
+}
+
+void VulkanUnmapResource(ResourceHandle handle)
+{
+    VulkanMemResource* resource =
+        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+
+    // Flush right before unmapping
+    VkMappedMemoryRange memoryRange = {};
+    memoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    memoryRange.memory = resource->deviceMemory;
+    memoryRange.offset = 0;
+    memoryRange.size = VK_WHOLE_SIZE;
+
+    VkResult result = vkFlushMappedMemoryRanges(g_vulkanContextResources.device, 1, &memoryRange);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to flush mapped gpu memory!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    vkUnmapMemory(g_vulkanContextResources.device, resource->deviceMemory);
+}
+
+void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
+{
+    TINKER_ASSERT(descSetDataCount <= MAX_BINDINGS_PER_SET);
+
+    DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
+
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    {
+        VkDescriptorSet* descriptorSet =
+            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiImage].descriptorSet;
+
+        // Descriptor layout
+        VkWriteDescriptorSet descSetWrites[MAX_BINDINGS_PER_SET] = {};
+        uint32 descriptorCount = 0;
+
+        // Desc set info data
+        VkDescriptorBufferInfo descBufferInfo[MAX_BINDINGS_PER_SET] = {};
+        VkDescriptorImageInfo descImageInfo[MAX_BINDINGS_PER_SET] = {};
+
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+        {
+            descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+            uint32 type = descLayout->params[uiDesc].type;
+            if (type != DescriptorType::eMax)
+            {
+                VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes);
+                uint32 resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
+                VulkanMemResource* res = &resChain->resourceChain[resIndex];
+
+                switch (type)
+                {
+                    case DescriptorType::eBuffer:
+                    case DescriptorType::eSSBO:
+                    {
+                        VkBuffer* buffer = &res->buffer;
+
+                        descBufferInfo[descriptorCount].buffer = *buffer;
+                        descBufferInfo[descriptorCount].offset = 0;
+                        descBufferInfo[descriptorCount].range = VK_WHOLE_SIZE;
+
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = GetVkDescriptorType(type);
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pBufferInfo = &descBufferInfo[descriptorCount];
+                        break;
+                    }
+
+                    case DescriptorType::eSampledImage:
+                    {
+                        VkImageView* imageView = &res->imageView;
+
+                        descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                        descImageInfo[descriptorCount].imageView = *imageView;
+                        descImageInfo[descriptorCount].sampler = g_vulkanContextResources.linearSampler;
+
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pImageInfo = &descImageInfo[descriptorCount];
+                        break;
+                    }
+
+                    default:
+                    {
+                        break;
+                    }
+                }
+                ++descriptorCount;
+            }
+        }
+
+        if (descriptorCount > 0)
+        {
+            vkUpdateDescriptorSets(g_vulkanContextResources.device, descriptorCount, descSetWrites, 0, nullptr);
+        }
+    }
+}
+
 void BeginVulkanCommandRecording()
 {
     VkCommandBufferBeginInfo commandBufferBeginInfo = {};
