@@ -125,17 +125,10 @@ struct VulkanContextResources
         VkPipelineLayout pipelineLayout[eMaxShaders];
     } psoPermutations;
     VulkanDescriptorLayout descLayouts[eMaxDescLayouts];
+
+    Tk::Core::LinearAllocator DataAllocator;
 };
 extern VulkanContextResources g_vulkanContextResources;
-
-// Helpers
-void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMemory* deviceMem,
-    VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags);
-void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeInBytes,
-    VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
-    VkBuffer* buffer, VkDeviceMemory* deviceMemory);
-void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags aspectMask, VkImage image, VkImageView* imageView, uint32 arrayEles);
-VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VkDevice device);
 
 void InitVulkanDataTypesPerEnum();
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState);

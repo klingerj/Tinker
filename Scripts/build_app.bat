@@ -101,7 +101,7 @@ if %GraphicsAPIChosen% == "VK" (
     set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/Vulkan.cpp 
     set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCmds.cpp 
     set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanTypes.cpp 
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanGPUMemAllocator.cpp 
+    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCreation.cpp 
     set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
     set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Common/ShaderManager.cpp 
     set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Common/VirtualTexture.cpp 

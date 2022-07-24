@@ -3,6 +3,7 @@
 #include "CoreDefines.h"
 #include "Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 namespace Tk
 {
@@ -61,12 +62,12 @@ bool VulkanCreateGraphicsPipeline(void* vertexShaderCode, uint32 numVertexShader
     uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles);
 void DestroyPSOPerms(uint32 shaderID);
 void VulkanDestroyAllPSOPerms();
-void DestroyAllDescLayouts();
 
-bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout);
 DescriptorHandle VulkanCreateDescriptor(uint32 descriptorLayoutID);
+bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout);
 void VulkanDestroyDescriptor(DescriptorHandle handle);
 void VulkanDestroyAllDescriptors();
+void DestroyAllDescLayouts();
 void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount);
 
 // Memory mapping - probably just for staging buffers
