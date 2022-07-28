@@ -4,7 +4,12 @@
 #include "Allocators.h"
 #include "Graphics/Common/GraphicsCommon.h"
 
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <vulkan/vulkan.h>
+#include "vk_mem_alloc.h"
 
 #define VULKAN_RESOURCE_POOL_MAX 512
 
@@ -27,7 +32,7 @@ namespace Graphics
 
 typedef struct vulkan_mem_resource
 {
-    VkDeviceMemory deviceMemory;
+    VmaAllocation GpuMemAlloc;
 
     union
     {
@@ -127,6 +132,8 @@ struct VulkanContextResources
     VulkanDescriptorLayout descLayouts[eMaxDescLayouts];
 
     Tk::Core::LinearAllocator DataAllocator;
+
+    VmaAllocator GPUMemAllocator;
 };
 extern VulkanContextResources g_vulkanContextResources;
 
@@ -136,6 +143,8 @@ const VkPipelineDepthStencilStateCreateInfo& GetVkDepthState(uint32 gameDepthSta
 const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout);
 const VkFormat& GetVkImageFormat(uint32 gameImageFormat);
 const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType);
+VkBufferUsageFlags GetVkBufferUsageFlags(uint32 bufferUsage);
+VmaAllocationCreateFlagBits GetVMAUsageFlags(uint32 memUsage);
 
 }
 }

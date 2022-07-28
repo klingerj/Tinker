@@ -1,3 +1,9 @@
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN // Since VMA includes windows.h
+#endif
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h" // Note: including this below the others resulted in compile errors in intrin.h
+
 #include "Graphics/Vulkan/Vulkan.h"
 #include "Graphics/Vulkan/VulkanTypes.h"
 #include "Graphics/Vulkan/VulkanCreation.h"
@@ -10,9 +16,10 @@
 //#define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 #ifdef _WIN32
-#include <vulkan/vulkan_win32.h>
 #define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan_win32.h>
 #endif
+
 
 namespace Tk
 {
@@ -595,6 +602,16 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     CreateSamplers();
 
     InitVulkanDataTypesPerEnum();
+
+    // Init Vulkan Memory Allocator
+    {
+        VmaAllocatorCreateInfo allocatorCreateInfo = {};
+        allocatorCreateInfo.physicalDevice = g_vulkanContextResources.physicalDevice;
+        allocatorCreateInfo.device = g_vulkanContextResources.device;
+        allocatorCreateInfo.instance = g_vulkanContextResources.instance;
+        vmaCreateAllocator(&allocatorCreateInfo, &g_vulkanContextResources.GPUMemAllocator);
+    }
+
     g_vulkanContextResources.isInitted = true;
     return 0;
 }
@@ -622,6 +639,8 @@ void DestroyVulkan()
     }
 
     vkDestroySampler(g_vulkanContextResources.device, g_vulkanContextResources.linearSampler, nullptr);
+
+    vmaDestroyAllocator(g_vulkanContextResources.GPUMemAllocator);
 
     #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
     // Debug utils messenger
