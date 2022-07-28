@@ -121,12 +121,12 @@ void* VulkanMapResource(ResourceHandle handle)
     VulkanMemResource* resource =
         &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
 
-    void* newMappedMem;
-    VkResult result = vkMapMemory(g_vulkanContextResources.device, resource->deviceMemory, 0, VK_WHOLE_SIZE, 0, &newMappedMem);
+    void* newMappedMem = nullptr;
 
+    VkResult result = vmaMapMemory(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc, &newMappedMem);
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::LogSeverity::eCritical);
+        Core::Utility::LogMsg("Platform", "Failed to map gpu memory in VMA!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
         return nullptr;
     }
@@ -138,22 +138,17 @@ void VulkanUnmapResource(ResourceHandle handle)
 {
     VulkanMemResource* resource =
         &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+    VmaAllocationInfo allocInfo = {};
+    vmaGetAllocationInfo(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc, &allocInfo);
 
-    // Flush right before unmapping
-    VkMappedMemoryRange memoryRange = {};
-    memoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    memoryRange.memory = resource->deviceMemory;
-    memoryRange.offset = 0;
-    memoryRange.size = VK_WHOLE_SIZE;
-
-    VkResult result = vkFlushMappedMemoryRanges(g_vulkanContextResources.device, 1, &memoryRange);
+    VkResult result = vmaFlushAllocation(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc, 0, VK_WHOLE_SIZE);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to flush mapped gpu memory!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
-    vkUnmapMemory(g_vulkanContextResources.device, resource->deviceMemory);
+    vmaUnmapMemory(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc);
 }
 
 void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)

@@ -13,11 +13,13 @@ namespace Graphics
 VulkanContextResources g_vulkanContextResources = {};
 
 // NOTE: Must correspond the enums in PlatformGameAPI.h
-static VkPipelineColorBlendAttachmentState   VulkanBlendStates    [BlendState::eMax]     = {};
-static VkPipelineDepthStencilStateCreateInfo VulkanDepthStates    [DepthState::eMax]     = {};
-static VkImageLayout                         VulkanImageLayouts   [ImageLayout::eMax]    = {};
-static VkFormat                              VulkanImageFormats   [ImageFormat::eMax]    = {};
-static VkDescriptorType                      VulkanDescriptorTypes[DescriptorType::eMax] = {};
+static VkPipelineColorBlendAttachmentState   VulkanBlendStates     [BlendState::eMax]     = {};
+static VkPipelineDepthStencilStateCreateInfo VulkanDepthStates     [DepthState::eMax]     = {};
+static VkImageLayout                         VulkanImageLayouts    [ImageLayout::eMax]    = {};
+static VkFormat                              VulkanImageFormats    [ImageFormat::eMax]    = {};
+static VkDescriptorType                      VulkanDescriptorTypes [DescriptorType::eMax] = {};
+static VkBufferUsageFlags                    VulkanBufferUsageFlags[BufferUsage::eMax]    = {};
+static VmaAllocationCreateFlagBits           VmaUsageFlags         [BufferUsage::eMax]    = {};
 
 void InitVulkanDataTypesPerEnum()
 {
@@ -78,6 +80,20 @@ void InitVulkanDataTypesPerEnum()
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     VulkanDescriptorTypes[DescriptorType::eSSBO] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+    VulkanBufferUsageFlags[BufferUsage::eVertex] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vertex buffers are actually SSBOs for now
+    VulkanBufferUsageFlags[BufferUsage::eIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    VulkanBufferUsageFlags[BufferUsage::eTransientVertex] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    VulkanBufferUsageFlags[BufferUsage::eTransientIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    VulkanBufferUsageFlags[BufferUsage::eStaging] = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VulkanBufferUsageFlags[BufferUsage::eUniform] = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+    VmaUsageFlags[BufferUsage::eVertex] = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    VmaUsageFlags[BufferUsage::eIndex] = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+    VmaUsageFlags[BufferUsage::eTransientVertex] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    VmaUsageFlags[BufferUsage::eTransientIndex] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    VmaUsageFlags[BufferUsage::eStaging] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    VmaUsageFlags[BufferUsage::eUniform] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 }
 
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState)
@@ -108,6 +124,18 @@ const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType)
 {
     TINKER_ASSERT(gameDescriptorType < DescriptorType::eMax);
     return VulkanDescriptorTypes[gameDescriptorType];
+}
+
+VkBufferUsageFlags GetVkBufferUsageFlags(uint32 bufferUsage)
+{
+    TINKER_ASSERT(bufferUsage < BufferUsage::eMax);
+    return VulkanBufferUsageFlags[bufferUsage];
+}
+
+VmaAllocationCreateFlagBits GetVMAUsageFlags(uint32 bufferUsage)
+{
+    TINKER_ASSERT(bufferUsage < BufferUsage::eMax);
+    return VmaUsageFlags[bufferUsage];
 }
 
 }

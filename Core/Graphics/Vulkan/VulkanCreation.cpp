@@ -58,66 +58,6 @@ static void CreateImageView(VkDevice device, VkFormat format, VkImageAspectFlags
     }
 }
 
-static void AllocGPUMemory(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceMemory* deviceMemory,
-    VkMemoryRequirements memRequirements, VkMemoryPropertyFlags memPropertyFlags)
-{
-    // Check for memory type support
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-    uint32 memTypeIndex = 0xffffffff;
-    for (uint32 uiMemType = 0; uiMemType < memProperties.memoryTypeCount; ++uiMemType)
-    {
-        if (((1 << uiMemType) & memRequirements.memoryTypeBits) &&
-            (memProperties.memoryTypes[uiMemType].propertyFlags & memPropertyFlags) == memPropertyFlags)
-        {
-            memTypeIndex = uiMemType;
-            break;
-        }
-    }
-    if (memTypeIndex == 0xffffffff)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to find memory property flags!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-
-    VkMemoryAllocateInfo memAllocInfo = {};
-    memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memAllocInfo.allocationSize = memRequirements.size;
-    memAllocInfo.memoryTypeIndex = memTypeIndex;
-    VkResult result = vkAllocateMemory(device, &memAllocInfo, nullptr, deviceMemory);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to allocate gpu memory!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-}
-
-static void CreateBuffer(VkPhysicalDevice physicalDevice, VkDevice device, uint32 sizeInBytes,
-    VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags propertyFlags,
-    VkBuffer* buffer, VkDeviceMemory* deviceMemory)
-{
-    VkBufferCreateInfo bufferCreateInfo = {};
-    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCreateInfo.size = sizeInBytes;
-    bufferCreateInfo.usage = usageFlags;
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VkResult result = vkCreateBuffer(device, &bufferCreateInfo, nullptr, buffer);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan buffer!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, *buffer, &memRequirements);
-
-    AllocGPUMemory(physicalDevice, device, deviceMemory, memRequirements, propertyFlags);
-
-    vkBindBufferMemory(device, *buffer, *deviceMemory, 0);
-}
-
 static VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShaderCodeBytes, VkDevice device)
 {
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
@@ -593,68 +533,26 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
     {
         VulkanMemResource* newResource = &newResourceChain->resourceChain[uiBuf];
 
-        VkBufferUsageFlags usageFlags = {};
-        VkMemoryPropertyFlagBits propertyFlags = {};
+        VkBufferUsageFlags usageFlags = GetVkBufferUsageFlags(bufferUsage);
+        VmaAllocationCreateFlagBits allocCreateFlags = GetVMAUsageFlags(bufferUsage);
 
-        switch (bufferUsage)
+        VkBufferCreateInfo bufferCreateInfo = {};
+        bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferCreateInfo.size = sizeInBytes;
+        bufferCreateInfo.usage = usageFlags;
+        bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        // Allocate GPU memory using VMA
+        VmaAllocationCreateInfo allocCreateInfo = {};
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocCreateInfo.flags = allocCreateFlags;
+        //allocCreateInfo.pool = ; // TODO: alloc from custom memory pool
+        VkResult result = vmaCreateBuffer(g_vulkanContextResources.GPUMemAllocator, &bufferCreateInfo, &allocCreateInfo, &newResource->buffer, &newResource->GpuMemAlloc, nullptr);
+        if (result != VK_SUCCESS)
         {
-            case BufferUsage::eVertex:
-            {
-                usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vertex buffers are actually SSBOs for now
-                propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-                break;
-            }
-
-            case BufferUsage::eIndex:
-            {
-                usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-                propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-                break;
-            }
-
-            case BufferUsage::eTransientVertex:
-            {
-                usageFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; // vertex buffers are actually SSBOs for now
-                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-                break;
-            }
-
-            case BufferUsage::eTransientIndex:
-            {
-                usageFlags = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-                break;
-            }
-
-            case BufferUsage::eStaging:
-            {
-                usageFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-                break;
-            }
-
-            case BufferUsage::eUniform:
-            {
-                usageFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-                propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-                break;
-            }
-
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid buffer usage specified!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                break;
-            }
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan buffer in VMA!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
         }
-
-        CreateBuffer(g_vulkanContextResources.physicalDevice,
-            g_vulkanContextResources.device,
-            sizeInBytes,
-            usageFlags,
-            propertyFlags,
-            &newResource->buffer,
-            &newResource->deviceMemory);
     }
 
     return ResourceHandle(newResourceHandle);
@@ -664,10 +562,11 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
 {
     uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
     TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
-    VulkanMemResourceChain* newResourceChain =
-        g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
+    VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
 
+    // TODO: don't duplicate images per frame in flight
+    // need to change this in other places as well
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VulkanMemResource* newResource = &newResourceChain->resourceChain[uiImage];
@@ -708,20 +607,16 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
             }
         }
 
-        VkResult result = vkCreateImage(g_vulkanContextResources.device,
-            &imageCreateInfo,
-            nullptr,
-            &newResource->image);
-
-        VkMemoryRequirements memRequirements = {};
-        vkGetImageMemoryRequirements(g_vulkanContextResources.device, newResource->image, &memRequirements);
-        AllocGPUMemory(g_vulkanContextResources.physicalDevice,
-            g_vulkanContextResources.device,
-            &newResource->deviceMemory,
-            memRequirements,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-        vkBindImageMemory(g_vulkanContextResources.device, newResource->image, newResource->deviceMemory, 0);
+        // Allocate GPU memory using VMA
+        VmaAllocationCreateInfo allocCreateInfo = {};
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT; // images always go in this part of memory for now
+        VkResult result = vmaCreateImage(g_vulkanContextResources.GPUMemAllocator, &imageCreateInfo, &allocCreateInfo, &newResource->image, &newResource->GpuMemAlloc, nullptr);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan image in VMA!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+        }
 
         // Create image view
         VkImageAspectFlags aspectMask = {};
@@ -760,7 +655,6 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     return ResourceHandle(newResourceHandle);
 }
 
-
 ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc)
 {
     ResourceHandle newHandle = DefaultResHandle_Invalid;
@@ -793,64 +687,41 @@ ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc)
     return newHandle;
 }
 
-static void DestroyImageResource(ResourceHandle handle)
-{
-    vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
-
-    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
-    {
-        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiFrame];
-
-        if (resource->image != VK_NULL_HANDLE)
-        {
-            vkDestroyImage(g_vulkanContextResources.device, resource->image, nullptr);
-            vkFreeMemory(g_vulkanContextResources.device, resource->deviceMemory, nullptr);
-            vkDestroyImageView(g_vulkanContextResources.device, resource->imageView, nullptr);
-        }
-    }
-
-    g_vulkanContextResources.vulkanMemResourcePool.Dealloc(handle.m_hRes);
-}
-
-static void DestroyBuffer(ResourceHandle handle, uint32 bufferUsage)
-{
-    vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
-
-    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
-    {
-        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiFrame];
-
-        // Only destroy/free memory if it's a validly created buffer
-        if (resource->buffer != VK_NULL_HANDLE)
-        {
-            vkDestroyBuffer(g_vulkanContextResources.device, resource->buffer, nullptr);
-            vkFreeMemory(g_vulkanContextResources.device, resource->deviceMemory, nullptr);
-        }
-    }
-
-    g_vulkanContextResources.vulkanMemResourcePool.Dealloc(handle.m_hRes);
-}
-
 void VulkanDestroyResource(ResourceHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
     VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
 
-    switch (resourceChain->resDesc.resourceType)
+    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
-        case ResourceType::eBuffer1D:
-        {
-            DestroyBuffer(handle, resourceChain->resDesc.bufferUsage);
-            break;
-        }
+        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiFrame];
 
-        case ResourceType::eImage2D:
+        switch (resourceChain->resDesc.resourceType)
         {
-            DestroyImageResource(handle);
-            break;
+            case ResourceType::eBuffer1D:
+            {
+                if (resource->buffer != VK_NULL_HANDLE)
+                {
+                    vkDestroyBuffer(g_vulkanContextResources.device, resource->buffer, nullptr);
+                    vmaFreeMemory(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc);
+                }
+                break;
+            }
+
+            case ResourceType::eImage2D:
+            {
+                if (resource->image != VK_NULL_HANDLE)
+                {
+                    vkDestroyImage(g_vulkanContextResources.device, resource->image, nullptr);
+                    vkDestroyImageView(g_vulkanContextResources.device, resource->imageView, nullptr);
+                    vmaFreeMemory(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc);
+                }
+                break;
+            }
         }
     }
+    g_vulkanContextResources.vulkanMemResourcePool.Dealloc(handle.m_hRes);
 }
 
 void CreateSamplers()
