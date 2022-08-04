@@ -182,6 +182,8 @@ typedef struct graphics_resource_description
             uint32 arrayEles;
         };
     };
+
+    const char* debugLabel = "";
 } ResourceDesc;
 
 struct FramebufferHandle

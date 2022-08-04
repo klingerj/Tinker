@@ -114,8 +114,10 @@ static void CreateAllDescriptors()
     desc.resourceType = Graphics::ResourceType::eBuffer1D;
     desc.dims = v3ui(sizeof(DescriptorData_Instance) * MAX_INSTANCES_PER_VIEW, 0, 0);
     desc.bufferUsage = Graphics::BufferUsage::eUniform;
+    desc.debugLabel = "Descriptor Buffer Instance Constant Data";
     gameGraphicsData.m_DescDataBufferHandle_Instance = Graphics::CreateResource(desc);
     desc.dims = v3ui(sizeof(DescriptorData_Global), 0, 0);
+    desc.debugLabel = "Descriptor Buffer Global Constant Data";
     gameGraphicsData.m_DescDataBufferHandle_Global = Graphics::CreateResource(desc);
 
     gameGraphicsData.m_DescData_Global = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_VIEW_GLOBAL);
@@ -141,8 +143,11 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
+    desc.debugLabel = "MainViewColor";
     gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
+
     desc.imageFormat = Graphics::ImageFormat::Depth_32F;
+    desc.debugLabel = "MainViewDepth";
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
     gameRenderPasses[eRenderPass_ZPrePass].Init();

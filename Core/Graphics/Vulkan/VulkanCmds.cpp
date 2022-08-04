@@ -343,7 +343,7 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
         debugLabel,
         { 0.0f, 0.0f, 0.0f, 0.0f },
     };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
 #endif
     vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, 0, 0, 0);
 }
@@ -388,7 +388,7 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
         debugLabel,
         { 0.0f, 0.0f, 0.0f, 0.0f },
     };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
 #endif
 
     VulkanMemResourceChain* dstResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes);
@@ -513,6 +513,8 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     renderingInfo.pDepthAttachment = HasDepth ? &depthAttachment : nullptr;
     renderingInfo.pStencilAttachment = nullptr;
 
+    DbgStartMarker(commandBuffer, debugLabel);
+
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
 
     VkViewport viewport = { 0, 0, (float)renderWidth, (float)renderHeight, DEPTH_MIN, DEPTH_MAX };
@@ -520,28 +522,13 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
 
     VkRect2D scissor = { 0, 0, renderWidth, renderHeight };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
 }
 
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
     vkCmdEndRendering(commandBuffer);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
-#endif
+    DbgEndMarker(commandBuffer);
 }
 
 void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
@@ -564,7 +551,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
         debugLabel,
         { 0.0f, 0.0f, 0.0f, 0.0f },
     };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
 #endif
 
     VkImageMemoryBarrier barrier = {};
@@ -740,7 +727,7 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
         debugLabel,
         { 0.0f, 0.0f, 0.0f, 0.0f },
     };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
+    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
 #endif
 
     VulkanMemResourceChain* memResourceChain = nullptr;

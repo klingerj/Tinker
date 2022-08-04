@@ -11,6 +11,8 @@
 #include <vulkan/vulkan.h>
 #include "vk_mem_alloc.h"
 
+#define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
+
 #define VULKAN_RESOURCE_POOL_MAX 512
 
 #define VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES 3
@@ -84,9 +86,10 @@ struct VulkanContextResources
     
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger = NULL;
-    PFN_vkCmdBeginDebugUtilsLabelEXT pfnCmdBeginDebugUtilsLabelEXT = NULL;
-    PFN_vkCmdEndDebugUtilsLabelEXT pfnCmdEndDebugUtilsLabelEXT = NULL;
+    PFN_vkCmdBeginDebugUtilsLabelEXT  pfnCmdBeginDebugUtilsLabelEXT  = NULL;
+    PFN_vkCmdEndDebugUtilsLabelEXT    pfnCmdEndDebugUtilsLabelEXT    = NULL;
     PFN_vkCmdInsertDebugUtilsLabelEXT pfnCmdInsertDebugUtilsLabelEXT = NULL;
+    PFN_vkSetDebugUtilsObjectNameEXT  pfnSetDebugUtilsObjectNameEXT  = NULL;
 
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     uint32 graphicsQueueIndex = TINKER_INVALID_HANDLE;
@@ -136,6 +139,11 @@ struct VulkanContextResources
     VmaAllocator GPUMemAllocator;
 };
 extern VulkanContextResources g_vulkanContextResources;
+
+void DbgSetImageObjectName(uint64 handle, const char* name);
+void DbgSetBufferObjectName(uint64 handle, const char* name);
+void DbgStartMarker(VkCommandBuffer commandBuffer, const char* debugLabel);
+void DbgEndMarker(VkCommandBuffer commandBuffer);
 
 void InitVulkanDataTypesPerEnum();
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState);

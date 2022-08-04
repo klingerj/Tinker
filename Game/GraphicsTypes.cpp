@@ -11,6 +11,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
     {
         Graphics::ResourceDesc desc;
         desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
+        desc.debugLabel = "Default Quad Vtx Attr Buffer";
 
         // Positions
         desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);

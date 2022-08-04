@@ -518,7 +518,7 @@ void VulkanDestroyAllPSOPerms()
     }
 }
 
-static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsage)
+static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsage, const char* debugLabel)
 {
     uint32 newResourceHandle =
         g_vulkanContextResources.vulkanMemResourcePool.Alloc();
@@ -553,12 +553,14 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
             Core::Utility::LogMsg("Platform", "Failed to create Vulkan buffer in VMA!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
+
+        DbgSetBufferObjectName((uint64)newResource->buffer, debugLabel);
     }
 
     return ResourceHandle(newResourceHandle);
 }
 
-static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles)
+static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles, const char* debugLabel)
 {
     uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
     TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
@@ -618,6 +620,8 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
             TINKER_ASSERT(0);
         }
 
+        DbgSetImageObjectName((uint64)newResource->image, debugLabel);
+
         // Create image view
         VkImageAspectFlags aspectMask = {};
         switch (imageFormat)
@@ -663,13 +667,13 @@ ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc)
     {
         case ResourceType::eBuffer1D:
         {
-            newHandle = CreateBufferResource(resDesc.dims.x, resDesc.bufferUsage);
+            newHandle = CreateBufferResource(resDesc.dims.x, resDesc.bufferUsage, resDesc.debugLabel);
             break;
         }
 
         case ResourceType::eImage2D:
         {
-            newHandle = CreateImageResource(resDesc.imageFormat, resDesc.dims.x, resDesc.dims.y, resDesc.arrayEles);
+            newHandle = CreateImageResource(resDesc.imageFormat, resDesc.dims.x, resDesc.dims.y, resDesc.arrayEles, resDesc.debugLabel);
             break;
         }
 
