@@ -12,6 +12,53 @@ namespace Graphics
 
 VulkanContextResources g_vulkanContextResources = {};
 
+static void DbgSetObjectNameBase(uint64 handle, VkObjectType type, const char* name)
+{
+#ifdef ENABLE_VULKAN_DEBUG_LABELS
+    VkDebugUtilsObjectNameInfoEXT info =
+    {
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+        NULL,
+        type,
+        handle,
+        name
+    };
+
+    g_vulkanContextResources.pfnSetDebugUtilsObjectNameEXT(g_vulkanContextResources.device, &info);
+#endif
+}
+
+void DbgSetImageObjectName(uint64 handle, const char* name)
+{
+    DbgSetObjectNameBase(handle, VK_OBJECT_TYPE_IMAGE, name);
+}
+
+void DbgSetBufferObjectName(uint64 handle, const char* name)
+{
+    DbgSetObjectNameBase(handle, VK_OBJECT_TYPE_BUFFER, name);
+}
+
+void DbgStartMarker(VkCommandBuffer commandBuffer, const char* debugLabel)
+{
+#if defined(ENABLE_VULKAN_DEBUG_LABELS)
+    VkDebugUtilsLabelEXT label =
+    {
+        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+        NULL,
+        debugLabel,
+        { 0.0f, 0.0f, 0.0f, 0.0f },
+    };
+    g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
+#endif
+}
+
+void DbgEndMarker(VkCommandBuffer commandBuffer)
+{
+#if defined(ENABLE_VULKAN_DEBUG_LABELS)
+    g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
+#endif
+}
+
 // NOTE: Must correspond the enums in PlatformGameAPI.h
 static VkPipelineColorBlendAttachmentState   VulkanBlendStates     [BlendState::eMax]     = {};
 static VkPipelineDepthStencilStateCreateInfo VulkanDepthStates     [DepthState::eMax]     = {};

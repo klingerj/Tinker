@@ -13,13 +13,11 @@
 #include <iostream>
 // TODO: move this to be a compile define
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
-//#define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan_win32.h>
 #endif
-
 
 namespace Tk
 {
@@ -470,35 +468,20 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         TINKER_ASSERT(0);
     }
 
-    // Debug labels
+    // Debug utils labels / debug markers
     #if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    /*g_vulkanContextResources.pfnSetDebugUtilsObjectNameEXT =
-        (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device,
-                                                              "vkSetDebugUtilsObjectNameEXT")*/;
-    g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT =
-        (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device,
-                                                               "vkCmdBeginDebugUtilsLabelEXT");
-    if (!g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to get create debug utils begin label proc addr!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
+    g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device, "vkCmdBeginDebugUtilsLabelEXT");
+    g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device, "vkCmdEndDebugUtilsLabelEXT");
+    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device, "vkCmdInsertDebugUtilsLabelEXT");
+    g_vulkanContextResources.pfnSetDebugUtilsObjectNameEXT = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device, "vkSetDebugUtilsObjectNameEXT");
 
-    g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT =
-        (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device,
-                                                               "vkCmdEndDebugUtilsLabelEXT");
-    if (!g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT)
+    if (!g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT ||
+        !g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT ||
+        !g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT ||
+        !g_vulkanContextResources.pfnSetDebugUtilsObjectNameEXT
+        )
     {
-        Core::Utility::LogMsg("Platform", "Failed to get create debug utils end label proc addr!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT =
-        (PFN_vkCmdInsertDebugUtilsLabelEXT)vkGetDeviceProcAddr(g_vulkanContextResources.device,
-                                                               "vkCmdInsertDebugUtilsLabelEXT");
-    if (!g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to get create debug utils insert label proc addr!", Core::Utility::LogSeverity::eCritical);
+        Core::Utility::LogMsg("Platform", "Failed to get create debug utils marker proc addr!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
     #endif

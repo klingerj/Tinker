@@ -322,6 +322,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         // Create buffer handles
         Graphics::ResourceDesc desc;
         desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
+        desc.debugLabel = "Asset Vtx Attr Buffer";
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
         void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
