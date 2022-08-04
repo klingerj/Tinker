@@ -334,17 +334,6 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
     VulkanMemResourceChain* indexBufferResource = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
     VkBuffer& indexBuffer = indexBufferResource->resourceChain[0].buffer;
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
     vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, 0, 0, 0);
 }
 
@@ -379,17 +368,6 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
     const char* debugLabel, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
 
     VulkanMemResourceChain* dstResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes);
     VulkanMemResourceChain* srcResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes);
@@ -542,17 +520,6 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
     }
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
 
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -718,17 +685,6 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
     const v4f& clearValue, const char* debugLabel, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    //g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
 
     VulkanMemResourceChain* memResourceChain = nullptr;
     VulkanMemResource* memResource = nullptr;
