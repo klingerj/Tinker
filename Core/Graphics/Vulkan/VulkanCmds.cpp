@@ -14,9 +14,7 @@ bool VulkanAcquireFrame()
 {
     const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
 
-    VkResult result;
-
-    result = vkWaitForFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence, VK_FALSE, (uint64)-1);
+    VkResult result = vkWaitForFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence, VK_FALSE, (uint64)-1);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Waiting for virtual frame fence took too long!", Core::Utility::LogSeverity::eInfo);
@@ -334,7 +332,7 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
 
     // Index buffer
     VulkanMemResourceChain* indexBufferResource = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
-    VkBuffer& indexBuffer = indexBufferResource->resourceChain[0].buffer; // [g_vulkanContextResources.currentVirtualFrame]
+    VkBuffer& indexBuffer = indexBufferResource->resourceChain[0].buffer;
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
@@ -523,31 +521,6 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     VkRect2D scissor = { 0, 0, renderWidth, renderHeight };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    /*
-    VkRenderPassBeginInfo renderPassBeginInfo = {};
-    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderArea.extent = VkExtent2D({ renderWidth, renderHeight });
-
-    FramebufferHandle framebuffer = framebufferHandle;
-    if (framebuffer == DefaultFramebufferHandle_Invalid)
-    {
-        renderPassBeginInfo.framebuffer = g_vulkanContextResources.swapChainFramebuffers[g_vulkanContextResources.currentSwapChainImage];
-        renderPassBeginInfo.renderArea.extent = g_vulkanContextResources.swapChainExtent;
-
-        VkClearValue swapChainClearValue = { 0.0f, 0.0f, 0.0f, 1.0f };
-        renderPassBeginInfo.pClearValues = &swapChainClearValue;
-        renderPassBeginInfo.clearValueCount = 1;
-    }
-    else
-    {
-        VulkanFramebufferResource* framebufferPtr =
-            &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
-        renderPassBeginInfo.framebuffer = framebufferPtr->framebuffer;
-        renderPassBeginInfo.clearValueCount = framebufferPtr->numClearValues;
-        renderPassBeginInfo.pClearValues = framebufferPtr->clearValues;
-    }
-    renderPassBeginInfo.renderPass = g_vulkanContextResources.renderPasses[renderPassID].renderPassVk;*/
-
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
     VkDebugUtilsLabelEXT label =
     {
@@ -566,11 +539,9 @@ void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
 
     vkCmdEndRendering(commandBuffer);
 
-/*
 #if defined(ENABLE_VULKAN_DEBUG_LABELS)
     g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
 #endif
-*/
 }
 
 void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
@@ -578,7 +549,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
 {
     if (startLayout == endLayout)
     {
-        // Useless transition, don't record it
+        // Useless transition / error transition, don't record it
         TINKER_ASSERT(0);
         return;
     }
@@ -598,7 +569,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
 
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED; // TODO: probably change this
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.oldLayout = GetVkImageLayout(startLayout);
     barrier.newLayout = GetVkImageLayout(endLayout);
