@@ -1,6 +1,6 @@
 # Tinker Engine
 
-My second game engine project. Made with things learned from Handmade Hero, coworkers, and lessons learned from the older [Joe Engine](https://github.com/klingerj/Joe-Engine). Everything written from scratch. The Joe Engine has more graphics features (for the moment), but Tinker has superior software architecture, no dependencies, compiles faster, and has other debatably cooler features and capabilities.
+My second game engine project. Made with things learned from Handmade Hero, coworkers, and lessons learned from the older [Joe Engine](https://github.com/klingerj/Joe-Engine). Nearly everything written from scratch. The Joe Engine has more graphics features (for the moment), but Tinker has superior software architecture, no dependencies, compiles faster, and has other debatably cooler features and capabilities.
 
 Currently, the project renders a few instanced models with a Z prepass (fairly barebones graphics-wise):  
 ![](Output/TestImages/gameScreenshot.png)
@@ -38,6 +38,7 @@ Raytraced | Rasterized
   * Automatically hotloads newly built game code dll
 * API-agnostic graphics layer
   * Vulkan backend
+    * Use of dynamic rendering API feature
   * Draw call batching
   * Instanced rendering
 * Simple unit testing and benchmarking frameworks
@@ -70,10 +71,10 @@ Raytraced | Rasterized
 
 ### Build instructions
 You will need to have installed:
-* Visual Studio 2019, because the project will look for  
+* Visual Studio 2019, because the project will currently check for  
 <code>C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat</code>  
-(<code>Community</code> and <code>Enterprise</code> versions are also checked for)
-* Vulkan SDK version 1.2.141.2 from [LunarG](https://vulkan.lunarg.com/sdk/home#windows). You currently must use this exact version, no auto-detecting occurs  
+(<code>Community</code> and <code>Enterprise</code> versions will also work)
+* Vulkan SDK version 1.3.216.0 or higher from [LunarG](https://vulkan.lunarg.com/sdk/home#windows)
 
 To Build:
 * Run <code>proj_shell.bat</code> in the <code>Scripts/</code> directory. You can do this by double-clicking in the file explorer or from command line.
@@ -90,6 +91,10 @@ You should now be able to run the game via <code>run_game.bat</code>.
 
 ### Graphics API backends supported currently:
 * Vulkan
+
+### Libraries Used (Minimal dependencies used)
+* [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
+  * Header only, included as of Vulkan SDK version 1.3.216.0
 
 ### Assets used:  
 * [CGTrader - Fire Elemental by inalaatzu](https://www.cgtrader.com/free-3d-models/character/fantasy/fire-elemental-29c02a51-2d44-4c4b-9e73-fc5899cd690d)  
