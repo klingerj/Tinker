@@ -68,7 +68,7 @@ static void InitGPUMemAllocators()
         vkDestroyBuffer(g_vulkanContextResources.device, TestBuffer, nullptr);
 
         uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers].Init(512 * 1024 * 1024, memoryTypeIndex, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, properties.limits.nonCoherentAtomSize);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers].Init(DEVICE_LOCAL_BUFFER_HEAP_SIZE, memoryTypeIndex, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, properties.limits.nonCoherentAtomSize);
     }
 
     {
@@ -86,7 +86,7 @@ static void InitGPUMemAllocators()
         vkDestroyBuffer(g_vulkanContextResources.device, TestBuffer, nullptr);
 
         uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers].Init(512 * 1024 * 1024, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers].Init(HOST_VISIBLE_HEAP_SIZE, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
 
         // Note: special!!! this memory block is going to be persistently mapped for now
         result = vkMapMemory(g_vulkanContextResources.device, g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers].m_GPUMemory, 0, VK_WHOLE_SIZE, 0, &g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers].m_MappedMemPtr);
@@ -112,7 +112,7 @@ static void InitGPUMemAllocators()
         vkDestroyImage(g_vulkanContextResources.device, TestImage, nullptr);
 
         uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages].Init(512 * 1024 * 1024, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages].Init(DEVICE_LOCAL_IMAGE_HEAP_SIZE, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
     }
 }
 
