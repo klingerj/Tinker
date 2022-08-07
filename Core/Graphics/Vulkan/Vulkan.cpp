@@ -1,9 +1,3 @@
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN // Since VMA includes windows.h
-#endif
-#define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h" // Note: including this below the others resulted in compile errors in intrin.h
-
 #include "Graphics/Vulkan/Vulkan.h"
 #include "Graphics/Vulkan/VulkanTypes.h"
 #include "Graphics/Vulkan/VulkanCreation.h"
@@ -18,6 +12,10 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan_win32.h>
 #endif
+
+#define DEVICE_LOCAL_BUFFER_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
+#define HOST_VISIBLE_HEAP_SIZE 120 * 1000 * 1000 // 120 MB
+#define DEVICE_LOCAL_IMAGE_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
 
 namespace Tk
 {
@@ -37,7 +35,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 {
     if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) | (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
     {
-        OutputDebugString("VALIDATION LAYER:\n");
         OutputDebugString(pCallbackData->pMessage);
         OutputDebugString("\n");
     }
@@ -45,6 +42,79 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
     return VK_FALSE;
 }
 #endif
+
+// This code exists so that we can preallocate proper VkDeviceMemory's before creating any buffers for faster GPU memory allocation
+// TODO: wrap up stuff into helpers
+static void InitGPUMemAllocators()
+{
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(g_vulkanContextResources.physicalDevice, &properties);
+
+    VkMemoryRequirements memRequirements = {};
+
+    {
+        // Create test buffer to query memory requirements
+        VkBufferUsageFlags AllPossibleFlags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        VkBuffer TestBuffer = VK_NULL_HANDLE;
+        VkResult result = CreateBuffer(0, 64u, AllPossibleFlags, VK_SHARING_MODE_EXCLUSIVE, &TestBuffer);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create buffer!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+        }
+
+        vkGetBufferMemoryRequirements(g_vulkanContextResources.device, TestBuffer, &memRequirements);
+        // Done with the buffer
+        vkDestroyBuffer(g_vulkanContextResources.device, TestBuffer, nullptr);
+
+        uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers].Init(512 * 1024 * 1024, memoryTypeIndex, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, properties.limits.nonCoherentAtomSize);
+    }
+
+    {
+        VkBufferUsageFlags AllPossibleFlags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        VkBuffer TestBuffer = VK_NULL_HANDLE;
+        VkResult result = CreateBuffer(0, 64u, AllPossibleFlags, VK_SHARING_MODE_EXCLUSIVE, &TestBuffer);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create buffer!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+        }
+
+        vkGetBufferMemoryRequirements(g_vulkanContextResources.device, TestBuffer, &memRequirements);
+        // Done with the buffer
+        vkDestroyBuffer(g_vulkanContextResources.device, TestBuffer, nullptr);
+
+        uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers].Init(512 * 1024 * 1024, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
+
+        // Note: special!!! this memory block is going to be persistently mapped for now
+        result = vkMapMemory(g_vulkanContextResources.device, g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers].m_GPUMemory, 0, VK_WHOLE_SIZE, 0, &g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers].m_MappedMemPtr);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+        }
+    }
+
+    {
+        VkImageUsageFlags AllPossibleFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        VkImage TestImage = VK_NULL_HANDLE;
+        VkResult result = CreateImage(0, VK_IMAGE_TYPE_2D, VK_FORMAT_R8G8B8A8_SRGB, { 64u, 64u, 1u }, 6u, 4u, VK_IMAGE_TILING_OPTIMAL, AllPossibleFlags, VK_SHARING_MODE_EXCLUSIVE, &TestImage);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create image!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+        }
+
+        vkGetImageMemoryRequirements(g_vulkanContextResources.device, TestImage, &memRequirements);
+        // Done with the image
+        vkDestroyImage(g_vulkanContextResources.device, TestImage, nullptr);
+
+        uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages].Init(512 * 1024 * 1024, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
+    }
+}
 
 int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height)
 {
@@ -586,14 +656,7 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
 
     InitVulkanDataTypesPerEnum();
 
-    // Init Vulkan Memory Allocator
-    {
-        VmaAllocatorCreateInfo allocatorCreateInfo = {};
-        allocatorCreateInfo.physicalDevice = g_vulkanContextResources.physicalDevice;
-        allocatorCreateInfo.device = g_vulkanContextResources.device;
-        allocatorCreateInfo.instance = g_vulkanContextResources.instance;
-        vmaCreateAllocator(&allocatorCreateInfo, &g_vulkanContextResources.GPUMemAllocator);
-    }
+    InitGPUMemAllocators();
 
     g_vulkanContextResources.isInitted = true;
     return 0;
@@ -623,7 +686,10 @@ void DestroyVulkan()
 
     vkDestroySampler(g_vulkanContextResources.device, g_vulkanContextResources.linearSampler, nullptr);
 
-    vmaDestroyAllocator(g_vulkanContextResources.GPUMemAllocator);
+    for (uint32 uiAlloc = 0; uiAlloc < ARRAYCOUNT(g_vulkanContextResources.GPUMemAllocators); ++uiAlloc)
+    {
+        g_vulkanContextResources.GPUMemAllocators[uiAlloc].Destroy();
+    }
 
     #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
     // Debug utils messenger

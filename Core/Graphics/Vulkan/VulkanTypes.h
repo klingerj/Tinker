@@ -9,7 +9,6 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <vulkan/vulkan.h>
-#include "vk_mem_alloc.h"
 
 #define ENABLE_VULKAN_DEBUG_LABELS // enables marking up vulkan objects/commands with debug labels
 
@@ -32,9 +31,33 @@ namespace Core
 namespace Graphics
 {
 
+typedef struct vulkan_mem_alloc
+{
+    VkDeviceMemory allocMem;
+    VkDeviceSize allocSize;
+    VkDeviceSize allocOffset;
+    void* mappedMemPtr;
+} VulkanMemAlloc;
+
+typedef struct vulkan_mem_allocator
+{
+    VkDeviceMemory m_GPUMemory;
+    uint64 m_AllocSizeLimit;
+    uint64 m_LastAllocOffset;
+    uint32 m_NumAllocs;
+    VkMemoryPropertyFlags m_MemFlags;
+    void* m_MappedMemPtr;
+    VkDeviceSize m_AllocGranularity;
+
+    void Init(uint32 TotalAllocSize, uint32 MemoryTypeIndex, VkMemoryPropertyFlagBits MemPropertyFlags, VkDeviceSize AllocGranularity);
+    void Destroy();
+    VulkanMemAlloc Alloc(VkMemoryRequirements allocReqs);
+
+} VulkanMemoryAllocator;
+
 typedef struct vulkan_mem_resource
 {
-    VmaAllocation GpuMemAlloc;
+    VulkanMemAlloc GpuMemAlloc;
 
     union
     {
@@ -136,7 +159,14 @@ struct VulkanContextResources
 
     Tk::Core::LinearAllocator DataAllocator;
 
-    VmaAllocator GPUMemAllocator;
+    enum
+    {
+        eVulkanMemoryAllocatorDeviceLocalBuffers = 0u,
+        eVulkanMemoryAllocatorDeviceLocalImages,
+        eVulkanMemoryAllocatorHostVisibleBuffers,
+        eVulkanMemoryAllocatorMax,
+    };
+    VulkanMemoryAllocator GPUMemAllocators[eVulkanMemoryAllocatorMax];
 };
 extern VulkanContextResources g_vulkanContextResources;
 
@@ -145,6 +175,11 @@ void DbgSetBufferObjectName(uint64 handle, const char* name);
 void DbgStartMarker(VkCommandBuffer commandBuffer, const char* debugLabel);
 void DbgEndMarker(VkCommandBuffer commandBuffer);
 
+uint32 ChooseMemoryTypeBits(uint32 requiredMemoryTypeBits, VkMemoryPropertyFlags memPropertyFlags);
+
+VkResult CreateBuffer(VkBufferCreateFlags flags, VkDeviceSize size, VkBufferUsageFlags usage, VkSharingMode sharingMode, VkBuffer* outBuffer);
+VkResult CreateImage(VkImageCreateFlags flags, VkImageType imageType, VkFormat format, VkExtent3D extent, uint32 mipLevels, uint32 arrayLayers, VkImageTiling tiling, VkImageUsageFlags usage, VkSharingMode sharingMode, VkImage* outImage);
+
 void InitVulkanDataTypesPerEnum();
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState);
 const VkPipelineDepthStencilStateCreateInfo& GetVkDepthState(uint32 gameDepthState);
@@ -152,7 +187,7 @@ const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout);
 const VkFormat& GetVkImageFormat(uint32 gameImageFormat);
 const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType);
 VkBufferUsageFlags GetVkBufferUsageFlags(uint32 bufferUsage);
-VmaAllocationCreateFlagBits GetVMAUsageFlags(uint32 memUsage);
+VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 memUsage);
 
 }
 }

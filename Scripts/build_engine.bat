@@ -136,7 +136,7 @@ echo Building TinkerApp.exe...
 
 
 if %GraphicsAPIChosen% == "VK" (
-    set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include /I %VULKAN_SDK%/Include/vma
+    set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
     set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
 )
 

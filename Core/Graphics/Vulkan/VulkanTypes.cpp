@@ -12,6 +12,107 @@ namespace Graphics
 
 VulkanContextResources g_vulkanContextResources = {};
 
+void VulkanMemoryAllocator::Init(uint32 TotalAllocSize, uint32 MemoryTypeIndex, VkMemoryPropertyFlagBits MemPropertyFlags, VkDeviceSize AllocGranularity)
+{
+    m_GPUMemory = VK_NULL_HANDLE;
+    m_AllocSizeLimit = TotalAllocSize;
+    m_LastAllocOffset = 0;
+    m_NumAllocs = 0;
+    m_MemFlags = MemPropertyFlags;
+    m_AllocGranularity = AllocGranularity;
+
+    VkMemoryAllocateInfo memAllocInfo = {};
+    memAllocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memAllocInfo.allocationSize = m_AllocSizeLimit;
+    memAllocInfo.memoryTypeIndex = MemoryTypeIndex;
+    VkResult result = vkAllocateMemory(g_vulkanContextResources.device, &memAllocInfo, nullptr, &m_GPUMemory);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "GPU mem allocator failed to allocate gpu memory!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+}
+
+void VulkanMemoryAllocator::Destroy()
+{
+    vkFreeMemory(g_vulkanContextResources.device, m_GPUMemory, nullptr);
+    m_GPUMemory = VK_NULL_HANDLE;
+}
+
+VulkanMemAlloc VulkanMemoryAllocator::Alloc(VkMemoryRequirements allocReqs)
+{
+    uint64 allocSize = RoundValueToPow2(allocReqs.size, m_AllocGranularity);
+
+    //TODO: check/enforce that the alignment is a power of two?
+    uint64 alignment = max(m_AllocGranularity, allocReqs.alignment);
+    TINKER_ASSERT(ISPOW2(alignment));
+    uint64 nextAllocOffset = RoundValueToPow2(m_LastAllocOffset, alignment); // ensure alloc offset is aligned
+    uint64 nextAllocEnd = nextAllocOffset + allocSize;
+
+    if (nextAllocEnd > m_AllocSizeLimit)
+    {
+        TINKER_ASSERT(0);
+        Core::Utility::LogMsg("Platform", "Vulkan gpu mem allocator ran out of memory!", Core::Utility::LogSeverity::eInfo);
+    }
+
+    m_LastAllocOffset = nextAllocEnd;
+    ++m_NumAllocs;
+
+    VulkanMemAlloc alloc;
+    alloc.allocMem = m_GPUMemory;
+    alloc.allocOffset = nextAllocOffset;
+    alloc.allocSize = allocSize;
+    alloc.mappedMemPtr = m_MappedMemPtr; // may be nullptr
+    return alloc;
+}
+
+uint32 ChooseMemoryTypeBits(uint32 requiredMemoryTypeBits, VkMemoryPropertyFlags memPropertyFlags)
+{
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(g_vulkanContextResources.physicalDevice, &memProperties);
+
+    uint32 memTypeIndex = 0xffffffff;
+    // TODO: make this smarter
+    // For now, pick the first memory heap that remotely matches
+    for (uint32 uiMemType = 0; uiMemType < memProperties.memoryTypeCount; ++uiMemType)
+    {
+        if (((1 << uiMemType) & requiredMemoryTypeBits) &&
+            (memProperties.memoryTypes[uiMemType].propertyFlags & memPropertyFlags) == memPropertyFlags)
+        {
+            memTypeIndex = uiMemType;
+            break;
+        }
+    }
+    return memTypeIndex;
+}
+
+VkResult CreateBuffer(VkBufferCreateFlags flags, VkDeviceSize size, VkBufferUsageFlags usage, VkSharingMode sharingMode, VkBuffer* outBuffer)
+{
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.flags = flags;
+    bufferCreateInfo.size = size;
+    bufferCreateInfo.usage = usage;
+    bufferCreateInfo.sharingMode = sharingMode;
+    return vkCreateBuffer(g_vulkanContextResources.device, &bufferCreateInfo, nullptr, outBuffer);
+}
+
+VkResult CreateImage(VkImageCreateFlags flags, VkImageType imageType, VkFormat format, VkExtent3D extent, uint32 mipLevels, uint32 arrayLayers, VkImageTiling tiling, VkImageUsageFlags usage, VkSharingMode sharingMode, VkImage* outImage)
+{
+    VkImageCreateInfo imageCreateInfo = {};
+    imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = imageType;
+    imageCreateInfo.extent = extent;
+    imageCreateInfo.mipLevels = mipLevels;
+    imageCreateInfo.arrayLayers = arrayLayers;
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageCreateInfo.format = format;
+    imageCreateInfo.tiling = tiling;
+    imageCreateInfo.usage = usage;
+    imageCreateInfo.flags = flags;
+    return vkCreateImage(g_vulkanContextResources.device, &imageCreateInfo, nullptr, outImage);
+}
+
 static void DbgSetObjectNameBase(uint64 handle, VkObjectType type, const char* name)
 {
 #ifdef ENABLE_VULKAN_DEBUG_LABELS
@@ -66,7 +167,7 @@ static VkImageLayout                         VulkanImageLayouts    [ImageLayout:
 static VkFormat                              VulkanImageFormats    [ImageFormat::eMax]    = {};
 static VkDescriptorType                      VulkanDescriptorTypes [DescriptorType::eMax] = {};
 static VkBufferUsageFlags                    VulkanBufferUsageFlags[BufferUsage::eMax]    = {};
-static VmaAllocationCreateFlagBits           VmaUsageFlags         [BufferUsage::eMax]    = {};
+static VkMemoryPropertyFlagBits              VulkanMemPropertyFlags[BufferUsage::eMax]    = {};
 
 void InitVulkanDataTypesPerEnum()
 {
@@ -135,12 +236,12 @@ void InitVulkanDataTypesPerEnum()
     VulkanBufferUsageFlags[BufferUsage::eStaging] = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     VulkanBufferUsageFlags[BufferUsage::eUniform] = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-    VmaUsageFlags[BufferUsage::eVertex] = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-    VmaUsageFlags[BufferUsage::eIndex] = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-    VmaUsageFlags[BufferUsage::eTransientVertex] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-    VmaUsageFlags[BufferUsage::eTransientIndex] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-    VmaUsageFlags[BufferUsage::eStaging] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-    VmaUsageFlags[BufferUsage::eUniform] = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    VulkanMemPropertyFlags[BufferUsage::eVertex] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    VulkanMemPropertyFlags[BufferUsage::eIndex] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    VulkanMemPropertyFlags[BufferUsage::eTransientVertex] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VulkanMemPropertyFlags[BufferUsage::eTransientIndex] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VulkanMemPropertyFlags[BufferUsage::eStaging] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VulkanMemPropertyFlags[BufferUsage::eUniform] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 }
 
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState)
@@ -179,10 +280,10 @@ VkBufferUsageFlags GetVkBufferUsageFlags(uint32 bufferUsage)
     return VulkanBufferUsageFlags[bufferUsage];
 }
 
-VmaAllocationCreateFlagBits GetVMAUsageFlags(uint32 bufferUsage)
+VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 bufferUsage)
 {
     TINKER_ASSERT(bufferUsage < BufferUsage::eMax);
-    return VmaUsageFlags[bufferUsage];
+    return VulkanMemPropertyFlags[bufferUsage];
 }
 
 }
