@@ -1,6 +1,6 @@
 # Tinker Engine
 
-My second game engine project. Made with things learned from Handmade Hero, coworkers, and lessons learned from the older [Joe Engine](https://github.com/klingerj/Joe-Engine). Nearly everything written from scratch. The Joe Engine has more graphics features (for the moment), but Tinker has superior software architecture, no dependencies, compiles faster, and has other debatably cooler features and capabilities.
+My second game engine project. Made with things learned from Handmade Hero, coworkers, and lessons learned from the older [Joe Engine](https://github.com/klingerj/Joe-Engine). Everything written from scratch. The Joe Engine has more graphics features (for the moment), but Tinker has superior software architecture, no dependencies, compiles faster, and has other debatably cooler features and capabilities.
 
 Currently, the project renders a few instanced models with a Z prepass (fairly barebones graphics-wise):  
 ![](Output/TestImages/gameScreenshot.png)
@@ -91,10 +91,6 @@ You should now be able to run the game via <code>run_game.bat</code>.
 
 ### Graphics API backends supported currently:
 * Vulkan
-
-### Libraries Used (Minimal dependencies used)
-* [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
-  * Header only, included as of Vulkan SDK version 1.3.216.0
 
 ### Assets used:  
 * [CGTrader - Fire Elemental by inalaatzu](https://www.cgtrader.com/free-3d-models/character/fantasy/fire-elemental-29c02a51-2d44-4c4b-9e73-fc5899cd690d)  
