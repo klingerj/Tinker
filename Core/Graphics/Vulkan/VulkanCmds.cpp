@@ -116,37 +116,55 @@ void VulkanSubmitFrame()
 
 void* VulkanMapResource(ResourceHandle handle)
 {
-    VulkanMemResource* resource =
-        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+    VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
+    const ResourceDesc& desc = resourceChain->resDesc;
+    VulkanMemResource* resource = &resourceChain->resourceChain[IsBufferUsageMultiBuffered(desc.bufferUsage) ?  g_vulkanContextResources.currentVirtualFrame : 0];
 
-    void* newMappedMem = nullptr;
-
-    VkResult result = vmaMapMemory(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc, &newMappedMem);
-    if (result != VK_SUCCESS)
+    // Note: Right now, all host visible memory is allocated into the same single device memory block, which I just leave persistently mapped. So this just has to return the mapped ptr + offset.
+    if (1)
     {
-        Core::Utility::LogMsg("Platform", "Failed to map gpu memory in VMA!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-        return nullptr;
+        return (void*)((uint8*)resource->GpuMemAlloc.mappedMemPtr + resource->GpuMemAlloc.allocOffset);
     }
+    else
+    {
+        void* newMappedMem;
+        VkResult result = vkMapMemory(g_vulkanContextResources.device, resource->GpuMemAlloc.allocMem, 0, VK_WHOLE_SIZE, 0, &newMappedMem);
 
-    return newMappedMem;
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+            return nullptr;
+        }
+
+        return newMappedMem;
+    }
 }
 
 void VulkanUnmapResource(ResourceHandle handle)
 {
-    VulkanMemResource* resource =
-        &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
-    VmaAllocationInfo allocInfo = {};
-    vmaGetAllocationInfo(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc, &allocInfo);
+    VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
+    const ResourceDesc& desc = resourceChain->resDesc;
+    VulkanMemResource* resource = &resourceChain->resourceChain[IsBufferUsageMultiBuffered(desc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0];
 
-    VkResult result = vmaFlushAllocation(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc, 0, VK_WHOLE_SIZE);
+    // Flush right before unmapping
+    VkMappedMemoryRange memoryRange = {};
+    memoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    memoryRange.memory = resource->GpuMemAlloc.allocMem;
+    memoryRange.offset = resource->GpuMemAlloc.allocOffset;
+    memoryRange.size = resource->GpuMemAlloc.allocSize;
+
+    VkResult result = vkFlushMappedMemoryRanges(g_vulkanContextResources.device, 1, &memoryRange);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to flush mapped gpu memory!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
 
-    vmaUnmapMemory(g_vulkanContextResources.GPUMemAllocator, resource->GpuMemAlloc);
+    if (0)
+    {
+        vkUnmapMemory(g_vulkanContextResources.device, resource->GpuMemAlloc.allocMem);
+    }
 }
 
 void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
