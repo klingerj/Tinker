@@ -12,22 +12,32 @@ namespace Graphics
 
 bool VulkanAcquireFrame()
 {
-    vkWaitForFences(g_vulkanContextResources.device, 1, &g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame], VK_TRUE, (uint64)-1);
+    const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
+
+    VkResult result = vkWaitForFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence, VK_FALSE, (uint64)-1);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Waiting for virtual frame fence took too long!", Core::Utility::LogSeverity::eInfo);
+        return false;
+    }
+    vkResetFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence);
 
     uint32 currentSwapChainImageIndex = TINKER_INVALID_HANDLE;
 
-    VkResult result = vkAcquireNextImageKHR(g_vulkanContextResources.device,
+    result = vkAcquireNextImageKHR(g_vulkanContextResources.device,
         g_vulkanContextResources.swapChain,
         (uint64)-1,
-        g_vulkanContextResources.swapChainImageAvailableSemaphores[g_vulkanContextResources.currentFrame],
+        virtualFrameSyncData.ImageAvailableSema,
         VK_NULL_HANDLE,
         &currentSwapChainImageIndex);
 
-    if (result != VK_SUCCESS)
+    // Error checking
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
     {
         Core::Utility::LogMsg("Platform", "Failed to acquire next swap chain image!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
+            TINKER_ASSERT(0); // untested code path
             Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
             VulkanDestroySwapChain();
             VulkanCreateSwapChain();
@@ -42,34 +52,31 @@ bool VulkanAcquireFrame()
         return false;
     }
 
-    if (g_vulkanContextResources.imageInFlightFences[currentSwapChainImageIndex] != VK_NULL_HANDLE)
-        vkWaitForFences(g_vulkanContextResources.device, 1, &g_vulkanContextResources.imageInFlightFences[currentSwapChainImageIndex], VK_TRUE, (uint64)-1);
-
-    g_vulkanContextResources.imageInFlightFences[currentSwapChainImageIndex] = g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame];
     g_vulkanContextResources.currentSwapChainImage = currentSwapChainImageIndex;
     return true;
 }
 
 void VulkanSubmitFrame()
 {
+    const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
+
     // Submit
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[1] = { g_vulkanContextResources.swapChainImageAvailableSemaphores[g_vulkanContextResources.currentFrame] };
-    VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    VkSemaphore waitSemaphores[1] = { virtualFrameSyncData.ImageAvailableSema };
+    VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage];
+    submitInfo.pCommandBuffers = &g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame];
 
-    VkSemaphore signalSemaphores[1] = { g_vulkanContextResources.renderCompleteSemaphores[g_vulkanContextResources.currentFrame] };
+    VkSemaphore signalSemaphores[1] = { virtualFrameSyncData.GPUWorkCompleteSema };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    vkResetFences(g_vulkanContextResources.device, 1, &g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame]);
-    VkResult result = vkQueueSubmit(g_vulkanContextResources.graphicsQueue, 1, &submitInfo, g_vulkanContextResources.fences[g_vulkanContextResources.currentFrame]);
+    VkResult result = vkQueueSubmit(g_vulkanContextResources.graphicsQueue, 1, &submitInfo, virtualFrameSyncData.Fence);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::LogSeverity::eCritical);
@@ -83,20 +90,19 @@ void VulkanSubmitFrame()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &g_vulkanContextResources.swapChain;
     presentInfo.pImageIndices = &g_vulkanContextResources.currentSwapChainImage;
-    presentInfo.pResults = nullptr;
 
-    result = vkQueuePresentKHR(g_vulkanContextResources.presentationQueue, &presentInfo);
+    result = vkQueuePresentKHR(g_vulkanContextResources.graphicsQueue, &presentInfo);
 
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to present swap chain!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {
-            TINKER_ASSERT(0);
-            /*Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
-            VulkanDestroySwapChain(g_vulkanContextResources);
-            VulkanCreateSwapChain(g_vulkanContextResources);
-            return; // Don't present on this frame*/
+            TINKER_ASSERT(0); // untested code path
+            Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
+            VulkanDestroySwapChain();
+            VulkanCreateSwapChain();
+            return;
         }
         else
         {
@@ -105,9 +111,143 @@ void VulkanSubmitFrame()
         }
     }
 
-    g_vulkanContextResources.currentFrame = (g_vulkanContextResources.currentFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
+    g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
+}
 
-    vkQueueWaitIdle(g_vulkanContextResources.presentationQueue);
+void* VulkanMapResource(ResourceHandle handle)
+{
+    VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
+    const ResourceDesc& desc = resourceChain->resDesc;
+    VulkanMemResource* resource = &resourceChain->resourceChain[IsBufferUsageMultiBuffered(desc.bufferUsage) ?  g_vulkanContextResources.currentVirtualFrame : 0];
+
+    // Note: Right now, all host visible memory is allocated into the same single device memory block, which I just leave persistently mapped. So this just has to return the mapped ptr + offset.
+    if (1)
+    {
+        return (void*)((uint8*)resource->GpuMemAlloc.mappedMemPtr + resource->GpuMemAlloc.allocOffset);
+    }
+    else
+    {
+        void* newMappedMem;
+        VkResult result = vkMapMemory(g_vulkanContextResources.device, resource->GpuMemAlloc.allocMem, 0, VK_WHOLE_SIZE, 0, &newMappedMem);
+
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+            return nullptr;
+        }
+
+        return newMappedMem;
+    }
+}
+
+void VulkanUnmapResource(ResourceHandle handle)
+{
+    VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
+    const ResourceDesc& desc = resourceChain->resDesc;
+    VulkanMemResource* resource = &resourceChain->resourceChain[IsBufferUsageMultiBuffered(desc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0];
+
+    // Flush right before unmapping
+    VkMappedMemoryRange memoryRange = {};
+    memoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    memoryRange.memory = resource->GpuMemAlloc.allocMem;
+    memoryRange.offset = resource->GpuMemAlloc.allocOffset;
+    memoryRange.size = resource->GpuMemAlloc.allocSize;
+
+    VkResult result = vkFlushMappedMemoryRanges(g_vulkanContextResources.device, 1, &memoryRange);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to flush mapped gpu memory!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    if (0)
+    {
+        vkUnmapMemory(g_vulkanContextResources.device, resource->GpuMemAlloc.allocMem);
+    }
+}
+
+void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
+{
+    TINKER_ASSERT(descSetDataCount <= MAX_BINDINGS_PER_SET);
+
+    DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
+
+    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    {
+        VkDescriptorSet* descriptorSet =
+            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiImage].descriptorSet;
+
+        // Descriptor layout
+        VkWriteDescriptorSet descSetWrites[MAX_BINDINGS_PER_SET] = {};
+        uint32 descriptorCount = 0;
+
+        // Desc set info data
+        VkDescriptorBufferInfo descBufferInfo[MAX_BINDINGS_PER_SET] = {};
+        VkDescriptorImageInfo descImageInfo[MAX_BINDINGS_PER_SET] = {};
+
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+        {
+            descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+            uint32 type = descLayout->params[uiDesc].type;
+            if (type != DescriptorType::eMax)
+            {
+                VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes);
+                uint32 resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
+                VulkanMemResource* res = &resChain->resourceChain[resIndex];
+
+                switch (type)
+                {
+                    case DescriptorType::eBuffer:
+                    case DescriptorType::eSSBO:
+                    {
+                        VkBuffer* buffer = &res->buffer;
+
+                        descBufferInfo[descriptorCount].buffer = *buffer;
+                        descBufferInfo[descriptorCount].offset = 0;
+                        descBufferInfo[descriptorCount].range = VK_WHOLE_SIZE;
+
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = GetVkDescriptorType(type);
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pBufferInfo = &descBufferInfo[descriptorCount];
+                        break;
+                    }
+
+                    case DescriptorType::eSampledImage:
+                    {
+                        VkImageView* imageView = &res->imageView;
+
+                        descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                        descImageInfo[descriptorCount].imageView = *imageView;
+                        descImageInfo[descriptorCount].sampler = g_vulkanContextResources.linearSampler;
+
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pImageInfo = &descImageInfo[descriptorCount];
+                        break;
+                    }
+
+                    default:
+                    {
+                        break;
+                    }
+                }
+                ++descriptorCount;
+            }
+        }
+
+        if (descriptorCount > 0)
+        {
+            vkUpdateDescriptorSets(g_vulkanContextResources.device, descriptorCount, descSetWrites, 0, nullptr);
+        }
+    }
 }
 
 void BeginVulkanCommandRecording()
@@ -117,7 +257,7 @@ void BeginVulkanCommandRecording()
     commandBufferBeginInfo.flags = 0;
     commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
-    VkResult result = vkBeginCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage], &commandBufferBeginInfo);
+    VkResult result = vkBeginCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame], &commandBufferBeginInfo);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
@@ -127,12 +267,12 @@ void BeginVulkanCommandRecording()
 
 void EndVulkanCommandRecording()
 {
-    if (g_vulkanContextResources.currentSwapChainImage == TINKER_INVALID_HANDLE)
+    if (g_vulkanContextResources.currentSwapChainImage == TINKER_INVALID_HANDLE || g_vulkanContextResources.currentVirtualFrame == TINKER_INVALID_HANDLE)
     {
         TINKER_ASSERT(0);
     }
 
-    VkResult result = vkEndCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage]);
+    VkResult result = vkEndCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame]);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
@@ -183,8 +323,8 @@ VkCommandBuffer ChooseAppropriateCommandBuffer(bool immediateSubmit)
 
     if (!immediateSubmit)
     {
-        TINKER_ASSERT(g_vulkanContextResources.currentSwapChainImage != TINKER_INVALID_HANDLE);
-        commandBuffer = g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentSwapChainImage];
+        TINKER_ASSERT(g_vulkanContextResources.currentSwapChainImage != TINKER_INVALID_HANDLE && g_vulkanContextResources.currentVirtualFrame != TINKER_INVALID_HANDLE);
+        commandBuffer = g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame];
     }
 
     return commandBuffer;
@@ -208,25 +348,10 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-    uint32 currentSwapChainImage = g_vulkanContextResources.currentSwapChainImage;
-
     // Index buffer
     VulkanMemResourceChain* indexBufferResource = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
-    //uint32 indexBufferSize = indexBufferResource->resDesc.dims.x;
-    //TODO: bad indexing
-    VkBuffer& indexBuffer = indexBufferResource->resourceChain[g_vulkanContextResources.currentSwapChainImage].buffer;
+    VkBuffer& indexBuffer = indexBufferResource->resourceChain[0].buffer;
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
     vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, 0, 0, 0);
 }
 
@@ -248,7 +373,7 @@ void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 de
         if (descHandle != DefaultDescHandle_Invalid)
         {
             VkDescriptorSet* descSet =
-                &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentSwapChainImage].descriptorSet;
+                &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
 
             vkCmdBindDescriptorSets(commandBuffer,
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -262,37 +387,23 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
-
     VulkanMemResourceChain* dstResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes);
-    VulkanMemResource* dstResource = &dstResourceChain->resourceChain[g_vulkanContextResources.currentSwapChainImage];
+    VulkanMemResourceChain* srcResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes);
 
     switch (dstResourceChain->resDesc.resourceType)
     {
         case ResourceType::eBuffer1D:
         {
             VkBufferCopy bufferCopy = {};
+            bufferCopy.srcOffset = 0; // TODO: make this stuff a function param?
+            bufferCopy.size = sizeInBytes;
+            bufferCopy.dstOffset = 0;
 
-            for (uint32 uiBuf = 0; uiBuf < g_vulkanContextResources.numSwapChainImages; ++uiBuf)
-            {
-                bufferCopy.srcOffset = 0; // TODO: make this a function param?
-                bufferCopy.size = sizeInBytes;
-                bufferCopy.dstOffset = 0;
-
-                // TODO:bad indexing, assumes staging buffers are only one copy
-                VkBuffer srcBuffer = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
-                VkBuffer dstBuffer = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[uiBuf].buffer;
-                vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
-            }
+            uint32 srcIndex = IsBufferUsageMultiBuffered(srcResourceChain->resDesc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0u;
+            uint32 dstIndex = IsBufferUsageMultiBuffered(dstResourceChain->resDesc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0u;
+            VkBuffer srcBuffer = srcResourceChain->resourceChain[srcIndex].buffer;
+            VkBuffer dstBuffer = dstResourceChain->resourceChain[dstIndex].buffer;
+            vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
 
             break;
         }
@@ -317,12 +428,12 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
                 }
             }
 
-            for (uint32 uiImg = 0; uiImg < g_vulkanContextResources.numSwapChainImages; ++uiImg)
             {
+                // TODO: currently no images are duplicated per frame in flight
                 VkBuffer& srcBuffer = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes)->resourceChain[0].buffer;
-                VkImage& dstImage = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[uiImg].image;
+                VkImage& dstImage = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes)->resourceChain[0].image;
 
-                // TODO: make some of these function params
+                // TODO: make some of these into function params
                 VkBufferImageCopy region = {};
                 region.bufferOffset = 0;
                 region.bufferRowLength = 0;
@@ -341,52 +452,79 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
     }
 }
 
-void VulkanRecordCommandRenderPassBegin(FramebufferHandle framebufferHandle, uint32 renderPassID, uint32 renderWidth, uint32 renderHeight,
+void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT, uint32 renderWidth, uint32 renderHeight,
     const char* debugLabel, bool immediateSubmit)
 {
+    const bool HasDepth = depthRT.m_hRes != TINKER_INVALID_HANDLE;
+    const uint32 numAttachments = numColorRTs + (HasDepth ? 1u : 0u);
+
+    if (HasDepth)
+        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS_WITH_DEPTH);
+    else
+        TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS);
+
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-    VkRenderPassBeginInfo renderPassBeginInfo = {};
-    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderArea.extent = VkExtent2D({ renderWidth, renderHeight });
-
-    FramebufferHandle framebuffer = framebufferHandle;
-    if (framebuffer == DefaultFramebufferHandle_Invalid)
+    
+    VkRenderingAttachmentInfo colorAttachments[VULKAN_MAX_RENDERTARGETS] = {};
+    for (uint32 i = 0; i < min(numColorRTs, VULKAN_MAX_RENDERTARGETS); ++i)
     {
-        framebuffer = g_vulkanContextResources.swapChainFramebufferHandle;
-        renderPassBeginInfo.renderArea.extent = g_vulkanContextResources.swapChainExtent;
+        VkRenderingAttachmentInfo& colorAttachment = colorAttachments[i];
+        colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.clearValue.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+        if (colorRTs[i] == IMAGE_HANDLE_SWAP_CHAIN)
+        {
+            colorAttachment.imageView = g_vulkanContextResources.swapChainImageViews[g_vulkanContextResources.currentSwapChainImage];
+        }
+        else
+        {
+            VulkanMemResource* resource =
+                &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+            colorAttachment.imageView = resource->imageView;
+        }
     }
-    VulkanFramebufferResource* framebufferPtr =
-        &g_vulkanContextResources.vulkanFramebufferResourcePool.PtrFromHandle(framebuffer.m_hFramebuffer)->resourceChain[g_vulkanContextResources.currentSwapChainImage];
-    renderPassBeginInfo.framebuffer = framebufferPtr->framebuffer;
-    renderPassBeginInfo.renderPass = g_vulkanContextResources.renderPasses[renderPassID].renderPassVk;
 
-    renderPassBeginInfo.clearValueCount = framebufferPtr->numClearValues;
-    renderPassBeginInfo.pClearValues = framebufferPtr->clearValues;
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
+    VkRenderingAttachmentInfo depthAttachment = {};
+    depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depthAttachment.clearValue.color = { DEPTH_MAX, 0 };
+    if (HasDepth)
     {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    g_vulkanContextResources.pfnCmdBeginDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
+        VulkanMemResource* resource =
+            &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(depthRT.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        depthAttachment.imageView = resource->imageView;
+    }
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    VkRenderingInfo renderingInfo = {};
+    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    renderingInfo.renderArea = { 0, 0, renderWidth, renderHeight };
+    renderingInfo.layerCount = 1;
+    renderingInfo.colorAttachmentCount = numColorRTs;
+    renderingInfo.pColorAttachments = numColorRTs ? colorAttachments : nullptr;
+    renderingInfo.pDepthAttachment = HasDepth ? &depthAttachment : nullptr;
+    renderingInfo.pStencilAttachment = nullptr;
+
+    DbgStartMarker(commandBuffer, debugLabel);
+
+    vkCmdBeginRendering(commandBuffer, &renderingInfo);
+
+    VkViewport viewport = { 0, 0, (float)renderWidth, (float)renderHeight, DEPTH_MIN, DEPTH_MAX };
+    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+    VkRect2D scissor = { 0, 0, renderWidth, renderHeight };
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-    vkCmdEndRenderPass(commandBuffer);
-
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    g_vulkanContextResources.pfnCmdEndDebugUtilsLabelEXT(commandBuffer);
-#endif
+    vkCmdEndRendering(commandBuffer);
+    DbgEndMarker(commandBuffer);
 }
 
 void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
@@ -394,119 +532,139 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
 {
     if (startLayout == endLayout)
     {
-        // Useless transition, don't record it
+        // Useless transition / error transition, don't record it
         TINKER_ASSERT(0);
         return;
     }
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.oldLayout = GetVkImageLayout(startLayout);
+    barrier.newLayout = GetVkImageLayout(endLayout);
+
+    VkPipelineStageFlags srcStage;
+    VkPipelineStageFlags dstStage;
+
+    switch (startLayout)
     {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
-
-    VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-
-    for (uint32 uiImg = 0; uiImg < g_vulkanContextResources.numSwapChainImages; ++uiImg)
-    {
-        VulkanMemResource* memResource = &memResourceChain->resourceChain[uiImg];
-
-        VkImageMemoryBarrier barrier = {};
-        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.oldLayout = GetVkImageLayout(startLayout);
-        barrier.newLayout = GetVkImageLayout(endLayout);
-
-        VkPipelineStageFlags srcStage;
-        VkPipelineStageFlags dstStage;
-
-        switch (startLayout)
+        case ImageLayout::eUndefined:
         {
-            case ImageLayout::eUndefined:
-            {
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                barrier.srcAccessMask = 0;
-                srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                break;
-            }
-
-            case ImageLayout::eShaderRead:
-            {
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                break;
-            }
-
-            case ImageLayout::eTransferDst:
-            {
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-                srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-                break;
-            }
-
-            case ImageLayout::eDepthOptimal:
-            {
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-                srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-                break;
-            }
-
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                return;
-            }
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.srcAccessMask = 0;
+            srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            break;
         }
 
-        switch (endLayout)
+        case ImageLayout::eShaderRead:
         {
-            case ImageLayout::eUndefined:
-            {
-                TINKER_ASSERT(0);
-                // Can't transition to undefined according to Vulkan spec
-                return;
-            }
-
-            case ImageLayout::eShaderRead:
-            {
-                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-                dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-                break;
-            }
-
-            case ImageLayout::eTransferDst:
-            {
-                barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-                dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-                break;
-            }
-
-            case ImageLayout::eDepthOptimal:
-            {
-                barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-                dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-                break;
-            }
-
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid src image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                return;
-            }
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            srcStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
         }
+
+        case ImageLayout::eTransferDst:
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        }
+
+        case ImageLayout::eDepthOptimal:
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            srcStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            break;
+        }
+
+        case ImageLayout::eRenderOptimal:
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            break;
+        }
+
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+            return;
+        }
+    }
+
+    switch (endLayout)
+    {
+        case ImageLayout::eUndefined:
+        {
+            TINKER_ASSERT(0);
+            // Can't transition to undefined according to Vulkan spec
+            return;
+        }
+
+        case ImageLayout::eShaderRead:
+        {
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+        }
+
+        case ImageLayout::eTransferDst:
+        {
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        }
+
+        case ImageLayout::eDepthOptimal:
+        {
+            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            break;
+        }
+
+        case ImageLayout::eRenderOptimal:
+        {
+            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            break;
+        }
+
+        case ImageLayout::ePresent:
+        {
+            barrier.dstAccessMask = 0;
+            dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            break;
+        }
+
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid src image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+            return;
+        }
+    }
+
+    VkImage image = VK_NULL_HANDLE;
+    uint32 numArrayEles = 0;
+    if (imageHandle == IMAGE_HANDLE_SWAP_CHAIN)
+    {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        image = g_vulkanContextResources.swapChainImages[g_vulkanContextResources.currentSwapChainImage];
+        numArrayEles = 1;
+    }
+    else
+    {
+        VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
+        VulkanMemResource* memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        image = memResource->image;
+        numArrayEles = memResourceChain->resDesc.arrayEles;
 
         switch (memResourceChain->resDesc.imageFormat)
         {
@@ -530,15 +688,15 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
                 return;
             }
         }
-
-        barrier.image = memResource->image;
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = memResourceChain->resDesc.arrayEles;
-
-        vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
+
+    barrier.image = image;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = numArrayEles;
+
+    vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
@@ -546,19 +704,21 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-#if defined(ENABLE_VULKAN_DEBUG_LABELS)
-    VkDebugUtilsLabelEXT label =
-    {
-        VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
-        NULL,
-        debugLabel,
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-    };
-    g_vulkanContextResources.pfnCmdInsertDebugUtilsLabelEXT(commandBuffer, &label);
-#endif
+    VulkanMemResourceChain* memResourceChain = nullptr;
+    VulkanMemResource* memResource = nullptr;
+    uint32 imageFormat = ImageFormat::Invalid;
 
-    VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-    VulkanMemResource* memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentSwapChainImage];
+    if (imageHandle == IMAGE_HANDLE_SWAP_CHAIN)
+    {
+        //imageFormat = ImageFormat::TheSwapChainFormat;
+        TINKER_ASSERT(0); // don't clear the swap chain for now
+    }
+    else
+    {
+        memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
+        memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        imageFormat = memResourceChain->resDesc.imageFormat;
+    }
 
     VkClearColorValue clearColor = {};
     VkClearDepthStencilValue clearDepth = {};
@@ -569,29 +729,15 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
     range.baseArrayLayer = 0;
     range.layerCount = 1;
 
-    switch (memResourceChain->resDesc.imageFormat)
+    switch (imageFormat)
     {
         case ImageFormat::BGRA8_SRGB:
-        {
-            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            for (uint32 i = 0; i < 4; ++i)
-            {
-                clearColor.uint32[i] = (uint32)clearValue[i];
-            }
-
-            vkCmdClearColorImage(commandBuffer,
-                memResource->image,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &range);
-
-            break;
-        }
-
         case ImageFormat::RGBA8_SRGB:
         {
             range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             for (uint32 i = 0; i < 4; ++i)
             {
-                clearColor.uint32[i] = (uint32)clearValue[i];
+                clearColor.uint32[i] = *(uint32*)&clearValue[i];
             }
 
             vkCmdClearColorImage(commandBuffer,
@@ -605,7 +751,7 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
         {
             range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
             clearDepth.depth = clearValue.x;
-            clearDepth.stencil = (uint32)clearValue.y;
+            clearDepth.stencil = *(uint32*)&clearValue.y;
 
             vkCmdClearDepthStencilImage(commandBuffer,
                 memResource->image,
@@ -614,6 +760,11 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
             break;
         }
 
+        case ImageFormat::TheSwapChainFormat:
+        {
+            // TODO: similar to regular color, but need to grab swap chain image handle from vulkan resources rather than following mem resource ptr
+        }
+        
         default:
         {
             Core::Utility::LogMsg("Platform", "Invalid image format for clear command!", Core::Utility::LogSeverity::eCritical);

@@ -21,28 +21,26 @@ namespace Graphics
 namespace ShaderManager
 {
 
-static void CreateAllRenderPasses()
+typedef struct gfx_pipeline_attach_fmts
 {
-    bool bOk = false;
-    // Render passes
-    // TODO: make the render pass creation stuff more controllable by the app
+    uint32 numColorRTs = 0;
+    uint32 colorRTFormats[MAX_MULTIPLE_RENDERTARGETS] = {};
+    uint32 depthFormat = 0;
 
-    // NOTE: this render pass is created inside the vulkan init code
-    // color, no depth
-    //bOk = Tk::Core::Graphics::CreateRenderPass(RENDERPASS_ID_SWAP_CHAIN_BLIT, 1, ImageFormat::RGBA8_SRGB, ImageLayout::eUndefined, ImageLayout::ePresent, ImageFormat::Invalid);
-    //TINKER_ASSERT(bOk);
-
-    // depth, no color
-    bOk = Tk::Core::Graphics::CreateRenderPass(Graphics::RENDERPASS_ID_ZPrepass, 0, Graphics::ImageFormat::Invalid, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eUndefined, Graphics::ImageFormat::Depth_32F);
-    TINKER_ASSERT(bOk);
-
-    // color, depth
-    bOk = Tk::Core::Graphics::CreateRenderPass(Graphics::RENDERPASS_ID_MainView, 1, Graphics::ImageFormat::RGBA8_SRGB, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eShaderRead, Graphics::ImageFormat::Depth_32F);
-    TINKER_ASSERT(bOk);
-}
+    void Init()
+    {
+        numColorRTs = 0;
+        for (uint32 i = 0; i < ARRAYCOUNT(colorRTFormats); ++i)
+        {
+            colorRTFormats[i] = ImageFormat::Invalid;
+        }
+        depthFormat = ImageFormat::Invalid;
+    }
+} GraphicsPipelineAttachmentFormats;
 
 static bool LoadShader(const char* vertexShaderFileName, const char* fragmentShaderFileName,
-    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
+    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight,
+    const GraphicsPipelineAttachmentFormats& pipelineFormats,
     uint32* descLayouts, uint32 numDescLayouts)
 {
     uint8* vertexShaderBuffer = nullptr;
@@ -68,7 +66,9 @@ static bool LoadShader(const char* vertexShaderFileName, const char* fragmentSha
     const bool created = Tk::Core::Graphics::CreateGraphicsPipeline(
         vertexShaderBuffer, vertexShaderFileSize,
         fragmentShaderBuffer, fragmentShaderFileSize,
-        shaderID, viewportWidth, viewportHeight, renderPassID, descLayouts, numDescLayouts);
+        shaderID, viewportWidth, viewportHeight,
+        pipelineFormats.numColorRTs, pipelineFormats.colorRTFormats, pipelineFormats.depthFormat,
+        descLayouts, numDescLayouts);
     return created;
 }
 
@@ -90,7 +90,6 @@ void ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight)
 
 void CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight)
 {
-    CreateAllRenderPasses();
     // TODO: don't reload the shader every time we resize, need to be able to reference existing bytecode... which we do already store
     LoadAllShaders(newWindowWidth, newWindowHeight);
 }
@@ -120,10 +119,15 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
 
+    GraphicsPipelineAttachmentFormats pipelineFormats;
+
     // Swap chain blit
     descLayouts[0] = Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS;
-    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, Graphics::RENDERPASS_ID_SWAP_CHAIN_BLIT, descLayouts, 2);
+    pipelineFormats.Init();
+    pipelineFormats.numColorRTs = 1;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
+    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -133,7 +137,9 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
-    bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, Graphics::RENDERPASS_ID_ZPrepass, descLayouts, 3);
+    pipelineFormats.Init();
+    pipelineFormats.depthFormat = ImageFormat::Depth_32F;
+    bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, pipelineFormats, descLayouts, 3);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -143,7 +149,11 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
-    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 3);
+    pipelineFormats.Init();
+    pipelineFormats.numColorRTs = 1;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA8_SRGB;
+    pipelineFormats.depthFormat = ImageFormat::Depth_32F;
+    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 3);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -152,19 +162,23 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     // Animated poly
     descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
-    bOk = LoadShader(shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 2);
+    pipelineFormats.Init();
+    pipelineFormats.numColorRTs = 1;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA8_SRGB;
+    pipelineFormats.depthFormat = ImageFormat::Depth_32F;
+    bOk = LoadShader(shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
 
     // Virtual texture, basic shader
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
+    /*descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_VIRTUAL_TEXTURE;
     descLayouts[3] = Graphics::DESCLAYOUT_ID_TERRAIN_DATA;
-    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView, descLayouts, 4);
-    TINKER_ASSERT(bOk);
+    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, pipelineFormats, descLayouts, 4);
+    TINKER_ASSERT(bOk);*/
 }
 
 void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
@@ -234,7 +248,6 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_TERRAIN_DATA, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
-    CreateAllRenderPasses();
     LoadAllShaders(windowWidth, windowHeight);
 }
 

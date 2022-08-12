@@ -3,17 +3,17 @@ pushd ..\Shaders
 if NOT EXIST .\spv mkdir .\spv
 
 rem Vulkan
-set VulkanVersion=1.2.141.2
-set VulkanPath="C:\VulkanSDK"\%VulkanVersion%
+set VulkanPath=%VULKAN_SDK%
 
 echo.
 echo ***** Compiling GLSL shaders to SPV *****
-echo Using Vulkan SDK v%VulkanVersion% glslangValidator
+echo Using Vulkan SDK: %VulkanPath%
+echo glslangValidator
 echo.
 
 echo Deleting existing .spv files...
 pushd .\spv
-del *.spv
+del *.spv > NUL 2> NUL
 popd
 echo Done.
 echo.

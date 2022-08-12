@@ -158,8 +158,4 @@ echo.
 popd
 popd
 
-rem Run game build script
-call build_game.bat %BuildConfig%
-echo.
-
 :EndScript

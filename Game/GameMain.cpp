@@ -114,8 +114,10 @@ static void CreateAllDescriptors()
     desc.resourceType = Graphics::ResourceType::eBuffer1D;
     desc.dims = v3ui(sizeof(DescriptorData_Instance) * MAX_INSTANCES_PER_VIEW, 0, 0);
     desc.bufferUsage = Graphics::BufferUsage::eUniform;
+    desc.debugLabel = "Descriptor Buffer Instance Constant Data";
     gameGraphicsData.m_DescDataBufferHandle_Instance = Graphics::CreateResource(desc);
     desc.dims = v3ui(sizeof(DescriptorData_Global), 0, 0);
+    desc.debugLabel = "Descriptor Buffer Global Constant Data";
     gameGraphicsData.m_DescDataBufferHandle_Global = Graphics::CreateResource(desc);
 
     gameGraphicsData.m_DescData_Global = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_VIEW_GLOBAL);
@@ -141,26 +143,24 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
+    desc.debugLabel = "MainViewColor";
     gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
+
     desc.imageFormat = Graphics::ImageFormat::Depth_32F;
+    desc.debugLabel = "MainViewDepth";
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
-    // Depth-only pass
-    gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass] = Graphics::CreateFramebuffer(nullptr, 0, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_ZPrepass);
-
-    // Color and depth
-    gameGraphicsData.m_framebufferHandles[eRenderPass_MainView] = Graphics::CreateFramebuffer(&gameGraphicsData.m_rtColorHandle, 1, gameGraphicsData.m_rtDepthHandle, windowWidth, windowHeight, Graphics::RENDERPASS_ID_MainView);
-
-    gameRenderPasses[eRenderPass_ZPrePass] = {};
-    gameRenderPasses[eRenderPass_ZPrePass].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_ZPrePass];
-    gameRenderPasses[eRenderPass_ZPrePass].renderPassID = Graphics::RENDERPASS_ID_ZPrepass;
+    gameRenderPasses[eRenderPass_ZPrePass].Init();
+    gameRenderPasses[eRenderPass_ZPrePass].numColorRTs = 0;
+    gameRenderPasses[eRenderPass_ZPrePass].depthRT = gameGraphicsData.m_rtDepthHandle;
     gameRenderPasses[eRenderPass_ZPrePass].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_ZPrePass].renderHeight = windowHeight;
     gameRenderPasses[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
 
-    gameRenderPasses[eRenderPass_MainView] = {};
-    gameRenderPasses[eRenderPass_MainView].framebuffer = gameGraphicsData.m_framebufferHandles[eRenderPass_MainView];
-    gameRenderPasses[eRenderPass_MainView].renderPassID = Graphics::RENDERPASS_ID_MainView;
+    gameRenderPasses[eRenderPass_MainView].Init();
+    gameRenderPasses[eRenderPass_MainView].numColorRTs = 1;
+    gameRenderPasses[eRenderPass_MainView].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPasses[eRenderPass_MainView].depthRT = gameGraphicsData.m_rtDepthHandle;
     gameRenderPasses[eRenderPass_MainView].renderWidth = windowWidth;
     gameRenderPasses[eRenderPass_MainView].renderHeight = windowHeight;
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
@@ -362,6 +362,36 @@ GAME_UPDATE(GameUpdate)
         ++command;
     }
 
+    // Clear color buffer
+    {
+        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
+        // Transition from layout undefined to transfer_dst (required for clear command)
+        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->debugLabel = "Transition color to transfer_dst";
+        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
+        command->m_startLayout = Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        command->m_commandType = Graphics::GraphicsCmd::eClearImage;
+        command->debugLabel = "Clear color buffer";
+        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
+        command->m_clearValue = v4f(0.0f, 0.0f, 0.0f, 0.0f);
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+
+        // Transition from transfer dst to depth_attachment_optimal
+        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->debugLabel = "Transition color to render_optimal";
+        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
+        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
+        command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
+        ++graphicsCommandStream->m_numCommands;
+        ++command;
+    }
+
     // Record render commands for view(s)
     {
         //TIMED_SCOPED_BLOCK("Record render pass commands");
@@ -388,12 +418,31 @@ GAME_UPDATE(GameUpdate)
     // FINAL BLIT TO SCREEN
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
+    // Transition main view render target from render optimal to shader read
+    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->debugLabel = "Transition main view render target to shader read for blit";
+    command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
+    command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
+    command->m_endLayout = Graphics::ImageLayout::eShaderRead;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
+
+    // Transition of swap chain to render optimal
+    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->debugLabel = "Transition swap chain to render_optimal";
+    command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
+    command->m_startLayout = Graphics::ImageLayout::eUndefined;
+    command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
+
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
     command->debugLabel = "Blit to screen";
-    command->m_framebufferHandle = Graphics::DefaultFramebufferHandle_Invalid;
-    command->m_renderPassID = Graphics::RENDERPASS_ID_SWAP_CHAIN_BLIT;
-    command->m_renderWidth = 0;
-    command->m_renderHeight = 0;
+    command->m_numColorRTs = 1;
+    command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
+    command->m_depthRT = Graphics::DefaultResHandle_Invalid;
+    command->m_renderWidth = windowWidth;
+    command->m_renderHeight = windowHeight;
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
@@ -418,6 +467,15 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
+    // Transition of swap chain from render optimal to present
+    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->debugLabel = "Transition swap chain to present";
+    command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
+    command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
+    command->m_endLayout = Graphics::ImageLayout::ePresent;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
+
     if (isGameInitted && isMultiplayer && connectedToServer)
     {
         int result = SendMessageToServer();
@@ -436,10 +494,6 @@ GAME_UPDATE(GameUpdate)
 
 static void DestroyWindowResizeDependentResources()
 {
-    for (uint32 uiPass = 0; uiPass < eRenderPass_Max; ++uiPass)
-    {
-        Graphics::DestroyFramebuffer(gameGraphicsData.m_framebufferHandles[uiPass]);
-    }
     Graphics::DestroyResource(gameGraphicsData.m_rtColorHandle);
     Graphics::DestroyResource(gameGraphicsData.m_rtDepthHandle);
 }

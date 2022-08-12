@@ -52,10 +52,10 @@ inline bool ISPOW2(const T& x)
     return x && ((x & (x - 1)) == 0);
 }
 
-// TODO: pow2 roundup can be done with only bitwise ops i think
-inline uint32 LOG2(uint32 x)
+template <typename T>
+inline T LOG2(T x)
 {
-    uint32 i = 1;
+    T i = 1;
     for (; x >> i; ++i) {}
     return i;
 }
@@ -65,9 +65,16 @@ inline uint32 POW2(uint32 x)
     return 1 << LOG2(x);
 }
 
+// TODO: remove usage of this
 inline uint32 POW2_ROUNDUP(uint32 x)
 {
     return ISPOW2(x) ? x : POW2(x);
+}
+
+template <typename T>
+inline T RoundValueToPow2(T val, T pow2)
+{
+    return (val + pow2 - 1) & ~(pow2 - 1);
 }
 
 #define FLOAT_EQUAL(a, b) fabs(a - b) < FLT_EPSILON

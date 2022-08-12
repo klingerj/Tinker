@@ -322,6 +322,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         // Create buffer handles
         Graphics::ResourceDesc desc;
         desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
+        desc.debugLabel = "Asset Vtx Attr Buffer";
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
         void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
@@ -382,8 +383,8 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         //memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
         for (uint32 i = 0; i < m_allMeshData[uiAsset].m_numVertices; ++i)
         {
-            memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, normalBuffer + i, sizeof(v3f));
-            memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, 1);
+            memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, &normalBuffer[i], sizeof(v3f));
+            memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, sizeof(float)); // add 0 as 4th channel of normal vector
         }
         memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
         //-----

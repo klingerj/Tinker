@@ -14,6 +14,17 @@ namespace Core
 namespace Graphics
 {
 
+uint32 MultiBufferedStatusFromBufferUsage[] = 
+{
+    0u,
+    0u,
+    1u,
+    1u,
+    0u,
+    1u,
+};
+static_assert(ARRAYCOUNT(MultiBufferedStatusFromBufferUsage) == BufferUsage::eMax); // Don't forget to add one here if enum is added to
+
 void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     int result = 0;
@@ -38,7 +49,6 @@ void WindowResize()
 {
     #ifdef VULKAN
     VulkanDestroyAllPSOPerms();
-    VulkanDestroyAllRenderPasses();
     VulkanDestroySwapChain();
     VulkanCreateSwapChain();
     #endif
@@ -141,7 +151,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 {
                     instanceCount = 0;
                     #ifdef VULKAN
-                    Graphics::VulkanRecordCommandRenderPassBegin(currentCmd.m_framebufferHandle, currentCmd.m_renderPassID,
+                    Graphics::VulkanRecordCommandRenderPassBegin(currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
                         currentCmd.m_renderWidth, currentCmd.m_renderHeight,
                         currentCmd.debugLabel, immediateSubmit);
                     #endif
@@ -248,26 +258,11 @@ UNMAP_RESOURCE(UnmapResource)
     #endif
 }
 
-CREATE_FRAMEBUFFER(CreateFramebuffer)
-{
-    #ifdef VULKAN
-    return Graphics::VulkanCreateFramebuffer(rtColorHandles, numRTColorHandles, rtDepthHandle,
-        width, height, renderPassID);
-    #endif
-}
-
-DESTROY_FRAMEBUFFER(DestroyFramebuffer)
-{
-    #ifdef VULKAN
-    Graphics::VulkanDestroyFramebuffer(handle);
-    #endif
-}
-
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     #ifdef VULKAN
     return Graphics::VulkanCreateGraphicsPipeline(vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
-        shaderID, viewportWidth, viewportHeight, renderPassID, descriptorHandles, numDescriptorHandles);
+        shaderID, viewportWidth, viewportHeight, numColorRTs, colorRTFormats, depthFormat, descriptorHandles, numDescriptorHandles);
     #endif
 }
 
@@ -303,13 +298,6 @@ CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
 {
     #ifdef VULKAN
     return Graphics::VulkanCreateDescriptorLayout(descLayoutID, descLayout);
-    #endif
-}
-
-CREATE_RENDERPASS(CreateRenderPass)
-{
-    #ifdef VULKAN
-    return Graphics::VulkanCreateRenderPass(renderPassID, numColorRTs, colorFormat, startLayout, endLayout, depthFormat);
     #endif
 }
 

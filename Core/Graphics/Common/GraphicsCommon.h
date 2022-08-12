@@ -79,10 +79,11 @@ namespace ImageFormat
 {
     enum : uint32
     {
-        BGRA8_SRGB = 0,
+        Invalid = 0,
+        BGRA8_SRGB,
         RGBA8_SRGB,
         Depth_32F,
-        Invalid,
+        TheSwapChainFormat,
         eMax
     };
 }
@@ -94,6 +95,7 @@ namespace ImageLayout
         eUndefined = 0,
         eShaderRead,
         eTransferDst,
+        eRenderOptimal,
         eDepthOptimal,
         ePresent,
         eMax
@@ -115,6 +117,23 @@ namespace GraphicsCmd
     };
 }
 
+namespace DepthCompareOp
+{
+    enum : uint32
+    {
+        eLeOrEqual = 0,
+        eGeOrEqual,
+        // TODO: support strictly less than for normal rendering?
+        eMax
+    };
+}
+
+extern uint32 MultiBufferedStatusFromBufferUsage[BufferUsage::eMax];
+inline uint32 IsBufferUsageMultiBuffered(uint32 bufferUsage)
+{
+    TINKER_ASSERT(bufferUsage < BufferUsage::eMax);
+    return MultiBufferedStatusFromBufferUsage[bufferUsage];
+}
 
 // Concrete type for resource handle to catch errors at compile time, e.g.
 // Try to free a descriptor set with a resource handle, which can happen if all handles
@@ -148,8 +167,8 @@ struct ResourceHandle
 
 typedef struct graphics_resource_description
 {
-    v3ui dims;
-    uint32 resourceType;
+    v3ui dims = {};
+    uint32 resourceType = ResourceType::eMax;
 
     union
     {
@@ -163,6 +182,8 @@ typedef struct graphics_resource_description
             uint32 arrayEles;
         };
     };
+
+    const char* debugLabel = "";
 } ResourceDesc;
 
 struct FramebufferHandle
@@ -256,6 +277,22 @@ typedef struct descriptor_set_data_handles
     }
 } DescriptorSetDataHandles;
 
+#define MAX_MULTIPLE_RENDERTARGETS 8u
+
+#define IMAGE_HANDLE_SWAP_CHAIN ResourceHandle(0xFFFFFFFE) // INVALID_HANDLE - 1 reserved to refer to the swap chain image 
+
+//#define DEPTH_REVERSED
+#ifndef DEPTH_REVERSED
+#define DEPTH_MIN 0.0f
+#define DEPTH_MAX 1.0f
+#define DEPTH_OP DepthCompareOp::eLeOrEqual
+#else
+// TODO: untested
+#define DEPTH_MIN 1.0f
+#define DEPTH_MAX 0.0f
+#define DEPTH_OP DepthCompareOp::eGeOrEqual
+#endif
+
 typedef struct graphics_command
 {
     const char* debugLabel = "Default Label";
@@ -286,17 +323,18 @@ typedef struct graphics_command
         // Begin render pass
         struct
         {
-            FramebufferHandle m_framebufferHandle;
-            uint32 m_renderPassID;
             uint32 m_renderWidth;
             uint32 m_renderHeight;
+            uint32 m_numColorRTs;
+            ResourceHandle m_colorRTs[MAX_MULTIPLE_RENDERTARGETS];
+            ResourceHandle m_depthRT;
         };
 
         // End render pass
-        // NOTE: For now, no data
-        /*struct
+        // NOTE: no actual data required
+        /* struct
         {
-        };*/
+        }; */
 
         // Image Layout Transition
         struct
@@ -351,14 +389,6 @@ enum
 
 enum
 {
-    RENDERPASS_ID_SWAP_CHAIN_BLIT = 0,
-    RENDERPASS_ID_ZPrepass,
-    RENDERPASS_ID_MainView,
-    RENDERPASS_ID_MAX
-};
-
-enum
-{
     SHADER_ID_SWAP_CHAIN_BLIT = 0,
     SHADER_ID_BASIC_ZPrepass,
     SHADER_ID_BASIC_MainView,
@@ -380,13 +410,7 @@ MAP_RESOURCE(MapResource);
 #define UNMAP_RESOURCE(name) TINKER_API void name(ResourceHandle handle)
 UNMAP_RESOURCE(UnmapResource);
 
-#define CREATE_FRAMEBUFFER(name) TINKER_API FramebufferHandle name(ResourceHandle* rtColorHandles, uint32 numRTColorHandles, ResourceHandle rtDepthHandle, uint32 width, uint32 height, uint32 renderPassID)
-CREATE_FRAMEBUFFER(CreateFramebuffer);
-
-#define DESTROY_FRAMEBUFFER(name) TINKER_API void name(FramebufferHandle handle)
-DESTROY_FRAMEBUFFER(DestroyFramebuffer);
-
-#define CREATE_GRAPHICS_PIPELINE(name) TINKER_API bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID, uint32* descriptorHandles, uint32 numDescriptorHandles)
+#define CREATE_GRAPHICS_PIPELINE(name) TINKER_API bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat, uint32* descriptorHandles, uint32 numDescriptorHandles)
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline);
 
 #define CREATE_DESCRIPTOR(name) TINKER_API DescriptorHandle name(uint32 descLayoutID)
@@ -407,9 +431,6 @@ SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate);
 // Not meant for the user
 #define CREATE_DESCRIPTOR_LAYOUT(name) TINKER_API bool name(uint32 descLayoutID, const DescriptorLayout* descLayout)
 CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout);
-
-#define CREATE_RENDERPASS(name) TINKER_API bool name(uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat)
-CREATE_RENDERPASS(CreateRenderPass);
 
 #define DESTROY_GRAPHICS_PIPELINE(name) TINKER_API void name(uint32 shaderID)
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
