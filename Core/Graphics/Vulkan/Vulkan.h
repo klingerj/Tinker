@@ -3,6 +3,7 @@
 #include "CoreDefines.h"
 #include "Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 namespace Tk
 {
@@ -40,7 +41,6 @@ void DestroyVulkan();
 
 void VulkanCreateSwapChain();
 void VulkanDestroySwapChain();
-void CreateSamplers();
 
 // Frame command recording
 bool VulkanAcquireFrame();
@@ -55,26 +55,20 @@ void EndVulkanCommandRecordingImmediate();
 ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc);
 void VulkanDestroyResource(ResourceHandle handle);
 
-FramebufferHandle VulkanCreateFramebuffer(ResourceHandle* rtColorHandles, uint32 numRTColorHandles,
-    ResourceHandle rtDepthHandle, uint32 width, uint32 height, uint32 renderPassID);
-void VulkanDestroyFramebuffer(FramebufferHandle handle);
-
 bool VulkanCreateGraphicsPipeline(void* vertexShaderCode, uint32 numVertexShaderBytes,
     void* fragmentShaderCode, uint32 numFragmentShaderBytes,
-    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 renderPassID,
+    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight,
+    uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat,
     uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles);
 void DestroyPSOPerms(uint32 shaderID);
 void VulkanDestroyAllPSOPerms();
-void DestroyAllDescLayouts();
-void VulkanDestroyAllRenderPasses();
 
-bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout);
 DescriptorHandle VulkanCreateDescriptor(uint32 descriptorLayoutID);
+bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout);
 void VulkanDestroyDescriptor(DescriptorHandle handle);
 void VulkanDestroyAllDescriptors();
+void DestroyAllDescLayouts();
 void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount);
-void InitDescriptorPool();
-bool VulkanCreateRenderPass(uint32 renderPassID, uint32 numColorRTs, uint32 colorFormat, uint32 startLayout, uint32 endLayout, uint32 depthFormat);
 
 // Memory mapping - probably just for staging buffers
 void* VulkanMapResource(ResourceHandle handle);
@@ -88,9 +82,8 @@ void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 de
     const DescriptorHandle* descSetHandles, bool immediateSubmit);
 void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
     const char* debugLabel, bool immediateSubmit);
-void VulkanRecordCommandRenderPassBegin(FramebufferHandle framebufferHandle, uint32 renderPassID,
-    uint32 renderWidth, uint32 renderHeight,
-    const char* debugLabel, bool immediateSubmit);
+void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT,
+    uint32 renderWidth, uint32 renderHeight, const char* debugLabel, bool immediateSubmit);
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit);
 void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout,
     const char* debugLabel, bool immediateSubmit);

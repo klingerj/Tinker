@@ -8,6 +8,7 @@
 #include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <Windowsx.h>
 
