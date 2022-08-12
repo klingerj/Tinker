@@ -16,6 +16,7 @@ echo   Debug
 echo.
 echo graphics_api
 echo   VK (uses VULKAN_SDK environment variable)
+echo   D3D12
 echo.
 echo For example:
 echo build_app.bat Release VK

@@ -27,6 +27,7 @@ echo.
 
 rem Run other build scripts
 call build_app.bat Release VK
+call build_shadercompiler.bat Release VK
 call build_server.bat Release
 call build_benchmarks.bat Release
 call build_tests.bat Release

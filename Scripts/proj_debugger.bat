@@ -16,7 +16,7 @@ IF NOT EXIST %DevenvPathComm% (
             ) ELSE set DevenvPath=%DevenvPathEnt%
         ) ELSE set DevenvPath=%DevenvPathPro%
     ) ELSE set DevenvPath=%DevenvPathComm%
-start "" %DevenvPath% /debugexe ..\Build\%1 /nosplash
+start "" %DevenvPath% /debugexe ..\%1 /nosplash
 
 popd
 popd

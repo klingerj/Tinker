@@ -1,6 +1,24 @@
 @echo off
 setlocal
 
+if "%1" == "-h" (goto PrintHelp)
+if "%1" == "-help" (goto PrintHelp)
+if "%1" == "help" (goto PrintHelp)
+goto StartScript
+
+:PrintHelp
+echo Usage: build_engine.bat ^<build_mode^> 
+echo.
+echo build_mode:
+echo   Release
+echo   Debug
+echo.
+echo For example:
+echo build_engine.bat Release VK
+echo.
+goto EndScript
+
+:StartScript
 set BuildConfig=%1
 if "%BuildConfig%" NEQ "Debug" (
     if "%BuildConfig%" NEQ "Release" (
