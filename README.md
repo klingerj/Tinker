@@ -60,14 +60,14 @@ Raytraced | Rasterized
 
 ### Roadmap of future features:
 * Compute shader support
-* Threading of file loading/parsing, streaming of models
+* Asset cooking
+* DirectX12 graphics backend
 * PBR shaders
-* Virtualized textures
 * Post processing
-* Render graph structure
-* Linux platform layer
-* DX12 graphics backend
-* IMGUI
+* IMGUI debug ui
+* Asset streaming
+* Virtualized textures
+* Async graph execution structure
 
 ### Build instructions
 You will need to have installed:
