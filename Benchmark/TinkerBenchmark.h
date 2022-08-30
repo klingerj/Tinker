@@ -18,8 +18,8 @@
         for (uint32 i = 0; i < NUM_SAMPLES; ++i) \
         { \
             timeSum += timeSamples[i]; \
-            bestTime = min(bestTime, timeSamples[i]); \
-            worstTime = max(worstTime, timeSamples[i]); \
+            bestTime = Min(bestTime, timeSamples[i]); \
+            worstTime = Max(worstTime, timeSamples[i]); \
         } \
         avgTime = timeSum / NUM_SAMPLES; \
         std::cout << "Best Time: "  << bestTime << " ms\n"; \

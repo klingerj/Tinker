@@ -75,7 +75,7 @@ static void scanWordIntoBuffer(const uint8* buffer, uint64* currentIndex, char* 
     scanWord(buffer, currentIndex);
 
     uint32 numBytesToCopy = (uint32)(*currentIndex - wordStartIndex);
-    numBytesToCopy = min(NextWordMaxLen, numBytesToCopy);
+    numBytesToCopy = Min(NextWordMaxLen, numBytesToCopy);
     memcpy(NextWord, buffer + wordStartIndex, numBytesToCopy);
 }
 

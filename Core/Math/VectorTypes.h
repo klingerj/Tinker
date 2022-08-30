@@ -1116,8 +1116,8 @@ struct AABB3D
 
     void ExpandTo(const vec3<float>& point)
     {
-        for (uint32 i = 0; i < 3; ++i) { minExt[i] = min(minExt[i], point[i]); }
-        for (uint32 i = 0; i < 3; ++i) { maxExt[i] = max(maxExt[i], point[i]); }
+        for (uint32 i = 0; i < 3; ++i) { minExt[i] = Min(minExt[i], point[i]); }
+        for (uint32 i = 0; i < 3; ++i) { maxExt[i] = Max(maxExt[i], point[i]); }
     }
 
     bool Intersects(const AABB3D& other) const
