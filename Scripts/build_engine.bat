@@ -34,28 +34,20 @@ if "%BuildConfig%" NEQ "Debug" (
     )
 
 if "%GraphicsAPI%" == "VK" (
-	set GraphicsAPIChosen="VK"
+    rem Vulkan
+    echo Using Vulkan SDK: %VULKAN_SDK%
+    echo.
     ) else (
         if "%GraphicsAPI%" == "D3D12" (
-	    set GraphicsAPIChosen="D3D12"
+        echo D3D12 not yet supported. Build canceled.
+        echo.
+        goto DoneBuild
         ) else (
-	    set GraphicsAPIChosen="None"
+	    set GraphicsAPI="None"
 	    echo Unsupported graphics API specified.
         goto DoneBuild
         )
     )
-
-if %GraphicsAPIChosen% == "VK" (
-    rem Vulkan
-    echo Using Vulkan SDK: %VULKAN_SDK%
-    echo.
-) else (
-    if %GraphicsAPIChosen% == "D3D12" (
-        rem echo D3D12 not yet supported. Build canceled.
-        rem echo.
-        rem goto DoneBuild
-    )
-)
 
 echo ***** Building Tinker App *****
 
@@ -97,25 +89,25 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/AccelStructures/Octree.cpp 
 
-set SourceListVulkan=
-if %GraphicsAPIChosen% == "VK" (
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/Vulkan.cpp 
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCmds.cpp 
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanTypes.cpp 
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCreation.cpp 
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Common/ShaderManager.cpp 
-    set SourceListVulkan=!SourceListVulkan! %AbsolutePathPrefix%/../Core/Graphics/Common/VirtualTexture.cpp 
+set SourceListGraphics=
+set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
+set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/ShaderManager.cpp 
+set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/VirtualTexture.cpp 
+if "%GraphicsAPI%" == "VK" (
+    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/Vulkan.cpp 
+    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCmds.cpp 
+    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanTypes.cpp 
+    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCreation.cpp 
 )
-set SourceListApp=%SourceListApp% %SourceListVulkan%
+set SourceListApp=%SourceListApp% %SourceListGraphics%
 
-if %GraphicsAPIChosen% == "D3D12" ( echo No source files available for D3D12. )
+if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /DASSERTS_ENABLE=1 
+set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /DENABLE_MEM_TRACKING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /DASSERTS_ENABLE=1 
 
-if %GraphicsAPIChosen% == "VK" (
+if "%GraphicsAPI%" == "VK" (
     set CompileDefines=!CompileDefines! /DVULKAN 
 )
 
@@ -136,7 +128,7 @@ echo.
 echo Building TinkerApp.exe...
 
 
-if %GraphicsAPIChosen% == "VK" (
+if "%GraphicsAPI%" == "VK" (
     set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
     set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
 )

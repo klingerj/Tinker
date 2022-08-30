@@ -82,7 +82,9 @@ rem TinkerSC - primary exe
 set AbsolutePathPrefix=%cd%
 
 set SourceListSC= 
-set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Tools/ShaderCompiler/Main.cpp 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/DataStructures/Vector.cpp 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Mem.cpp 
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
@@ -102,9 +104,8 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines!
     )
 
-rem set CompileIncludePaths= /I ../Core 
-set CompileIncludePaths=
-set LibsToLink=user32.lib ws2_32.lib 
+set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18
+set LibsToLink=user32.lib ws2_32.lib ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib
 
 echo.
 echo Building TinkerSC.exe...
@@ -126,9 +127,5 @@ if EXIST TinkerSC.exp (
 echo.
 popd
 popd
-
-rem Run game build script
-call build_game.bat %BuildConfig%
-echo.
 
 :EndScript

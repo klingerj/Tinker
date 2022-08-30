@@ -14,7 +14,7 @@ echo   Release
 echo   Debug
 echo.
 echo For example:
-echo build_engine.bat Release VK
+echo build_game.bat Release VK
 echo.
 goto EndScript
 
@@ -67,7 +67,7 @@ set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cp
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/DTINKER_GAME /D_ASSETS_DIR=%AbsolutePathPrefix%\\..\\Assets\\ 
+set CompileDefines=/DTINKER_GAME /DENABLE_MEM_TRACKING /D_ASSETS_DIR=%AbsolutePathPrefix%\\..\\Assets\\ 
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%

@@ -129,7 +129,7 @@ void RaytraceTest()
                 Normalize(lightDir);
                 float lambert = Dot(interpNormal, lightDir);
                 lambert *= 0.7f;
-                lambert = max(0.05f, lambert);
+                lambert = Max(0.05f, lambert);
                 // Linear to SRGB
                 if (lambert > 0.0031308f)
                 {

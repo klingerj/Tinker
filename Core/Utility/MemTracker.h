@@ -11,8 +11,6 @@ namespace Core
 namespace Utility
 {
 
-#define ENABLE_MEM_TRACKING
-
 // TODO: make this stuff thread-safe
 void RecordMemAlloc(uint64 sizeInBytes, void* memPtr, const char* filename, int lineNum);
 void RecordMemDealloc(void* memPtr);

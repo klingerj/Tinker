@@ -98,7 +98,7 @@ void VulkanCreateSwapChain()
     uint32 numSwapChainImages = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0) // 0 can indicate no maximum
     {
-        numSwapChainImages = min(numSwapChainImages, capabilities.maxImageCount);
+        numSwapChainImages = Min(numSwapChainImages, capabilities.maxImageCount);
     }
 
     uint32 numAvailableSurfaceFormats;
@@ -420,7 +420,7 @@ bool VulkanCreateGraphicsPipeline(
             pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
             pipelineRenderingCreateInfo.colorAttachmentCount = numColorRTs;
             VkFormat formats[MAX_MULTIPLE_RENDERTARGETS] = {};
-            for (uint32 uiFmt = 0; uiFmt < min(numColorRTs, (uint32)ARRAYCOUNT(formats)); ++uiFmt)
+            for (uint32 uiFmt = 0; uiFmt < Min(numColorRTs, (uint32)ARRAYCOUNT(formats)); ++uiFmt)
             {
                 formats[uiFmt] = GetVkImageFormat(colorRTFormats[uiFmt]);
             }

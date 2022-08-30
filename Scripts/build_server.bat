@@ -34,7 +34,7 @@ if "%BuildConfig%" == "Debug" (
 rem *********************************************************************************************************
 rem TinkerServer
 set SourceListServer=../Core/Platform/Win32Server.cpp
-set CompileDefines= 
+set CompileDefines=/DENABLE_MEM_TRACKING 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsServer=/FdTinkerServer.pdb

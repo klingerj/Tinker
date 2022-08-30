@@ -42,7 +42,7 @@ set SourceListBenchmark=%SourceListBenchmark% ../Core/Utility/MemTracker.cpp
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/DataStructureBenchmarks/HashMapBenchmarks.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/DataStructures/HashMap.cpp 
-set CompileDefines= 
+set CompileDefines=/DENABLE_MEM_TRACKING 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb

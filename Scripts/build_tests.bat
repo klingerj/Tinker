@@ -41,7 +41,7 @@ set SourceListTest=%SourceListTest% ../Core/Utility/MemTracker.cpp
 set SourceListTest=%SourceListTest% ../Core/DataStructures/Vector.cpp 
 set SourceListTest=%SourceListTest% ../Core/DataStructures/HashMap.cpp 
 set SourceListTest=%SourceListTest% ../Core/Mem.cpp 
-set CompileDefines= 
+set CompileDefines=/DENABLE_MEM_TRACKING 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsTest=/FdTinkerTest.pdb
