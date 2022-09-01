@@ -1,7 +1,12 @@
-Build/
 *.obj
-Shaders/spv/
+Build/*.exe
+Build/*.pdb
+Build/*.lib
+Build/.vs/
+Build/TinkerGame.dll
+Build/TinkerGame_hotload.dll
 ToolsBin/.vs/
+Shaders/spv/
 *.swp
 *.swo
 *~
