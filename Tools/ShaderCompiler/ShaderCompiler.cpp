@@ -1,5 +1,4 @@
 #include <atlbase.h>
-//#include <windows.h>
 #include <inc/dxcapi.h>
 
 #include <stdio.h>
@@ -7,6 +6,10 @@
 #include "ShaderCompiler.h"
 #include "DataStructures/Vector.h"
 #include "Platform/PlatformGameAPI.h"
+
+#ifdef _SHADERS_SPV_DIR
+#define SHADERS_SPV_PATH STRINGIFY(_SHADERS_SPV_DIR)
+#endif
 
 uint32 CompileAllShadersDX()
 {
@@ -27,16 +30,21 @@ uint32 CompileAllShadersVK()
     args.PushBackRaw("-T");
     args.PushBackRaw("vs_6_7"); // TODO: VS, PS, CS
 
-    //args.PushBackRaw("-Qstrip_debug"); // keep this if we want debug shaders
+    //args.PushBackRaw("-Qstrip_debug"); // keep this if we want debug shaders i think
     args.PushBackRaw("-Qstrip_reflect");
 
     args.PushBackRaw("DXC_ARG_WARNINGS_ARE_ERRORS");
     args.PushBackRaw("DXC_ARG_DEBUG");
     args.PushBackRaw("DXC_ARG_PACK_MATRIX_COLUMN_MAJOR");
 
-    // TODO: add vulkan args
+    // Vulkan specific args
+    args.PushBackRaw("-spirv");
+    args.PushBackRaw("-fvk-invert-y");
+    // TODO: we definitely want more here eventually
 
-    // TODO: #defines
+    // TODO: shader #defines
+
+    // TODO: grab all files in the directory
 
     HRESULT result;
 
@@ -49,7 +57,7 @@ uint32 CompileAllShadersVK()
     pUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
 
     CComPtr<IDxcBlobEncoding> pSource = nullptr;
-    pUtils->LoadFile(L"myshader.hlsl", nullptr, &pSource);
+    pUtils->LoadFile(LPCWSTR(SHADERS_SPV_PATH "myshader.hlsl"), nullptr, &pSource);
     DxcBuffer Source;
     Source.Ptr = pSource->GetBufferPointer();
     Source.Size = pSource->GetBufferSize();

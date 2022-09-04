@@ -90,7 +90,7 @@ set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32Loggi
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /DASSERTS_ENABLE=1 
+set CompileDefines=/D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\hlsl\\ /DASSERTS_ENABLE=1 
 
 if %GraphicsAPIChosen% == "VK" (
     set CompileDefines=!CompileDefines! /DVULKAN 
