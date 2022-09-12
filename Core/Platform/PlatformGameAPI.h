@@ -17,6 +17,16 @@ struct GraphicsCommandStream;
 namespace Platform
 {
 
+struct FileHandle
+{
+    // TODO: this is true for windows currently but need to make this more sound probably
+    unsigned long long h;
+    enum
+    {
+        eInvalidValue = (uint64)-1,
+    };
+};
+
 #define PRINT_DEBUG_STRING(name) TINKER_API void name(const char* str)
 PRINT_DEBUG_STRING(PrintDebugString);
 
@@ -28,6 +38,15 @@ WRITE_ENTIRE_FILE(WriteEntireFile);
 
 #define GET_ENTIRE_FILE_SIZE(name) TINKER_API uint32 name(const char* filename)
 GET_ENTIRE_FILE_SIZE(GetEntireFileSize);
+
+#define FIND_FILE_OPEN(name) TINKER_API FileHandle name(const char* dirWithFileExts, wchar_t* outFilename, uint32 outFilenameMax)
+FIND_FILE_OPEN(FindFileOpen);
+
+#define FIND_FILE_NEXT(name) TINKER_API uint32 name(FileHandle prevFindFileHandle, wchar_t* outFilename, uint32 outFilenameMax)
+FIND_FILE_NEXT(FindFileNext);
+
+#define FIND_FILE_CLOSE(name) TINKER_API void name(FileHandle handle)
+FIND_FILE_CLOSE(FindFileClose);
 
 #define INIT_NETWORK_CONNECTION(name) TINKER_API int name()
 INIT_NETWORK_CONNECTION(InitNetworkConnection);

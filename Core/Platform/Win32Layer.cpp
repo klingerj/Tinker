@@ -78,6 +78,7 @@ static bool ReloadGameCode(Win32GameCode* GameCode)
     if (!enableDllHotloading)
         return false;
 
+    const char* str = GAME_DLL_PATH;
     HANDLE gameDllFileHandle = CreateFile(GAME_DLL_PATH, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
 
     if (gameDllFileHandle == INVALID_HANDLE_VALUE)
