@@ -86,5 +86,36 @@ WRITE_ENTIRE_FILE(WriteEntireFile)
     }
 }
 
+FIND_FILE_OPEN(FindFileOpen)
+{
+    WIN32_FIND_DATA fd;
+    HANDLE hFind = FindFirstFile(dirWithFileExts, &fd);
+    if (hFind != INVALID_HANDLE_VALUE)
+    {
+        mbstowcs_s(NULL, outFilename, outFilenameMax, fd.cFileName, strlen(fd.cFileName));
+    }
+
+    FileHandle handle;
+    handle.h = (uint64)hFind;
+    return handle;
+}
+
+FIND_FILE_NEXT(FindFileNext)
+{
+    WIN32_FIND_DATA fd;
+    bool result = FindNextFile((HANDLE)prevFindFileHandle.h, &fd); // nonzero if no error, zero if error
+    if (result)
+    {
+        mbstowcs_s(NULL, outFilename, outFilenameMax, fd.cFileName, strlen(fd.cFileName));
+    }
+    return (uint32)(!result); // for me, zero is error, nonzero if error
+}
+
+FIND_FILE_CLOSE(FindFileClose)
+{
+    if ((HANDLE)(handle.h) != INVALID_HANDLE_VALUE)
+        FindClose((HANDLE)handle.h);
+}
+
 }
 }
