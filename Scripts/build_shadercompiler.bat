@@ -109,6 +109,13 @@ if "%BuildConfig%" == "Debug" (
 set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18
 set LibsToLink=user32.lib ws2_32.lib ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib
 
+rem Copy needed DLLs to Build/ directory
+echo.
+echo Copying required dlls dxcompiler.dll and dxil.dll to build dir...
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
+echo Done.
+
 echo.
 echo Building TinkerSC.exe...
 
