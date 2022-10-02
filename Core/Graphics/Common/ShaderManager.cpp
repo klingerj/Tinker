@@ -107,9 +107,8 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     {
         SHADERS_SPV_PATH "blit_vert_glsl.spv",
         SHADERS_SPV_PATH "blit_frag_glsl.spv",
-        //SHADERS_SPV_PATH "basic_vert_glsl.spv",
-        SHADERS_SPV_PATH "basic_vert_hlsl.spv",
-        SHADERS_SPV_PATH "basic_frag_hlsl.spv",
+        SHADERS_SPV_PATH "basic_VS.spv",
+        SHADERS_SPV_PATH "basic_PS.spv",
         SHADERS_SPV_PATH "animpoly_vert_glsl.spv",
         SHADERS_SPV_PATH "animpoly_frag_glsl.spv",
         SHADERS_SPV_PATH "basic_noModelMat_vert_glsl.spv",
