@@ -90,7 +90,7 @@ set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32Loggi
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/D_SHADERS_SRC_DIR=%AbsolutePathPrefix%\\..\\Shaders\\hlsl\\ /DASSERTS_ENABLE=1 
+set CompileDefines=/DASSERTS_ENABLE=1 /D_SHADERS_SRC_DIR=%AbsolutePathPrefix%\\..\\Shaders\\hlsl\\ /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\
 
 if %GraphicsAPIChosen% == "VK" (
     set CompileDefines=!CompileDefines! /DVULKAN 
@@ -109,13 +109,6 @@ if "%BuildConfig%" == "Debug" (
 set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18
 set LibsToLink=user32.lib ws2_32.lib ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib
 
-rem Copy needed DLLs to Build/ directory
-echo.
-echo Copying required dlls dxcompiler.dll and dxil.dll to build dir...
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
-echo Done.
-
 echo.
 echo Building TinkerSC.exe...
 
@@ -131,6 +124,13 @@ if EXIST TinkerSC.exp (
     echo.
     del TinkerSC.exp
     )
+
+rem Copy needed DLLs to Build/ directory
+echo.
+echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
+echo Done.
 
 :DoneBuild
 echo.

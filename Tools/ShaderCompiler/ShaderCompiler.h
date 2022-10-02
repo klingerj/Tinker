@@ -13,5 +13,7 @@ enum : uint32
 };
 }
 
+// 1 means all files compiled cleanly, 0 means failure to compile
+// TODO: let someone get the warnings buffer
 uint32 CompileAllShadersVK();
 uint32 CompileAllShadersDX();
