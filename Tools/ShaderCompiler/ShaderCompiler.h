@@ -2,6 +2,16 @@
 
 #include "CoreDefines.h"
 
-// error code of 0 = success
+namespace ShaderCompileErrCode
+{
+enum : uint32
+{
+    Success = 0,
+    HasWarnings,
+    HasErrors,
+    Max
+};
+}
+
 uint32 CompileAllShadersVK();
 uint32 CompileAllShadersDX();
