@@ -11,71 +11,77 @@
 #define SHADERS_SRC_DIR STRINGIFY(_SHADERS_SRC_DIR)
 #endif
 
-static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> pUtils, CComPtr<IDxcIncludeHandler> pIncludeHandler, LPCWSTR* args, uint32 numArgs, const wchar_t* shaderFilename)
+#ifdef _SHADERS_SPV_DIR
+#define SHADERS_SPV_DIR STRINGIFY(_SHADERS_SPV_DIR)
+#endif
+
+static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> pUtils, CComPtr<IDxcIncludeHandler> pIncludeHandler, LPCWSTR* args, uint32 numArgs, const wchar_t* shaderFilepath, const wchar_t* shaderFilenameWithExt)
 {
     CComPtr<IDxcBlobEncoding> pSource = nullptr;
-    pUtils->LoadFile((LPCWSTR)shaderFilename, nullptr, &pSource);
+    pUtils->LoadFile((LPCWSTR)shaderFilepath, nullptr, &pSource);
     DxcBuffer Source;
     Source.Ptr = pSource->GetBufferPointer();
     Source.Size = pSource->GetBufferSize();
     Source.Encoding = DXC_CP_ACP;
 
     CComPtr<IDxcResult> pResults;
-    HRESULT compileResult = pCompiler->Compile(&Source, args, numArgs, pIncludeHandler, IID_PPV_ARGS(&pResults));
-    if (compileResult != S_OK)
+    HRESULT compileStatus = pCompiler->Compile(&Source, args, numArgs, pIncludeHandler, IID_PPV_ARGS(&pResults));
+    if (FAILED(compileStatus))
     {
-        // Something bad happened
+        // Something bad happened inside DXC
         TINKER_ASSERT(0);
-        // TODO: error report better here
+        return ShaderCompileErrCode::HasErrors;
     }
 
-    // TODO: figure out how to differentiate errors from warnings
-    /*if (pResults->HasOutput())
-    {
-        // TODO: can check if there are errors
-    }*/
+    uint32 errCode = ShaderCompileErrCode::Max;
 
     CComPtr<IDxcBlobUtf8> pErrors = nullptr;
     pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
 
-    // IDxcCompiler3::Compile will always return an error buffer, but its length will be zero if there are no warnings or errors.
-    if (pErrors && pErrors->GetStringLength() != 0)
+    if (pErrors != nullptr && pErrors->GetStringLength() != 0)
     {
-        wprintf(L"Warnings and Errors:\n%S\n", pErrors->GetStringPointer());
+        printf("Warnings and Errors:\n%s\n", pErrors->GetStringPointer());
+        return ShaderCompileErrCode::HasErrors;
+    }
+    
+    // Compilation succeeded
+    errCode = ShaderCompileErrCode::Success;
+    // TODO: figure out how to determine if the shader has only warnings
+
+    // Get shader hash
+    CComPtr<IDxcBlob> pHash = nullptr;
+    if (SUCCEEDED(pResults->GetOutput(DXC_OUT_SHADER_HASH, IID_PPV_ARGS(&pHash), nullptr)) && pHash != nullptr)
+    {
+        DxcShaderHash* pHashBuf = (DxcShaderHash*)pHash->GetBufferPointer();
+        // TODO: do something with it
     }
 
-    // Determine error code
-    // TODO: make sure:
-    /*
-    success means hresult == s_ok and no error buffer
-    warnings means hresult == s_ok and yes error buffer
-    errors means hresult != s_ok and yes error buffer
-    */
-    uint32 errCode = ShaderCompileErrCode::Max;
-
-    if (pErrors && pErrors->GetStringLength() != 0)
-        errCode = ShaderCompileErrCode::HasErrors;
-    else
-        errCode = ShaderCompileErrCode::Success;
-
-    /*if (compileResult != S_OK)
+    CComPtr<IDxcBlob> pShader = nullptr;
+    //CComPtr<IDxcBlobUtf16> pShaderName = nullptr;
+    if (SUCCEEDED(pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pShader), 0/*&pShaderName*/)) && pShader != nullptr)
     {
-        TINKER_ASSERT(pErrors && pErrors->GetStringLength() != 0);
-        if (pErrors && pErrors->GetStringLength() != 0)
-            errCode = ShaderCompileErrCode::HasErrors;
-        else
-        {
-            TINKER_ASSERT(0);
-            printf("Shader Compiler - HResult was != S_OK but no pErrors buffer from DXC.\n");
-        }
+        // TODO: alloc into linear allocator, memcpy in the bytecode so it can be referenced later, e.g. in hashmap
+
+        // For now, just write out the spv file
+        char shaderFilepathSpv[2048] = {};
+        uint32 filepathMax = ARRAYCOUNT(shaderFilepathSpv);
+        uint32 basepathLen = (uint32)strlen(SHADERS_SPV_DIR);
+        memcpy(&shaderFilepathSpv[0], SHADERS_SPV_DIR, basepathLen);
+        char* shaderFilenameSpvStart = &shaderFilepathSpv[basepathLen];
+
+        // Remove .hlsl ext, replace with .spv
+        const char* hlslExt = "hlsl";
+        const uint32 hlslExtLen = 4;
+        uint32 shaderFilenameNoExtLen = (uint32)wcslen(shaderFilenameWithExt) - hlslExtLen;
+        uint32 numCharsRemainingToWrite = filepathMax - shaderFilenameNoExtLen - 4; // spv + null term
+        size_t numCharsWritten = 0;
+        wcstombs_s(&numCharsWritten, shaderFilenameSpvStart, filepathMax - basepathLen, shaderFilenameWithExt, shaderFilenameNoExtLen);
+        // TODO: better error handling here, but will replace with a better string system
+        memcpy(shaderFilenameSpvStart + shaderFilenameNoExtLen, "spv", strlen("spv"));
+        *(shaderFilenameSpvStart + shaderFilenameNoExtLen + strlen("spv")) = '\0';
+        Tk::Platform::WriteEntireFile(shaderFilepathSpv, (uint32)pShader->GetBufferSize(), (uint8*)pShader->GetBufferPointer());
     }
-    else
-    {
-        if (pErrors && pErrors->GetStringLength() != 0)
-            errCode = ShaderCompileErrCode::HasWarnings;
-        else
-            errCode = ShaderCompileErrCode::Success;
-    }*/
+
     return errCode;
 }
 
@@ -86,17 +92,21 @@ uint32 CompileAllShadersDX()
     return 1;
 }
 
-//#include <locale.h>
 uint32 CompileAllShadersVK()
 {
-    printf("Compiling all shaders VK!\n");
+    printf("Compiling all shaders VK!\n\n");
 
-    Tk::Core::Vector<LPCWSTR> args; // TODO: make this less bad later
+    Tk::Core::Vector<LPCWSTR> args;
+    args.Reserve(16);
+
     args.PushBackRaw(L"-E");
     args.PushBackRaw(L"main");
 
     args.PushBackRaw(L"-T");
-    args.PushBackRaw(L"vs_6_7"); // TODO: VS, PS, CS
+    args.PushBackRaw(L"vs_6_7");
+
+    //args.PushBackRaw(L"-Zss");
+    args.PushBackRaw(L"-Zi");
 
     //args.PushBackRaw("-Qstrip_debug"); // keep this if we want debug shaders i think
 
@@ -106,62 +116,109 @@ uint32 CompileAllShadersVK()
 
     // Vulkan specific args
     args.PushBackRaw(L"-spirv");
-    args.PushBackRaw(L"-fvk-invert-y");
-    // TODO: we definitely want more here eventually
+    //args.PushBackRaw(L"-fvk-invert-y");
+    args.PushBackRaw(L"-fspv-target-env=vulkan1.3");
 
     // TODO: shader #defines
 
     HRESULT result;
-
     CComPtr<IDxcUtils> pUtils;
     CComPtr<IDxcCompiler3> pCompiler;
     result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
     result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
+    // TODO: check these hresults?
 
     CComPtr<IDxcIncludeHandler> pIncludeHandler;
     pUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
 
     // NOTE: only need this due to char -> w_char games
-    wchar_t CurrShaderFilename[2048] = {};
-    uint32 FilenameMax = ARRAYCOUNT(CurrShaderFilename);
-    size_t NumCharsWritten = 0;
-    mbstowcs_s(&NumCharsWritten, CurrShaderFilename, ARRAYCOUNT(CurrShaderFilename), SHADERS_SRC_DIR, strlen(SHADERS_SRC_DIR));
-    --NumCharsWritten; // We are going to overwrite the null terminator
-    uint32 CharsRemaining = FilenameMax - (uint32)NumCharsWritten;
-    wchar_t* ShaderFilenameStart = &CurrShaderFilename[NumCharsWritten];
+    wchar_t currShaderFilepath[2048] = {};
+    uint32 filenameMax = ARRAYCOUNT(currShaderFilepath);
+    size_t numCharsWritten = 0;
+    mbstowcs_s(&numCharsWritten, currShaderFilepath, ARRAYCOUNT(currShaderFilepath), SHADERS_SRC_DIR, strlen(SHADERS_SRC_DIR));
+    --numCharsWritten; // We are going to overwrite the null terminator
+    uint32 numCharsRemaining = filenameMax - (uint32)numCharsWritten;
+    wchar_t* shaderFilenameStart = &currShaderFilepath[numCharsWritten];
 
-    Tk::Platform::FileHandle FindFileHandle = Tk::Platform::FindFileOpen(SHADERS_SRC_DIR "*.hlsl", ShaderFilenameStart, CharsRemaining);
-    //setlocale(LC_ALL, "");
-    //printf("%ls\n", CurrShaderFilename);
+    uint32 allFilesCompiledCleanly = 1;
 
-    uint32 FindFileError = FindFileHandle.h == FindFileHandle.eInvalidValue;
-    uint32 AllFilesCompiledCleanly = 1;
-    while (!FindFileError)
+    Tk::Platform::FileHandle findFileHandle = Tk::Platform::FindFileOpen(SHADERS_SRC_DIR "*vert_hlsl.hlsl", shaderFilenameStart, numCharsRemaining);
+    uint32 findFileError = findFileHandle.h == findFileHandle.eInvalidValue;
+    while (!findFileError)
     {
-        uint32 CompileError = CompileFile(pCompiler, pUtils, pIncludeHandler, (LPCWSTR*)args.Data(), args.Size(), CurrShaderFilename);
-        if (CompileError != ShaderCompileErrCode::Success || CompileError != ShaderCompileErrCode::HasWarnings)
+        printf("\nCompiling: %ls...\n", shaderFilenameStart);
+
+        uint32 compileError = CompileFile(pCompiler, pUtils, pIncludeHandler, (LPCWSTR*)args.Data(), args.Size(), currShaderFilepath, shaderFilenameStart);
+        if (compileError != ShaderCompileErrCode::Success || compileError != ShaderCompileErrCode::HasWarnings)
         {
-            AllFilesCompiledCleanly = 0;
-            // TODO: error reporting
+            allFilesCompiledCleanly = 0;
+            // TODO: error reporting?
         }
         else
         {
-            // TODO: for now this will just output the spv file, otherwise this would add a material library entry for the library file
-            char CurrShaderFilenameSPV[2048] = {};
-            //Tk::Platform::WriteEntireFile(filename, filesizeInBytes, bytecode*);
+            // TODO: add entry to hashmap for material library
         }
 
-        memset(CurrShaderFilename, 0, ARRAYCOUNT(CurrShaderFilename) * sizeof(uint16));
-        FindFileError = Tk::Platform::FindFileNext(FindFileHandle, &CurrShaderFilename[0], CharsRemaining);
-    }
-    Tk::Platform::FindFileClose(FindFileHandle);
+        printf("Done.\n\n");
 
-    return 0;
+        // Reset shader name but keep base path
+        memset((uint8*)shaderFilenameStart, 0, numCharsRemaining * sizeof(wchar_t));
+        findFileError = Tk::Platform::FindFileNext(findFileHandle, shaderFilenameStart, numCharsRemaining);
+    }
+    Tk::Platform::FindFileClose(findFileHandle);
+
+    args.Clear();
+    args.PushBackRaw(L"-E");
+    args.PushBackRaw(L"main");
+
+    args.PushBackRaw(L"-T");
+    args.PushBackRaw(L"ps_6_7");
+
+    //args.PushBackRaw(L"-Zss");
+    args.PushBackRaw(L"-Zi");
+
+    //args.PushBackRaw("-Qstrip_debug"); // keep this if we want debug shaders i think
+
+    args.PushBackRaw(L"DXC_ARG_WARNINGS_ARE_ERRORS");
+    args.PushBackRaw(L"DXC_ARG_DEBUG");
+    args.PushBackRaw(L"DXC_ARG_PACK_MATRIX_COLUMN_MAJOR");
+
+    // Vulkan specific args
+    args.PushBackRaw(L"-spirv");
+    //args.PushBackRaw(L"-fvk-invert-y");
+    args.PushBackRaw(L"-fspv-target-env=vulkan1.3");
+
+    findFileHandle = Tk::Platform::FindFileOpen(SHADERS_SRC_DIR "*frag_hlsl.hlsl", shaderFilenameStart, numCharsRemaining);
+    findFileError = findFileHandle.h == findFileHandle.eInvalidValue;
+    while (!findFileError)
+    {
+        printf("\nCompiling: %ls...\n", shaderFilenameStart);
+
+        uint32 compileError = CompileFile(pCompiler, pUtils, pIncludeHandler, (LPCWSTR*)args.Data(), args.Size(), currShaderFilepath, shaderFilenameStart);
+        if (compileError != ShaderCompileErrCode::Success || compileError != ShaderCompileErrCode::HasWarnings)
+        {
+            allFilesCompiledCleanly = 0;
+            // TODO: error reporting?
+        }
+        else
+        {
+            // TODO: add entry to hashmap for material library
+        }
+
+        printf("Done.\n\n");
+
+        // Reset shader name but keep base path
+        memset((uint8*)shaderFilenameStart, 0, numCharsRemaining * sizeof(wchar_t));
+        findFileError = Tk::Platform::FindFileNext(findFileHandle, shaderFilenameStart, numCharsRemaining);
+    }
+    Tk::Platform::FindFileClose(findFileHandle);
+
+    return allFilesCompiledCleanly;
 }
 
 int main()
 {
-    // TODO: parse args
+    // TODO: parse cmd line args
     bool bVulkan = true;
     uint32 result = 0;
     if (bVulkan)
