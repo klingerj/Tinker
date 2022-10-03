@@ -9,6 +9,7 @@ enum : uint32
     Success = 0,
     HasWarnings,
     HasErrors,
+    NonShaderError,
     Max
 };
 }
