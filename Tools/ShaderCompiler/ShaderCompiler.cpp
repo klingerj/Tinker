@@ -7,6 +7,12 @@
 #include "DataStructures/Vector.h"
 #include "Platform/PlatformGameAPI.h"
 
+static CComPtr<IDxcUtils> g_pUtils;
+static CComPtr<IDxcCompiler3> g_pCompiler;
+static CComPtr<IDxcIncludeHandler> g_pIncludeHandler;
+
+Tk::Core::Vector<const wchar_t*> g_args;
+
 #ifdef _SHADERS_SRC_DIR
 #define SHADERS_SRC_DIR STRINGIFY(_SHADERS_SRC_DIR)
 #endif
@@ -43,7 +49,7 @@ static const wchar_t* CompileFlags_Common[] =
     L"DXC_ARG_WARNINGS_ARE_ERRORS",
     L"DXC_ARG_DEBUG",
     L"DXC_ARG_PACK_MATRIX_COLUMN_MAJOR",
-    L"-E "
+    L"-E ",
     ENTRY_POINT_NAME_WCHAR,
 };
 
@@ -60,22 +66,21 @@ static const wchar_t* CompileFlags_Debug[] =
     L"-Zss",
 };
 
-static const wchar_t* CompileFlags_ShaderSpecific[ShaderType::Max] =
+static const wchar_t* CompileFlags_ShaderSpecific[ShaderType::Max][1] =
 {
-    L"-T vs_6_7",
-    L"-T ps_6_7",
-    L"-T cs_6_7",
+    { L"-T vs_6_7" },
+    { L"-T ps_6_7" },
+    { L"-T cs_6_7" },
 };
 
-static void AppendFlags_(const wchar_t** flagsToAppend, uint32 numArgsToAppend, Tk::Core::Vector<const wchar_t*>& argsOut)
+static void AppendArgs_(const wchar_t** argsToAppend, uint32 numArgsToAppend, Tk::Core::Vector<const wchar_t*>& argsOut)
 {
     for (uint32 i = 0; i < numArgsToAppend; ++i)
     {
-        argsOut.PushBackRaw(flagsToAppend[i]);
+        argsOut.PushBackRaw(argsToAppend[i]);
     }
 }
-#define AppendFlags(flags, args) AppendFlags_(flags, ARRAYCOUNT(flags), args);
-#define AppendSingleFlag(flag, args) AppendFlags_(&flag, 1, args);
+#define AppendArgsToList(args, argsList) AppendArgs_(args, ARRAYCOUNT(args), argsList);
 
 static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> pUtils, CComPtr<IDxcIncludeHandler> pIncludeHandler, const wchar_t* args, uint32 numArgs, const wchar_t* shaderFilepath, const wchar_t* shaderFilenameWithExt)
 {
@@ -95,7 +100,7 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
         return ShaderCompileErrCode::HasErrors;
     }
 
-    uint32 errCode = ShaderCompileErrCode::Max;
+    uint32 errCode = ShaderCompileErrCode::HasErrors;
 
     CComPtr<IDxcBlobUtf8> pErrors = nullptr;
     pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
@@ -121,8 +126,6 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
     CComPtr<IDxcBlob> pShader = nullptr;
     if (SUCCEEDED(pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pShader), nullptr)) && pShader != nullptr)
     {
-        // TODO: alloc into linear allocator, memcpy in the bytecode so it can be referenced later, e.g. in hashmap
-
         // For now, just write out the spv file
         char shaderFilepathSpv[2048] = {};
         uint32 filepathMax = ARRAYCOUNT(shaderFilepathSpv);
@@ -146,32 +149,26 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
     return errCode;
 }
 
+static uint32 InitCompiler()
+{
+    return !(FAILED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&g_pUtils))) ||
+           FAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&g_pCompiler))) ||
+           FAILED(g_pUtils->CreateDefaultIncludeHandler(&g_pIncludeHandler)));
+}
+
 uint32 CompileAllShadersDX()
 {
-    //args.PushBackRaw(L"-Qstrip_reflect");
-    printf("Compiling all shaders DX!\n");
-    return 1;
+    printf("DX codepath not implemented yet :)");
+    return ShaderCompileErrCode::NonShaderError;
 }
 
 uint32 CompileAllShadersVK()
 {
-    printf("Compiling all shaders VK!\n\n");
-
-    Tk::Core::Vector<const wchar_t*> args;
-    args.Reserve(32);
-
-    HRESULT result;
-    CComPtr<IDxcUtils> pUtils;
-    CComPtr<IDxcCompiler3> pCompiler;
-    result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&pUtils));
-    result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&pCompiler));
-    // TODO: error handling for these hresults
+    if (!InitCompiler())
+        return ShaderCompileErrCode::NonShaderError;
     
-    CComPtr<IDxcIncludeHandler> pIncludeHandler;
-    pUtils->CreateDefaultIncludeHandler(&pIncludeHandler);
-
     // Start compilation
-    uint32 allFilesCompiledCleanly = 1;
+    uint32 errorCode = ShaderCompileErrCode::Success;
 
     // NOTE: only need this due to char -> w_char games
     wchar_t currShaderFilepath[2048] = {};
@@ -184,10 +181,10 @@ uint32 CompileAllShadersVK()
 
     for (uint32 uiShaderType = 0; uiShaderType < ShaderType::Max; ++uiShaderType)
     {
-        args.Clear();
-        AppendFlags(CompileFlags_Common, args);
-        AppendFlags(CompileFlags_VkSpecific, args);
-        AppendSingleFlag(CompileFlags_ShaderSpecific[uiShaderType], args);
+        g_args.Clear();
+        AppendArgsToList(CompileFlags_Common, g_args);
+        AppendArgsToList(CompileFlags_VkSpecific, g_args);
+        AppendArgsToList(CompileFlags_ShaderSpecific[uiShaderType], g_args);
 
         Tk::Platform::FileHandle findFileHandle = Tk::Platform::FindFileOpen(ShaderFileSuffixRegexs[uiShaderType], shaderFilenameStart, numCharsRemaining);
         uint32 findFileError = findFileHandle.h == findFileHandle.eInvalidValue;
@@ -195,15 +192,14 @@ uint32 CompileAllShadersVK()
         {
             printf("\nCompiling: %ls...\n", shaderFilenameStart);
 
-            uint32 compileError = CompileFile(pCompiler, pUtils, pIncludeHandler, (const wchar_t*)args.Data(), args.Size(), currShaderFilepath, shaderFilenameStart);
-            if (compileError != ShaderCompileErrCode::Success || compileError != ShaderCompileErrCode::HasWarnings)
+            uint32 compileError = CompileFile(g_pCompiler, g_pUtils, g_pIncludeHandler, (const wchar_t*)g_args.Data(), g_args.Size(), currShaderFilepath, shaderFilenameStart);
+            if (compileError == ShaderCompileErrCode::Success || compileError == ShaderCompileErrCode::HasWarnings)
             {
-                allFilesCompiledCleanly = 0;
-                // TODO: error reporting?
+                // TODO: add entry to hashmap for material library, get the bytecode from the compile call
             }
             else
             {
-                // TODO: add entry to hashmap for material library
+                errorCode = compileError;
             }
 
             printf("Done.\n\n");
@@ -215,18 +211,62 @@ uint32 CompileAllShadersVK()
         Tk::Platform::FindFileClose(findFileHandle);
     }
 
-    return allFilesCompiledCleanly;
+    return errorCode;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    // TODO: parse cmd line args
-    bool bVulkan = true;
-    uint32 result = 0;
+    uint32 bVulkan = false;
+    if (argc != 2)
+    {
+        printf("Invalid number of arguments provided. Usage: TinkerSC.exe [VK | DX]\n");
+        return ShaderCompileErrCode::NonShaderError;
+    }
+    else
+    {
+        if (strncmp(argv[1], "VK", strlen("VK")) == 0)
+        {
+            bVulkan = 1u;
+        }
+        else if (strncmp(argv[1], "DX", strlen("DX")) == 0)
+        {
+            bVulkan = 0u;
+        }
+        else
+        {
+            printf("Unrecognized argument provided. Usage: TinkerSC.exe [VK | DX]\n");
+            return ShaderCompileErrCode::NonShaderError;
+        }
+    }
+
+    g_args.Reserve(32);
+    uint32 result = ShaderCompileErrCode::NonShaderError;
     if (bVulkan)
         result = CompileAllShadersVK();
     else
         result = CompileAllShadersDX();
+
+    switch (result)
+    {
+        case ShaderCompileErrCode::Success:
+        case ShaderCompileErrCode::HasWarnings:
+        {
+            printf("Compilation succeeded.\n");
+            break;
+        }
+
+        case ShaderCompileErrCode::HasErrors:
+        {
+            printf("Compilation failed with shader errors.\n");
+            break;
+        }
+
+        default:
+        {
+            printf("Compilation failed due to some error.\n");
+            break;
+        }
+    }
 
     return result;
 }
