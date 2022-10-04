@@ -33,6 +33,7 @@ Raytraced | Rasterized
   * <code>spv/</code> - compiled shader bytecode
 * <code>Test/</code> - simple setup for running unit tests
 * <code>ThirdParty/</code> - external libraries (kept minimal)
+  * <code>dxc_2022_07_18/</code> - dxc release lib
 * <code>Tools/</code> - code for separate tools
   * <code>ShaderCompiler/</code> - code that calls into DXC to compile HLSL shaders to SPIR-V (eventually DXIL too) 
 * <code>ToolsBin/</code> - built binaries of code from <code>Tools/</code>
