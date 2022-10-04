@@ -82,6 +82,8 @@ bool AcquireFrame()
         return VulkanAcquireFrame();
     
     return false;
+    #else
+    return false;
     #endif
 }
 
@@ -234,6 +236,8 @@ CREATE_RESOURCE(CreateResource)
 {
     #ifdef VULKAN
     return Graphics::VulkanCreateResource(resDesc);
+    #else
+    return Graphics::DefaultResHandle_Invalid;
     #endif
 }
 
@@ -248,6 +252,8 @@ MAP_RESOURCE(MapResource)
 {
     #ifdef VULKAN
     return Graphics::VulkanMapResource(handle);
+    #else
+    return NULL;
     #endif
 }
 
@@ -263,6 +269,8 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
     #ifdef VULKAN
     return Graphics::VulkanCreateGraphicsPipeline(vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
         shaderID, viewportWidth, viewportHeight, numColorRTs, colorRTFormats, depthFormat, descriptorHandles, numDescriptorHandles);
+    #else
+    return false;
     #endif
 }
 
@@ -270,6 +278,8 @@ CREATE_DESCRIPTOR(CreateDescriptor)
 {
     #ifdef VULKAN
     return Graphics::VulkanCreateDescriptor(descLayoutID);
+    #else
+    return DefaultDescHandle_Invalid;
     #endif
 }
 
@@ -298,7 +308,10 @@ CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
 {
     #ifdef VULKAN
     return Graphics::VulkanCreateDescriptorLayout(descLayoutID, descLayout);
+    #else
+    return false;
     #endif
+
 }
 
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)

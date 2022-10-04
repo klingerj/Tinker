@@ -1,5 +1,7 @@
+*.obj
 Build/
+ToolsBin/.vs/
+Shaders/spv/
 *.swp
 *.swo
 *~
-Shaders/spv/

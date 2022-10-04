@@ -44,7 +44,7 @@ VulkanMemAlloc VulkanMemoryAllocator::Alloc(VkMemoryRequirements allocReqs)
     uint64 allocSize = RoundValueToPow2(allocReqs.size, m_AllocGranularity);
 
     //TODO: check/enforce that the alignment is a power of two?
-    uint64 alignment = max(m_AllocGranularity, allocReqs.alignment);
+    uint64 alignment = Max(m_AllocGranularity, allocReqs.alignment);
     TINKER_ASSERT(ISPOW2(alignment));
     uint64 nextAllocOffset = RoundValueToPow2(m_LastAllocOffset, alignment); // ensure alloc offset is aligned
     uint64 nextAllocEnd = nextAllocOffset + allocSize;

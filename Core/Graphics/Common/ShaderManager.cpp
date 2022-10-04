@@ -5,8 +5,6 @@
 
 #ifdef _SHADERS_SPV_DIR
 #define SHADERS_SPV_PATH STRINGIFY(_SHADERS_SPV_DIR)
-#else
-//#define SHADERS_SPV_PATH "..\\Shaders\\spv\\"
 #endif
 
 static const uint32 totalShaderBytecodeMaxSizeInBytes = 1024 * 1024 * 100;
@@ -107,12 +105,10 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     {
         SHADERS_SPV_PATH "blit_vert_glsl.spv",
         SHADERS_SPV_PATH "blit_frag_glsl.spv",
-        SHADERS_SPV_PATH "basic_vert_glsl.spv",
-        SHADERS_SPV_PATH "basic_frag_glsl.spv",
-        SHADERS_SPV_PATH "animpoly_vert_glsl.spv",
-        SHADERS_SPV_PATH "animpoly_frag_glsl.spv",
-        SHADERS_SPV_PATH "basic_noModelMat_vert_glsl.spv",
-        SHADERS_SPV_PATH "basic_virtualTex_frag_glsl.spv",
+        SHADERS_SPV_PATH "basic_VS.spv",
+        SHADERS_SPV_PATH "basic_PS.spv",
+        SHADERS_SPV_PATH "animpoly_VS.spv",
+        SHADERS_SPV_PATH "animpoly_PS.spv",
     };
 
     uint32 descLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
@@ -168,17 +164,6 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
     bOk = LoadShader(shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
-
-    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
-        descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
-
-    // Virtual texture, basic shader
-    /*descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
-    descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
-    descLayouts[2] = Graphics::DESCLAYOUT_ID_VIRTUAL_TEXTURE;
-    descLayouts[3] = Graphics::DESCLAYOUT_ID_TERRAIN_DATA;
-    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_BASIC_VirtualTexture, windowWidth, windowHeight, pipelineFormats, descLayouts, 4);
-    TINKER_ASSERT(bOk);*/
 }
 
 void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)

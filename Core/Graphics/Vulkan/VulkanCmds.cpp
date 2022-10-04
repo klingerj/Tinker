@@ -466,7 +466,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
     
     VkRenderingAttachmentInfo colorAttachments[VULKAN_MAX_RENDERTARGETS] = {};
-    for (uint32 i = 0; i < min(numColorRTs, VULKAN_MAX_RENDERTARGETS); ++i)
+    for (uint32 i = 0; i < Min(numColorRTs, VULKAN_MAX_RENDERTARGETS); ++i)
     {
         VkRenderingAttachmentInfo& colorAttachment = colorAttachments[i];
         colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
