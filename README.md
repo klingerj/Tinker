@@ -28,7 +28,7 @@ Raytraced | Rasterized
 * <code>Output/</code> - dumping ground for output files, e.g. raytraced image
 * <code>SPIR-V-VM/</code> - (WIP, not done!) virtual machine for evaluating SPIR-V shaders, written in pure C
 * <code>Scripts/</code> - build scripts and some helpful project scripts
-* <code>Shaders/</code> - shaders (GLSL) and compiled SPIR-V
+* <code>Shaders/</code> - shaders (HLSL) and compiled SPIR-V (eventually DXIL as well)
 * <code>Test/</code> - simple setup for running unit tests
 * <code>ThirdParty/</code> - external libraries (kept minimal)
 * <code>Tools/</code> - code for separate tools
