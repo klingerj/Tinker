@@ -34,26 +34,26 @@ typedef int64_t  int64;
 #define TINKER_INVALID_HANDLE MAX_UINT32
 
 template <typename T>
-inline T max(const T& a, const T& b)
+T Max(const T& a, const T& b)
 {
     return (a > b) ? a : b;
 }
 
 template <typename T>
-inline T min(const T& a, const T& b)
+T Min(const T& a, const T& b)
 {
     return (a < b) ? a : b;
 }
-#define CLAMP(a, b, c) min(max(a, b), c)
+#define CLAMP(a, b, c) Min(Max(a, b), c)
 
 template <typename T>
-inline bool ISPOW2(const T& x)
+bool ISPOW2(const T& x)
 {
     return x && ((x & (x - 1)) == 0);
 }
 
 template <typename T>
-inline T LOG2(T x)
+T LOG2(T x)
 {
     T i = 1;
     for (; x >> i; ++i) {}
@@ -72,7 +72,7 @@ inline uint32 POW2_ROUNDUP(uint32 x)
 }
 
 template <typename T>
-inline T RoundValueToPow2(T val, T pow2)
+T RoundValueToPow2(T val, T pow2)
 {
     return (val + pow2 - 1) & ~(pow2 - 1);
 }

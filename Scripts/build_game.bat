@@ -1,6 +1,24 @@
 @echo off
 setlocal
 
+if "%1" == "-h" (goto PrintHelp)
+if "%1" == "-help" (goto PrintHelp)
+if "%1" == "help" (goto PrintHelp)
+goto StartScript
+
+:PrintHelp
+echo Usage: build_engine.bat ^<build_mode^> 
+echo.
+echo build_mode:
+echo   Release
+echo   Debug
+echo.
+echo For example:
+echo build_game.bat Release VK
+echo.
+goto EndScript
+
+:StartScript
 set BuildConfig=%1
 if "%BuildConfig%" NEQ "Debug" (
     if "%BuildConfig%" NEQ "Release" (
@@ -49,7 +67,7 @@ set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cp
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/DTINKER_GAME /D_ASSETS_DIR=%AbsolutePathPrefix%\\..\\Assets\\ 
+set CompileDefines=/DTINKER_GAME /DENABLE_MEM_TRACKING /D_ASSETS_DIR=%AbsolutePathPrefix%\\..\\Assets\\ 
 
 if "%TIME:~0,1%" == " " (
     set BuildTimestamp=%DATE:~4,2%_%DATE:~7,2%_%DATE:~10,4%__0%TIME:~1,1%_%TIME:~3,2%_%TIME:~6,2%

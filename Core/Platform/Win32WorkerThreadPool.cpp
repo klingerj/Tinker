@@ -7,7 +7,7 @@
 
 #define NUM_JOBS_PER_WORKER 512
 #define WORKER_THREAD_STACK_SIZE 1024 * 1024 * 2
-#define MAX_THREADS 16
+#define MAX_THREADS 16u
 
 namespace Tk
 {
@@ -75,7 +75,7 @@ outer_loop:
 
 void Startup(uint32 NumThreads)
 {
-    g_NumThreads = min(NumThreads, MAX_THREADS);
+    g_NumThreads = Min(NumThreads, MAX_THREADS);
     for (uint32 i = 0; i < g_NumThreads; ++i)
     {
         g_Threads[i].jobs.Init(NUM_JOBS_PER_WORKER);
