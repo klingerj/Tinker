@@ -1,7 +1,6 @@
 #include "Raytracing.h"
 #include "Mem.h"
 #include "AssetFileParsing.h"
-#include "Raytracing/AccelStructures/Octree.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
 #include "Camera.h"
@@ -33,8 +32,6 @@ void RaytraceTest()
 {
     TIMED_SCOPED_BLOCK("Raytrace test");
 
-    const bool useOctree = false;
-
     const MeshAttributeData& data = g_AssetManager.GetMeshAttrDataByID(2);
     uint32 numVerts =  data.m_numVertices;
     v3f* triData = (v3f*)Tk::Core::CoreMalloc(numVerts * sizeof(v3f));
@@ -44,13 +41,6 @@ void RaytraceTest()
         triData[i] = v3f(ptVec4.x, ptVec4.y, ptVec4.z);
     }
     
-    Tk::Core::Raytracing::Octree* octree = nullptr;
-    if (1)
-    {
-        octree = Tk::Core::Raytracing::CreateEmptyOctree();
-        //Tk::Core::Raytracing::BuildOctree(octree, triData, numVerts/3);
-    }
-
     const uint32 width = 256;
     const uint32 height = 256;
     uint32* img = (uint32*)Tk::Core::CoreMalloc(sizeof(uint32) * width * height);
@@ -107,15 +97,7 @@ void RaytraceTest()
 
             Tk::Core::Raytracing::Intersection isx;
             isx.InitInvalid();
-            if (useOctree)
-            {
-                // intersect with octree
-                isx = Tk::Core::Raytracing::IntersectRay(octree, ray);
-            }
-            else
-            {
-                RayMeshIntersectNaive(ray, triData, numVerts / 3, isx);
-            }
+            RayMeshIntersectNaive(ray, triData, numVerts / 3, isx);
 
             if (isx.t > 0.0f)
             {
@@ -154,8 +136,6 @@ void RaytraceTest()
             }
         }
     }
-
-    Tk::Core::Raytracing::DestroyOctree(octree);
 
     // Output image
     Buffer imgBuffer = {};
