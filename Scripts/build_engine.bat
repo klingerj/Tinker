@@ -88,7 +88,6 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Ha
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/AccelStructures/Octree.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 
 set SourceListGraphics=
