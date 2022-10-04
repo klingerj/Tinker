@@ -82,6 +82,7 @@ rem TinkerSC - primary exe
 set AbsolutePathPrefix=%cd%
 
 set SourceListSC= 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Tools/ShaderCompiler/main.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/DataStructures/Vector.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Mem.cpp 
@@ -125,7 +126,7 @@ if EXIST TinkerSC.exp (
     del TinkerSC.exp
     )
 
-rem Copy needed DLLs to Build/ directory
+rem Copy needed DLLs to exe directory
 echo.
 echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
 copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 

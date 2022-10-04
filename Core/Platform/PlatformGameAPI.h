@@ -57,9 +57,6 @@ END_NETWORK_CONNECTION(EndNetworkConnection);
 #define SEND_MESSAGE_TO_SERVER(name) TINKER_API int name()
 SEND_MESSAGE_TO_SERVER(SendMessageToServer);
 
-#define EXEC_SYSTEM_COMMAND(name) TINKER_API int name(const char* command)
-EXEC_SYSTEM_COMMAND(ExecSystemCommand);
-
 namespace Keycode
 {
 enum : uint32

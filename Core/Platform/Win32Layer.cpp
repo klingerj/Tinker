@@ -5,6 +5,7 @@
 #include "Win32Client.h"
 #include "Graphics/Common/GraphicsCommon.h"
 #include "Graphics/Common/ShaderManager.h"
+#include "ShaderCompiler/ShaderCompiler.h"
 #include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
 
@@ -50,7 +51,6 @@ bool g_cursorLocked = false;
 #ifdef _SCRIPTS_DIR
 #define SCRIPTS_PATH STRINGIFY(_SCRIPTS_DIR)
 #else
-//#define SCRIPTS_PATH "..\\Scripts\\"
 #endif
 
 #ifdef _GAME_DLL_PATH
@@ -229,29 +229,6 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
     }
 }
 
-EXEC_SYSTEM_COMMAND(ExecSystemCommand)
-{
-    STARTUPINFO startupInfo = {};
-    PROCESS_INFORMATION processInfo = {};
-
-    if (!CreateProcess(NULL, (LPSTR)command, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInfo))
-    {
-        Tk::Core::Utility::LogMsg("Platform", "Failed to create new process to execute system command:", Tk::Core::Utility::LogSeverity::eCritical);
-        Tk::Core::Utility::LogMsg("Platform", command, Tk::Core::Utility::LogSeverity::eCritical);
-        return 1;
-    }
-
-    WaitForSingleObject(processInfo.hProcess, INFINITE);
-
-    DWORD exitCode;
-    GetExitCodeProcess(processInfo.hProcess, &exitCode);
-
-    CloseHandle(processInfo.hProcess);
-    CloseHandle(processInfo.hThread);
-
-    return exitCode;
-}
-
 }
 }
 
@@ -320,13 +297,19 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
             {
                 Tk::Core::Utility::LogMsg("Platform", "Attempting to hotload shaders...\n", Tk::Core::Utility::LogSeverity::eInfo);
 
-                const char* shaderCompileCommand = SCRIPTS_PATH "build_compile_shaders_glsl2spv.bat";
-                if (ExecSystemCommand(shaderCompileCommand) == 0)
+                uint32 result = Tk::ShaderCompiler::ErrCode::NonShaderError;
+                #ifdef VULKAN
+                result = Tk::ShaderCompiler::CompileAllShadersVK();
+                #else
+                #endif
+
+                if (result == Tk::ShaderCompiler::ErrCode::Success)
                 {
                     Tk::Core::Graphics::ShaderManager::ReloadShaders(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                 }
                 else
                 {
+                    // TODO: grab error message from shader compiler
                     Tk::Core::Utility::LogMsg("Platform", "Failed to create shader compile process! Shaders will not be compiled.\n", Tk::Core::Utility::LogSeverity::eWarning);
                 }
 
@@ -620,6 +603,11 @@ wWinMain(HINSTANCE hInstance,
         ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
         #endif
 
+        if (Tk::ShaderCompiler::Init() != Tk::ShaderCompiler::ErrCode::Success)
+        {
+            TINKER_ASSERT(0);
+            Tk::Core::Utility::LogMsg("Platform", "Failed to init shader compiler!", Tk::Core::Utility::LogSeverity::eCritical);
+        }
         Tk::Core::Graphics::ShaderManager::Startup();
         Tk::Core::Graphics::ShaderManager::LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 

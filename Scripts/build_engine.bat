@@ -89,6 +89,7 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracke
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/AccelStructures/Octree.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 
 set SourceListGraphics=
 set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
@@ -106,7 +107,15 @@ if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
-set CompileDefines=/DTINKER_APP /DTINKER_EXPORTING /DENABLE_MEM_TRACKING /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ /DASSERTS_ENABLE=1 
+set CompileDefines=/DTINKER_APP 
+set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
+set CompileDefines=%CompileDefines% /DTINKER_EXPORTING 
+set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
+set CompileDefines=%CompileDefines% /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll 
+set CompileDefines=%CompileDefines% /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll 
+set CompileDefines=%CompileDefines% /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ 
+set CompileDefines=%CompileDefines% /D_SHADERS_SRC_DIR=%AbsolutePathPrefix%\\..\\Shaders\\hlsl\\ 
+set CompileDefines=%CompileDefines% /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ 
 
 if "%GraphicsAPI%" == "VK" (
     set CompileDefines=!CompileDefines! /DVULKAN 
@@ -122,8 +131,9 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines!
     )
 
-set CompileIncludePaths=/I ../Core 
+set CompileIncludePaths=/I ../Core /I ../Tools /I ../ThirdParty/dxc_2022_07_18 
 set LibsToLink=user32.lib ws2_32.lib 
+set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
 
 echo.
 echo Building TinkerApp.exe...
@@ -146,6 +156,13 @@ if EXIST TinkerApp.exp (
     echo.
     del TinkerApp.exp
     )
+
+rem Copy needed DLLs to exe directory
+echo.
+echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
+echo Done.
 
 :DoneBuild
 echo.
