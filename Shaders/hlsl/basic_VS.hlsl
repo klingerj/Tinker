@@ -1,4 +1,3 @@
-
 struct PushConstantData
 {
     uint InstanceOffsets[4];
@@ -37,9 +36,9 @@ struct DescInstance
 
 struct VSOutput
 {
-    [[vk::location(0)]] float4 Position  : SV_POSITION;
-    [[vk::location(1)]] float2 OutUV     : TEXCOORD0;
-    [[vk::location(2)]] float3 OutNormal : NORMAL;
+    [[vk::location(0)]] float4 Position : SV_POSITION;
+    [[vk::location(1)]] float2 UV       : TEXCOORD0;
+    [[vk::location(2)]] float3 Normal   : NORMAL;
 };
 
 VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID)
@@ -53,7 +52,7 @@ VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID
 
     VSOutput Out;
     Out.Position = mul(ViewProjMat, mul(ModelMat, ModelPos));
-    Out.OutUV = UV;
-    Out.OutNormal = Normal;
+    Out.UV = UV;
+    Out.Normal = Normal;
     return Out;
 }
