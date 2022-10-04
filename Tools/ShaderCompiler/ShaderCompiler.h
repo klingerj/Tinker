@@ -2,7 +2,12 @@
 
 #include "CoreDefines.h"
 
-namespace ShaderCompileErrCode
+namespace Tk
+{
+namespace ShaderCompiler
+{
+
+namespace ErrCode
 {
 enum : uint32
 {
@@ -15,6 +20,10 @@ enum : uint32
 }
 
 // 1 means all files compiled cleanly, 0 means failure to compile
-// TODO: let someone get the warnings buffer
+// TODO: expose the errors buffer
+uint32 Init();
 uint32 CompileAllShadersVK();
 uint32 CompileAllShadersDX();
+
+}
+}

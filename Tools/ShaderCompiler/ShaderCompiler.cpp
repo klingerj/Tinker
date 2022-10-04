@@ -7,9 +7,15 @@
 #include "DataStructures/Vector.h"
 #include "Platform/PlatformGameAPI.h"
 
+namespace Tk
+{
+namespace ShaderCompiler
+{
+
 static CComPtr<IDxcUtils> g_pUtils;
 static CComPtr<IDxcCompiler3> g_pCompiler;
 static CComPtr<IDxcIncludeHandler> g_pIncludeHandler;
+static uint32 isInitted = 0;
 
 Tk::Core::Vector<const wchar_t*> g_args;
 
@@ -97,10 +103,10 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
     {
         // Something bad happened inside DXC
         TINKER_ASSERT(0);
-        return ShaderCompileErrCode::HasErrors;
+        return ErrCode::HasErrors;
     }
 
-    uint32 errCode = ShaderCompileErrCode::HasErrors;
+    uint32 errCode = ErrCode::HasErrors;
 
     CComPtr<IDxcBlobUtf8> pErrors = nullptr;
     pResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr);
@@ -108,11 +114,11 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
     if (pErrors != nullptr && pErrors->GetStringLength() != 0)
     {
         printf("Warnings and Errors:\n%s\n", pErrors->GetStringPointer());
-        return ShaderCompileErrCode::HasErrors;
+        return ErrCode::HasErrors;
     }
     
     // Compilation succeeded
-    errCode = ShaderCompileErrCode::Success;
+    errCode = ErrCode::Success;
     // TODO: figure out how to determine if the shader has only warnings
 
     // Get shader hash
@@ -149,26 +155,36 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
     return errCode;
 }
 
-static uint32 InitCompiler()
+uint32 Init()
 {
-    return !(FAILED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&g_pUtils))) ||
-           FAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&g_pCompiler))) ||
-           FAILED(g_pUtils->CreateDefaultIncludeHandler(&g_pIncludeHandler)));
+    g_args.Reserve(32);
+    if (!(FAILED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&g_pUtils))) ||
+          FAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&g_pCompiler))) ||
+          FAILED(g_pUtils->CreateDefaultIncludeHandler(&g_pIncludeHandler))))
+    {
+        isInitted = 1;
+        return ErrCode::Success;
+    }
+    else
+    {
+        isInitted = 0;
+        return ErrCode::NonShaderError;
+    }
 }
 
 uint32 CompileAllShadersDX()
 {
     printf("DX codepath not implemented yet :)");
-    return ShaderCompileErrCode::NonShaderError;
+    return ErrCode::NonShaderError;
 }
 
 uint32 CompileAllShadersVK()
 {
-    if (!InitCompiler())
-        return ShaderCompileErrCode::NonShaderError;
+    if (!isInitted)
+        return ErrCode::NonShaderError;
     
     // Start compilation
-    uint32 errorCode = ShaderCompileErrCode::Success;
+    uint32 errorCode = ErrCode::Success;
 
     // NOTE: only need this due to char -> w_char games
     wchar_t currShaderFilepath[2048] = {};
@@ -193,7 +209,7 @@ uint32 CompileAllShadersVK()
             printf("\nCompiling: %ls...\n", shaderFilenameStart);
 
             uint32 compileError = CompileFile(g_pCompiler, g_pUtils, g_pIncludeHandler, (const wchar_t*)g_args.Data(), g_args.Size(), currShaderFilepath, shaderFilenameStart);
-            if (compileError == ShaderCompileErrCode::Success || compileError == ShaderCompileErrCode::HasWarnings)
+            if (compileError == ErrCode::Success || compileError == ErrCode::HasWarnings)
             {
                 // TODO: add entry to hashmap for material library, get the bytecode from the compile call
             }
@@ -214,59 +230,5 @@ uint32 CompileAllShadersVK()
     return errorCode;
 }
 
-int main(int argc, char* argv[])
-{
-    uint32 bVulkan = false;
-    if (argc != 2)
-    {
-        printf("Invalid number of arguments provided. Usage: TinkerSC.exe [VK | DX]\n");
-        return ShaderCompileErrCode::NonShaderError;
-    }
-    else
-    {
-        if (strncmp(argv[1], "VK", strlen("VK")) == 0)
-        {
-            bVulkan = 1u;
-        }
-        else if (strncmp(argv[1], "DX", strlen("DX")) == 0)
-        {
-            bVulkan = 0u;
-        }
-        else
-        {
-            printf("Unrecognized argument provided. Usage: TinkerSC.exe [VK | DX]\n");
-            return ShaderCompileErrCode::NonShaderError;
-        }
-    }
-
-    g_args.Reserve(32);
-    uint32 result = ShaderCompileErrCode::NonShaderError;
-    if (bVulkan)
-        result = CompileAllShadersVK();
-    else
-        result = CompileAllShadersDX();
-
-    switch (result)
-    {
-        case ShaderCompileErrCode::Success:
-        case ShaderCompileErrCode::HasWarnings:
-        {
-            printf("Compilation succeeded.\n");
-            break;
-        }
-
-        case ShaderCompileErrCode::HasErrors:
-        {
-            printf("Compilation failed with shader errors.\n");
-            break;
-        }
-
-        default:
-        {
-            printf("Compilation failed due to some error.\n");
-            break;
-        }
-    }
-
-    return result;
+}
 }
