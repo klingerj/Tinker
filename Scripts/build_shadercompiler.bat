@@ -82,7 +82,7 @@ rem TinkerSC - primary exe
 set AbsolutePathPrefix=%cd%
 
 set SourceListSC= 
-set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Tools/ShaderCompiler/main.cpp 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Tools/ShaderCompiler/Main.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/DataStructures/Vector.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Mem.cpp 
