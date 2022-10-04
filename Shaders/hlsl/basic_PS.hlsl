@@ -1,14 +1,8 @@
-
 struct PSInput
 {
-    [[vk::location(0)]] float4 Position  : SV_POSITION;
-    [[vk::location(1)]] float2 inUV     : TEXCOORD0;
-    [[vk::location(2)]] float3 inNormal : NORMAL;
-};
-
-struct PSOutput
-{
-    [[vk::location(0)]] float4 outColor;
+    [[vk::location(0)]] float4 Position : SV_POSITION;
+    [[vk::location(1)]] float2 UV       : TEXCOORD0;
+    [[vk::location(2)]] float3 Normal   : NORMAL;
 };
 
 #define LIGHT_DIR normalize(float3(-1, -1, 1))
@@ -17,14 +11,7 @@ struct PSOutput
 
 float4 main(PSInput Input) : SV_Target0
 {
-    float lambert = dot(LIGHT_DIR, normalize(Input.inNormal));
+    float lambert = dot(LIGHT_DIR, normalize(Input.Normal));
     float3 finalColor = clamp(BASE_COLOR * lambert, AMBIENT, 1.0f);
-    
-    float2 UV = Input.inUV;
-    float4 InPos = Input.Position;
-
-    //PSOutput Out;
-    //Out.outColor = float4(finalColor, 1.0f);
-    //return Out;
     return float4(finalColor, 1.0f);
 }
