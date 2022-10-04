@@ -310,7 +310,7 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
                 else
                 {
                     // TODO: grab error message from shader compiler
-                    Tk::Core::Utility::LogMsg("Platform", "Failed to create shader compile process! Shaders will not be compiled.\n", Tk::Core::Utility::LogSeverity::eWarning);
+                    Tk::Core::Utility::LogMsg("Platform", "Shader compilation failed.\n", Tk::Core::Utility::LogSeverity::eWarning);
                 }
 
                 Tk::Core::Utility::LogMsg("Platform", "...Done.\n", Tk::Core::Utility::LogSeverity::eInfo);
