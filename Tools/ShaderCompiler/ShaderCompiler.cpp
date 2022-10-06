@@ -6,6 +6,7 @@
 #include "ShaderCompiler.h"
 #include "DataStructures/Vector.h"
 #include "Platform/PlatformGameAPI.h"
+#include "StringTypes.h"
 
 namespace Tk
 {
@@ -133,23 +134,23 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
     if (SUCCEEDED(pResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&pShader), nullptr)) && pShader != nullptr)
     {
         // For now, just write out the spv file
-        char shaderFilepathSpv[2048] = {};
-        uint32 filepathMax = ARRAYCOUNT(shaderFilepathSpv);
-        uint32 basepathLen = (uint32)strlen(SHADERS_SPV_DIR);
-        memcpy(&shaderFilepathSpv[0], SHADERS_SPV_DIR, basepathLen);
-        char* shaderFilenameSpvStart = &shaderFilepathSpv[basepathLen];
+        static const uint32 filepathMax = 2048;
+        Tk::Core::StrFixedBuffer<2048> shaderFilepathSpv;
+        shaderFilepathSpv.Clear();
+        shaderFilepathSpv.Append(SHADERS_SPV_DIR);
+        char* shaderFilenameSpvStart = shaderFilepathSpv.EndOfStrPtr();
 
         // Remove .hlsl ext, replace with .spv
-        const char* hlslExt = "hlsl";
-        const uint32 hlslExtLen = 4;
+        static const char* hlslExt = "hlsl";
+        const uint32 hlslExtLen = (uint32)strlen(hlslExt);
         uint32 shaderFilenameNoExtLen = (uint32)wcslen(shaderFilenameWithExt) - hlslExtLen;
-        uint32 numCharsRemainingToWrite = filepathMax - shaderFilenameNoExtLen - 4; // spv + null term
-        size_t numCharsWritten = 0;
-        wcstombs_s(&numCharsWritten, shaderFilenameSpvStart, filepathMax - basepathLen, shaderFilenameWithExt, shaderFilenameNoExtLen);
-        // TODO: better error handling here, but will replace with a better string system
-        memcpy(shaderFilenameSpvStart + shaderFilenameNoExtLen, "spv", strlen("spv"));
-        *(shaderFilenameSpvStart + shaderFilenameNoExtLen + strlen("spv")) = '\0';
-        Tk::Platform::WriteEntireFile(shaderFilepathSpv, (uint32)pShader->GetBufferSize(), (uint8*)pShader->GetBufferPointer());
+        shaderFilepathSpv.AppendWChar(shaderFilenameWithExt, shaderFilenameNoExtLen);
+
+        // Complete string with .spv extension and null terminator
+        shaderFilepathSpv.Append("spv");
+        shaderFilepathSpv.NullTerminate();
+        Tk::Platform::WriteEntireFile(shaderFilepathSpv.m_data, (uint32)pShader->GetBufferSize(), (uint8*)pShader->GetBufferPointer());
+        printf("Wrote: %s\n", shaderFilepathSpv.m_data);
     }
 
     return errCode;
@@ -217,8 +218,6 @@ uint32 CompileAllShadersVK()
             {
                 errorCode = compileError;
             }
-
-            printf("Done.\n\n");
 
             // Reset shader name but keep base path
             memset((uint8*)shaderFilenameStart, 0, numCharsRemaining * sizeof(wchar_t));
