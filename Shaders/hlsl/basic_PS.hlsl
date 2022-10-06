@@ -1,7 +1,7 @@
 struct PSInput
 {
     [[vk::location(0)]] float4 Position : SV_POSITION;
-    [[vk::location(1)]] float2 UV       : TEXCOORD0;
+    //[[vk::location(1)]] float2 UV       : TEXCOORD0;
     [[vk::location(2)]] float3 Normal   : NORMAL;
 };
 

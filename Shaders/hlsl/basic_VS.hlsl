@@ -37,7 +37,7 @@ struct DescInstance
 struct VSOutput
 {
     [[vk::location(0)]] float4 Position : SV_POSITION;
-    [[vk::location(1)]] float2 UV       : TEXCOORD0;
+    //[[vk::location(1)]] float2 UV       : TEXCOORD0;
     [[vk::location(2)]] float3 Normal   : NORMAL;
 };
 
@@ -52,7 +52,7 @@ VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID
 
     VSOutput Out;
     Out.Position = mul(ViewProjMat, mul(ModelMat, ModelPos));
-    Out.UV = UV;
+    //Out.UV = UV;
     Out.Normal = Normal;
     return Out;
 }
