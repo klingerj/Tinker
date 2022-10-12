@@ -28,16 +28,17 @@ typedef unsigned __int64 uint64_t;
 
 //-----------------------------------------------------------------------------
 
-//void MurmurHash3_x86_32(const void* key, int len, uint32_t seed, void* out);
-//constexpr uint32_t MurmurHash3_x86_32(const char* key, int len, uint32_t seed);
+// NOTE(Joe) - this is the original function, modified slightly
+uint32_t MurmurHash3_x86_32_(const void* key, int len, uint32_t seed);
 
-inline constexpr uint32_t rotl32(uint32_t x, int8_t r)
+// NOTE(Joe) - what follows is the same murmur3 hash, but run at compile time for strings that it can be computed for (string literals)
+inline consteval uint32_t rotl32_Internal(uint32_t x, int8_t r)
 {
     return (x << r) | (x >> (32 - r));
 }
-#define	ROTL32(x,y)	rotl32(x,y)
+#define	ROTL32_INTERNAL(x,y) rotl32_Internal(x,y)
 
-inline constexpr uint32_t fmix32(uint32_t h)
+inline consteval uint32_t fmix32_Internal(uint32_t h)
 {
     h ^= h >> 16;
     h *= 0x85ebca6b;
@@ -47,16 +48,16 @@ inline constexpr uint32_t fmix32(uint32_t h)
     return h;
 }
 
-static constexpr uint32_t c1 = 0xcc9e2d51;
-static constexpr uint32_t c2 = 0x1b873593;
+static constexpr uint32_t c1_ = 0xcc9e2d51;
+static constexpr uint32_t c2_ = 0x1b873593;
 
-inline constexpr uint32_t Load4(const char* data)
+inline consteval uint32_t Load4_Internal(const char* data)
 {
     return (uint32_t(data[3]) << 24) | (uint32_t(data[2]) << 16) |
         (uint32_t(data[1]) << 8) | (uint32_t(data[0]) << 0);
 }
 
-inline constexpr uint32_t MurmurLoopTail(int len, const char* data, uint32_t h)
+inline consteval uint32_t MurmurLoopTail_Internal(int len, const char* data, uint32_t h)
 {
     uint32_t hash = h;
     uint32_t k1 = 0;
@@ -66,40 +67,39 @@ inline constexpr uint32_t MurmurLoopTail(int len, const char* data, uint32_t h)
     case 3: k1 ^= data[2] << 16;
     case 2: k1 ^= data[1] << 8;
     case 1: k1 ^= data[0];
-        k1 *= c1; k1 = ROTL32(k1, 15); k1 *= c2; hash ^= k1;
+        k1 *= c1_; k1 = ROTL32_INTERNAL(k1, 15); k1 *= c2_; hash ^= k1;
     }
     return hash;
 }
 
-inline constexpr uint32_t MurmurBodyHash(uint32_t h, uint32_t data)
+inline consteval uint32_t MurmurBodyHash_Internal(uint32_t h, uint32_t data)
 {
     uint32_t k1 = data;
-    k1 *= c1;
-    k1 = ROTL32(k1, 15);
-    k1 *= c2;
+    k1 *= c1_;
+    k1 = ROTL32_INTERNAL(k1, 15);
+    k1 *= c2_;
 
     h ^= k1;
-    h = ROTL32(h, 13);
+    h = ROTL32_INTERNAL(h, 13);
     h = h * 5 + 0xe6546b64;
     return h;
 }
 
-inline constexpr uint32_t MurmurLoopBody(int loopIters, int len, const char* data, uint32_t h)
+inline consteval uint32_t MurmurLoopBody_Internal(int loopIters, int len, const char* data, uint32_t h)
 {
     return (loopIters == 0 ?
-        MurmurLoopTail(len, data, h) :
-        MurmurLoopBody(loopIters - 1, len, data + 4, MurmurBodyHash(h, Load4(data))));
+        MurmurLoopTail_Internal(len, data, h) :
+        MurmurLoopBody_Internal(loopIters - 1, len, data + 4, MurmurBodyHash_Internal(h, Load4_Internal(data))));
 }
 
-inline constexpr uint32_t MurmurHash3_x86_32(const char* key, int len, uint32_t seed)
+inline consteval uint32_t MurmurHash3_x86_32(const char* key, int len, uint32_t seed)
 {
     uint32_t h1 = seed;
-    h1 = MurmurLoopBody(len / 4, len, (const char*)key, h1);
+    h1 = MurmurLoopBody_Internal(len / 4, len, (const char*)key, h1);
     h1 ^= len;
-    h1 = fmix32(h1);
+    h1 = fmix32_Internal(h1);
     return h1;
 }
-
 
 //-----------------------------------------------------------------------------
 

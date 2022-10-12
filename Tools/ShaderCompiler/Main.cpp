@@ -1,13 +1,15 @@
 #include "ShaderCompiler.h"
-#include "MurmurHash3.h"
+
 #include <stdio.h>
 #include <cstring>
 
+#include "MurmurHash3.h"
+
 int main(int argc, char* argv[])
 {
-    constexpr uint32 testHash = MurmurHash3_x86_32("henlo", 5, 0x54321);
-    //constexpr uint32 testHash2 = 0;
-    //MurmurHash3_x86_32("henlo", 5, 0x54321, &testHash2);
+    uint32 testHash = MurmurHash3_x86_32("henlo", 5, 0x54321);
+    const char* str = "henlo";
+    uint32 testHash2 = MurmurHash3_x86_32_(str, 5, 0x54321);
 
     uint32 bVulkan = false;
     if (argc != 2)
