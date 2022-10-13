@@ -115,16 +115,16 @@ void DestroyDefaultGeometry();
 template <typename DefGeom>
 void DestroyDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
 {
-    Graphics::DestroyDescriptor(geom.m_descriptor);
-    geom.m_descriptor = Core::Graphics::DefaultDescHandle_Invalid;
+    Tk::Core::Graphics::DestroyDescriptor(geom.m_descriptor);
+    geom.m_descriptor = Tk::Core::Graphics::DefaultDescHandle_Invalid;
 }
 
 template <typename DefGeom>
 void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
 {
-    geom.m_descriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS);
+    geom.m_descriptor = Tk::Core::Graphics::CreateDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_ASSET_VBS);
 
-    Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    Tk::Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
     descDataHandles[0].handles[0] = geom.m_positionBuffer.gpuBufferHandle;
     descDataHandles[0].handles[1] = geom.m_uvBuffer.gpuBufferHandle;
@@ -132,6 +132,5 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0], 1);
+    Tk::Core::Graphics::WriteDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0], 1);
 }
-

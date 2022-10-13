@@ -18,7 +18,7 @@ del SpirvVM.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /wd4996 /EHa- /GR- /Gm- /GS- /Zi /FS
+set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /wd4996 /EHa- /GR- /Gm- /GS- /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
