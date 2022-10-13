@@ -64,7 +64,7 @@ Raytraced | Rasterized
   * Ring buffer
 * SPIR-V virtual machine (WIP)
   * tested to evaluate some simple SPIR-V shaders, may become part of a full software renderer one day
-* Simple CPU-side raytracing framework (Octree WIP)
+* Simple CPU-side raytracing, very minimal/unoptimized
 
 ### Roadmap of future features:
 * Compute shader support
@@ -88,7 +88,8 @@ You will need to have installed:
 To Build:
 * Run <code>proj_shell.bat</code> in the <code>Scripts/</code> directory. You can do this by double-clicking in the file explorer or from command line.
 * In that shell window, run <code>ez-build_release.bat</code>. This will build every Tinker project.
-You should now be able to run the game via <code>run_game.bat</code>.
+You should now be able to run the game via <code>run_game.bat</code>.  
+You can find more detailed info on the various build projects [here](Scripts/README.md).
 
 ### Game Demo Controls:
 <code>Esc</code> - lock/unlock cursor  
