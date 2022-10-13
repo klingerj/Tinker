@@ -29,7 +29,7 @@ typedef unsigned __int64 uint64_t;
 //-----------------------------------------------------------------------------
 
 // NOTE(Joe) - this is the original function, modified slightly
-uint32_t MurmurHash3_x86_32_(const void* key, int len, uint32_t seed);
+uint32_t MurmurHash3_x86_32(const void* key, int len, uint32_t seed);
 
 // NOTE(Joe) - what follows is the same murmur3 hash, but run at compile time for strings that it can be computed for (string literals)
 inline consteval uint32_t rotl32_Internal(uint32_t x, int8_t r)
@@ -92,7 +92,8 @@ inline consteval uint32_t MurmurLoopBody_Internal(int loopIters, int len, const 
         MurmurLoopBody_Internal(loopIters - 1, len, data + 4, MurmurBodyHash_Internal(h, Load4_Internal(data))));
 }
 
-inline consteval uint32_t MurmurHash3_x86_32(const char* key, int len, uint32_t seed)
+template <size_t N>
+inline consteval uint32_t MurmurHash3_x86_32(const char (&key)[N], int len, uint32_t seed)
 {
     uint32_t h1 = seed;
     h1 = MurmurLoopBody_Internal(len / 4, len, (const char*)key, h1);

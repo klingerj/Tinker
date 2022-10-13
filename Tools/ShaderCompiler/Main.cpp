@@ -7,9 +7,9 @@
 
 int main(int argc, char* argv[])
 {
-    uint32 testHash = MurmurHash3_x86_32("henlo", 5, 0x54321);
-    const char* str = "henlo";
-    uint32 testHash2 = MurmurHash3_x86_32_(str, 5, 0x54321);
+    uint32 testHash = MurmurHash3_x86_32("henlo ", 6, 0x54321);
+    const char* str = "henlo ";
+    uint32 testHash2 = MurmurHash3_x86_32(str, (int)strlen(str), 0x54321);
 
     uint32 bVulkan = false;
     if (argc != 2)
