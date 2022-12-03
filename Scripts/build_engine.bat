@@ -93,7 +93,6 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Tools/ShaderCompiler/S
 set SourceListGraphics=
 set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
 set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/ShaderManager.cpp 
-set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/VirtualTexture.cpp 
 if "%GraphicsAPI%" == "VK" (
     set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/Vulkan.cpp 
     set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCmds.cpp 
@@ -130,7 +129,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines!
     )
 
-set CompileIncludePaths=/I ../Core /I ../Tools /I ../ThirdParty/dxc_2022_07_18 
+set CompileIncludePaths=/I ../Core /I ../Tools /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/MurmurHash3 
 set LibsToLink=user32.lib ws2_32.lib 
 set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
 

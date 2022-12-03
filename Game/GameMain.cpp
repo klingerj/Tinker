@@ -66,6 +66,50 @@ INPUT_CALLBACK(RaytraceTestCallback)
     Platform::PrintDebugString("...Done.\n");
 }
 
+static void InitDemoView()
+{
+    // Init view(s)
+    DescriptorData_Instance data;
+    data.modelMatrix = m4f(1.0f);
+
+    Init(&MainView, MAX_INSTANCES_PER_VIEW);
+    uint32 instanceID;
+    instanceID = CreateInstance(&MainView, 0);
+    data.modelMatrix[3][0] = -8.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
+    instanceID = CreateInstance(&MainView, 1);
+    data.modelMatrix[3][0] = -2.5f;
+    SetInstanceData(&MainView, instanceID, &data);
+
+    instanceID = CreateInstance(&MainView, 2);
+    data.modelMatrix = m4f(0.5f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][0] = 8.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
+    instanceID = CreateInstance(&MainView, 2);
+    data.modelMatrix = m4f(0.25f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][0] = 8.0f;
+    data.modelMatrix[3][2] = 6.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
+    instanceID = CreateInstance(&MainView, 3);
+    data.modelMatrix = m4f(7.0f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][1] = 8.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
+    instanceID = CreateInstance(&MainView, 3);
+    data.modelMatrix = m4f(7.0f);
+    data.modelMatrix[3][3] = 1.0f;
+    data.modelMatrix[3][1] = 10.0f;
+    SetInstanceData(&MainView, instanceID, &data);
+
+    CreateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
+}
+
 static void DestroyDescriptors()
 {
     Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
@@ -212,46 +256,7 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
-    // Init view(s)
-    DescriptorData_Instance data;
-    data.modelMatrix = m4f(1.0f);
-
-    Init(&MainView, MAX_INSTANCES_PER_VIEW);
-    uint32 instanceID;
-    instanceID = CreateInstance(&MainView, 0);
-    data.modelMatrix[3][0] = -8.0f;
-    SetInstanceData(&MainView, instanceID, &data);
-
-    instanceID = CreateInstance(&MainView, 1);
-    data.modelMatrix[3][0] = -2.5f;
-    SetInstanceData(&MainView, instanceID, &data);
-
-    instanceID = CreateInstance(&MainView, 2);
-    data.modelMatrix = m4f(0.5f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][0] = 8.0f;
-    SetInstanceData(&MainView, instanceID, &data);
-    
-    instanceID = CreateInstance(&MainView, 2);
-    data.modelMatrix = m4f(0.25f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][0] = 8.0f;
-    data.modelMatrix[3][2] = 6.0f;
-    SetInstanceData(&MainView, instanceID, &data);
-
-    instanceID = CreateInstance(&MainView, 3);
-    data.modelMatrix = m4f(7.0f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][1] = 8.0f;
-    SetInstanceData(&MainView, instanceID, &data);
-    
-    instanceID = CreateInstance(&MainView, 3);
-    data.modelMatrix = m4f(7.0f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][1] = 10.0f;
-    SetInstanceData(&MainView, instanceID, &data);
-
-    CreateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
+    InitDemoView();
 
     CreateAllDescriptors();
 
