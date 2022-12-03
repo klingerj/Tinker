@@ -2,14 +2,6 @@
 
 #include "Platform/PlatformGameAPI.h"
 
-namespace Tk
-{
-    namespace Platform
-    {
-        struct PlatformAPIFuncs;
-    }
-}
-
 #define INPUT_CALLBACK(name) void name(uint32 param)
 typedef INPUT_CALLBACK(input_callback_func);
 
