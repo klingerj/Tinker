@@ -382,8 +382,6 @@ GAME_UPDATE(GameUpdate)
         UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
         DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
 
-        //DrawTerrain(graphicsCommandStream);
-
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
 

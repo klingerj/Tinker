@@ -217,12 +217,6 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_POSONLY_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eBuffer;
-    descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_TERRAIN_DATA, &descriptorLayout);
-    TINKER_ASSERT(bOk);
-
     LoadAllShaders(windowWidth, windowHeight);
 }
 
