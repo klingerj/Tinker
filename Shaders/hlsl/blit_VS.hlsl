@@ -3,8 +3,6 @@
 #define NormalDataType float4
 
 [[vk::binding(0, 1)]] StructuredBuffer<PositionDataType> PositionData;
-[[vk::binding(1, 1)]] StructuredBuffer<UVDataType>       UVData;
-[[vk::binding(2, 1)]] StructuredBuffer<NormalDataType>   NormalData;
 
 struct VSOutput
 {
