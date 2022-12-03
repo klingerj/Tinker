@@ -12,8 +12,6 @@
 #include "View.h"
 #include "InputManager.h"
 
-//#include "Core/Graphics/VirtualTexture.h"
-
 #include <string.h>
 
 using namespace Tk;
@@ -57,8 +55,6 @@ INPUT_CALLBACK(GameCameraRotateVerticalCallback)
 {
     RotateCameraAboutRight(&g_gameCamera, cameraRotSensitivityVert * -(int32)param);
 }
-
-//Core::Graphics::VirtualTexture vt;
 
 #define MAX_INSTANCES_PER_VIEW 128
 static View MainView;
@@ -259,36 +255,9 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
 
     CreateAllDescriptors();
 
-    // TODO: TEMP: test virtual texture
-    //vt.Reset();
-    //vt.Create(graphicsCommandStream, 4, 16, v2ui(1024, 1024), v2ui(1024, 1024));
-
     return 0;
 }
 
-// TODO: move this out
-/*void DrawTerrain(Tk::Platform::Graphics::GraphicsCommandStream* graphicsCommandStream)
-{
-    Tk::Platform::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-
-    command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
-    command->debugLabel = "Draw terrain quad";
-    command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
-    command->m_numInstances = 1;
-    command->m_indexBufferHandle = vt.m_terrainIdx;
-    command->m_shader = Graphics::SHADER_ID_BASIC_VirtualTexture;
-    command->m_blendState = Graphics::BlendState::eAlphaBlend;
-    command->m_depthState = Graphics::DepthState::eTestOnWriteOn;
-    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
-    {
-        command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
-    }
-    command->m_descriptors[0] = gameGraphicsData.m_DescData_Global;
-    command->m_descriptors[1] = vt.m_desc_terrainPos;
-    command->m_descriptors[2] = vt.m_desc;
-    command->m_descriptors[3] = vt.m_desc_terrain;
-    ++graphicsCommandStream->m_numCommands;
-}*/
 
 extern "C"
 GAME_UPDATE(GameUpdate)
@@ -328,8 +297,6 @@ GAME_UPDATE(GameUpdate)
         descriptors[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
         Update(&MainView, descriptors);
     }
-
-    //vt.Update();
 
     // Clear depth buffer
     {
@@ -524,8 +491,6 @@ GAME_DESTROY(GameDestroy)
         DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
         
         DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-
-        //vt.Destroy();
 
         // Destroy assets
         g_AssetManager.DestroyAllMeshData();

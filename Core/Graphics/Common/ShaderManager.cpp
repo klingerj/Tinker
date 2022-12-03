@@ -218,16 +218,6 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSampledImage;
-    descriptorLayout.params[0].amount = 1;
-    descriptorLayout.params[1].type = Tk::Core::Graphics::DescriptorType::eBuffer;
-    descriptorLayout.params[1].amount = 1;
-    descriptorLayout.params[2].type = Tk::Core::Graphics::DescriptorType::eSampledImage;
-    descriptorLayout.params[2].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_VIRTUAL_TEXTURE, &descriptorLayout);
-    TINKER_ASSERT(bOk);
-
-    descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eBuffer;
     descriptorLayout.params[0].amount = 1;
     bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_TERRAIN_DATA, &descriptorLayout);
