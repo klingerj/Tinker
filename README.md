@@ -64,6 +64,7 @@ Raytraced | Rasterized
   * Ring buffer
 * SPIR-V virtual machine (WIP)
   * tested to evaluate some simple SPIR-V shaders, may become part of a full software renderer one day
+* Compile- and run-time string hashing
 * Simple CPU-side raytracing, very minimal/unoptimized
 
 ### Roadmap of future features:
