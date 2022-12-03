@@ -1,7 +1,18 @@
 #pragma once
 
 #include "CoreDefines.h"
+#include "MurmurHash3.h"
+
 #include <cstring>
+
+/* Murmur usage examples
+// Compile time hash
+uint32 testHash = MurmurHash3_x86_32("henlo ", 6, 0x54321);
+
+// Run time hasn
+const char* str = "henlo ";
+uint32 testHash2 = MurmurHash3_x86_32(str, (int)strlen(str), 0x54321);
+*/
 
 namespace Tk
 {
