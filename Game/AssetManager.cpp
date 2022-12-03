@@ -26,6 +26,22 @@ static Tk::Core::LinearAllocator VertUVAllocator;
 static Tk::Core::LinearAllocator VertNormalAllocator;
 static Tk::Core::LinearAllocator VertIndexAllocator;
 
+static const uint32 numDemoMeshAssets = 4;
+static const char* demoMeshFilePaths[numDemoMeshAssets] =
+{
+    ASSETS_PATH "UnitSphere\\sphere.obj",
+    ASSETS_PATH "UnitCube\\cube.obj",
+    ASSETS_PATH "FireElemental\\fire_elemental.obj",
+    ASSETS_PATH "RTX3090\\rtx3090.obj"
+};
+
+static const uint32 numDemoTextureAssets = 2;
+static const char* demoTextureFilePaths[numDemoTextureAssets] =
+{
+    ASSETS_PATH "checkerboard512.bmp",
+    ASSETS_PATH "checkerboardRGB512.bmp"
+};
+
 void AssetManager::FreeMemory()
 {
     m_meshBufferAllocator.ExplicitFree();
@@ -36,280 +52,275 @@ void AssetManager::LoadAllAssets()
     g_AssetFileScratchMemory.Init(AssetFileMemorySize, CACHE_LINE);
 
     // Meshes
-    const uint32 numMeshAssets = 4;
-    TINKER_ASSERT(numMeshAssets <= TINKER_MAX_MESHES);
 
-    m_numMeshAssets = numMeshAssets;
+    m_numMeshAssets = numDemoMeshAssets;
+    //m_numMeshAssets = 0;
+    TINKER_ASSERT(m_numMeshAssets <= TINKER_MAX_MESHES);
+    const char** meshFilePaths = &demoMeshFilePaths[0];
 
-    const char* meshFilePaths[numMeshAssets] =
+    if (m_numMeshAssets > 0)
     {
-        ASSETS_PATH "UnitSphere\\sphere.obj",
-        ASSETS_PATH "UnitCube\\cube.obj",
-        ASSETS_PATH "FireElemental\\fire_elemental.obj",
-        ASSETS_PATH "RTX3090\\rtx3090.obj"
-    };
-
-    uint32 totalMeshFileBytes = 0;
-    uint32 meshFileSizes[numMeshAssets] = {};
-    for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-    {
-        uint32 fileSize = GetEntireFileSize(meshFilePaths[uiAsset]); // + 1 byte for manual EOF byte
-        meshFileSizes[uiAsset] = fileSize;
-        totalMeshFileBytes += fileSize;
-    }
-
-    // Allocate one large buffer to store a dump of all obj files.
-    // Each obj file's data is separated by a single null byte to mark EOF
-    uint8* objFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalMeshFileBytes + numMeshAssets, CACHE_LINE); // + 1 EOF byte for each obj file -> + numMeshAssets
-
-    // Now precalculate the size of the vertex attribute buffers needed to contain the obj data
-    uint32 meshBufferSizes[numMeshAssets] = {};
-    uint32 totalMeshBufferSize = 0;
-
-    uint32 accumFileOffset = 0;
-
-    {
-        TIMED_SCOPED_BLOCK("Load OBJ files from disk - multithreaded");
-
-        bool multithreadObjLoading = true;
-        if (multithreadObjLoading)
+        uint32 totalMeshFileBytes = 0;
+        uint32 meshFileSizes[TINKER_MAX_MESHES] = {};
+        for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
         {
-            Tk::Platform::WorkerJobList jobs;
-            jobs.Init(numMeshAssets);
-            for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
+            uint32 fileSize = GetEntireFileSize(meshFilePaths[uiAsset]); // + 1 byte for manual EOF byte
+            meshFileSizes[uiAsset] = fileSize;
+            totalMeshFileBytes += fileSize;
+        }
+
+        // Allocate one large buffer to store a dump of all obj files.
+        // Each obj file's data is separated by a single null byte to mark EOF
+        uint8* objFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalMeshFileBytes + m_numMeshAssets, CACHE_LINE); // + 1 EOF byte for each obj file -> + m_numMeshAssets
+
+        // Now precalculate the size of the vertex attribute buffers needed to contain the obj data
+        uint32 meshBufferSizes[TINKER_MAX_MESHES] = {};
+        uint32 totalMeshBufferSize = 0;
+
+        uint32 accumFileOffset = 0;
+
+        // Load OBJ files from disk
+        {
+            TIMED_SCOPED_BLOCK("Load OBJ files from disk - multithreaded");
+
+            bool multithreadObjLoading = true;
+            if (multithreadObjLoading)
             {
-                uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
+                Tk::Platform::WorkerJobList jobs;
+                jobs.Init(m_numMeshAssets);
+                for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
+                {
+                    uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
+                    uint32 currentObjFileSize = meshFileSizes[uiAsset];
+                    accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
+
+                    jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
+                        {
+                            ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
+                            currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
+                        });
+
+                }
+                Tk::Platform::EnqueueWorkerThreadJobList_Assisted(&jobs);
+                jobs.WaitOnJobs();
+                jobs.FreeList();
+            }
+            else
+            {
+                for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
+                {
+                    uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
+                    uint32 currentObjFileSize = meshFileSizes[uiAsset];
+                    accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
+
+                    currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
+                    ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
+                }
+            }
+        }
+
+        // Parse OBJs
+        {
+            TIMED_SCOPED_BLOCK("Parse OBJ Files - single threaded");
+
+            const uint32 MAX_VERT_BUFFER_SIZE = 1024 * 1024 * 128; // TODO: reduce this when we don't have to store all the attr buffers in the same linear allocator by doing graphics right here
+            VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+            VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+            VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+            VertIndexAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+
+            ScratchBuffers = {};
+            ScratchBuffers.VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+            ScratchBuffers.VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+            ScratchBuffers.VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
+
+            accumFileOffset = 0;
+            uint32 accumNumVerts = 0;
+            for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
+            {
+                const uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
                 uint32 currentObjFileSize = meshFileSizes[uiAsset];
                 accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
 
+                uint32 numObjVerts = 0;
+                Tk::Core::Asset::ParseOBJ(VertPosAllocator, VertUVAllocator, VertNormalAllocator, VertIndexAllocator, ScratchBuffers, currentObjFile, currentObjFileSize, &numObjVerts);
+                TINKER_ASSERT(numObjVerts);
+                m_allMeshData[uiAsset].m_numVertices = numObjVerts;
+                m_allMeshData[uiAsset].m_vertexBufferData_Pos = VertPosAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts;
+                m_allMeshData[uiAsset].m_vertexBufferData_UV = VertUVAllocator.m_ownedMemPtr + sizeof(v2f) * accumNumVerts;
+                m_allMeshData[uiAsset].m_vertexBufferData_Normal = VertNormalAllocator.m_ownedMemPtr + sizeof(v3f) * accumNumVerts;
+                m_allMeshData[uiAsset].m_vertexBufferData_Index = VertIndexAllocator.m_ownedMemPtr + sizeof(uint32) * accumNumVerts;
+                // TODO: create the graphics buffers right away and don't bother storing m_allMeshData at all
+
+                ScratchBuffers.ResetState();
+                accumNumVerts += numObjVerts;
+            }
+        }
+    }
+
+    // Textures
+    
+    m_numTextureAssets = numDemoTextureAssets;
+    //m_numTextureAssets = 0;
+    TINKER_ASSERT(m_numTextureAssets <= TINKER_MAX_TEXTURES);
+    const char** textureFilePaths = &demoTextureFilePaths[0];
+    
+    if (m_numTextureAssets > 0)
+    {
+        // Compute the actual size of the texture data to be allocated and copied to the GPU
+        // TODO: get file extension from string
+        const char* fileExt = "bmp";
+
+        uint32 totalTextureFileBytes = 0;
+        uint32 textureFileSizes[TINKER_MAX_TEXTURES] = {};
+        for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)
+        {
+            uint32 fileSize = GetEntireFileSize(textureFilePaths[uiAsset]);
+            textureFileSizes[uiAsset] = fileSize;
+            totalTextureFileBytes += fileSize;
+        }
+
+        // Allocate one large buffer to store a dump of all texture files.
+        uint8* textureFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalTextureFileBytes, CACHE_LINE);
+
+        uint32 accumFileOffset = 0;
+
+        bool multithreadTextureLoading = true;
+        if (multithreadTextureLoading)
+        {
+            Platform::WorkerJobList jobs;
+            jobs.Init(m_numTextureAssets);
+            for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)
+            {
+                uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
+                uint32 currentTextureFileSize = textureFileSizes[uiAsset];
+                accumFileOffset += currentTextureFileSize;
+
                 jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
                     {
-                        ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
-                        currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
+                        ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
                     });
 
+                EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
             }
-            Tk::Platform::EnqueueWorkerThreadJobList_Assisted(&jobs);
             jobs.WaitOnJobs();
             jobs.FreeList();
         }
         else
         {
-            for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
+            // Dump each file into the one big buffer
+            for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)
             {
-                uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-                uint32 currentObjFileSize = meshFileSizes[uiAsset];
-                accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
+                uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
+                uint32 currentTextureFileSize = textureFileSizes[uiAsset];
+                accumFileOffset += currentTextureFileSize;
 
-                currentObjFile[currentObjFileSize] = '\0'; // Mark EOF
-                ReadEntireFile(meshFilePaths[uiAsset], currentObjFileSize, currentObjFile);
+                // Read each file into the buffer
+                ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
             }
         }
-    }
-
-    // Parse OBJs
-    {
-        TIMED_SCOPED_BLOCK("Parse OBJ Files - single threaded");
-
-        const uint32 MAX_VERT_BUFFER_SIZE = 1024 * 1024 * 128; // TODO: reduce this when we don't have to store all the attr buffers in the same linear allocator by doing graphics right here
-        VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
-        VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
-        VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
-        VertIndexAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
-
-        ScratchBuffers = {};
-        ScratchBuffers.VertPosAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
-        ScratchBuffers.VertUVAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
-        ScratchBuffers.VertNormalAllocator.Init(MAX_VERT_BUFFER_SIZE, CACHE_LINE);
 
         accumFileOffset = 0;
-        uint32 accumNumVerts = 0;
-        for (uint32 uiAsset = 0; uiAsset < numMeshAssets; ++uiAsset)
-        {
-            const uint8* currentObjFile = objFileDataBuffer + accumFileOffset;
-            uint32 currentObjFileSize = meshFileSizes[uiAsset];
-            accumFileOffset += currentObjFileSize + 1; // Account for manual EOF byte
-
-            uint32 numObjVerts = 0;
-            Tk::Core::Asset::ParseOBJ(VertPosAllocator, VertUVAllocator, VertNormalAllocator, VertIndexAllocator, ScratchBuffers, currentObjFile, currentObjFileSize, &numObjVerts);
-            TINKER_ASSERT(numObjVerts);
-            m_allMeshData[uiAsset].m_numVertices = numObjVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_Pos = VertPosAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_UV = VertUVAllocator.m_ownedMemPtr + sizeof(v2f) * accumNumVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_Normal = VertNormalAllocator.m_ownedMemPtr + sizeof(v3f) * accumNumVerts;
-            m_allMeshData[uiAsset].m_vertexBufferData_Index = VertIndexAllocator.m_ownedMemPtr + sizeof(uint32) * accumNumVerts;
-            // TODO: create the graphics buffers right away and don't bother storing m_allMeshData at all
-
-            ScratchBuffers.ResetState();
-            accumNumVerts += numObjVerts;
-        }
-    }
-    //-----
-
-    // Textures
-    const uint32 numTextureAssets = 2;
-    TINKER_ASSERT(numTextureAssets <= TINKER_MAX_TEXTURES);
-
-    m_numTextureAssets = numTextureAssets;
-
-    const char* textureFilePaths[numTextureAssets] =
-    {
-        ASSETS_PATH "checkerboard512.bmp",
-        ASSETS_PATH "checkerboardRGB512.bmp"
-    };
-    // Compute the actual size of the texture data to be allocated and copied to the GPU
-    // TODO: get file extension from string
-    const char* fileExt = "bmp";
-
-    uint32 totalTextureFileBytes = 0;
-    uint32 textureFileSizes[numTextureAssets] = {};
-    for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
-    {
-        uint32 fileSize = GetEntireFileSize(textureFilePaths[uiAsset]);
-        textureFileSizes[uiAsset] = fileSize;
-        totalTextureFileBytes += fileSize;
-    }
-
-    // Allocate one large buffer to store a dump of all texture files.
-    uint8* textureFileDataBuffer = (uint8*)g_AssetFileScratchMemory.Alloc(totalTextureFileBytes, CACHE_LINE);
-
-    accumFileOffset = 0;
-
-    bool multithreadTextureLoading = true;
-    if (multithreadTextureLoading)
-    {
-        Platform::WorkerJobList jobs;
-        jobs.Init(numTextureAssets);
-        for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
+        uint32 totalActualTextureSize = 0;
+        uint32 actualTextureSizes[TINKER_MAX_TEXTURES] = {};
+        // Parse each texture file and dump the actual texture contents into the allocator
+        for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)
         {
             uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
             uint32 currentTextureFileSize = textureFileSizes[uiAsset];
             accumFileOffset += currentTextureFileSize;
 
-            jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
-                {
-                    ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
-                });
+            uint32 actualTextureSizeInBytes = 0;
 
-            EnqueueWorkerThreadJob(jobs.m_jobs[uiAsset]);
-        }
-        jobs.WaitOnJobs();
-        jobs.FreeList();
-    }
-    else
-    {
-        // Dump each file into the one big buffer
-        for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
-        {
-            uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
-            uint32 currentTextureFileSize = textureFileSizes[uiAsset];
-            accumFileOffset += currentTextureFileSize;
-
-            // Read each file into the buffer
-            ReadEntireFile(textureFilePaths[uiAsset], currentTextureFileSize, currentTextureFile);
-        }
-    }
-
-    accumFileOffset = 0;
-    uint32 totalActualTextureSize = 0;
-    uint32 actualTextureSizes[numTextureAssets] = {};
-    // Parse each texture file and dump the actual texture contents into the allocator
-    for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
-    {
-        uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
-        uint32 currentTextureFileSize = textureFileSizes[uiAsset];
-        accumFileOffset += currentTextureFileSize;
-
-        uint32 actualTextureSizeInBytes = 0;
-
-        if (strncmp(fileExt, "bmp", 3) == 0)
-        {
-            Asset::BMPInfo info = Asset::GetBMPInfo(currentTextureFile);
-
-            // If it's a 24-bit bmp, pad to 32 bits. The 4th byte will be 255 (alpha of 1).
-            uint32 bpp = 0;
-            switch (info.bitsPerPixel)
+            if (strncmp(fileExt, "bmp", 3) == 0)
             {
-                case 24: // pad 24bpp to 32bpp
-                case 32:
+                Asset::BMPInfo info = Asset::GetBMPInfo(currentTextureFile);
+
+                // If it's a 24-bit bmp, pad to 32 bits. The 4th byte will be 255 (alpha of 1).
+                uint32 bpp = 0;
+                switch (info.bitsPerPixel)
                 {
-                    bpp = 32;
-                    break;
-                }
-
-                default:
-                {
-                    // Unsupported bmp variant
-                    TINKER_ASSERT(0);
-                }
-            }
-
-            actualTextureSizeInBytes = info.width * info.height * bpp / 8;
-            m_allTextureMetadata[uiAsset].m_dims = v3ui(info.width, info.height, 1);
-            m_allTextureMetadata[uiAsset].m_bitsPerPixel = info.bitsPerPixel; // store the original bpp in the texture metadata
-        }
-        else
-        {
-            TINKER_ASSERT(0);
-            // TODO: support other file types, e.g. png
-        }
-
-        actualTextureSizes[uiAsset] = actualTextureSizeInBytes;
-        totalActualTextureSize += actualTextureSizeInBytes;
-    }
-
-    // Allocate exactly enough space for each texture, cache-line aligned
-    m_textureBufferAllocator.Init(totalActualTextureSize, CACHE_LINE);
-
-    accumFileOffset = 0;
-    for (uint32 uiAsset = 0; uiAsset < numTextureAssets; ++uiAsset)
-    {
-        uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
-        uint32 currentTextureFileSize = textureFileSizes[uiAsset];
-        accumFileOffset += currentTextureFileSize;
-
-        uint8* textureBuffer = m_textureBufferAllocator.Alloc(actualTextureSizes[uiAsset], 1);
-
-        if (strncmp(fileExt, "bmp", 3) == 0)
-        {
-            uint8* textureBytesStart = currentTextureFile + sizeof(Asset::BMPHeader) + sizeof(Asset::BMPInfo);
-
-            // Copy the bmp bytes in - no parsing for bmp
-            // If the bits per pixel is 24, copy pixel by pixel and write a 0xFF byte for each alpha byte;
-            uint32 numPixels = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y;
-            switch (m_allTextureMetadata[uiAsset].m_bitsPerPixel)
-            {
-                case 24:
-                {
-                    for (uint32 uiPixel = 0; uiPixel < numPixels; ++uiPixel)
+                    case 24: // pad 24bpp to 32bpp
+                    case 32:
                     {
-                        memcpy(textureBuffer, textureBytesStart, 3);
-                        textureBuffer += 3;
-                        textureBytesStart += 3;
-                        textureBuffer[0] = 255; // write fully opaque alpha
-                        ++textureBuffer;
+                        bpp = 32;
+                        break;
                     }
-                    break;
+
+                    default:
+                    {
+                        // Unsupported bmp variant
+                        TINKER_ASSERT(0);
+                    }
                 }
 
-                case 32:
-                {
-                    memcpy(textureBuffer, textureBytesStart, actualTextureSizes[uiAsset]);
-                    break;
-                }
+                actualTextureSizeInBytes = info.width * info.height * bpp / 8;
+                m_allTextureMetadata[uiAsset].m_dims = v3ui(info.width, info.height, 1);
+                m_allTextureMetadata[uiAsset].m_bitsPerPixel = info.bitsPerPixel; // store the original bpp in the texture metadata
+            }
+            else
+            {
+                TINKER_ASSERT(0);
+                // TODO: support other file types, e.g. png
+            }
 
-                default:
+            actualTextureSizes[uiAsset] = actualTextureSizeInBytes;
+            totalActualTextureSize += actualTextureSizeInBytes;
+        }
+
+        // Allocate exactly enough space for each texture, cache-line aligned
+        m_textureBufferAllocator.Init(totalActualTextureSize, CACHE_LINE);
+
+        accumFileOffset = 0;
+        for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)
+        {
+            uint8* currentTextureFile = textureFileDataBuffer + accumFileOffset;
+            uint32 currentTextureFileSize = textureFileSizes[uiAsset];
+            accumFileOffset += currentTextureFileSize;
+
+            uint8* textureBuffer = m_textureBufferAllocator.Alloc(actualTextureSizes[uiAsset], 1);
+
+            if (strncmp(fileExt, "bmp", 3) == 0)
+            {
+                uint8* textureBytesStart = currentTextureFile + sizeof(Asset::BMPHeader) + sizeof(Asset::BMPInfo);
+
+                // Copy the bmp bytes in - no parsing for bmp
+                // If the bits per pixel is 24, copy pixel by pixel and write a 0xFF byte for each alpha byte;
+                uint32 numPixels = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y;
+                switch (m_allTextureMetadata[uiAsset].m_bitsPerPixel)
                 {
-                    // Unsupported bmp variant
-                    TINKER_ASSERT(0);
-                    break;
+                    case 24:
+                    {
+                        for (uint32 uiPixel = 0; uiPixel < numPixels; ++uiPixel)
+                        {
+                            memcpy(textureBuffer, textureBytesStart, 3);
+                            textureBuffer += 3;
+                            textureBytesStart += 3;
+                            textureBuffer[0] = 255; // write fully opaque alpha
+                            ++textureBuffer;
+                        }
+                        break;
+                    }
+
+                    case 32:
+                    {
+                        memcpy(textureBuffer, textureBytesStart, actualTextureSizes[uiAsset]);
+                        break;
+                    }
+
+                    default:
+                    {
+                        // Unsupported bmp variant
+                        TINKER_ASSERT(0);
+                        break;
+                    }
                 }
             }
-        }
-        else
-        {
-            TINKER_ASSERT(0);
-            // TODO: support other file types, e.g. png
+            else
+            {
+                TINKER_ASSERT(0);
+                // TODO: support other file types, e.g. png
+            }
         }
     }
 }
