@@ -103,8 +103,8 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     const uint32 numShaderFilepaths = 8;
     const char* shaderFilePaths[numShaderFilepaths] =
     {
-        SHADERS_SPV_PATH "blit_vert_glsl.spv",
-        SHADERS_SPV_PATH "blit_frag_glsl.spv",
+        SHADERS_SPV_PATH "blit_VS.spv",
+        SHADERS_SPV_PATH "blit_PS.spv",
         SHADERS_SPV_PATH "basic_VS.spv",
         SHADERS_SPV_PATH "basic_PS.spv",
         SHADERS_SPV_PATH "animpoly_VS.spv",
