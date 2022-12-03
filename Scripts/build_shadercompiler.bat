@@ -65,7 +65,7 @@ del TinkerSC.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++17 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
+set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -88,6 +88,7 @@ set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/DataStructures/Vect
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Mem.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32File.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32Logging.cpp 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
@@ -107,7 +108,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines!
     )
 
-set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18
+set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/MurmurHash3
 set LibsToLink=user32.lib ws2_32.lib ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib
 
 echo.

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <cstring>
 
+#include "MurmurHash3.h"
+
 int main(int argc, char* argv[])
 {
     uint32 bVulkan = false;
