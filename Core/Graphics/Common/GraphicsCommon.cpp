@@ -300,7 +300,7 @@ DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
 WRITE_DESCRIPTOR(WriteDescriptor)
 {
     #ifdef VULKAN
-    Graphics::VulkanWriteDescriptor(descLayoutID, descSetHandle, descSetDataHandles, descSetDataCount);
+    Graphics::VulkanWriteDescriptor(descLayoutID, descSetHandle, descSetDataHandles);
     #endif
 }
 

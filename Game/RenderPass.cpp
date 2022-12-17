@@ -41,7 +41,6 @@ void StartRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream
     command->m_renderWidth = renderPass->renderWidth;
     command->m_renderHeight = renderPass->renderHeight;
     ++graphicsCommandStream->m_numCommands;
-    ++command;
 }
 
 void EndRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream* graphicsCommandStream)
@@ -51,5 +50,4 @@ void EndRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream* 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
     command->debugLabel = renderPass->debugLabel;
     ++graphicsCommandStream->m_numCommands;
-    ++command;
 }

@@ -173,7 +173,7 @@ void CreateAnimatedPoly(TransientPrim* prim)
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_POSONLY_VBS, prim->descriptor, &descDataHandles[0], 2);
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_POSONLY_VBS, prim->descriptor, &descDataHandles[0]);
 }
 
 void DestroyAnimatedPoly(TransientPrim* prim)
