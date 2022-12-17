@@ -62,6 +62,7 @@ set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/AssetManager.cp
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPass.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Raytracing.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/View.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Scene.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Camera.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cpp 
 
