@@ -131,9 +131,10 @@ void ParseOBJ(Tk::Core::LinearAllocator& PosAllocator, Tk::Core::LinearAllocator
             // skip the 'vn'
             scanWord(EntireFileBuffer, &currentIndex);
 
-            v3f* VertBufferPtr = (v3f*)ScratchBuffers.VertNormalAllocator.Alloc(sizeof(v3f), 1);
+            v4f* VertBufferPtr = (v4f*)ScratchBuffers.VertNormalAllocator.Alloc(sizeof(v4f), 1);
             const uint32 numWordsPerVert = 3;
             ReadWordsIntoVertBuffer(numWordsPerVert, (float*)VertBufferPtr, EntireFileBuffer, &currentIndex);
+            VertBufferPtr->w = 0.0f;
         }
         else if (EntireFileBuffer[currentIndex] == 'f' && EntireFileBuffer[currentIndex + 1] == ' ') // Indices
         {
@@ -164,12 +165,12 @@ void ParseOBJ(Tk::Core::LinearAllocator& PosAllocator, Tk::Core::LinearAllocator
 
                 v4f*    FinalVertPosBufferPtr    = (v4f*)PosAllocator.Alloc(sizeof(v4f), 1);
                 v2f*    FinalVertUVBufferPtr     = (v2f*)UVAllocator.Alloc(sizeof(v2f), 1);
-                v3f*    FinalVertNormalBufferPtr = (v3f*)NormalAllocator.Alloc(sizeof(v3f), 1);
+                v4f*    FinalVertNormalBufferPtr = (v4f*)NormalAllocator.Alloc(sizeof(v4f), 1);
                 uint32* FinalVertIndexBufferPtr  = (uint32*)IndexAllocator.Alloc(sizeof(uint32), 1);
 
                 *FinalVertPosBufferPtr = ((v4f*)ScratchBuffers.VertPosAllocator.m_ownedMemPtr)[newIndices[0]];
                 *FinalVertUVBufferPtr = ((v2f*)ScratchBuffers.VertUVAllocator.m_ownedMemPtr)[newIndices[1]];
-                *FinalVertNormalBufferPtr = ((v3f*)ScratchBuffers.VertNormalAllocator.m_ownedMemPtr)[newIndices[2]];
+                *FinalVertNormalBufferPtr = ((v4f*)ScratchBuffers.VertNormalAllocator.m_ownedMemPtr)[newIndices[2]];
                 *FinalVertIndexBufferPtr = indicesCounter;
 
                 // TODO: no vertex deduplication currently happens

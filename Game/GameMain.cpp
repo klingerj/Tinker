@@ -340,7 +340,6 @@ GAME_UPDATE(GameUpdate)
         command->m_startLayout = Graphics::ImageLayout::eTransferDst;
         command->m_endLayout = Graphics::ImageLayout::eDepthOptimal;
         ++graphicsCommandStream->m_numCommands;
-        ++command;
     }
 
     // Clear color buffer
@@ -370,7 +369,6 @@ GAME_UPDATE(GameUpdate)
         command->m_startLayout = Graphics::ImageLayout::eTransferDst;
         command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
         ++graphicsCommandStream->m_numCommands;
-        ++command;
     }
 
     // Record render commands for view(s)
