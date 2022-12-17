@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "Raytracing.h"
 #include "View.h"
+#include "Scene.h"
 #include "InputManager.h"
 
 #include <string.h>
@@ -56,7 +57,9 @@ INPUT_CALLBACK(GameCameraRotateVerticalCallback)
     RotateCameraAboutRight(&g_gameCamera, cameraRotSensitivityVert * -(int32)param);
 }
 
-#define MAX_INSTANCES_PER_VIEW 128
+#define MAX_INSTANCES_PER_SCENE 128
+static Scene MainScene;
+
 static View MainView;
 
 INPUT_CALLBACK(RaytraceTestCallback)
@@ -66,47 +69,51 @@ INPUT_CALLBACK(RaytraceTestCallback)
     Platform::PrintDebugString("...Done.\n");
 }
 
-static void InitDemoView()
+static void InitDemo()
 {
-    // Init view(s)
+    // Init scene
+    Init(&MainScene, MAX_INSTANCES_PER_SCENE, &g_InputManager);
+    
+    // Init view
     DescriptorData_Instance data;
     data.modelMatrix = m4f(1.0f);
 
-    Init(&MainView, MAX_INSTANCES_PER_VIEW);
+    Init(&MainView);
     uint32 instanceID;
-    instanceID = CreateInstance(&MainView, 0);
+    instanceID = CreateInstance(&MainScene, 0);
     data.modelMatrix[3][0] = -8.0f;
-    SetInstanceData(&MainView, instanceID, &data);
+    SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainView, 1);
+    instanceID = CreateInstance(&MainScene, 1);
     data.modelMatrix[3][0] = -2.5f;
-    SetInstanceData(&MainView, instanceID, &data);
+    SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainView, 2);
+    instanceID = CreateInstance(&MainScene, 2);
     data.modelMatrix = m4f(0.5f);
     data.modelMatrix[3][3] = 1.0f;
     data.modelMatrix[3][0] = 8.0f;
-    SetInstanceData(&MainView, instanceID, &data);
+    SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainView, 2);
+    instanceID = CreateInstance(&MainScene, 2);
     data.modelMatrix = m4f(0.25f);
     data.modelMatrix[3][3] = 1.0f;
     data.modelMatrix[3][0] = 8.0f;
     data.modelMatrix[3][2] = 6.0f;
-    SetInstanceData(&MainView, instanceID, &data);
+    SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainView, 3);
+    instanceID = CreateInstance(&MainScene, 3);
     data.modelMatrix = m4f(7.0f);
     data.modelMatrix[3][3] = 1.0f;
     data.modelMatrix[3][1] = 8.0f;
-    SetInstanceData(&MainView, instanceID, &data);
+    SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainView, 3);
+    instanceID = CreateInstance(&MainScene, 3);
     data.modelMatrix = m4f(7.0f);
     data.modelMatrix[3][3] = 1.0f;
     data.modelMatrix[3][1] = 10.0f;
-    SetInstanceData(&MainView, instanceID, &data);
+    SetInstanceData(&MainScene, instanceID, &data);
 
+    // Procedural geometry
     CreateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
 }
 
@@ -152,7 +159,7 @@ static void CreateAllDescriptors()
     // Descriptor data
     Graphics::ResourceDesc desc;
     desc.resourceType = Graphics::ResourceType::eBuffer1D;
-    desc.dims = v3ui(sizeof(DescriptorData_Instance) * MAX_INSTANCES_PER_VIEW, 0, 0);
+    desc.dims = v3ui(sizeof(DescriptorData_Instance) * MAX_INSTANCES_PER_SCENE, 0, 0);
     desc.bufferUsage = Graphics::BufferUsage::eUniform;
     desc.debugLabel = "Descriptor Buffer Instance Constant Data";
     gameGraphicsData.m_DescDataBufferHandle_Instance = Graphics::CreateResource(desc);
@@ -256,7 +263,7 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
-    InitDemoView();
+    InitDemo();
 
     CreateAllDescriptors();
 
@@ -289,17 +296,19 @@ GAME_UPDATE(GameUpdate)
         g_InputManager.UpdateAndDoCallbacks(inputStateDeltas);
     }
 
-    // Update view(s)
+    // Update scene and view
     {
-        //TIMED_SCOPED_BLOCK("View update");
-        MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
-        MainView.m_projMatrix = g_projMat;
-
         Graphics::DescriptorSetDataHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0].InitInvalid();
         descriptors[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
         descriptors[1].InitInvalid();
         descriptors[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
+
+        Update(&MainScene, descriptors);
+
+        MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
+        MainView.m_projMatrix = g_projMat;
+        
         Update(&MainView, descriptors);
     }
 
@@ -373,11 +382,11 @@ GAME_UPDATE(GameUpdate)
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
         StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn, descriptors);
         EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
 
         StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
 
         UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
         DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
