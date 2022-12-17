@@ -148,7 +148,7 @@ void AssetManager::LoadAllAssets()
                 m_allMeshData[uiAsset].m_numVertices = numObjVerts;
                 m_allMeshData[uiAsset].m_vertexBufferData_Pos = VertPosAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts;
                 m_allMeshData[uiAsset].m_vertexBufferData_UV = VertUVAllocator.m_ownedMemPtr + sizeof(v2f) * accumNumVerts;
-                m_allMeshData[uiAsset].m_vertexBufferData_Normal = VertNormalAllocator.m_ownedMemPtr + sizeof(v3f) * accumNumVerts;
+                m_allMeshData[uiAsset].m_vertexBufferData_Normal = VertNormalAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts;
                 m_allMeshData[uiAsset].m_vertexBufferData_Index = VertIndexAllocator.m_ownedMemPtr + sizeof(uint32) * accumNumVerts;
                 // TODO: create the graphics buffers right away and don't bother storing m_allMeshData at all
 
@@ -382,21 +382,16 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         // Memcpy data into staging buffer
         const uint32 numPositionBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
         const uint32 numUVBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v2f);
-        const uint32 numNormalBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v3f);
+        const uint32 numNormalBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(v4f);
         const uint32 numIndexBytes = m_allMeshData[uiAsset].m_numVertices * sizeof(uint32);
 
         v4f* positionBuffer = (v4f*)m_allMeshData[uiAsset].m_vertexBufferData_Pos;
         v2f* uvBuffer       = (v2f*)m_allMeshData[uiAsset].m_vertexBufferData_UV;
-        v3f* normalBuffer   = (v3f*)m_allMeshData[uiAsset].m_vertexBufferData_Normal;
+        v4f* normalBuffer   = (v4f*)m_allMeshData[uiAsset].m_vertexBufferData_Normal;
         uint32* indexBuffer = (uint32*)m_allMeshData[uiAsset].m_vertexBufferData_Index;
         memcpy(stagingBufferMemPtr_Pos, positionBuffer, numPositionBytes);
         memcpy(stagingBufferMemPtr_UV, uvBuffer, numUVBytes);
-        //memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
-        for (uint32 i = 0; i < m_allMeshData[uiAsset].m_numVertices; ++i)
-        {
-            memcpy(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i, &normalBuffer[i], sizeof(v3f));
-            memset(((uint8*)stagingBufferMemPtr_Norm) + sizeof(v4f) * i + sizeof(v3f), 0, sizeof(float)); // add 0 as 4th channel of normal vector
-        }
+        memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
         memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
         //-----
 

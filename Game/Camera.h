@@ -26,4 +26,3 @@ void PanCameraAlongUp(Camera* camera, float amount);
 void RotateCameraAboutForward(Camera* camera, float rads);
 void RotateCameraAboutUp(Camera* camera, float rads);
 void RotateCameraAboutRight(Camera* camera, float rads);
-
