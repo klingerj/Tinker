@@ -419,7 +419,7 @@ DESTROY_DESCRIPTOR(DestroyDescriptor);
 #define DESTROY_ALL_DESCRIPTORS(name) TINKER_API void name()
 DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors);
 
-#define WRITE_DESCRIPTOR(name) TINKER_API void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
+#define WRITE_DESCRIPTOR(name) TINKER_API void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 WRITE_DESCRIPTOR(WriteDescriptor);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) TINKER_API void name(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)

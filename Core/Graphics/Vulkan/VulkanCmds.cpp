@@ -167,10 +167,8 @@ void VulkanUnmapResource(ResourceHandle handle)
     }
 }
 
-void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount)
+void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 {
-    TINKER_ASSERT(descSetDataCount <= MAX_BINDINGS_PER_SET);
-
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
 
     for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)

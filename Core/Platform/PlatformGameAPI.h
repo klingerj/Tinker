@@ -19,7 +19,6 @@ namespace Platform
 
 struct FileHandle
 {
-    // TODO: this is true for windows currently but need to make this more sound probably
     unsigned long long h;
     enum
     {
@@ -140,7 +139,7 @@ typedef struct mousecode_state
     };
 } MousecodeState;
 
-typedef struct input_state_delta
+struct InputStateDeltas
 {
     // TODO: gamepad input
 
@@ -149,7 +148,7 @@ typedef struct input_state_delta
 
     // Mouse input
     MousecodeState mouseCodes[Mousecode::eMax];
-} InputStateDeltas;
+};
 
 
 // Game side

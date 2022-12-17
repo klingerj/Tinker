@@ -68,7 +68,7 @@ bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLay
 void VulkanDestroyDescriptor(DescriptorHandle handle);
 void VulkanDestroyAllDescriptors();
 void DestroyAllDescLayouts();
-void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles, uint32 descSetDataCount);
+void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles);
 
 // Memory mapping - probably just for staging buffers
 void* VulkanMapResource(ResourceHandle handle);

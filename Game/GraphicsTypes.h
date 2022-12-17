@@ -132,5 +132,5 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Tk::Core::Graphics::WriteDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0], 1);
+    Tk::Core::Graphics::WriteDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0]);
 }
