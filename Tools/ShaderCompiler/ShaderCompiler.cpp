@@ -149,8 +149,16 @@ static uint32 CompileFile(CComPtr<IDxcCompiler3> pCompiler, CComPtr<IDxcUtils> p
         // Complete string with .spv extension and null terminator
         shaderFilepathSpv.Append("spv");
         shaderFilepathSpv.NullTerminate();
-        Tk::Platform::WriteEntireFile(shaderFilepathSpv.m_data, (uint32)pShader->GetBufferSize(), (uint8*)pShader->GetBufferPointer());
-        printf("Wrote: %s\n", shaderFilepathSpv.m_data);
+        uint32 fileErr = Tk::Platform::WriteEntireFile(shaderFilepathSpv.m_data, (uint32)pShader->GetBufferSize(), (uint8*)pShader->GetBufferPointer());
+        if (!fileErr)
+        {
+            printf("Wrote: %s\n", shaderFilepathSpv.m_data);
+        }
+        else
+        {
+            errCode = ErrCode::NonShaderError;
+            printf("Error writing spv file: %s\n", shaderFilepathSpv.m_data);
+        }
     }
 
     return errCode;

@@ -58,10 +58,12 @@ READ_ENTIRE_FILE(ReadEntireFile)
         ReadFile(fileHandle, buffer, fileSize, &numBytesRead, 0);
         TINKER_ASSERT(numBytesRead == fileSize);
         CloseHandle(fileHandle);
+        return 0;
     }
     else
     {
         Tk::Core::Utility::LogMsg("Platform", "Unable to create file handle!", Core::Utility::LogSeverity::eCritical);
+        return 1;
     }
 }
 
@@ -78,11 +80,13 @@ WRITE_ENTIRE_FILE(WriteEntireFile)
         WriteFile(fileHandle, buffer, fileSizeInBytes, &numBytesWritten, 0);
         TINKER_ASSERT(numBytesWritten == fileSizeInBytes);
         CloseHandle(fileHandle);
+        return 0;
     }
     else
     {
         DWORD dw = GetLastError();
         Tk::Core::Utility::LogMsg("Platform", "Unable to create file handle!", Tk::Core::Utility::LogSeverity::eCritical);
+        return 1;
     }
 }
 
