@@ -29,10 +29,10 @@ struct FileHandle
 #define PRINT_DEBUG_STRING(name) TINKER_API void name(const char* str)
 PRINT_DEBUG_STRING(PrintDebugString);
 
-#define READ_ENTIRE_FILE(name) TINKER_API void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
+#define READ_ENTIRE_FILE(name) TINKER_API uint32 name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
 READ_ENTIRE_FILE(ReadEntireFile);
 
-#define WRITE_ENTIRE_FILE(name) TINKER_API void name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
+#define WRITE_ENTIRE_FILE(name) TINKER_API uint32 name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
 WRITE_ENTIRE_FILE(WriteEntireFile);
 
 #define GET_ENTIRE_FILE_SIZE(name) TINKER_API uint32 name(const char* filename)
