@@ -109,6 +109,8 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
         SHADERS_SPV_PATH "basic_PS.spv",
         SHADERS_SPV_PATH "animpoly_VS.spv",
         SHADERS_SPV_PATH "animpoly_PS.spv",
+        SHADERS_SPV_PATH "imgui_VS.spv",
+        SHADERS_SPV_PATH "imgui_PS.spv",
     };
 
     uint32 descLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
@@ -124,6 +126,18 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
     bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
+    TINKER_ASSERT(bOk);
+
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+
+    // Imgui debug ui pass
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_IMGUI_TEX;
+    descLayouts[1] = Graphics::DESCLAYOUT_ID_IMGUI_VBS;
+    pipelineFormats.Init();
+    pipelineFormats.numColorRTs = 1;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA8_SRGB;
+    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -177,6 +191,22 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
     bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
+    descriptorLayout.params[1].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[1].amount = 1;
+    descriptorLayout.params[2].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[2].amount = 1;
+    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_VBS, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSampledImage;
+    descriptorLayout.params[0].amount = 1;
+    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_TEX, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();

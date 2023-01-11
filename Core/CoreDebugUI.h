@@ -4,12 +4,17 @@ namespace Tk
 {
 namespace Core
 {
+
+namespace Graphics
+{
+    struct GraphicsCommandStream;
+}
+
 namespace DebugUI
 {
     void Init();
     void Shutdown();
-    void NewFrame();
-    void Render();
+    void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
 
     void UI_RenderPassStats();
 }

@@ -305,10 +305,12 @@ typedef struct graphics_command
         {
             uint32 m_numIndices;
             uint32 m_numInstances;
-            ResourceHandle m_indexBufferHandle;
+            uint32 m_vertOffset;
+            uint32 m_indexOffset;
             uint32 m_shader;
             uint32 m_blendState;
             uint32 m_depthState;
+            ResourceHandle m_indexBufferHandle;
             DescriptorHandle m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         };
 
@@ -382,12 +384,15 @@ enum
     DESCLAYOUT_ID_ASSET_INSTANCE,
     DESCLAYOUT_ID_ASSET_VBS,
     DESCLAYOUT_ID_POSONLY_VBS,
+    DESCLAYOUT_ID_IMGUI_VBS,
+    DESCLAYOUT_ID_IMGUI_TEX,
     DESCLAYOUT_ID_MAX,
 };
 
 enum
 {
     SHADER_ID_SWAP_CHAIN_BLIT = 0,
+    SHADER_ID_IMGUI_DEBUGUI,
     SHADER_ID_BASIC_ZPrepass,
     SHADER_ID_BASIC_MainView,
     SHADER_ID_ANIMATEDPOLY_MainView,
