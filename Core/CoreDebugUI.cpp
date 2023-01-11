@@ -3,12 +3,6 @@
 #include "Math/VectorTypes.h"
 #include "Graphics/Common/GraphicsCommon.h"
 
-#ifdef VULKAN
-#include "backends/imgui_impl_vulkan.h"
-#else
-// TODO: D3D12
-#endif
-
 #include "imgui.h"
 
 static const uint32 MAX_VERTS = 1024 * 1024;
@@ -128,7 +122,7 @@ namespace DebugUI
 
                     command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
                     command->debugLabel = "Draw imgui element";
-                    command->m_numIndices = cmd.ElemCount;// numIdxs;
+                    command->m_numIndices = cmd.ElemCount;
                     command->m_numInstances = 1;
                     command->m_vertOffset = cmd.VtxOffset; // TODO: finish routing these thru to the backend, and also need to set them to 0 in all other places where we make draw calls rn, grep it
                     command->m_indexOffset = cmd.IdxOffset;
