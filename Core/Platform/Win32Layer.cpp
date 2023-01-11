@@ -20,7 +20,7 @@
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
 #ifndef TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX
-#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX 512
+#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
 #endif
 #ifndef TINKER_PLATFORM_HOTLOAD_FILENAME
 #define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
@@ -659,9 +659,9 @@ wWinMain(HINSTANCE hInstance,
 
             if (shouldRenderFrame)
             {
-                Tk::Core::DebugUI::NewFrame();
                 ImGui_ImplWin32_NewFrame();
                 ImGui::NewFrame();
+                Tk::Core::DebugUI::UI_RenderPassStats();
 
                 {
                     //TIMED_SCOPED_BLOCK("Game Update");
@@ -681,8 +681,8 @@ wWinMain(HINSTANCE hInstance,
                 {
                     //TIMED_SCOPED_BLOCK("Graphics command stream processing");
                     Tk::Core::Graphics::BeginFrameRecording();
+                    Tk::Core::DebugUI::Render(&g_graphicsCommandStream);
                     Tk::Core::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
-                    Tk::Core::DebugUI::Render(); // TODO: make this work
                     Tk::Core::Graphics::EndFrameRecording();
                     Tk::Core::Graphics::SubmitFrameToGPU();
                 }

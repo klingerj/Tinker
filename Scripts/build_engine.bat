@@ -104,7 +104,6 @@ if "%GraphicsAPI%" == "VK" (
     set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCmds.cpp 
     set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanTypes.cpp 
     set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCreation.cpp 
-    set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_vulkan.cpp 
 )
 set SourceListApp=%SourceListApp% %SourceListGraphics%
 
