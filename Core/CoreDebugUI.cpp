@@ -19,45 +19,121 @@ static Graphics::ResourceHandle indexBuffer = Graphics::DefaultResHandle_Invalid
 static Graphics::ResourceHandle positionBuffer = Graphics::DefaultResHandle_Invalid;
 static Graphics::ResourceHandle uvBuffer = Graphics::DefaultResHandle_Invalid;
 static Graphics::ResourceHandle colorBuffer = Graphics::DefaultResHandle_Invalid;
+static Graphics::ResourceHandle fontTexture = Graphics::DefaultResHandle_Invalid;
 static Graphics::DescriptorHandle vbDesc = Graphics::DefaultDescHandle_Invalid;
 static Graphics::DescriptorHandle texDesc = Graphics::DefaultDescHandle_Invalid;
 
-void Init()
+void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "Tinker Graphics";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 
-    Graphics::ResourceDesc desc;
-    desc.resourceType = Graphics::ResourceType::eBuffer1D;
-    desc.bufferUsage = Graphics::BufferUsage::eTransientVertex;
-    
-    desc.dims = v3ui(MAX_VERTS * sizeof(v2f), 0, 0);
-    positionBuffer = Graphics::CreateResource(desc);
-    desc.dims = v3ui(MAX_VERTS * sizeof(v2f), 0, 0);
-    uvBuffer = Graphics::CreateResource(desc);
-    desc.dims = v3ui(MAX_VERTS * sizeof(uint32), 0, 0);
-    colorBuffer = Graphics::CreateResource(desc);
+    // Vertex buffers
+    {
+        Graphics::ResourceDesc desc;
+        desc.resourceType = Graphics::ResourceType::eBuffer1D;
+        desc.bufferUsage = Graphics::BufferUsage::eTransientVertex;
 
-    desc.bufferUsage = Graphics::BufferUsage::eTransientIndex;
-    desc.dims = v3ui((MAX_VERTS - 2) * 3 * sizeof(uint32), 0, 0);
-    indexBuffer = Graphics::CreateResource(desc);
-    
-    vbDesc = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_VBS);
+        desc.dims = v3ui(MAX_VERTS * sizeof(v2f), 0, 0);
+        desc.debugLabel = "Imgui pos vtx buf";
+        positionBuffer = Graphics::CreateResource(desc);
+        desc.dims = v3ui(MAX_VERTS * sizeof(v2f), 0, 0);
+        desc.debugLabel = "Imgui uv vtx buf";
+        uvBuffer = Graphics::CreateResource(desc);
+        desc.dims = v3ui(MAX_VERTS * sizeof(uint32), 0, 0);
+        desc.debugLabel = "Imgui color vtx buf";
+        colorBuffer = Graphics::CreateResource(desc);
 
-    Graphics::DescriptorSetDataHandles descDataHandles = {};
-    descDataHandles.handles[0] = positionBuffer;
-    descDataHandles.handles[1] = uvBuffer;
-    descDataHandles.handles[2] = colorBuffer;
+        desc.bufferUsage = Graphics::BufferUsage::eTransientIndex;
+        desc.dims = v3ui((MAX_VERTS - 2) * 3 * sizeof(uint32), 0, 0);
+        desc.debugLabel = "Imgui color idx buf";
+        indexBuffer = Graphics::CreateResource(desc);
 
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_VBS, vbDesc, &descDataHandles);
+        vbDesc = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_VBS);
+
+        Graphics::DescriptorSetDataHandles descDataHandles = {};
+        descDataHandles.handles[0] = positionBuffer;
+        descDataHandles.handles[1] = uvBuffer;
+        descDataHandles.handles[2] = colorBuffer;
+
+        Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_VBS, vbDesc, &descDataHandles);
+    }
 
     // Font texture
-    int width, height;
-    unsigned char* pixels = NULL;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    //TODO: memcpy font texture, immediate submit to gpu buffer
-    io.Fonts->SetTexID((ImTextureID)((uint64)texDesc.m_hDesc));
+    {
+        int width, height;
+        unsigned char* pixels = NULL;
+        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+        //TODO: memcpy font texture, immediate submit to gpu buffer
+        io.Fonts->SetTexID((ImTextureID)((uint64)texDesc.m_hDesc));
+
+        // Image
+        Graphics::ResourceDesc desc;
+        desc.resourceType = Graphics::ResourceType::eImage2D;
+        desc.arrayEles = 1;
+        desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
+        desc.dims = v3ui(width, height, 1);
+        desc.debugLabel = "Imgui font image";
+        fontTexture = Graphics::CreateResource(desc);
+
+        // Staging buffer
+        Graphics::ResourceHandle imageStagingBufferHandle;
+        uint32 textureSizeInBytes = desc.dims.x * desc.dims.y * 4; // 4 bytes per pixel since RGBA8
+        desc.dims = v3ui(textureSizeInBytes, 0, 0);
+        desc.resourceType = Graphics::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
+        desc.bufferUsage = Graphics::BufferUsage::eStaging;
+        desc.debugLabel = "Imgui font staging buffer";
+        imageStagingBufferHandle = Graphics::CreateResource(desc);
+        
+        // Copy to GPU
+        void* stagingBufferMemPtr = Graphics::MapResource(imageStagingBufferHandle);
+        memcpy(stagingBufferMemPtr, pixels, textureSizeInBytes);
+
+        // Command recording and submission
+        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+
+        // Transition to transfer dst optimal layout
+        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->debugLabel = "Transition imgui font image layout to transfer dst optimal";
+        command->m_imageHandle = fontTexture;
+        command->m_startLayout = Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
+        ++command;
+        ++graphicsCommandStream->m_numCommands;
+
+        // Texture buffer copy
+        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->debugLabel = "Update imgui font texture data";
+        command->m_sizeInBytes = textureSizeInBytes;
+        command->m_srcBufferHandle = imageStagingBufferHandle;
+        command->m_dstBufferHandle = fontTexture;
+        ++command;
+        ++graphicsCommandStream->m_numCommands;
+
+        // Transition to shader read optimal layout
+        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->debugLabel = "Transition imgui font image layout to shader read optimal";
+        command->m_imageHandle = fontTexture;
+        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
+        command->m_endLayout = Graphics::ImageLayout::eShaderRead;
+        ++command;
+        ++graphicsCommandStream->m_numCommands;
+
+        // Perform the copy from staging buffer to device local buffer
+        Graphics::SubmitCmdsImmediate(graphicsCommandStream);
+        graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+
+        Graphics::UnmapResource(imageStagingBufferHandle);
+        Graphics::DestroyResource(imageStagingBufferHandle);
+
+        // Descriptor
+        texDesc = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_TEX);
+        Graphics::DescriptorSetDataHandles descHandles = {};
+        descHandles.InitInvalid();
+        descHandles.handles[0] = fontTexture;
+        Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_TEX, texDesc, &descHandles);
+    }
 }
 
 void Shutdown()
@@ -73,6 +149,8 @@ void Shutdown()
     uvBuffer = Graphics::DefaultResHandle_Invalid;
     Graphics::DestroyResource(colorBuffer);
     colorBuffer = Graphics::DefaultResHandle_Invalid;
+    Graphics::DestroyResource(fontTexture);
+    fontTexture = Graphics::DefaultResHandle_Invalid;
 
     Graphics::DestroyDescriptor(vbDesc);
     vbDesc = Graphics::DefaultDescHandle_Invalid;
@@ -99,13 +177,13 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         TINKER_ASSERT(drawData->TotalVtxCount <= MAX_VERTS);
 
         // Transition of swap chain to render optimal - TODO this is temporary???
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        /*command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition swap chain to render_optimal";
         command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
         command->m_startLayout = Graphics::ImageLayout::ePresent;
         command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
         ++graphicsCommandStream->m_numCommands;
-        ++command;
+        ++command;*/
 
         command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
         command->debugLabel = "Imgui draw";
@@ -182,13 +260,13 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         ++command;
 
         // Transition of swap chain to present - TODO this is temporary???
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        /*command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition swap chain to present";
         command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
         command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
         command->m_endLayout = Graphics::ImageLayout::ePresent;
         ++graphicsCommandStream->m_numCommands;
-        ++command;
+        ++command;*/
     }
 }
 

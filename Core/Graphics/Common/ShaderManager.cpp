@@ -136,7 +136,7 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[1] = Graphics::DESCLAYOUT_ID_IMGUI_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
-    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA8_SRGB;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::BGRA8_SRGB; // TODO: get swap chain format?
     bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 

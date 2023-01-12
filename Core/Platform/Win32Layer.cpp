@@ -626,7 +626,7 @@ wWinMain(HINSTANCE hInstance,
         // ImGui startup
         ImGui::CreateContext();
         ImGui_ImplWin32_Init(g_windowHandle);
-        Tk::Core::DebugUI::Init();
+        Tk::Core::DebugUI::Init(&g_graphicsCommandStream);
     }
 
     // Main loop

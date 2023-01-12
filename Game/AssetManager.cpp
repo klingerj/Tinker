@@ -333,7 +333,6 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         // Create buffer handles
         Graphics::ResourceDesc desc;
         desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
-        desc.debugLabel = "Asset Vtx Attr Buffer";
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
         void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
@@ -341,36 +340,44 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         // Positions
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
+        desc.debugLabel = "Asset Vtx Attr Buffer";
         m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
+        desc.debugLabel = "Asset Vtx Attr Staging Buffer";
         stagingBufferHandle_Pos = Graphics::CreateResource(desc);
         stagingBufferMemPtr_Pos = Graphics::MapResource(stagingBufferHandle_Pos);
 
         // UVs
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v2f), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
+        desc.debugLabel = "Asset Vtx Attr Buffer";
         m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
         
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
+        desc.debugLabel = "Asset Vtx Attr Staging Buffer";
         stagingBufferHandle_UV = Graphics::CreateResource(desc);
         stagingBufferMemPtr_UV = Graphics::MapResource(stagingBufferHandle_UV);
 
         // Normals
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
+        desc.debugLabel = "Asset Vtx Attr Buffer";
         m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
         
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
+        desc.debugLabel = "Asset Vtx Attr Staging Buffer";
         stagingBufferHandle_Norm = Graphics::CreateResource(desc);
         stagingBufferMemPtr_Norm = Graphics::MapResource(stagingBufferHandle_Norm);
 
         // Indices
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(uint32), 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eIndex;
+        desc.debugLabel = "Asset Idx Buffer";
         m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
         
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
+        desc.debugLabel = "Asset Idx Staging Buffer";
         stagingBufferHandle_Idx = Graphics::CreateResource(desc);
         stagingBufferMemPtr_Idx = Graphics::MapResource(stagingBufferHandle_Idx);
 

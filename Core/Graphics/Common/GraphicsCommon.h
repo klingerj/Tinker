@@ -386,6 +386,7 @@ struct GraphicsCommandStream
 
 
 // TODO: move all this, and also autogenerate this eventually?
+// TODO: don't use them as uint32's 
 // IDs must be uniquely named and have their id ascend monotonically from 0
 enum
 {
