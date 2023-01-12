@@ -12,7 +12,7 @@ namespace Graphics
 
 namespace DebugUI
 {
-    void Init();
+    void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
     void Shutdown();
     void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
 

@@ -140,7 +140,7 @@ static void WriteSwapChainBlitResources()
     Graphics::DescriptorSetDataHandles blitHandles = {};
     blitHandles.InitInvalid();
     blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    Graphics::WriteDescriptor(Graphics::SHADER_ID_SWAP_CHAIN_BLIT, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
