@@ -232,6 +232,8 @@ void DrawAnimatedPoly(TransientPrim* prim, Graphics::DescriptorHandle globalData
     command->debugLabel = "Draw animated poly";
     command->m_numIndices = (prim->numVertices - 1) * 3;
     command->m_numInstances = 1;
+    command->m_vertOffset = 0;
+    command->m_indexOffset = 0;
     command->m_indexBufferHandle = prim->indexBufferHandle;
     command->m_shader = shaderID;
     command->m_blendState = blendState;

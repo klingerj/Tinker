@@ -328,7 +328,7 @@ VkCommandBuffer ChooseAppropriateCommandBuffer(bool immediateSubmit)
     return commandBuffer;
 }
 
-void VulkanRecordCommandPushConstant(uint8* data, uint32 sizeInBytes, uint32 shaderID, uint32 blendState, uint32 depthState)
+void VulkanRecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 shaderID)
 {
     TINKER_ASSERT(data && sizeInBytes);
 

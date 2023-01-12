@@ -18,6 +18,8 @@ void DrawMeshDataCommand(Graphics::GraphicsCommandStream* graphicsCommandStream,
 
     command->m_numIndices = numIndices;
     command->m_numInstances = numInstances;
+    command->m_vertOffset = 0;
+    command->m_indexOffset = 0;
     command->m_shader = shaderID;
     command->m_blendState = blendState;
     command->m_depthState = depthState;

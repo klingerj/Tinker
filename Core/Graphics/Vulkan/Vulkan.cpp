@@ -362,6 +362,12 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
             continue;
         }
 
+        // Required, push constant minimum size
+        if (physicalDeviceProperties.limits.maxPushConstantsSize < MIN_PUSH_CONSTANTS_SIZE)
+        {
+            continue;
+        }
+
         if (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
             // Queue family

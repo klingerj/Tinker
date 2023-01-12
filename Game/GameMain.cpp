@@ -427,6 +427,8 @@ GAME_UPDATE(GameUpdate)
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_numInstances = 1;
+    command->m_vertOffset = 0;
+    command->m_indexOffset = 0;
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command->m_shader = Graphics::SHADER_ID_SWAP_CHAIN_BLIT;
     command->m_blendState = Graphics::BlendState::eReplace;
