@@ -108,6 +108,7 @@ namespace GraphicsCmd
     {
         eDrawCall = 0,
         eMemTransfer,
+        ePushConstant,
         eRenderPassBegin,
         eRenderPassEnd,
         eLayoutTransition,
@@ -293,6 +294,8 @@ typedef struct descriptor_set_data_handles
 #define DEPTH_OP DepthCompareOp::eGeOrEqual
 #endif
 
+#define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
+
 typedef struct graphics_command
 {
     const char* debugLabel = "Default Label";
@@ -320,6 +323,14 @@ typedef struct graphics_command
             uint32 m_sizeInBytes;
             ResourceHandle m_srcBufferHandle;
             ResourceHandle m_dstBufferHandle;
+        };
+
+        // Push constant
+        struct
+        {
+            uint32 m_shaderForLayout;
+            // TODO: more data here makes this struct bigger, maybe store a pointer?
+            uint8 m_pushConstantData[32];
         };
 
         // Begin render pass

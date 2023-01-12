@@ -370,8 +370,7 @@ bool VulkanCreateGraphicsPipeline(
     VkPushConstantRange pushConstantRange = {};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(uint32) * 4;
-    // TODO: use maximum available size, or get the size as a parameter
+    pushConstantRange.size = MIN_PUSH_CONSTANTS_SIZE;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -470,18 +469,22 @@ void DestroyPSOPerms(uint32 shaderID)
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
     VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
-    vkDestroyPipelineLayout(g_vulkanContextResources.device, pipelineLayout, nullptr);
-    pipelineLayout = VK_NULL_HANDLE;
-
-    for (uint32 bs = 0; bs < VulkanContextResources::eMaxBlendStates; ++bs)
+    if (pipelineLayout != VK_NULL_HANDLE)
     {
-        for (uint32 ds = 0; ds < VulkanContextResources::eMaxDepthStates; ++ds)
+        vkDestroyPipelineLayout(g_vulkanContextResources.device, pipelineLayout, nullptr);
+        pipelineLayout = VK_NULL_HANDLE;
+    }
+
+    for (uint32 uiblendState = 0; uiblendState < VulkanContextResources::eMaxBlendStates; ++uiblendState)
+    {
+        for (uint32 uiDepthState = 0; uiDepthState < VulkanContextResources::eMaxDepthStates; ++uiDepthState)
         {
-            VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][bs][ds];
-
-            vkDestroyPipeline(g_vulkanContextResources.device, graphicsPipeline, nullptr);
-
-            graphicsPipeline = VK_NULL_HANDLE;
+            VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][uiblendState][uiDepthState];
+            if (graphicsPipeline != VK_NULL_HANDLE)
+            {
+                vkDestroyPipeline(g_vulkanContextResources.device, graphicsPipeline, nullptr);
+                graphicsPipeline = VK_NULL_HANDLE;
+            }
         }
     }
 }
@@ -490,27 +493,9 @@ void VulkanDestroyAllPSOPerms()
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    for (uint32 sid = 0; sid < VulkanContextResources::eMaxShaders; ++sid)
+    for (uint32 shaderID = 0; shaderID < VulkanContextResources::eMaxShaders; ++shaderID)
     {
-        VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[sid];
-        if (pipelineLayout != VK_NULL_HANDLE)
-        {
-            vkDestroyPipelineLayout(g_vulkanContextResources.device, pipelineLayout, nullptr);
-            pipelineLayout = VK_NULL_HANDLE;
-        }
-
-        for (uint32 bs = 0; bs < VulkanContextResources::eMaxBlendStates; ++bs)
-        {
-            for (uint32 ds = 0; ds < VulkanContextResources::eMaxDepthStates; ++ds)
-            {
-                VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[sid][bs][ds];
-                if (graphicsPipeline != VK_NULL_HANDLE)
-                {
-                    vkDestroyPipeline(g_vulkanContextResources.device, graphicsPipeline, nullptr);
-                    graphicsPipeline = VK_NULL_HANDLE;
-                }
-            }
-        }
+        DestroyPSOPerms(shaderID);
     }
 }
 
