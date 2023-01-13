@@ -91,9 +91,10 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/CoreDebugUI.cpp
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
 
 set SourceListGraphics=

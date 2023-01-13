@@ -33,10 +33,10 @@ VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID
     float2 UV = UVData.Load(VertexIndex);
     uint Color = ColorData.Load(VertexIndex);
     float4 ColorUnpacked;
-    ColorUnpacked.r = Color & 0xF;
-    ColorUnpacked.g = (Color >> 8) & 0xF;
-    ColorUnpacked.b = (Color >> 16) & 0xF;
-    ColorUnpacked.a = (Color >> 24) & 0xF;
+    ColorUnpacked.r = (Color & 0xF) / 255.f;
+    ColorUnpacked.g = ((Color >> 8) & 0xF) / 255.f;
+    ColorUnpacked.b = ((Color >> 16) & 0xF) / 255.f;
+    ColorUnpacked.a = ((Color >> 24) & 0xF) / 255.f;
 
     VSOutput Out;
     Out.Position = float4(ModelPos * PushConstants.Scale + PushConstants.Translate, 0, 1);

@@ -192,15 +192,16 @@ void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHa
             if (type != DescriptorType::eMax)
             {
                 VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes);
-                uint32 resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
-                VulkanMemResource* res = &resChain->resourceChain[resIndex];
+                uint32 resIndex = 0;
 
                 switch (type)
                 {
                     case DescriptorType::eBuffer:
                     case DescriptorType::eSSBO:
                     {
-                        VkBuffer* buffer = &res->buffer;
+                        resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
+
+                        VkBuffer* buffer = &resChain->resourceChain[resIndex].buffer;
 
                         descBufferInfo[descriptorCount].buffer = *buffer;
                         descBufferInfo[descriptorCount].offset = 0;
@@ -217,7 +218,7 @@ void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHa
 
                     case DescriptorType::eSampledImage:
                     {
-                        VkImageView* imageView = &res->imageView;
+                        VkImageView* imageView = &resChain->resourceChain[resIndex].imageView; // Should be index 0 for images
 
                         descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                         descImageInfo[descriptorCount].imageView = *imageView;
@@ -479,8 +480,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
         }
         else
         {
-            VulkanMemResource* resource =
-                &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+            VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
             colorAttachment.imageView = resource->imageView;
         }
     }
@@ -493,8 +493,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     depthAttachment.clearValue.color = { DEPTH_MAX, 0 };
     if (HasDepth)
     {
-        VulkanMemResource* resource =
-            &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(depthRT.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(depthRT.m_hRes)->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
         depthAttachment.imageView = resource->imageView;
     }
 
@@ -660,7 +659,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
     else
     {
         VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-        VulkanMemResource* memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        VulkanMemResource* memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
         image = memResource->image;
         numArrayEles = memResourceChain->resDesc.arrayEles;
 
@@ -714,7 +713,7 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
     else
     {
         memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-        memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
         imageFormat = memResourceChain->resDesc.imageFormat;
     }
 
