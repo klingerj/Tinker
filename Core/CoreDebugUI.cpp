@@ -186,7 +186,7 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         ++command;*/
 
         command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
-        command->debugLabel = "Imgui draw";
+        command->debugLabel = "Begin Imgui render pass";
         command->m_numColorRTs = 1;
         command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN; // TODO: need handle to whatever RT, or do we draw it onto the swap chain?
         command->m_depthRT = Graphics::DefaultResHandle_Invalid;
@@ -200,13 +200,16 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         {
             ImDrawList* currDrawList = drawData->CmdLists[uiCmdList];
 
-            uint32* idxBufPtr = (uint32*)Graphics::MapResource(indexBuffer);
-            v2f* posBufPtr    =    (v2f*)Graphics::MapResource(positionBuffer);
-            v2f* uvBufPtr     =    (v2f*)Graphics::MapResource(uvBuffer);
-            uint32* colorBufPtr  =    (uint32*)Graphics::MapResource(colorBuffer);
+            uint32* idxBufPtr   = (uint32*)Graphics::MapResource(indexBuffer);
+            v2f* posBufPtr      = (v2f*)Graphics::MapResource(positionBuffer);
+            v2f* uvBufPtr       = (v2f*)Graphics::MapResource(uvBuffer);
+            uint32* colorBufPtr = (uint32*)Graphics::MapResource(colorBuffer);
 
             uint32 numIdxs = currDrawList->IdxBuffer.size();
-            memcpy(idxBufPtr + idxCtr, currDrawList->IdxBuffer.begin(), sizeof(ImDrawIdx) * numIdxs);
+            for (uint32 uiIdx = 0; uiIdx < numIdxs; ++uiIdx)
+            {
+                idxBufPtr[uiIdx + idxCtr] = (uint32)currDrawList->IdxBuffer[uiIdx];
+            }
             idxCtr += numIdxs;
 
             uint32 numVtxs = currDrawList->VtxBuffer.size();
@@ -228,8 +231,13 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 command->debugLabel = "Imgui push constant";
                 command->m_shaderForLayout = Graphics::SHADER_ID_IMGUI_DEBUGUI;
                 {
-                    uint8* data = command->m_pushConstantData;
-                    memcpy(data, &cmd.ClipRect, sizeof(&cmd.ClipRect));
+                    float* data = (float*)command->m_pushConstantData;
+
+                    const v2f scale = v2f(2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y);
+                    data[0] = scale.x;
+                    data[1] = scale.y;
+                    data[2] = 1.0f - drawData->DisplayPos.x * scale.x;
+                    data[3] = -1.0f - drawData->DisplayPos.y * scale.y;
                 }
                 ++graphicsCommandStream->m_numCommands;
                 ++command;
@@ -256,23 +264,26 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         }
 
         command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
+        command->debugLabel = "End Imgui render pass";
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
         // Transition of swap chain to present - TODO this is temporary???
-        /*command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition swap chain to present";
         command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
         command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
         command->m_endLayout = Graphics::ImageLayout::ePresent;
         ++graphicsCommandStream->m_numCommands;
-        ++command;*/
+        ++command;
     }
 }
 
 void UI_RenderPassStats()
 {
-    const char* names[3] = { "ZPrepass", "MainView", "PostGraph" };
+    ImGui::ShowDemoWindow();
+
+    /*const char* names[3] = { "ZPrepass", "MainView", "PostGraph" };
     float timings[3] = { 0.012f, 0.53f, 1.7f };
 
     if (ImGui::Begin("Render Pass Timings"))
@@ -286,7 +297,7 @@ void UI_RenderPassStats()
         }
 
         ImGui::End();
-    }
+    }*/
 }
 
 }

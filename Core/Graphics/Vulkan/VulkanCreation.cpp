@@ -563,107 +563,103 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
 
-    // TODO: don't duplicate images per frame in flight
-    // need to change this in other places as well
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    // Images not duplicated per frame in flight
+    VulkanMemResource* newResource = &newResourceChain->resourceChain[0];
+
+    // Create image
+    VkImageCreateInfo imageCreateInfo = {};
+    imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreateInfo.extent.width = width;
+    imageCreateInfo.extent.height = height;
+    imageCreateInfo.extent.depth = 1;
+    imageCreateInfo.mipLevels = 1;
+    imageCreateInfo.arrayLayers = numArrayEles;
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageCreateInfo.format = GetVkImageFormat(imageFormat);
+    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    
+    // TODO: collapse this switch into an array of data
+    switch (imageFormat)
     {
-        VulkanMemResource* newResource = &newResourceChain->resourceChain[uiImage];
-
-        // Create image
-        VkImageCreateInfo imageCreateInfo = {};
-        imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageCreateInfo.extent.width = width;
-        imageCreateInfo.extent.height = height;
-        imageCreateInfo.extent.depth = 1;
-        imageCreateInfo.mipLevels = 1;
-        imageCreateInfo.arrayLayers = numArrayEles;
-        imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageCreateInfo.format = GetVkImageFormat(imageFormat);
-        imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        
-        // TODO: collapse this switch into an array of data
-        switch (imageFormat)
+        case ImageFormat::BGRA8_SRGB:
+        case ImageFormat::RGBA8_SRGB:
         {
-            case ImageFormat::BGRA8_SRGB:
-            case ImageFormat::RGBA8_SRGB:
-            {
-                imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
-                break;
-            }
-
-            case ImageFormat::Depth_32F:
-            {
-                imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-                break;
-            }
-
-            case ImageFormat::Invalid:
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                break;
-            }
+            imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
+            break;
         }
 
-        VkResult result = vkCreateImage(g_vulkanContextResources.device, &imageCreateInfo, nullptr, &newResource->image);
-        if (result != VK_SUCCESS)
+        case ImageFormat::Depth_32F:
         {
-            Core::Utility::LogMsg("Platform", "Failed to create image!", Core::Utility::LogSeverity::eCritical);
+            imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            break;
+        }
+
+        case ImageFormat::Invalid:
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
+            break;
         }
-
-        // Pick the correct gpu memory allocator
-        // TODO: this will change once the user can create allocators via the graphics layer
-        const uint32 AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages;
-        VkMemoryRequirements memRequirements = {};
-        vkGetImageMemoryRequirements(g_vulkanContextResources.device, newResource->image, &memRequirements);
-
-        VulkanMemAlloc newAlloc = g_vulkanContextResources.GPUMemAllocators[AllocatorIndex].Alloc(memRequirements);
-        result = vkBindImageMemory(g_vulkanContextResources.device, newResource->image, newAlloc.allocMem, newAlloc.allocOffset);
-        if (result != VK_SUCCESS)
-        {
-            Core::Utility::LogMsg("Platform", "Failed to bind image memory!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-        }
-
-        DbgSetImageObjectName((uint64)newResource->image, debugLabel);
-
-        // Create image view
-        VkImageAspectFlags aspectMask = {};
-        // TODO: collapse this switch into an array of data
-        switch (imageFormat)
-        {
-            case ImageFormat::BGRA8_SRGB:
-            case ImageFormat::RGBA8_SRGB:
-            {
-                aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
-                break;
-            }
-
-            case ImageFormat::Depth_32F:
-            {
-                aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-                break;
-            }
-
-            case ImageFormat::Invalid:
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                break;
-            }
-        }
-
-        CreateImageView(g_vulkanContextResources.device,
-            GetVkImageFormat(imageFormat),
-            aspectMask,
-            newResource->image,
-            &newResource->imageView,
-            numArrayEles);
     }
+
+    VkResult result = vkCreateImage(g_vulkanContextResources.device, &imageCreateInfo, nullptr, &newResource->image);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create image!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    // Pick the correct gpu memory allocator
+    // TODO: this will change once the user can create allocators via the graphics layer
+    const uint32 AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages;
+    VkMemoryRequirements memRequirements = {};
+    vkGetImageMemoryRequirements(g_vulkanContextResources.device, newResource->image, &memRequirements);
+
+    VulkanMemAlloc newAlloc = g_vulkanContextResources.GPUMemAllocators[AllocatorIndex].Alloc(memRequirements);
+    result = vkBindImageMemory(g_vulkanContextResources.device, newResource->image, newAlloc.allocMem, newAlloc.allocOffset);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to bind image memory!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    DbgSetImageObjectName((uint64)newResource->image, debugLabel);
+
+    // Create image view
+    VkImageAspectFlags aspectMask = {};
+    // TODO: collapse this switch into an array of data
+    switch (imageFormat)
+    {
+        case ImageFormat::BGRA8_SRGB:
+        case ImageFormat::RGBA8_SRGB:
+        {
+            aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
+            break;
+        }
+
+        case ImageFormat::Depth_32F:
+        {
+            aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            break;
+        }
+
+        case ImageFormat::Invalid:
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+            break;
+        }
+    }
+
+    CreateImageView(g_vulkanContextResources.device,
+        GetVkImageFormat(imageFormat),
+        aspectMask,
+        newResource->image,
+        &newResource->imageView,
+        numArrayEles);
 
     return ResourceHandle(newResourceHandle);
 }

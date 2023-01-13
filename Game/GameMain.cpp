@@ -443,17 +443,18 @@ GAME_UPDATE(GameUpdate)
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
+    command->debugLabel = "End blit to screen render pass";
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
     // Transition of swap chain from render optimal to present
-    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    /*command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
     command->debugLabel = "Transition swap chain to present";
     command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
     command->m_endLayout = Graphics::ImageLayout::ePresent;
     ++graphicsCommandStream->m_numCommands;
-    ++command;
+    ++command;*/
 
     if (isGameInitted && isMultiplayer && connectedToServer)
     {

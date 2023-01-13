@@ -1,4 +1,4 @@
-[[vk::binding(0, 0)]] Texture2D SrcImage;
+[[vk::binding(0, 0)]] Texture2D FontImage;
 [[vk::binding(0, 0)]] SamplerState SamplerLinearWrap;
 
 struct PSInput
@@ -10,5 +10,5 @@ struct PSInput
 
 float4 main(PSInput Input) : SV_Target0
 {
-    return Input.Color * SrcImage.SampleLevel(SamplerLinearWrap, Input.UV, 0).rgba;
+    return Input.Color * FontImage.SampleLevel(SamplerLinearWrap, Input.UV, 0).rgba;
 }
