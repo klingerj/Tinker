@@ -340,8 +340,8 @@ void VulkanRecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint
     vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
 }
 
-void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices,
-    uint32 numInstances, const char* debugLabel, bool immediateSubmit)
+void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
+    uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit)
 {
     TINKER_ASSERT(indexBufferHandle != DefaultResHandle_Invalid);
 
@@ -351,7 +351,7 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
     VulkanMemResourceChain* indexBufferResource = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
     VkBuffer& indexBuffer = indexBufferResource->resourceChain[0].buffer;
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
 }
 
 void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState,

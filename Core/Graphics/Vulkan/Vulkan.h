@@ -76,8 +76,8 @@ void VulkanUnmapResource(ResourceHandle handle);
 
 // Graphics command recording
 void VulkanRecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 shaderID);
-void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices,
-    uint32 numInstances, const char* debugLabel, bool immediateSubmit);
+void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
+    uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit);
 void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState,
     const DescriptorHandle* descSetHandles, bool immediateSubmit);
 void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
