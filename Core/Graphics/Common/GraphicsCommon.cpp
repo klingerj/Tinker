@@ -122,15 +122,9 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     Graphics::VulkanRecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState,
                         &currentCmd.m_descriptors[0], immediateSubmit);
 
-                    // Push constant
-                    {
-                        uint32 data[4] = {};
-                        //data[0] = instanceCount;
-                        //Graphics::VulkanRecordCommandPushConstant((uint8*)data, sizeof(uint32) * 4, currentShaderID, currentBlendState, currentDepthState);
-                    }
-
                     Graphics::VulkanRecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
-                        currentCmd.m_numInstances, currentCmd.debugLabel, immediateSubmit);
+                        currentCmd.m_numInstances, currentCmd.m_vertOffset, currentCmd.m_indexOffset,
+                        currentCmd.debugLabel, immediateSubmit);
 
                     #endif
                     break;

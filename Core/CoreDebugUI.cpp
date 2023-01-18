@@ -195,6 +195,9 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
+        const v2f scale = v2f(2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y);
+        const v2f translate = v2f(-1.0f - drawData->DisplayPos.x * scale.x, -1.0f - drawData->DisplayPos.y * scale.y);
+
         uint32 vtxCtr = 0, idxCtr = 0;
         for (int32 uiCmdList = 0; uiCmdList < drawData->CmdListsCount; ++uiCmdList)
         {
@@ -232,12 +235,10 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 command->m_shaderForLayout = Graphics::SHADER_ID_IMGUI_DEBUGUI;
                 {
                     float* data = (float*)command->m_pushConstantData;
-
-                    const v2f scale = v2f(2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y);
                     data[0] = scale.x;
                     data[1] = scale.y;
-                    data[2] = 1.0f - drawData->DisplayPos.x * scale.x;
-                    data[3] = -1.0f - drawData->DisplayPos.y * scale.y;
+                    data[2] = translate.x;
+                    data[3] = translate.y;
                 }
                 ++graphicsCommandStream->m_numCommands;
                 ++command;
@@ -246,7 +247,7 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 command->debugLabel = "Draw imgui element";
                 command->m_numIndices = cmd.ElemCount;
                 command->m_numInstances = 1;
-                command->m_vertOffset = cmd.VtxOffset; // TODO: finish routing these thru to the backend, and also need to set them to 0 in all other places where we make draw calls rn, grep it
+                command->m_vertOffset = cmd.VtxOffset;
                 command->m_indexOffset = cmd.IdxOffset;
                 command->m_indexBufferHandle = indexBuffer;
                 command->m_shader = Graphics::SHADER_ID_IMGUI_DEBUGUI;
