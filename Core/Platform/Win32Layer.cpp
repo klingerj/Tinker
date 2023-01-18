@@ -386,6 +386,7 @@ static void HandleMouseInput(uint32 mouseCode, int displacement)
     g_inputStateDeltas.mouseCodes[mouseCode].displacement = pxDisp;
 }
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND hwnd,
     UINT uMsg,
     WPARAM wParam,
@@ -394,6 +395,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     using namespace Tk;
     using namespace Platform;
     
+    // Window messages for Imgui
+    if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+    {
+        return 1;
+    }
+
     LRESULT result = 0;
 
     switch (uMsg)
