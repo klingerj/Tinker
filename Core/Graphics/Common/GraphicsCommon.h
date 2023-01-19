@@ -68,9 +68,10 @@ namespace DepthState
 {
      enum : uint32
      {
-         eOff = 0,
-         eTestOnWriteOn,
-         eTestOnWriteOff,
+         eOff_CCW = 0,
+         eOff_NoCull,
+         eTestOnWriteOn_CCW,
+         eTestOnWriteOff_CCW,
          eMax
      };   
 }

@@ -311,19 +311,6 @@ bool VulkanCreateGraphicsPipeline(
     viewportState.scissorCount = 1;
     viewportState.pScissors = &scissor;
 
-    VkPipelineRasterizationStateCreateInfo rasterizer = {};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE;// VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
-    rasterizer.depthBiasConstantFactor = 0.0f;
-    rasterizer.depthBiasClamp = 0.0f;
-    rasterizer.depthBiasSlopeFactor = 0.0f;
-
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     multisampling.sampleShadingEnable = VK_FALSE;
@@ -342,11 +329,10 @@ bool VulkanCreateGraphicsPipeline(
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
 
-    const uint32 numDynamicStates = 2;
+    const uint32 numDynamicStates = 1;
     VkDynamicState dynamicStates[numDynamicStates] =
     {
         VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_LINE_WIDTH
     };
 
     VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -397,7 +383,7 @@ bool VulkanCreateGraphicsPipeline(
         {
             VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
 
-            VkPipelineDepthStencilStateCreateInfo depthStencilState = GetVkDepthState(depthState);
+            DepthCullState depthCullState = GetVkDepthCullState(depthState);
             VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
             if (numColorRTs == 0)
@@ -424,6 +410,19 @@ bool VulkanCreateGraphicsPipeline(
             pipelineRenderingCreateInfo.depthAttachmentFormat = GetVkImageFormat(depthFormat);
             pipelineRenderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
+            VkPipelineRasterizationStateCreateInfo rasterizer = {};
+            rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+            rasterizer.depthClampEnable = VK_FALSE;
+            rasterizer.rasterizerDiscardEnable = VK_FALSE;
+            rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+            rasterizer.lineWidth = 1.0f;
+            rasterizer.cullMode = depthCullState.cullMode;
+            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            rasterizer.depthBiasEnable = VK_FALSE;
+            rasterizer.depthBiasConstantFactor = 0.0f;
+            rasterizer.depthBiasClamp = 0.0f;
+            rasterizer.depthBiasSlopeFactor = 0.0f;
+
             VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
             pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
             pipelineCreateInfo.pNext = &pipelineRenderingCreateInfo; // for dynamic rendering
@@ -434,7 +433,7 @@ bool VulkanCreateGraphicsPipeline(
             pipelineCreateInfo.pViewportState = &viewportState;
             pipelineCreateInfo.pRasterizationState = &rasterizer;
             pipelineCreateInfo.pMultisampleState = &multisampling;
-            pipelineCreateInfo.pDepthStencilState = &depthStencilState;
+            pipelineCreateInfo.pDepthStencilState = &depthCullState.depthState;
             pipelineCreateInfo.pColorBlendState = &colorBlending;
             pipelineCreateInfo.pDynamicState = nullptr;
             pipelineCreateInfo.layout = pipelineLayout;

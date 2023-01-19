@@ -380,14 +380,14 @@ GAME_UPDATE(GameUpdate)
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
         StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
         EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
 
         StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
 
         UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
+        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, graphicsCommandStream);
 
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
@@ -432,7 +432,7 @@ GAME_UPDATE(GameUpdate)
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command->m_shader = Graphics::SHADER_ID_SWAP_CHAIN_BLIT;
     command->m_blendState = Graphics::BlendState::eReplace;
-    command->m_depthState = Graphics::DepthState::eOff;
+    command->m_depthState = Graphics::DepthState::eOff_CCW;
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
         command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
