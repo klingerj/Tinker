@@ -252,7 +252,7 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 command->m_indexBufferHandle = indexBuffer;
                 command->m_shader = Graphics::SHADER_ID_IMGUI_DEBUGUI;
                 command->m_blendState = Graphics::BlendState::eAlphaBlend;
-                command->m_depthState = Graphics::DepthState::eOff;
+                command->m_depthState = Graphics::DepthState::eOff_NoCull;
                 for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
                 {
                     command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
