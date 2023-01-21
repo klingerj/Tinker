@@ -47,7 +47,7 @@ void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 
         desc.bufferUsage = Graphics::BufferUsage::eTransientIndex;
         desc.dims = v3ui((MAX_VERTS - 2) * 3 * sizeof(uint32), 0, 0);
-        desc.debugLabel = "Imgui color idx buf";
+        desc.debugLabel = "Imgui idx buf";
         indexBuffer = Graphics::CreateResource(desc);
 
         vbDesc = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_VBS);
@@ -162,7 +162,6 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    // TODO: walk draw data and record cmds
     ImDrawData* drawData = ImGui::GetDrawData();
     if (!drawData->Valid)
     {
@@ -198,22 +197,21 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         const v2f scale = v2f(2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y);
         const v2f translate = v2f(-1.0f - drawData->DisplayPos.x * scale.x, -1.0f - drawData->DisplayPos.y * scale.y);
 
+        uint32* idxBufPtr = (uint32*)Graphics::MapResource(indexBuffer);
+        v2f* posBufPtr = (v2f*)Graphics::MapResource(positionBuffer);
+        v2f* uvBufPtr = (v2f*)Graphics::MapResource(uvBuffer);
+        uint32* colorBufPtr = (uint32*)Graphics::MapResource(colorBuffer);
+
         uint32 vtxCtr = 0, idxCtr = 0;
         for (int32 uiCmdList = 0; uiCmdList < drawData->CmdListsCount; ++uiCmdList)
         {
             ImDrawList* currDrawList = drawData->CmdLists[uiCmdList];
 
-            uint32* idxBufPtr   = (uint32*)Graphics::MapResource(indexBuffer);
-            v2f* posBufPtr      = (v2f*)Graphics::MapResource(positionBuffer);
-            v2f* uvBufPtr       = (v2f*)Graphics::MapResource(uvBuffer);
-            uint32* colorBufPtr = (uint32*)Graphics::MapResource(colorBuffer);
-
             uint32 numIdxs = currDrawList->IdxBuffer.size();
             for (uint32 uiIdx = 0; uiIdx < numIdxs; ++uiIdx)
             {
-                idxBufPtr[uiIdx + idxCtr] = (uint32)currDrawList->IdxBuffer[uiIdx];
+                idxBufPtr[uiIdx + idxCtr] = (uint32)(currDrawList->IdxBuffer[uiIdx]);
             }
-            idxCtr += numIdxs;
 
             uint32 numVtxs = currDrawList->VtxBuffer.size();
             for (uint32 uiVtx = 0; uiVtx < numVtxs; ++uiVtx)
@@ -223,7 +221,6 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 uvBufPtr[vtxCtr + uiVtx]    = v2f(vert.uv.x, vert.uv.y);
                 colorBufPtr[vtxCtr + uiVtx] = vert.col;
             }
-            vtxCtr += numVtxs;
 
             // Record draw calls
             for (int32 uiCmd = 0; uiCmd < currDrawList->CmdBuffer.size(); ++uiCmd)
@@ -247,8 +244,8 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 command->debugLabel = "Draw imgui element";
                 command->m_numIndices = cmd.ElemCount;
                 command->m_numInstances = 1;
-                command->m_vertOffset = cmd.VtxOffset;
-                command->m_indexOffset = cmd.IdxOffset;
+                command->m_vertOffset = cmd.VtxOffset + vtxCtr;
+                command->m_indexOffset = cmd.IdxOffset + idxCtr;
                 command->m_indexBufferHandle = indexBuffer;
                 command->m_shader = Graphics::SHADER_ID_IMGUI_DEBUGUI;
                 command->m_blendState = Graphics::BlendState::eAlphaBlend;
@@ -262,7 +259,15 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 ++graphicsCommandStream->m_numCommands;
                 ++command;
             }
+
+            idxCtr += numIdxs;
+            vtxCtr += numVtxs;
         }
+
+        Graphics::UnmapResource(indexBuffer);
+        Graphics::UnmapResource(positionBuffer);
+        Graphics::UnmapResource(uvBuffer);
+        Graphics::UnmapResource(colorBuffer);
 
         command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
         command->debugLabel = "End Imgui render pass";

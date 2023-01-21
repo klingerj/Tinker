@@ -432,7 +432,7 @@ GAME_UPDATE(GameUpdate)
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command->m_shader = Graphics::SHADER_ID_SWAP_CHAIN_BLIT;
     command->m_blendState = Graphics::BlendState::eReplace;
-    command->m_depthState = Graphics::DepthState::eOff_CCW;
+    command->m_depthState = Graphics::DepthState::eOff_NoCull;
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
         command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
