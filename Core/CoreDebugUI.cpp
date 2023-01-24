@@ -187,7 +187,7 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
         command->debugLabel = "Begin Imgui render pass";
         command->m_numColorRTs = 1;
-        command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN; // TODO: need handle to whatever RT, or do we draw it onto the swap chain?
+        command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
         command->m_depthRT = Graphics::DefaultResHandle_Invalid;
         command->m_renderWidth  = (uint32)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
         command->m_renderHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
