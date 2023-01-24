@@ -509,12 +509,20 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
     uint32 isMultiBufferedResource = IsBufferUsageMultiBuffered(bufferUsage);
     const uint32 NumCopies = isMultiBufferedResource ? VULKAN_MAX_FRAMES_IN_FLIGHT : 1u;
 
+    const VkBufferUsageFlags usageFlags = GetVkBufferUsageFlags(bufferUsage);
+    const VkMemoryPropertyFlags propertyFlags = GetVkMemoryPropertyFlags(bufferUsage);
+
+    // Pick the correct gpu memory allocator
+    // TODO: this will change once the user can create allocators via the graphics layer
+    uint32 AllocatorIndex = 0xFFFFFFFF;
+    if (propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers;
+    else
+        AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers;
+
     for (uint32 uiBuf = 0; uiBuf < NumCopies; ++uiBuf)
     {
         VulkanMemResource* newResource = &newResourceChain->resourceChain[uiBuf];
-
-        VkBufferUsageFlags usageFlags = GetVkBufferUsageFlags(bufferUsage);
-        VkMemoryPropertyFlags propertyFlags = GetVkMemoryPropertyFlags(bufferUsage);
 
         VkBufferCreateInfo bufferCreateInfo = {};
         bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -528,14 +536,6 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
             Core::Utility::LogMsg("Platform", "Failed to create buffer!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
-
-        // Pick the correct gpu memory allocator
-        // TODO: this will change once the user can create allocators via the graphics layer
-        uint32 AllocatorIndex = 0xFFFFFFFF;
-        if (propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-            AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers;
-        else
-            AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers;
 
         VkMemoryRequirements memRequirements = {};
         vkGetBufferMemoryRequirements(g_vulkanContextResources.device, newResource->buffer, &memRequirements);

@@ -112,7 +112,7 @@ static void InitGPUMemAllocators()
         vkDestroyImage(g_vulkanContextResources.device, TestImage, nullptr);
 
         uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages].Init(DEVICE_LOCAL_IMAGE_HEAP_SIZE, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages].Init(DEVICE_LOCAL_IMAGE_HEAP_SIZE, memoryTypeIndex, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, properties.limits.nonCoherentAtomSize);
     }
 }
 
