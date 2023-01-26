@@ -149,6 +149,15 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
+                case GraphicsCmd::eSetScissor:
+                {
+                    #ifdef VULKAN
+                    Graphics::VulkanRecordCommandSetScissor(currentCmd.m_scissorOffsetX, currentCmd.m_scissorOffsetY, currentCmd.m_scissorWidth, currentCmd.m_scissorHeight);
+                    #endif
+
+                    break;
+                }
+
                 case GraphicsCmd::eRenderPassBegin:
                 {
                     #ifdef VULKAN

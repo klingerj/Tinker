@@ -110,6 +110,7 @@ namespace GraphicsCmd
         eDrawCall = 0,
         eMemTransfer,
         ePushConstant,
+        eSetScissor,
         eRenderPassBegin,
         eRenderPassEnd,
         eLayoutTransition,
@@ -332,6 +333,15 @@ typedef struct graphics_command
             uint32 m_shaderForLayout;
             // TODO: more data here makes this struct bigger, maybe store a pointer?
             uint8 m_pushConstantData[32];
+        };
+
+        // Scissor
+        struct
+        {
+            int32 m_scissorOffsetX;
+            int32 m_scissorOffsetY;
+            uint32 m_scissorWidth;
+            uint32 m_scissorHeight;
         };
 
         // Begin render pass

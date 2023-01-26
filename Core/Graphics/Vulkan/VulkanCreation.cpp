@@ -300,16 +300,17 @@ bool VulkanCreateGraphicsPipeline(
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = { viewportWidth, viewportHeight };
+    //VkRect2D scissor = {};
+    //scissor.offset = { 0, 0 };
+    //scissor.extent = { viewportWidth, viewportHeight };
 
     VkPipelineViewportStateCreateInfo viewportState = {};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
     viewportState.pViewports = &viewport;
-    viewportState.scissorCount = 1;
-    viewportState.pScissors = &scissor;
+    viewportState.scissorCount = 1; // Must be set dynamically
+    viewportState.pScissors = nullptr;
+    //viewportState.pScissors = &scissor;
 
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -332,7 +333,7 @@ bool VulkanCreateGraphicsPipeline(
     const uint32 numDynamicStates = 1;
     VkDynamicState dynamicStates[numDynamicStates] =
     {
-        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
     };
 
     VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -435,7 +436,7 @@ bool VulkanCreateGraphicsPipeline(
             pipelineCreateInfo.pMultisampleState = &multisampling;
             pipelineCreateInfo.pDepthStencilState = &depthCullState.depthState;
             pipelineCreateInfo.pColorBlendState = &colorBlending;
-            pipelineCreateInfo.pDynamicState = nullptr;
+            pipelineCreateInfo.pDynamicState = &dynamicState;
             pipelineCreateInfo.layout = pipelineLayout;
             pipelineCreateInfo.renderPass = VK_NULL_HANDLE; // for dynamic rendering
             pipelineCreateInfo.subpass = 0;

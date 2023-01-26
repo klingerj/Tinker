@@ -43,6 +43,16 @@ void StartRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream
     command->m_renderWidth = renderPass->renderWidth;
     command->m_renderHeight = renderPass->renderHeight;
     ++graphicsCommandStream->m_numCommands;
+    ++command;
+
+    // Set scissor state
+    command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
+    command->debugLabel = "Set render pass scissor state";
+    command->m_scissorOffsetX = 0;
+    command->m_scissorOffsetY = 0;
+    command->m_scissorWidth = renderPass->renderWidth;
+    command->m_scissorHeight = renderPass->renderHeight;
+    ++graphicsCommandStream->m_numCommands;
 }
 
 void EndRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream* graphicsCommandStream)
