@@ -340,6 +340,15 @@ void VulkanRecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint
     vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
 }
 
+void VulkanRecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height)
+{
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(false);
+    VkRect2D scissor = {};
+    scissor.offset = { offsetX, offsetY };
+    scissor.extent = { width, height };
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+}
+
 void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
     uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit)
 {
@@ -510,12 +519,6 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     DbgStartMarker(commandBuffer, debugLabel);
 
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
-
-    VkViewport viewport = { 0, 0, (float)renderWidth, (float)renderHeight, DEPTH_MIN, DEPTH_MAX };
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-    VkRect2D scissor = { 0, 0, renderWidth, renderHeight };
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)

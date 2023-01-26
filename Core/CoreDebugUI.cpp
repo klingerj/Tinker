@@ -184,15 +184,21 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         ++graphicsCommandStream->m_numCommands;
         ++command;*/
 
+        const uint32 fbWidth = (uint32)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+        const uint32 fbHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+
         command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
         command->debugLabel = "Begin Imgui render pass";
         command->m_numColorRTs = 1;
         command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
         command->m_depthRT = Graphics::DefaultResHandle_Invalid;
-        command->m_renderWidth  = (uint32)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-        command->m_renderHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+        command->m_renderWidth  = fbWidth;
+        command->m_renderHeight = fbHeight;
         ++graphicsCommandStream->m_numCommands;
         ++command;
+
+        const v2f scissorWindowMin = v2f(drawData->DisplayPos.x, drawData->DisplayPos.y);
+        const v2f scissorScale = v2f(drawData->FramebufferScale.x, drawData->FramebufferScale.y);
 
         const v2f scale = v2f(2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y);
         const v2f translate = v2f(-1.0f - drawData->DisplayPos.x * scale.x, -1.0f - drawData->DisplayPos.y * scale.y);
@@ -237,6 +243,30 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                     data[2] = translate.x;
                     data[3] = translate.y;
                 }
+                ++graphicsCommandStream->m_numCommands;
+                ++command;
+
+                // Calc tight scissor
+                v2f scissorMin = {};
+                v2f scissorMax = {};
+                scissorMin = v2f((cmd.ClipRect.x - scissorWindowMin.x), (cmd.ClipRect.y - scissorWindowMin.y)) * scissorScale;
+                scissorMax = v2f((cmd.ClipRect.z - scissorWindowMin.x), (cmd.ClipRect.w - scissorWindowMin.y)) * scissorScale;
+                scissorMin.x = Max(scissorMin.x, 0.0f);
+                scissorMin.y = Max(scissorMin.y, 0.0f);
+                scissorMax.x = Min(scissorMax.x, (float)fbWidth);
+                scissorMax.y = Min(scissorMax.y, (float)fbHeight);
+                if (scissorMax.x <= scissorMin.x ||
+                    scissorMax.y <= scissorMin.y)
+                {
+                    continue;
+                }
+                
+                command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
+                command->debugLabel = "Set render pass scissor state";
+                command->m_scissorOffsetX = (int32)scissorMin.x;
+                command->m_scissorOffsetY = (int32)scissorMin.y;
+                command->m_scissorWidth = uint32(scissorMax.x - scissorMin.x);
+                command->m_scissorHeight = uint32(scissorMax.y - scissorMin.y);
                 ++graphicsCommandStream->m_numCommands;
                 ++command;
 
