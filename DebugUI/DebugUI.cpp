@@ -21,11 +21,23 @@ static Tk::Core::Graphics::ResourceHandle fontTexture = Tk::Core::Graphics::Defa
 static Tk::Core::Graphics::DescriptorHandle vbDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
 static Tk::Core::Graphics::DescriptorHandle texDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
 
+void* ImGuiMemWrapper_Malloc(size_t sz, void* user_data)
+{
+    (void)user_data;
+    return malloc(sz);
+}
+
+void ImGuiMemWrapper_Free(void* ptr, void* user_data)
+{
+    (void)user_data;
+    free(ptr);
+}
+
 void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // ImGui startup
     ImGui::CreateContext();
-    Tk::Platform::ImguiCreate(ImGui::GetCurrentContext());
+    Tk::Platform::ImguiCreate(ImGui::GetCurrentContext(), ImGuiMemWrapper_Malloc, ImGuiMemWrapper_Free);
 
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "Tinker Graphics";
