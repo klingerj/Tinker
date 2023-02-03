@@ -237,6 +237,8 @@ IMGUI_CREATE(ImguiCreate)
     TINKER_ASSERT(context);
 
     ImGui::SetCurrentContext(context);
+    ImGui::SetAllocatorFunctions(mallocWrapper, freeWrapper);
+
     ImGui_ImplWin32_Init(g_windowHandle);
 }
 

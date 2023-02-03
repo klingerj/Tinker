@@ -60,7 +60,11 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer);
 
 // ImGui to platform (Win32, etc) functions
 // TODO This is just going to be "technical debt" for now, we need a better defined platform layer for the game dll probably
-#define IMGUI_CREATE(name) TINKER_API void name(ImGuiContext* context)
+
+// These must match imgui.h
+typedef void*   (*ImGuiMemAllocFuncWrapper)(size_t sz, void* user_data);
+typedef void    (*ImGuiMemFreeFuncWrapper)(void* ptr, void* user_data);
+#define IMGUI_CREATE(name) TINKER_API void name(ImGuiContext* context, ImGuiMemAllocFuncWrapper mallocWrapper, ImGuiMemFreeFuncWrapper freeWrapper)
 IMGUI_CREATE(ImguiCreate);
 
 #define IMGUI_NEW_FRAME(name) TINKER_API void name()
