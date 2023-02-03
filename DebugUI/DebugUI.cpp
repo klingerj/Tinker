@@ -1,6 +1,8 @@
-#include "CoreDebugUI.h"
+#include "DebugUI.h"
+
 #include "CoreDefines.h"
 #include "Math/VectorTypes.h"
+#include "Platform/PlatformGameAPI.h"
 #include "Graphics/Common/GraphicsCommon.h"
 
 #include "imgui.h"
@@ -8,56 +10,56 @@
 static const uint32 MAX_VERTS = 1024 * 1024;
 static const uint32 MAX_IDXS = MAX_VERTS * 3;
 
-namespace Tk
-{
-namespace Core
-{
 namespace DebugUI
 {
 
-static Graphics::ResourceHandle indexBuffer = Graphics::DefaultResHandle_Invalid;
-static Graphics::ResourceHandle positionBuffer = Graphics::DefaultResHandle_Invalid;
-static Graphics::ResourceHandle uvBuffer = Graphics::DefaultResHandle_Invalid;
-static Graphics::ResourceHandle colorBuffer = Graphics::DefaultResHandle_Invalid;
-static Graphics::ResourceHandle fontTexture = Graphics::DefaultResHandle_Invalid;
-static Graphics::DescriptorHandle vbDesc = Graphics::DefaultDescHandle_Invalid;
-static Graphics::DescriptorHandle texDesc = Graphics::DefaultDescHandle_Invalid;
+static Tk::Core::Graphics::ResourceHandle indexBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+static Tk::Core::Graphics::ResourceHandle positionBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+static Tk::Core::Graphics::ResourceHandle uvBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+static Tk::Core::Graphics::ResourceHandle colorBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+static Tk::Core::Graphics::ResourceHandle fontTexture = Tk::Core::Graphics::DefaultResHandle_Invalid;
+static Tk::Core::Graphics::DescriptorHandle vbDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
+static Tk::Core::Graphics::DescriptorHandle texDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
 
 void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
+    // ImGui startup
+    ImGui::CreateContext();
+    Tk::Platform::ImguiCreate(ImGui::GetCurrentContext());
+
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "Tinker Graphics";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 
     // Vertex buffers
     {
-        Graphics::ResourceDesc desc;
-        desc.resourceType = Graphics::ResourceType::eBuffer1D;
-        desc.bufferUsage = Graphics::BufferUsage::eTransientVertex;
+        Tk::Core::Graphics::ResourceDesc desc;
+        desc.resourceType = Tk::Core::Graphics::ResourceType::eBuffer1D;
+        desc.bufferUsage = Tk::Core::Graphics::BufferUsage::eTransientVertex;
 
         desc.dims = v3ui(MAX_VERTS * sizeof(v2f), 0, 0);
         desc.debugLabel = "Imgui pos vtx buf";
-        positionBuffer = Graphics::CreateResource(desc);
+        positionBuffer = Tk::Core::Graphics::CreateResource(desc);
         desc.dims = v3ui(MAX_VERTS * sizeof(v2f), 0, 0);
         desc.debugLabel = "Imgui uv vtx buf";
-        uvBuffer = Graphics::CreateResource(desc);
+        uvBuffer = Tk::Core::Graphics::CreateResource(desc);
         desc.dims = v3ui(MAX_VERTS * sizeof(uint32), 0, 0);
         desc.debugLabel = "Imgui color vtx buf";
-        colorBuffer = Graphics::CreateResource(desc);
+        colorBuffer = Tk::Core::Graphics::CreateResource(desc);
 
-        desc.bufferUsage = Graphics::BufferUsage::eTransientIndex;
+        desc.bufferUsage = Tk::Core::Graphics::BufferUsage::eTransientIndex;
         desc.dims = v3ui((MAX_VERTS - 2) * 3 * sizeof(uint32), 0, 0);
         desc.debugLabel = "Imgui idx buf";
-        indexBuffer = Graphics::CreateResource(desc);
+        indexBuffer = Tk::Core::Graphics::CreateResource(desc);
 
-        vbDesc = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_VBS);
+        vbDesc = Tk::Core::Graphics::CreateDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_IMGUI_VBS);
 
-        Graphics::DescriptorSetDataHandles descDataHandles = {};
+        Tk::Core::Graphics::DescriptorSetDataHandles descDataHandles = {};
         descDataHandles.handles[0] = positionBuffer;
         descDataHandles.handles[1] = uvBuffer;
         descDataHandles.handles[2] = colorBuffer;
 
-        Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_VBS, vbDesc, &descDataHandles);
+        Tk::Core::Graphics::WriteDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_IMGUI_VBS, vbDesc, &descDataHandles);
     }
 
     // Font texture
@@ -65,45 +67,44 @@ void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
         int width, height;
         unsigned char* pixels = NULL;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-        //TODO: memcpy font texture, immediate submit to gpu buffer
         io.Fonts->SetTexID((ImTextureID)((uint64)texDesc.m_hDesc));
 
         // Image
-        Graphics::ResourceDesc desc;
-        desc.resourceType = Graphics::ResourceType::eImage2D;
+        Tk::Core::Graphics::ResourceDesc desc;
+        desc.resourceType = Tk::Core::Graphics::ResourceType::eImage2D;
         desc.arrayEles = 1;
-        desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
+        desc.imageFormat = Tk::Core::Graphics::ImageFormat::RGBA8_SRGB;
         desc.dims = v3ui(width, height, 1);
         desc.debugLabel = "Imgui font image";
-        fontTexture = Graphics::CreateResource(desc);
+        fontTexture = Tk::Core::Graphics::CreateResource(desc);
 
         // Staging buffer
-        Graphics::ResourceHandle imageStagingBufferHandle;
+        Tk::Core::Graphics::ResourceHandle imageStagingBufferHandle;
         uint32 textureSizeInBytes = desc.dims.x * desc.dims.y * 4; // 4 bytes per pixel since RGBA8
         desc.dims = v3ui(textureSizeInBytes, 0, 0);
-        desc.resourceType = Graphics::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
-        desc.bufferUsage = Graphics::BufferUsage::eStaging;
+        desc.resourceType = Tk::Core::Graphics::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
+        desc.bufferUsage = Tk::Core::Graphics::BufferUsage::eStaging;
         desc.debugLabel = "Imgui font staging buffer";
-        imageStagingBufferHandle = Graphics::CreateResource(desc);
+        imageStagingBufferHandle = Tk::Core::Graphics::CreateResource(desc);
         
         // Copy to GPU
-        void* stagingBufferMemPtr = Graphics::MapResource(imageStagingBufferHandle);
+        void* stagingBufferMemPtr = Tk::Core::Graphics::MapResource(imageStagingBufferHandle);
         memcpy(stagingBufferMemPtr, pixels, textureSizeInBytes);
 
         // Command recording and submission
-        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
         // Transition to transfer dst optimal layout
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition imgui font image layout to transfer dst optimal";
         command->m_imageHandle = fontTexture;
-        command->m_startLayout = Graphics::ImageLayout::eUndefined;
-        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
+        command->m_startLayout = Tk::Core::Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Tk::Core::Graphics::ImageLayout::eTransferDst;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
         // Texture buffer copy
-        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eMemTransfer;
         command->debugLabel = "Update imgui font texture data";
         command->m_sizeInBytes = textureSizeInBytes;
         command->m_srcBufferHandle = imageStagingBufferHandle;
@@ -112,27 +113,27 @@ void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
         ++graphicsCommandStream->m_numCommands;
 
         // Transition to shader read optimal layout
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eLayoutTransition;
         command->debugLabel = "Transition imgui font image layout to shader read optimal";
         command->m_imageHandle = fontTexture;
-        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
-        command->m_endLayout = Graphics::ImageLayout::eShaderRead;
+        command->m_startLayout = Tk::Core::Graphics::ImageLayout::eTransferDst;
+        command->m_endLayout = Tk::Core::Graphics::ImageLayout::eShaderRead;
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
         // Perform the copy from staging buffer to device local buffer
-        Graphics::SubmitCmdsImmediate(graphicsCommandStream);
+        Tk::Core::Graphics::SubmitCmdsImmediate(graphicsCommandStream);
         graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 
-        Graphics::UnmapResource(imageStagingBufferHandle);
-        Graphics::DestroyResource(imageStagingBufferHandle);
+        Tk::Core::Graphics::UnmapResource(imageStagingBufferHandle);
+        Tk::Core::Graphics::DestroyResource(imageStagingBufferHandle);
 
         // Descriptor
-        texDesc = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_TEX);
-        Graphics::DescriptorSetDataHandles descHandles = {};
+        texDesc = Tk::Core::Graphics::CreateDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_IMGUI_TEX);
+        Tk::Core::Graphics::DescriptorSetDataHandles descHandles = {};
         descHandles.InitInvalid();
         descHandles.handles[0] = fontTexture;
-        Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_IMGUI_TEX, texDesc, &descHandles);
+        Tk::Core::Graphics::WriteDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_IMGUI_TEX, texDesc, &descHandles);
     }
 }
 
@@ -141,26 +142,37 @@ void Shutdown()
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "";
 
-    Graphics::DestroyResource(indexBuffer);
-    indexBuffer = Graphics::DefaultResHandle_Invalid;
-    Graphics::DestroyResource(positionBuffer);
-    positionBuffer = Graphics::DefaultResHandle_Invalid;
-    Graphics::DestroyResource(uvBuffer);
-    uvBuffer = Graphics::DefaultResHandle_Invalid;
-    Graphics::DestroyResource(colorBuffer);
-    colorBuffer = Graphics::DefaultResHandle_Invalid;
-    Graphics::DestroyResource(fontTexture);
-    fontTexture = Graphics::DefaultResHandle_Invalid;
+    Tk::Core::Graphics::DestroyResource(indexBuffer);
+    indexBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+    Tk::Core::Graphics::DestroyResource(positionBuffer);
+    positionBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+    Tk::Core::Graphics::DestroyResource(uvBuffer);
+    uvBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+    Tk::Core::Graphics::DestroyResource(colorBuffer);
+    colorBuffer = Tk::Core::Graphics::DefaultResHandle_Invalid;
+    Tk::Core::Graphics::DestroyResource(fontTexture);
+    fontTexture = Tk::Core::Graphics::DefaultResHandle_Invalid;
 
-    Graphics::DestroyDescriptor(vbDesc);
-    vbDesc = Graphics::DefaultDescHandle_Invalid;
-    Graphics::DestroyDescriptor(texDesc);
-    texDesc = Graphics::DefaultDescHandle_Invalid;
+    Tk::Core::Graphics::DestroyDescriptor(vbDesc);
+    vbDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
+    Tk::Core::Graphics::DestroyDescriptor(texDesc);
+    texDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
+
+    Tk::Platform::ImguiDestroy();
+    ImGui::DestroyContext(ImGui::GetCurrentContext());
 }
 
-void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
+void NewFrame()
 {
-    Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Tk::Platform::ImguiNewFrame();
+    ImGui::NewFrame();
+}
+
+void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Core::Graphics::ResourceHandle renderTarget)
+{
+    ImGui::Render();
+
+    Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     ImDrawData* drawData = ImGui::GetDrawData();
     if (!drawData->Valid)
@@ -175,23 +187,14 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         TINKER_ASSERT(drawData->TotalIdxCount <= MAX_IDXS);
         TINKER_ASSERT(drawData->TotalVtxCount <= MAX_VERTS);
 
-        // Transition of swap chain to render optimal - TODO this is temporary???
-        /*command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
-        command->debugLabel = "Transition swap chain to render_optimal";
-        command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-        command->m_startLayout = Graphics::ImageLayout::ePresent;
-        command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;*/
-
         const uint32 fbWidth = (uint32)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
         const uint32 fbHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
 
-        command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
+        command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eRenderPassBegin;
         command->debugLabel = "Begin Imgui render pass";
         command->m_numColorRTs = 1;
-        command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-        command->m_depthRT = Graphics::DefaultResHandle_Invalid;
+        command->m_colorRTs[0] = renderTarget;
+        command->m_depthRT = Tk::Core::Graphics::DefaultResHandle_Invalid;
         command->m_renderWidth  = fbWidth;
         command->m_renderHeight = fbHeight;
         ++graphicsCommandStream->m_numCommands;
@@ -203,10 +206,10 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
         const v2f scale = v2f(2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y);
         const v2f translate = v2f(-1.0f - drawData->DisplayPos.x * scale.x, -1.0f - drawData->DisplayPos.y * scale.y);
 
-        uint32* idxBufPtr = (uint32*)Graphics::MapResource(indexBuffer);
-        v2f* posBufPtr = (v2f*)Graphics::MapResource(positionBuffer);
-        v2f* uvBufPtr = (v2f*)Graphics::MapResource(uvBuffer);
-        uint32* colorBufPtr = (uint32*)Graphics::MapResource(colorBuffer);
+        uint32* idxBufPtr = (uint32*)Tk::Core::Graphics::MapResource(indexBuffer);
+        v2f* posBufPtr = (v2f*)Tk::Core::Graphics::MapResource(positionBuffer);
+        v2f* uvBufPtr = (v2f*)Tk::Core::Graphics::MapResource(uvBuffer);
+        uint32* colorBufPtr = (uint32*)Tk::Core::Graphics::MapResource(colorBuffer);
 
         uint32 vtxCtr = 0, idxCtr = 0;
         for (int32 uiCmdList = 0; uiCmdList < drawData->CmdListsCount; ++uiCmdList)
@@ -233,9 +236,9 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
             {
                 const ImDrawCmd& cmd = currDrawList->CmdBuffer[uiCmd];
 
-                command->m_commandType = Graphics::GraphicsCmd::ePushConstant;
+                command->m_commandType = Tk::Core::Graphics::GraphicsCmd::ePushConstant;
                 command->debugLabel = "Imgui push constant";
-                command->m_shaderForLayout = Graphics::SHADER_ID_IMGUI_DEBUGUI;
+                command->m_shaderForLayout = Tk::Core::Graphics::SHADER_ID_IMGUI_DEBUGUI;
                 {
                     float* data = (float*)command->m_pushConstantData;
                     data[0] = scale.x;
@@ -261,7 +264,7 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                     continue;
                 }
                 
-                command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
+                command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eSetScissor;
                 command->debugLabel = "Set render pass scissor state";
                 command->m_scissorOffsetX = (int32)scissorMin.x;
                 command->m_scissorOffsetY = (int32)scissorMin.y;
@@ -270,19 +273,19 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
                 ++graphicsCommandStream->m_numCommands;
                 ++command;
 
-                command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
+                command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eDrawCall;
                 command->debugLabel = "Draw imgui element";
                 command->m_numIndices = cmd.ElemCount;
                 command->m_numInstances = 1;
                 command->m_vertOffset = cmd.VtxOffset + vtxCtr;
                 command->m_indexOffset = cmd.IdxOffset + idxCtr;
                 command->m_indexBufferHandle = indexBuffer;
-                command->m_shader = Graphics::SHADER_ID_IMGUI_DEBUGUI;
-                command->m_blendState = Graphics::BlendState::eAlphaBlend;
-                command->m_depthState = Graphics::DepthState::eOff_NoCull;
+                command->m_shader = Tk::Core::Graphics::SHADER_ID_IMGUI_DEBUGUI;
+                command->m_blendState = Tk::Core::Graphics::BlendState::eAlphaBlend;
+                command->m_depthState = Tk::Core::Graphics::DepthState::eOff_NoCull;
                 for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
                 {
-                    command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
+                    command->m_descriptors[i] = Tk::Core::Graphics::DefaultDescHandle_Invalid;
                 }
                 command->m_descriptors[0] = texDesc;
                 command->m_descriptors[1] = vbDesc;
@@ -294,22 +297,13 @@ void Render(Graphics::GraphicsCommandStream* graphicsCommandStream)
             vtxCtr += numVtxs;
         }
 
-        Graphics::UnmapResource(indexBuffer);
-        Graphics::UnmapResource(positionBuffer);
-        Graphics::UnmapResource(uvBuffer);
-        Graphics::UnmapResource(colorBuffer);
+        Tk::Core::Graphics::UnmapResource(indexBuffer);
+        Tk::Core::Graphics::UnmapResource(positionBuffer);
+        Tk::Core::Graphics::UnmapResource(uvBuffer);
+        Tk::Core::Graphics::UnmapResource(colorBuffer);
 
-        command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
+        command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eRenderPassEnd;
         command->debugLabel = "End Imgui render pass";
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
-
-        // Transition of swap chain to present - TODO this is temporary???
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
-        command->debugLabel = "Transition swap chain to present";
-        command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-        command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
-        command->m_endLayout = Graphics::ImageLayout::ePresent;
         ++graphicsCommandStream->m_numCommands;
         ++command;
     }
@@ -336,6 +330,4 @@ void UI_RenderPassStats()
     }*/
 }
 
-}
-}
 }
