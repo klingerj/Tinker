@@ -3,6 +3,8 @@
 #include "CoreDefines.h"
 #include "PlatformGameThreadAPI.h"
 
+struct ImGuiContext;
+
 namespace Tk
 {
 
@@ -55,6 +57,18 @@ END_NETWORK_CONNECTION(EndNetworkConnection);
 
 #define SEND_MESSAGE_TO_SERVER(name) TINKER_API int name()
 SEND_MESSAGE_TO_SERVER(SendMessageToServer);
+
+// ImGui to platform (Win32, etc) functions
+// TODO This is just going to be "technical debt" for now, we need a better defined platform layer for the game dll probably
+#define IMGUI_CREATE(name) TINKER_API void name(ImGuiContext* context)
+IMGUI_CREATE(ImguiCreate);
+
+#define IMGUI_NEW_FRAME(name) TINKER_API void name()
+IMGUI_NEW_FRAME(ImguiNewFrame);
+
+#define IMGUI_DESTROY(name) TINKER_API void name()
+IMGUI_DESTROY(ImguiDestroy);
+//
 
 namespace Keycode
 {

@@ -8,14 +8,12 @@
 #include "ShaderCompiler/ShaderCompiler.h"
 #include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
-#include "CoreDebugUI.h"
+
+#include "backends/imgui_impl_win32.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <Windowsx.h>
-
-#include "imgui.h"
-#include "backends/imgui_impl_win32.h"
 
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
@@ -231,6 +229,25 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
     {
         return 0;
     }
+}
+
+IMGUI_CREATE(ImguiCreate)
+{
+    TINKER_ASSERT(g_windowHandle);
+    TINKER_ASSERT(context);
+
+    ImGui::SetCurrentContext(context);
+    ImGui_ImplWin32_Init(g_windowHandle);
+}
+
+IMGUI_NEW_FRAME(ImguiNewFrame)
+{
+    ImGui_ImplWin32_NewFrame();
+}
+
+IMGUI_DESTROY(ImguiDestroy)
+{
+    ImGui_ImplWin32_Shutdown();
 }
 
 }
@@ -629,11 +646,6 @@ wWinMain(HINSTANCE hInstance,
         g_inputStateDeltas = {};
         g_cursorLocked = true;
         ShowCursor(FALSE);
-
-        // ImGui startup
-        ImGui::CreateContext();
-        ImGui_ImplWin32_Init(g_windowHandle);
-        Tk::Core::DebugUI::Init(&g_graphicsCommandStream);
     }
 
     // Main loop
@@ -666,10 +678,6 @@ wWinMain(HINSTANCE hInstance,
 
             if (shouldRenderFrame)
             {
-                ImGui_ImplWin32_NewFrame();
-                ImGui::NewFrame();
-                Tk::Core::DebugUI::UI_RenderPassStats();
-
                 {
                     //TIMED_SCOPED_BLOCK("Game Update");
 
@@ -682,13 +690,10 @@ wWinMain(HINSTANCE hInstance,
                     }
                 }
 
-                ImGui::Render();
-
                 // Process command stream
                 {
                     //TIMED_SCOPED_BLOCK("Graphics command stream processing");
                     Tk::Core::Graphics::BeginFrameRecording();
-                    Tk::Core::DebugUI::Render(&g_graphicsCommandStream);
                     Tk::Core::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
                     Tk::Core::Graphics::EndFrameRecording();
                     Tk::Core::Graphics::SubmitFrameToGPU();
@@ -716,10 +721,6 @@ wWinMain(HINSTANCE hInstance,
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     ThreadPool::Shutdown();
     #endif
-
-    Tk::Core::DebugUI::Shutdown();
-    ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
 
     Tk::Core::Graphics::ShaderManager::Shutdown();
     Tk::Core::Graphics::DestroyContext();

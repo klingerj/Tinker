@@ -12,6 +12,7 @@
 #include "View.h"
 #include "Scene.h"
 #include "InputManager.h"
+#include "DebugUI.h"
 
 #include <string.h>
 
@@ -217,6 +218,9 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
+    // Debug UI
+    DebugUI::Init(graphicsCommandStream);
+
     // Camera controls
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eW, GameCameraPanForwardCallback);
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eA, GameCameraPanLeftCallback);
@@ -285,6 +289,9 @@ GAME_UPDATE(GameUpdate)
         }
         isGameInitted = true;
     }
+
+    // Start frame
+    DebugUI::NewFrame();
 
     UpdateAxisVectors(&g_gameCamera);
 
@@ -391,6 +398,9 @@ GAME_UPDATE(GameUpdate)
 
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
+
+    // Debug UI render
+    DebugUI::Render(graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
 
     // FINAL BLIT TO SCREEN
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
@@ -506,6 +516,8 @@ GAME_DESTROY(GameDestroy)
 {
     if (isGameInitted)
     {
+        DebugUI::Shutdown();
+
         DestroyWindowResizeDependentResources();
         DestroyDescriptors();
 
