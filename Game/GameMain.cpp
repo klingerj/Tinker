@@ -12,6 +12,7 @@
 #include "View.h"
 #include "Scene.h"
 #include "InputManager.h"
+#include "DebugUI.h"
 
 #include <string.h>
 
@@ -140,7 +141,7 @@ static void WriteSwapChainBlitResources()
     Graphics::DescriptorSetDataHandles blitHandles = {};
     blitHandles.InitInvalid();
     blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    Graphics::WriteDescriptor(Graphics::SHADER_ID_SWAP_CHAIN_BLIT, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
@@ -213,9 +214,18 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
 }
 
+INPUT_CALLBACK(ToggleImGuiDisplay)
+{
+    DebugUI::ToggleEnable();
+}
+
 static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
+
+    // Debug UI
+    DebugUI::Init(graphicsCommandStream);
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF1, ToggleImGuiDisplay); // Toggle with hotkey - TODO: move to tilde with ctrl?
 
     // Camera controls
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eW, GameCameraPanForwardCallback);
@@ -285,6 +295,9 @@ GAME_UPDATE(GameUpdate)
         }
         isGameInitted = true;
     }
+
+    // Start frame
+    DebugUI::NewFrame();
 
     UpdateAxisVectors(&g_gameCamera);
 
@@ -380,17 +393,21 @@ GAME_UPDATE(GameUpdate)
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
         StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
         EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
 
         StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, descriptors);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
 
         UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn, graphicsCommandStream);
+        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, graphicsCommandStream);
 
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
     }
+
+    // Imgui menus
+    DebugUI::UI_RenderPassStats();
+    DebugUI::Render(graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
 
     // FINAL BLIT TO SCREEN
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
@@ -423,14 +440,25 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
+    command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
+    command->debugLabel = "Set render pass scissor state";
+    command->m_scissorOffsetX = 0;
+    command->m_scissorOffsetY = 0;
+    command->m_scissorWidth = windowWidth;
+    command->m_scissorHeight = windowHeight;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
+
     command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_numInstances = 1;
+    command->m_vertOffset = 0;
+    command->m_indexOffset = 0;
     command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
     command->m_shader = Graphics::SHADER_ID_SWAP_CHAIN_BLIT;
     command->m_blendState = Graphics::BlendState::eReplace;
-    command->m_depthState = Graphics::DepthState::eOff;
+    command->m_depthState = Graphics::DepthState::eOff_NoCull;
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
         command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
@@ -441,6 +469,7 @@ GAME_UPDATE(GameUpdate)
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
+    command->debugLabel = "End blit to screen render pass";
     ++graphicsCommandStream->m_numCommands;
     ++command;
 
@@ -494,6 +523,8 @@ GAME_DESTROY(GameDestroy)
 {
     if (isGameInitted)
     {
+        DebugUI::Shutdown();
+
         DestroyWindowResizeDependentResources();
         DestroyDescriptors();
 

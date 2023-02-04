@@ -99,8 +99,6 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
     }
     else
     {
-        // Track number of instances for proper indexing into uniform buffer of instance data
-        uint32 instanceCount = 0;
         uint32 currentShaderID = SHADER_ID_MAX;
         uint32 currentBlendState = BlendState::eMax;
         uint32 currentDepthState = DepthState::eMax;
@@ -115,27 +113,20 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
             {
                 case GraphicsCmd::eDrawCall:
                 {
-                    #ifdef VULKAN
-                    currentShaderID   = currentCmd.m_shader;
+                    currentShaderID = currentCmd.m_shader;
                     currentBlendState = currentCmd.m_blendState;
                     currentDepthState = currentCmd.m_depthState;
+
+                    #ifdef VULKAN
 
                     Graphics::VulkanRecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState,
                         &currentCmd.m_descriptors[0], immediateSubmit);
 
-                    // Push constant
-                    {
-                        uint32 data[4] = {};
-                        data[0] = instanceCount;
-                        Graphics::VulkanRecordCommandPushConstant((uint8*)data, sizeof(uint32) * 4, currentShaderID, currentBlendState, currentDepthState);
-                    }
-
                     Graphics::VulkanRecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
-                        currentCmd.m_numInstances, currentCmd.debugLabel, immediateSubmit);
+                        currentCmd.m_numInstances, currentCmd.m_vertOffset, currentCmd.m_indexOffset,
+                        currentCmd.debugLabel, immediateSubmit);
 
                     #endif
-
-                    instanceCount += currentCmd.m_numInstances;
                     break;
                 }
 
@@ -149,9 +140,26 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
+                case GraphicsCmd::ePushConstant:
+                {
+                    #ifdef VULKAN
+                    Graphics::VulkanRecordCommandPushConstant(&currentCmd.m_pushConstantData[0], ARRAYCOUNT(currentCmd.m_pushConstantData) * sizeof(uint8), currentCmd.m_shaderForLayout);
+                    #endif
+
+                    break;
+                }
+
+                case GraphicsCmd::eSetScissor:
+                {
+                    #ifdef VULKAN
+                    Graphics::VulkanRecordCommandSetScissor(currentCmd.m_scissorOffsetX, currentCmd.m_scissorOffsetY, currentCmd.m_scissorWidth, currentCmd.m_scissorHeight);
+                    #endif
+
+                    break;
+                }
+
                 case GraphicsCmd::eRenderPassBegin:
                 {
-                    instanceCount = 0;
                     #ifdef VULKAN
                     Graphics::VulkanRecordCommandRenderPassBegin(currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
                         currentCmd.m_renderWidth, currentCmd.m_renderHeight,

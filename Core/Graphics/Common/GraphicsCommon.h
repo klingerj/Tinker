@@ -68,9 +68,10 @@ namespace DepthState
 {
      enum : uint32
      {
-         eOff = 0,
-         eTestOnWriteOn,
-         eTestOnWriteOff,
+         eOff_CCW = 0,
+         eOff_NoCull,
+         eTestOnWriteOn_CCW,
+         eTestOnWriteOff_CCW,
          eMax
      };   
 }
@@ -108,6 +109,8 @@ namespace GraphicsCmd
     {
         eDrawCall = 0,
         eMemTransfer,
+        ePushConstant,
+        eSetScissor,
         eRenderPassBegin,
         eRenderPassEnd,
         eLayoutTransition,
@@ -293,6 +296,8 @@ typedef struct descriptor_set_data_handles
 #define DEPTH_OP DepthCompareOp::eGeOrEqual
 #endif
 
+#define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
+
 typedef struct graphics_command
 {
     const char* debugLabel = "Default Label";
@@ -305,10 +310,12 @@ typedef struct graphics_command
         {
             uint32 m_numIndices;
             uint32 m_numInstances;
-            ResourceHandle m_indexBufferHandle;
+            uint32 m_vertOffset;
+            uint32 m_indexOffset;
             uint32 m_shader;
             uint32 m_blendState;
             uint32 m_depthState;
+            ResourceHandle m_indexBufferHandle;
             DescriptorHandle m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         };
 
@@ -318,6 +325,23 @@ typedef struct graphics_command
             uint32 m_sizeInBytes;
             ResourceHandle m_srcBufferHandle;
             ResourceHandle m_dstBufferHandle;
+        };
+
+        // Push constant
+        struct
+        {
+            uint32 m_shaderForLayout;
+            // TODO: more data here makes this struct bigger, maybe store a pointer?
+            uint8 m_pushConstantData[32];
+        };
+
+        // Scissor
+        struct
+        {
+            int32 m_scissorOffsetX;
+            int32 m_scissorOffsetY;
+            uint32 m_scissorWidth;
+            uint32 m_scissorHeight;
         };
 
         // Begin render pass
@@ -373,6 +397,7 @@ struct GraphicsCommandStream
 
 
 // TODO: move all this, and also autogenerate this eventually?
+// TODO: don't use them as uint32's 
 // IDs must be uniquely named and have their id ascend monotonically from 0
 enum
 {
@@ -382,12 +407,15 @@ enum
     DESCLAYOUT_ID_ASSET_INSTANCE,
     DESCLAYOUT_ID_ASSET_VBS,
     DESCLAYOUT_ID_POSONLY_VBS,
+    DESCLAYOUT_ID_IMGUI_VBS,
+    DESCLAYOUT_ID_IMGUI_TEX,
     DESCLAYOUT_ID_MAX,
 };
 
 enum
 {
     SHADER_ID_SWAP_CHAIN_BLIT = 0,
+    SHADER_ID_IMGUI_DEBUGUI,
     SHADER_ID_BASIC_ZPrepass,
     SHADER_ID_BASIC_MainView,
     SHADER_ID_ANIMATEDPOLY_MainView,

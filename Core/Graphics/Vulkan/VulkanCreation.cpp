@@ -300,29 +300,17 @@ bool VulkanCreateGraphicsPipeline(
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = { viewportWidth, viewportHeight };
+    //VkRect2D scissor = {};
+    //scissor.offset = { 0, 0 };
+    //scissor.extent = { viewportWidth, viewportHeight };
 
     VkPipelineViewportStateCreateInfo viewportState = {};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
     viewportState.pViewports = &viewport;
-    viewportState.scissorCount = 1;
-    viewportState.pScissors = &scissor;
-
-    VkPipelineRasterizationStateCreateInfo rasterizer = {};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
-    rasterizer.depthBiasConstantFactor = 0.0f;
-    rasterizer.depthBiasClamp = 0.0f;
-    rasterizer.depthBiasSlopeFactor = 0.0f;
+    viewportState.scissorCount = 1; // Must be set dynamically
+    viewportState.pScissors = nullptr;
+    //viewportState.pScissors = &scissor;
 
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -342,11 +330,10 @@ bool VulkanCreateGraphicsPipeline(
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
 
-    const uint32 numDynamicStates = 2;
+    const uint32 numDynamicStates = 1;
     VkDynamicState dynamicStates[numDynamicStates] =
     {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_LINE_WIDTH
+        VK_DYNAMIC_STATE_SCISSOR,
     };
 
     VkPipelineDynamicStateCreateInfo dynamicState = {};
@@ -370,8 +357,7 @@ bool VulkanCreateGraphicsPipeline(
     VkPushConstantRange pushConstantRange = {};
     pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstantRange.offset = 0;
-    pushConstantRange.size = sizeof(uint32) * 4;
-    // TODO: use maximum available size, or get the size as a parameter
+    pushConstantRange.size = MIN_PUSH_CONSTANTS_SIZE;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -398,7 +384,7 @@ bool VulkanCreateGraphicsPipeline(
         {
             VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
 
-            VkPipelineDepthStencilStateCreateInfo depthStencilState = GetVkDepthState(depthState);
+            DepthCullState depthCullState = GetVkDepthCullState(depthState);
             VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
             if (numColorRTs == 0)
@@ -425,6 +411,19 @@ bool VulkanCreateGraphicsPipeline(
             pipelineRenderingCreateInfo.depthAttachmentFormat = GetVkImageFormat(depthFormat);
             pipelineRenderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
+            VkPipelineRasterizationStateCreateInfo rasterizer = {};
+            rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+            rasterizer.depthClampEnable = VK_FALSE;
+            rasterizer.rasterizerDiscardEnable = VK_FALSE;
+            rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+            rasterizer.lineWidth = 1.0f;
+            rasterizer.cullMode = depthCullState.cullMode;
+            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+            rasterizer.depthBiasEnable = VK_FALSE;
+            rasterizer.depthBiasConstantFactor = 0.0f;
+            rasterizer.depthBiasClamp = 0.0f;
+            rasterizer.depthBiasSlopeFactor = 0.0f;
+
             VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
             pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
             pipelineCreateInfo.pNext = &pipelineRenderingCreateInfo; // for dynamic rendering
@@ -435,9 +434,9 @@ bool VulkanCreateGraphicsPipeline(
             pipelineCreateInfo.pViewportState = &viewportState;
             pipelineCreateInfo.pRasterizationState = &rasterizer;
             pipelineCreateInfo.pMultisampleState = &multisampling;
-            pipelineCreateInfo.pDepthStencilState = &depthStencilState;
+            pipelineCreateInfo.pDepthStencilState = &depthCullState.depthState;
             pipelineCreateInfo.pColorBlendState = &colorBlending;
-            pipelineCreateInfo.pDynamicState = nullptr;
+            pipelineCreateInfo.pDynamicState = &dynamicState;
             pipelineCreateInfo.layout = pipelineLayout;
             pipelineCreateInfo.renderPass = VK_NULL_HANDLE; // for dynamic rendering
             pipelineCreateInfo.subpass = 0;
@@ -470,18 +469,22 @@ void DestroyPSOPerms(uint32 shaderID)
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
     VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
-    vkDestroyPipelineLayout(g_vulkanContextResources.device, pipelineLayout, nullptr);
-    pipelineLayout = VK_NULL_HANDLE;
-
-    for (uint32 bs = 0; bs < VulkanContextResources::eMaxBlendStates; ++bs)
+    if (pipelineLayout != VK_NULL_HANDLE)
     {
-        for (uint32 ds = 0; ds < VulkanContextResources::eMaxDepthStates; ++ds)
+        vkDestroyPipelineLayout(g_vulkanContextResources.device, pipelineLayout, nullptr);
+        pipelineLayout = VK_NULL_HANDLE;
+    }
+
+    for (uint32 uiblendState = 0; uiblendState < VulkanContextResources::eMaxBlendStates; ++uiblendState)
+    {
+        for (uint32 uiDepthState = 0; uiDepthState < VulkanContextResources::eMaxDepthStates; ++uiDepthState)
         {
-            VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][bs][ds];
-
-            vkDestroyPipeline(g_vulkanContextResources.device, graphicsPipeline, nullptr);
-
-            graphicsPipeline = VK_NULL_HANDLE;
+            VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][uiblendState][uiDepthState];
+            if (graphicsPipeline != VK_NULL_HANDLE)
+            {
+                vkDestroyPipeline(g_vulkanContextResources.device, graphicsPipeline, nullptr);
+                graphicsPipeline = VK_NULL_HANDLE;
+            }
         }
     }
 }
@@ -490,27 +493,9 @@ void VulkanDestroyAllPSOPerms()
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
-    for (uint32 sid = 0; sid < VulkanContextResources::eMaxShaders; ++sid)
+    for (uint32 shaderID = 0; shaderID < VulkanContextResources::eMaxShaders; ++shaderID)
     {
-        VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[sid];
-        if (pipelineLayout != VK_NULL_HANDLE)
-        {
-            vkDestroyPipelineLayout(g_vulkanContextResources.device, pipelineLayout, nullptr);
-            pipelineLayout = VK_NULL_HANDLE;
-        }
-
-        for (uint32 bs = 0; bs < VulkanContextResources::eMaxBlendStates; ++bs)
-        {
-            for (uint32 ds = 0; ds < VulkanContextResources::eMaxDepthStates; ++ds)
-            {
-                VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[sid][bs][ds];
-                if (graphicsPipeline != VK_NULL_HANDLE)
-                {
-                    vkDestroyPipeline(g_vulkanContextResources.device, graphicsPipeline, nullptr);
-                    graphicsPipeline = VK_NULL_HANDLE;
-                }
-            }
-        }
+        DestroyPSOPerms(shaderID);
     }
 }
 
@@ -525,12 +510,20 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
     uint32 isMultiBufferedResource = IsBufferUsageMultiBuffered(bufferUsage);
     const uint32 NumCopies = isMultiBufferedResource ? VULKAN_MAX_FRAMES_IN_FLIGHT : 1u;
 
+    const VkBufferUsageFlags usageFlags = GetVkBufferUsageFlags(bufferUsage);
+    const VkMemoryPropertyFlags propertyFlags = GetVkMemoryPropertyFlags(bufferUsage);
+
+    // Pick the correct gpu memory allocator
+    // TODO: this will change once the user can create allocators via the graphics layer
+    uint32 AllocatorIndex = 0xFFFFFFFF;
+    if (propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+        AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers;
+    else
+        AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers;
+
     for (uint32 uiBuf = 0; uiBuf < NumCopies; ++uiBuf)
     {
         VulkanMemResource* newResource = &newResourceChain->resourceChain[uiBuf];
-
-        VkBufferUsageFlags usageFlags = GetVkBufferUsageFlags(bufferUsage);
-        VkMemoryPropertyFlags propertyFlags = GetVkMemoryPropertyFlags(bufferUsage);
 
         VkBufferCreateInfo bufferCreateInfo = {};
         bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -544,14 +537,6 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
             Core::Utility::LogMsg("Platform", "Failed to create buffer!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
-
-        // Pick the correct gpu memory allocator
-        // TODO: this will change once the user can create allocators via the graphics layer
-        uint32 AllocatorIndex = 0xFFFFFFFF;
-        if (propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-            AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers;
-        else
-            AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers;
 
         VkMemoryRequirements memRequirements = {};
         vkGetBufferMemoryRequirements(g_vulkanContextResources.device, newResource->buffer, &memRequirements);
@@ -578,107 +563,103 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
 
-    // TODO: don't duplicate images per frame in flight
-    // need to change this in other places as well
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    // Images not duplicated per frame in flight
+    VulkanMemResource* newResource = &newResourceChain->resourceChain[0];
+
+    // Create image
+    VkImageCreateInfo imageCreateInfo = {};
+    imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreateInfo.extent.width = width;
+    imageCreateInfo.extent.height = height;
+    imageCreateInfo.extent.depth = 1;
+    imageCreateInfo.mipLevels = 1;
+    imageCreateInfo.arrayLayers = numArrayEles;
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageCreateInfo.format = GetVkImageFormat(imageFormat);
+    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    
+    // TODO: collapse this switch into an array of data
+    switch (imageFormat)
     {
-        VulkanMemResource* newResource = &newResourceChain->resourceChain[uiImage];
-
-        // Create image
-        VkImageCreateInfo imageCreateInfo = {};
-        imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageCreateInfo.extent.width = width;
-        imageCreateInfo.extent.height = height;
-        imageCreateInfo.extent.depth = 1;
-        imageCreateInfo.mipLevels = 1;
-        imageCreateInfo.arrayLayers = numArrayEles;
-        imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageCreateInfo.format = GetVkImageFormat(imageFormat);
-        imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        
-        // TODO: collapse this switch into an array of data
-        switch (imageFormat)
+        case ImageFormat::BGRA8_SRGB:
+        case ImageFormat::RGBA8_SRGB:
         {
-            case ImageFormat::BGRA8_SRGB:
-            case ImageFormat::RGBA8_SRGB:
-            {
-                imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
-                break;
-            }
-
-            case ImageFormat::Depth_32F:
-            {
-                imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-                break;
-            }
-
-            case ImageFormat::Invalid:
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                break;
-            }
+            imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
+            break;
         }
 
-        VkResult result = vkCreateImage(g_vulkanContextResources.device, &imageCreateInfo, nullptr, &newResource->image);
-        if (result != VK_SUCCESS)
+        case ImageFormat::Depth_32F:
         {
-            Core::Utility::LogMsg("Platform", "Failed to create image!", Core::Utility::LogSeverity::eCritical);
+            imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            break;
+        }
+
+        case ImageFormat::Invalid:
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
+            break;
         }
-
-        // Pick the correct gpu memory allocator
-        // TODO: this will change once the user can create allocators via the graphics layer
-        const uint32 AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages;
-        VkMemoryRequirements memRequirements = {};
-        vkGetImageMemoryRequirements(g_vulkanContextResources.device, newResource->image, &memRequirements);
-
-        VulkanMemAlloc newAlloc = g_vulkanContextResources.GPUMemAllocators[AllocatorIndex].Alloc(memRequirements);
-        result = vkBindImageMemory(g_vulkanContextResources.device, newResource->image, newAlloc.allocMem, newAlloc.allocOffset);
-        if (result != VK_SUCCESS)
-        {
-            Core::Utility::LogMsg("Platform", "Failed to bind image memory!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-        }
-
-        DbgSetImageObjectName((uint64)newResource->image, debugLabel);
-
-        // Create image view
-        VkImageAspectFlags aspectMask = {};
-        // TODO: collapse this switch into an array of data
-        switch (imageFormat)
-        {
-            case ImageFormat::BGRA8_SRGB:
-            case ImageFormat::RGBA8_SRGB:
-            {
-                aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
-                break;
-            }
-
-            case ImageFormat::Depth_32F:
-            {
-                aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-                break;
-            }
-
-            case ImageFormat::Invalid:
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                break;
-            }
-        }
-
-        CreateImageView(g_vulkanContextResources.device,
-            GetVkImageFormat(imageFormat),
-            aspectMask,
-            newResource->image,
-            &newResource->imageView,
-            numArrayEles);
     }
+
+    VkResult result = vkCreateImage(g_vulkanContextResources.device, &imageCreateInfo, nullptr, &newResource->image);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create image!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    // Pick the correct gpu memory allocator
+    // TODO: this will change once the user can create allocators via the graphics layer
+    const uint32 AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages;
+    VkMemoryRequirements memRequirements = {};
+    vkGetImageMemoryRequirements(g_vulkanContextResources.device, newResource->image, &memRequirements);
+
+    VulkanMemAlloc newAlloc = g_vulkanContextResources.GPUMemAllocators[AllocatorIndex].Alloc(memRequirements);
+    result = vkBindImageMemory(g_vulkanContextResources.device, newResource->image, newAlloc.allocMem, newAlloc.allocOffset);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to bind image memory!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    DbgSetImageObjectName((uint64)newResource->image, debugLabel);
+
+    // Create image view
+    VkImageAspectFlags aspectMask = {};
+    // TODO: collapse this switch into an array of data
+    switch (imageFormat)
+    {
+        case ImageFormat::BGRA8_SRGB:
+        case ImageFormat::RGBA8_SRGB:
+        {
+            aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
+            break;
+        }
+
+        case ImageFormat::Depth_32F:
+        {
+            aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            break;
+        }
+
+        case ImageFormat::Invalid:
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+            break;
+        }
+    }
+
+    CreateImageView(g_vulkanContextResources.device,
+        GetVkImageFormat(imageFormat),
+        aspectMask,
+        newResource->image,
+        &newResource->imageView,
+        numArrayEles);
 
     return ResourceHandle(newResourceHandle);
 }

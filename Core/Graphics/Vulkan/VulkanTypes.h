@@ -182,7 +182,14 @@ VkResult CreateImage(VkImageCreateFlags flags, VkImageType imageType, VkFormat f
 
 void InitVulkanDataTypesPerEnum();
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState);
-const VkPipelineDepthStencilStateCreateInfo& GetVkDepthState(uint32 gameDepthState);
+
+typedef struct
+{
+    VkPipelineDepthStencilStateCreateInfo depthState;
+    VkCullModeFlags cullMode;
+} DepthCullState;
+const DepthCullState& GetVkDepthCullState(uint32 gameDepthCullState);
+
 const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout);
 const VkFormat& GetVkImageFormat(uint32 gameImageFormat);
 const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType);

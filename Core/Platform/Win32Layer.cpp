@@ -9,6 +9,8 @@
 #include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
 
+#include "backends/imgui_impl_win32.h"
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <Windowsx.h>
@@ -16,7 +18,7 @@
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
 #ifndef TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX
-#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX 512
+#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
 #endif
 #ifndef TINKER_PLATFORM_HOTLOAD_FILENAME
 #define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
@@ -229,6 +231,27 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
     }
 }
 
+IMGUI_CREATE(ImguiCreate)
+{
+    TINKER_ASSERT(g_windowHandle);
+    TINKER_ASSERT(context);
+
+    ImGui::SetCurrentContext(context);
+    ImGui::SetAllocatorFunctions(mallocWrapper, freeWrapper);
+
+    ImGui_ImplWin32_Init(g_windowHandle);
+}
+
+IMGUI_NEW_FRAME(ImguiNewFrame)
+{
+    ImGui_ImplWin32_NewFrame();
+}
+
+IMGUI_DESTROY(ImguiDestroy)
+{
+    ImGui_ImplWin32_Shutdown();
+}
+
 }
 }
 
@@ -282,6 +305,12 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
         case 'D':
         {
             gameKeyCode = Keycode::eD;
+            break;
+        }
+
+        case VK_F1:
+        {
+            gameKeyCode = Keycode::eF1;
             break;
         }
 
@@ -382,6 +411,7 @@ static void HandleMouseInput(uint32 mouseCode, int displacement)
     g_inputStateDeltas.mouseCodes[mouseCode].displacement = pxDisp;
 }
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND hwnd,
     UINT uMsg,
     WPARAM wParam,
@@ -390,6 +420,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     using namespace Tk;
     using namespace Platform;
     
+    // Window messages for Imgui
+    if (!g_cursorLocked && ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+    {
+        return 1;
+    }
+
     LRESULT result = 0;
 
     switch (uMsg)
@@ -509,7 +545,18 @@ static void ProcessWindowMessages()
                 case WM_KEYUP:
                 case WM_KEYDOWN:
                 {
-                    HandleKeypressInput((uint32)msg.wParam, (uint64)msg.lParam);
+                    // Still send keypress messages to the window proc fn
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+
+                    if (ImGui::GetCurrentContext())
+                    {
+                        ImGuiIO& io = ImGui::GetIO();
+                        if (!io.WantCaptureKeyboard)
+                        {
+                            HandleKeypressInput((uint32)msg.wParam, (uint64)msg.lParam);
+                        }
+                    }
                     break;
                 }
 
@@ -543,8 +590,8 @@ wWinMain(HINSTANCE hInstance,
 
         // TODO: load from settings file
         g_GlobalAppParams = {};
-        g_GlobalAppParams.m_windowWidth = 800;
-        g_GlobalAppParams.m_windowHeight = 600;
+        g_GlobalAppParams.m_windowWidth = 1920;
+        g_GlobalAppParams.m_windowHeight = 1080;
 
         // Get system info
         g_SystemInfo = {};

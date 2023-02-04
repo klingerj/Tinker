@@ -94,10 +94,6 @@ rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
 set CompileDefines=/DASSERTS_ENABLE=1 /D_SHADERS_SRC_DIR=%AbsolutePathPrefix%\\..\\Shaders\\hlsl\\ /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\
 
-if %GraphicsAPIChosen% == "VK" (
-    set CompileDefines=!CompileDefines! /DVULKAN 
-)
-
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsSC=/FdTinkerSC.pdb
     set DebugLinkFlagsSC=/pdb:TinkerSC.pdb /NATVIS:../Utils/Natvis/Tinker.natvis

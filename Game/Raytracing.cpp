@@ -140,7 +140,11 @@ void RaytraceTest()
     // Output image
     Buffer imgBuffer = {};
     Tk::Core::Asset::SaveBMP(&imgBuffer, (uint8*)img, width, height, 32);
-    Tk::Platform::WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", (uint32)imgBuffer.m_sizeInBytes, imgBuffer.m_data);
+    uint32 fileErr = Tk::Platform::WriteEntireFile("..\\Output\\TestImages\\raytraceOutput.bmp", (uint32)imgBuffer.m_sizeInBytes, imgBuffer.m_data);
+    if (fileErr)
+    {
+        Tk::Core::Utility::LogMsg("Platform", "Failed to write raytracing test output image!", Tk::Core::Utility::LogSeverity::eWarning);
+    }
     imgBuffer.Dealloc();
     Tk::Core::CoreFree(img);
 
