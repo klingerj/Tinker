@@ -21,6 +21,13 @@ static Tk::Core::Graphics::ResourceHandle fontTexture = Tk::Core::Graphics::Defa
 static Tk::Core::Graphics::DescriptorHandle vbDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
 static Tk::Core::Graphics::DescriptorHandle texDesc = Tk::Core::Graphics::DefaultDescHandle_Invalid;
 
+static bool g_enable = false;
+
+void ToggleEnable()
+{
+    g_enable = !g_enable;
+}
+
 void* ImGuiMemWrapper_Malloc(size_t sz, void* user_data)
 {
     (void)user_data;
@@ -37,11 +44,16 @@ void Init(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // ImGui startup
     ImGui::CreateContext();
-    Tk::Platform::ImguiCreate(ImGui::GetCurrentContext(), ImGuiMemWrapper_Malloc, ImGuiMemWrapper_Free);
 
     ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigDockingWithShift = true;
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // TODO: support this
+
     io.BackendRendererName = "Tinker Graphics";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+    
+    Tk::Platform::ImguiCreate(ImGui::GetCurrentContext(), ImGuiMemWrapper_Malloc, ImGuiMemWrapper_Free);
 
     // Vertex buffers
     {
@@ -184,6 +196,15 @@ void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk
 {
     ImGui::Render();
 
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // TODO: support this
+    /*if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }*/
+
     Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
     ImDrawData* drawData = ImGui::GetDrawData();
@@ -323,7 +344,10 @@ void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk
 
 void UI_RenderPassStats()
 {
-    ImGui::ShowDemoWindow();
+    if (g_enable)
+    {
+        ImGui::ShowDemoWindow();
+    }
 
     /*const char* names[3] = { "ZPrepass", "MainView", "PostGraph" };
     float timings[3] = { 0.012f, 0.53f, 1.7f };

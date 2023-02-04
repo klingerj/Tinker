@@ -214,12 +214,18 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
 }
 
+INPUT_CALLBACK(ToggleImGuiDisplay)
+{
+    DebugUI::ToggleEnable();
+}
+
 static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
     // Debug UI
     DebugUI::Init(graphicsCommandStream);
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF1, ToggleImGuiDisplay); // Toggle with hotkey - TODO: move to tilde with ctrl?
 
     // Camera controls
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eW, GameCameraPanForwardCallback);
