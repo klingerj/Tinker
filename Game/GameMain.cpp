@@ -14,6 +14,23 @@
 #include "InputManager.h"
 #include "DebugUI.h"
 
+// Unity style build
+#include "GraphicsTypes.cpp"
+#include "AssetManager.cpp"
+#include "RenderPass.cpp"
+#include "Raytracing.cpp"
+#include "View.cpp"
+#include "Scene.cpp"
+#include "Camera.cpp"
+#include "InputManager.cpp"
+#include "DebugUI.cpp"
+#include "imgui.cpp"
+#include "imgui_demo.cpp"
+#include "imgui_draw.cpp"
+#include "imgui_tables.cpp"
+#include "imgui_widgets.cpp"
+//
+
 #include <string.h>
 
 using namespace Tk;
