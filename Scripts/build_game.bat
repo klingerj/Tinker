@@ -57,20 +57,6 @@ set AbsolutePathPrefix=%cd%
 
 set SourceListGame= 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GameMain.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GraphicsTypes.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/AssetManager.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPass.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Raytracing.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/View.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Scene.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Camera.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../DebugUI/DebugUI.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
-rem set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
