@@ -8,10 +8,10 @@ Currently, the project renders a few instanced models with a Z prepass (fairly b
 Output from the SPIR-V virtual machine, evaluating a very simple Lambertian shader:  
 ![](Output/TestImages/spirv_output.bmp)
 
-Early in the project, I added very simple software raytracing to try to match the hardware rasterized output of the game: 
+<!--- Early in the project, I added very simple software raytracing to try to match the hardware rasterized output of the game: 
 Raytraced | Rasterized  
 :--------:|:----------:  
-![](Output/TestImages/raytraceOutput.bmp) | ![](Output/TestImages/rasterRef.bmp)
+![](Output/TestImages/raytraceOutput.bmp) | ![](Output/TestImages/rasterRef.bmp) --->
 
 ### Platforms supported currently:
 * Windows 10 / x86
