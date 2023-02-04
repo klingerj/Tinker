@@ -66,6 +66,7 @@ Raytraced | Rasterized
   * tested to evaluate some simple SPIR-V shaders, may become part of a full software renderer one day
 * Compile- and run-time string hashing using Murmur
 * Simple CPU-side raytracing, very minimal/unoptimized
+* ImGui debug UI
 
 ### Roadmap of future features:
 * Compute shader support
@@ -74,7 +75,6 @@ Raytraced | Rasterized
 * DirectX12 graphics backend
 * PBR shaders
 * Post processing
-* IMGUI debug ui
 * Asset streaming
 * Virtualized textures
 * Async graph execution structure
@@ -102,6 +102,12 @@ You can find more detailed info on the various build projects [here](Scripts/REA
 
 ### Graphics API backends supported currently:
 * Vulkan
+
+### Code dependencies
+* [DirectXShaderCompiler (DXC), LLVM license](https://github.com/microsoft/DirectXShaderCompiler)
+* [Murmur Hash 3, MIT license](https://github.com/aappleby/smhasher)
+  * Also referenced [this gist](https://gist.github.com/oteguro/10538695) when implementing compile-time hashing with murmur
+* [Imgui - docking branch, MIT license](https://github.com/ocornut/imgui)
 
 ### Assets used:  
 * [CGTrader - Fire Elemental by inalaatzu](https://www.cgtrader.com/free-3d-models/character/fantasy/fire-elemental-29c02a51-2d44-4c4b-9e73-fc5899cd690d)  
