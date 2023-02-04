@@ -210,8 +210,8 @@ void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk
     ImDrawData* drawData = ImGui::GetDrawData();
     if (!drawData->Valid)
     {
-        TINKER_ASSERT(0);
-        // TODO: log
+        // Well, this should never happen
+        TINKER_ASSERT(0 && "Invalid imgui draw data");
         return;
     }
 
@@ -224,7 +224,7 @@ void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk
         const uint32 fbHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
 
         command->m_commandType = Tk::Core::Graphics::GraphicsCmd::eRenderPassBegin;
-        command->debugLabel = "Begin Imgui render pass";
+        command->debugLabel = "Imgui render pass";
         command->m_numColorRTs = 1;
         command->m_colorRTs[0] = renderTarget;
         command->m_depthRT = Tk::Core::Graphics::DefaultResHandle_Invalid;
@@ -344,10 +344,12 @@ void Render(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk
 
 void UI_RenderPassStats()
 {
-    if (g_enable)
+    if (!g_enable)
     {
-        ImGui::ShowDemoWindow();
+        return;
     }
+
+    ImGui::ShowDemoWindow();
 
     /*const char* names[3] = { "ZPrepass", "MainView", "PostGraph" };
     float timings[3] = { 0.012f, 0.53f, 1.7f };
