@@ -13,6 +13,11 @@ Raytraced | Rasterized
 :--------:|:----------:  
 ![](Output/TestImages/raytraceOutput.bmp) | ![](Output/TestImages/rasterRef.bmp)
 
+### Platforms supported currently:
+* Windows 10 / x86
+
+### Graphics API backends supported currently:
+* Vulkan
 
 ### Project hierarchy description
 * <code>Assets/</code> - art files to load
@@ -92,17 +97,6 @@ To Build:
 * In that shell window, run <code>ez-build_release.bat</code>. This will build every Tinker project.
 You should now be able to run the game via <code>run_game.bat</code>.  
 You can find more detailed info on the various build projects [here](Scripts/README.md).
-
-### Game Demo Controls:
-<code>Esc</code> - lock/unlock cursor  
-<code>WASD</code> - move camera  
-<code>Mouse</code> - look around  
-
-### Platforms supported currently:
-* Windows 10 / x86
-
-### Graphics API backends supported currently:
-* Vulkan
 
 ### Dependencies
 * [DirectXShaderCompiler (DXC), LLVM license](https://github.com/microsoft/DirectXShaderCompiler)
