@@ -2,7 +2,7 @@
 
 using namespace Tk;
 
-InputManager g_InputManager;
+InputManager g_InputManager = {};
 
 void InputManager::BindKeycodeCallback_KeyDown(uint32 keycode, input_callback_func callback)
 {

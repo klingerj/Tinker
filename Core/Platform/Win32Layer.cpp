@@ -308,6 +308,12 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
             break;
         }
 
+        case VK_F1:
+        {
+            gameKeyCode = Keycode::eF1;
+            break;
+        }
+
         case VK_F9:
         {
             gameKeyCode = Keycode::eF9;
@@ -539,7 +545,32 @@ static void ProcessWindowMessages()
                 case WM_KEYUP:
                 case WM_KEYDOWN:
                 {
-                    HandleKeypressInput((uint32)msg.wParam, (uint64)msg.lParam);
+                    // Still send keypress messages to the window proc fn
+                    TranslateMessage(&msg);
+                    DispatchMessage(&msg);
+
+                    if (ImGui::GetCurrentContext())
+                    {
+                        ImGuiIO& io = ImGui::GetIO();
+                        if (!io.WantCaptureKeyboard)
+                        {
+                            HandleKeypressInput((uint32)msg.wParam, (uint64)msg.lParam);
+                        }
+                    }
+                    break;
+                }
+
+                case WM_MOUSEMOVE:
+                {
+                    if (ImGui::GetCurrentContext())
+                    {
+                        ImGuiIO& io = ImGui::GetIO();
+                        if (!io.WantCaptureMouse)
+                        {
+                            TranslateMessage(&msg);
+                            DispatchMessage(&msg);
+                        }
+                    }
                     break;
                 }
 
