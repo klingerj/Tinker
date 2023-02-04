@@ -22,11 +22,28 @@ struct VSOutput
     [[vk::location(2)]] float4 Color    : COLOR;
 };
 
+float srgbToLinear(float srgb)
+{
+    if (srgb <= 0.04045)
+    {
+        return srgb / 12.92;
+    }
+    else
+    {
+        return pow((srgb + 0.055) / 1.055, 2.4);
+    }
+}
+
+float3 srgbToLinear(float3 srgb)
+{
+    return float3(srgbToLinear(srgb.r), srgbToLinear(srgb.g), srgbToLinear(srgb.b));
+}
+
 VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID)
 {
     float2 ModelPos = PositionData.Load(VertexIndex).xy;
     float2 FinalPos = ModelPos * PushConstants.Scale * 0.5;
-    FinalPos.y = 1 - FinalPos.y; // For Vulkan
+    FinalPos.y = 1 - FinalPos.y; // For Vulkan - TODO don't do this in shader, or just ifdef it and move on
     FinalPos *= 2.0;
     FinalPos += PushConstants.Translate;
 
@@ -43,6 +60,6 @@ VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID
     VSOutput Out;
     Out.Position = float4(FinalPos, 0, 1);
     Out.UV = UV;
-    Out.Color = pow(ColorUnpacked, 2.2);
+    Out.Color = float4(srgbToLinear(ColorUnpacked.rgb), ColorUnpacked.a);
     return Out;
 }
