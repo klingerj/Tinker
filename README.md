@@ -103,7 +103,7 @@ You can find more detailed info on the various build projects [here](Scripts/REA
 ### Graphics API backends supported currently:
 * Vulkan
 
-### Code dependencies
+### Dependencies
 * [DirectXShaderCompiler (DXC), LLVM license](https://github.com/microsoft/DirectXShaderCompiler)
 * [Murmur Hash 3, MIT license](https://github.com/aappleby/smhasher)
   * Also referenced [this gist](https://gist.github.com/oteguro/10538695) when implementing compile-time hashing with murmur
