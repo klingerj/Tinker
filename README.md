@@ -24,7 +24,8 @@ Raytraced | Rasterized
   * <code>Platform/</code> - platform/threading api layer as well as application main, e.g. Windows
   * <code>Raytracing/</code> - (WIP, not done!) minimal raytracing and octree code
   * <code>Utility/</code> - logging, mem alloc tracking, code block timing
-* <code>Game/</code> - all game code, builds as dll
+* <code>DebugUI/</code> - debug ui / imgui layer, builds with game dll
+* <code>Game/</code> - game code, builds as dll
 * <code>Output/</code> - dumping ground for output files, e.g. raytraced image
 * <code>SPIR-V-VM/</code> - (WIP, not done!) virtual machine for evaluating SPIR-V shaders, written in pure C
 * <code>Scripts/</code> - build scripts and some helpful project scripts
