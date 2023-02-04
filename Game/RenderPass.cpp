@@ -1,5 +1,4 @@
 #include "RenderPass.h"
-#include "AssetManager.h"
 
 #include <string.h>
 
