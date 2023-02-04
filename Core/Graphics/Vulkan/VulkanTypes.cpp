@@ -43,7 +43,6 @@ VulkanMemAlloc VulkanMemoryAllocator::Alloc(VkMemoryRequirements allocReqs)
 {
     uint64 allocSize = RoundValueToPow2(allocReqs.size, m_AllocGranularity);
 
-    //TODO: check/enforce that the alignment is a power of two?
     uint64 alignment = Max(m_AllocGranularity, allocReqs.alignment);
     TINKER_ASSERT(ISPOW2(alignment));
     uint64 nextAllocOffset = RoundValueToPow2(m_LastAllocOffset, alignment); // ensure alloc offset is aligned
@@ -162,7 +161,7 @@ void DbgEndMarker(VkCommandBuffer commandBuffer)
 
 // NOTE: Must correspond the enums in PlatformGameAPI.h
 static VkPipelineColorBlendAttachmentState   VulkanBlendStates     [BlendState::eMax]     = {};
-static VkPipelineDepthStencilStateCreateInfo VulkanDepthStates     [DepthState::eMax]     = {};
+static DepthCullState                        VulkanDepthStates     [DepthState::eMax]     = {};
 static VkImageLayout                         VulkanImageLayouts    [ImageLayout::eMax]    = {};
 static VkFormat                              VulkanImageFormats    [ImageFormat::eMax]    = {};
 static VkDescriptorType                      VulkanDescriptorTypes [DescriptorType::eMax] = {};
@@ -202,15 +201,20 @@ void InitVulkanDataTypesPerEnum()
     depthStencilState.stencilTestEnable = VK_FALSE;
     depthStencilState.front = {};
     depthStencilState.back = {};
-
     depthStencilState.depthTestEnable = VK_FALSE;
     depthStencilState.depthWriteEnable = VK_FALSE;
-    VulkanDepthStates[DepthState::eOff] = depthStencilState;
+    VulkanDepthStates[DepthState::eOff_NoCull].cullMode = VK_CULL_MODE_NONE;
+    VulkanDepthStates[DepthState::eOff_CCW].depthState = depthStencilState;
+    VulkanDepthStates[DepthState::eOff_CCW].cullMode = VK_CULL_MODE_BACK_BIT;
+
     depthStencilState.depthTestEnable = VK_TRUE;
     depthStencilState.depthWriteEnable = VK_TRUE;
-    VulkanDepthStates[DepthState::eTestOnWriteOn] = depthStencilState;
+    VulkanDepthStates[DepthState::eTestOnWriteOn_CCW].depthState = depthStencilState;
+    VulkanDepthStates[DepthState::eTestOnWriteOn_CCW].cullMode = VK_CULL_MODE_BACK_BIT;
+
     depthStencilState.depthWriteEnable = VK_FALSE;
-    VulkanDepthStates[DepthState::eTestOnWriteOff] = depthStencilState;
+    VulkanDepthStates[DepthState::eTestOnWriteOff_CCW].depthState = depthStencilState;
+    VulkanDepthStates[DepthState::eTestOnWriteOff_CCW].cullMode = VK_CULL_MODE_BACK_BIT;
 
     VulkanImageLayouts[ImageLayout::eUndefined] = VK_IMAGE_LAYOUT_UNDEFINED;
     VulkanImageLayouts[ImageLayout::eShaderRead] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -250,10 +254,10 @@ const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState
     return VulkanBlendStates[gameBlendState];
 }
 
-const VkPipelineDepthStencilStateCreateInfo& GetVkDepthState(uint32 gameDepthState)
+const DepthCullState& GetVkDepthCullState(uint32 gameDepthCullState)
 {
-    TINKER_ASSERT(gameDepthState < DepthState::eMax);
-    return VulkanDepthStates[gameDepthState];
+    TINKER_ASSERT(gameDepthCullState < DepthState::eMax);
+    return VulkanDepthStates[gameDepthCullState];
 }
 
 const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout)

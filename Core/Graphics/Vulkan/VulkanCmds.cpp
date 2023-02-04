@@ -192,15 +192,16 @@ void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHa
             if (type != DescriptorType::eMax)
             {
                 VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes);
-                uint32 resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
-                VulkanMemResource* res = &resChain->resourceChain[resIndex];
+                uint32 resIndex = 0;
 
                 switch (type)
                 {
                     case DescriptorType::eBuffer:
                     case DescriptorType::eSSBO:
                     {
-                        VkBuffer* buffer = &res->buffer;
+                        resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
+
+                        VkBuffer* buffer = &resChain->resourceChain[resIndex].buffer;
 
                         descBufferInfo[descriptorCount].buffer = *buffer;
                         descBufferInfo[descriptorCount].offset = 0;
@@ -217,7 +218,7 @@ void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHa
 
                     case DescriptorType::eSampledImage:
                     {
-                        VkImageView* imageView = &res->imageView;
+                        VkImageView* imageView = &resChain->resourceChain[resIndex].imageView; // Should be index 0 for images
 
                         descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                         descImageInfo[descriptorCount].imageView = *imageView;
@@ -328,7 +329,7 @@ VkCommandBuffer ChooseAppropriateCommandBuffer(bool immediateSubmit)
     return commandBuffer;
 }
 
-void VulkanRecordCommandPushConstant(uint8* data, uint32 sizeInBytes, uint32 shaderID, uint32 blendState, uint32 depthState)
+void VulkanRecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 shaderID)
 {
     TINKER_ASSERT(data && sizeInBytes);
 
@@ -339,18 +340,28 @@ void VulkanRecordCommandPushConstant(uint8* data, uint32 sizeInBytes, uint32 sha
     vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
 }
 
-void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices,
-    uint32 numInstances, const char* debugLabel, bool immediateSubmit)
+void VulkanRecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height)
+{
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(false);
+    VkRect2D scissor = {};
+    scissor.offset = { offsetX, offsetY };
+    scissor.extent = { width, height };
+    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+}
+
+void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
+    uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit)
 {
     TINKER_ASSERT(indexBufferHandle != DefaultResHandle_Invalid);
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
     // Index buffer
-    VulkanMemResourceChain* indexBufferResource = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
-    VkBuffer& indexBuffer = indexBufferResource->resourceChain[0].buffer;
+    VulkanMemResourceChain* indexBufferResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
+    const ResourceDesc& desc = indexBufferResourceChain->resDesc;
+    VkBuffer& indexBuffer = indexBufferResourceChain->resourceChain[IsBufferUsageMultiBuffered(desc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0].buffer;
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
 }
 
 void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState,
@@ -479,8 +490,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
         }
         else
         {
-            VulkanMemResource* resource =
-                &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+            VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
             colorAttachment.imageView = resource->imageView;
         }
     }
@@ -493,8 +503,7 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     depthAttachment.clearValue.color = { DEPTH_MAX, 0 };
     if (HasDepth)
     {
-        VulkanMemResource* resource =
-            &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(depthRT.m_hRes)->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(depthRT.m_hRes)->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
         depthAttachment.imageView = resource->imageView;
     }
 
@@ -510,12 +519,6 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     DbgStartMarker(commandBuffer, debugLabel);
 
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
-
-    VkViewport viewport = { 0, 0, (float)renderWidth, (float)renderHeight, DEPTH_MIN, DEPTH_MAX };
-    vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-    VkRect2D scissor = { 0, 0, renderWidth, renderHeight };
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
 void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
@@ -660,7 +663,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
     else
     {
         VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-        VulkanMemResource* memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        VulkanMemResource* memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
         image = memResource->image;
         numArrayEles = memResourceChain->resDesc.arrayEles;
 
@@ -714,7 +717,7 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
     else
     {
         memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-        memResource = &memResourceChain->resourceChain[g_vulkanContextResources.currentVirtualFrame];
+        memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
         imageFormat = memResourceChain->resDesc.imageFormat;
     }
 

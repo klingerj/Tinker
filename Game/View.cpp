@@ -21,11 +21,14 @@ void Update(View* view, Tk::Core::Graphics::DescriptorSetDataHandles* descDataHa
     Tk::Core::Graphics::UnmapResource(bufferHandle);
 }
 
-// TODO: need to reorganize this, the view doesn't really do anything here
+// TODO: need to reorganize this? the view doesn't really do anything here
 void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPass,
     Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 shaderID, uint32 blendState, uint32 depthState,
     Tk::Core::Graphics::DescriptorHandle* descriptors)
 {
+    // Track number of instances for proper indexing into uniform buffer of instance data
+    uint32 instanceCount = 0;
+
     if (scene->m_numInstances > 0)
     {
         uint32 currentAssetID = scene->m_instances_sorted[0].m_assetID;
@@ -43,6 +46,20 @@ void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPa
                 descriptors[2] = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID)->m_descriptor;
 
                 StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
+
+                {
+                    Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+                    command->m_commandType = Tk::Core::Graphics::GraphicsCmd::ePushConstant;
+                    command->debugLabel = "Imgui push constant";
+                    command->m_shaderForLayout = shaderID;
+                    {
+                        uint8* data = command->m_pushConstantData;
+                        memcpy(data, &instanceCount, sizeof(uint32));
+                    }
+                    ++graphicsCommandStream->m_numCommands;
+                    //++command;
+                }
+
                 DrawMeshDataCommand(graphicsCommandStream,
                         meshData->m_numIndices,
                         currentNumInstances,
@@ -52,6 +69,7 @@ void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPa
                         depthState,
                         descriptors,
                         "Draw asset");
+                instanceCount += currentNumInstances;
 
                 currentNumInstances = 1;
                 currentAssetID = nextAssetID;

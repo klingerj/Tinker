@@ -89,6 +89,11 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracke
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
 
 set SourceListGraphics=
 set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
@@ -129,7 +134,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines!
     )
 
-set CompileIncludePaths=/I ../Core /I ../Tools /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/MurmurHash3 
+set CompileIncludePaths=/I ../Core /I ../Tools /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/MurmurHash3 /I ../ThirdParty/imgui-docking 
 set LibsToLink=user32.lib ws2_32.lib 
 set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
 

@@ -14,7 +14,7 @@
 #endif
 
 #define DEVICE_LOCAL_BUFFER_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
-#define HOST_VISIBLE_HEAP_SIZE 120 * 1000 * 1000 // 120 MB
+#define HOST_VISIBLE_HEAP_SIZE 256 * 1024 * 1024 // 120 MiB
 #define DEVICE_LOCAL_IMAGE_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
 
 namespace Tk
@@ -112,7 +112,7 @@ static void InitGPUMemAllocators()
         vkDestroyImage(g_vulkanContextResources.device, TestImage, nullptr);
 
         uint32 memoryTypeIndex = ChooseMemoryTypeBits(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages].Init(DEVICE_LOCAL_IMAGE_HEAP_SIZE, memoryTypeIndex, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, properties.limits.nonCoherentAtomSize);
+        g_vulkanContextResources.GPUMemAllocators[g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalImages].Init(DEVICE_LOCAL_IMAGE_HEAP_SIZE, memoryTypeIndex, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, properties.limits.nonCoherentAtomSize);
     }
 }
 
@@ -358,6 +358,12 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
         
         // Required device feature - can't use this device if not available
         if (physicalDeviceVulkan13Features.dynamicRendering == VK_FALSE)
+        {
+            continue;
+        }
+
+        // Required, push constant minimum size
+        if (physicalDeviceProperties.limits.maxPushConstantsSize < MIN_PUSH_CONSTANTS_SIZE)
         {
             continue;
         }

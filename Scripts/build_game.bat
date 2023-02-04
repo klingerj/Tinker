@@ -49,7 +49,7 @@ if "%BuildConfig%" == "Debug" (
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
-set CompileIncludePaths=/I ../Core 
+set CompileIncludePaths=/I ../Core /I ../DebugUI /I ../ThirdParty/imgui-docking 
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
@@ -65,6 +65,12 @@ set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/View.cpp
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Scene.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Camera.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../DebugUI/DebugUI.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%

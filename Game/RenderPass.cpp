@@ -18,6 +18,8 @@ void DrawMeshDataCommand(Graphics::GraphicsCommandStream* graphicsCommandStream,
 
     command->m_numIndices = numIndices;
     command->m_numInstances = numInstances;
+    command->m_vertOffset = 0;
+    command->m_indexOffset = 0;
     command->m_shader = shaderID;
     command->m_blendState = blendState;
     command->m_depthState = depthState;
@@ -40,6 +42,16 @@ void StartRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream
     command->m_depthRT = renderPass->depthRT;
     command->m_renderWidth = renderPass->renderWidth;
     command->m_renderHeight = renderPass->renderHeight;
+    ++graphicsCommandStream->m_numCommands;
+    ++command;
+
+    // Set scissor state
+    command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
+    command->debugLabel = "Set render pass scissor state";
+    command->m_scissorOffsetX = 0;
+    command->m_scissorOffsetY = 0;
+    command->m_scissorWidth = renderPass->renderWidth;
+    command->m_scissorHeight = renderPass->renderHeight;
     ++graphicsCommandStream->m_numCommands;
 }
 
