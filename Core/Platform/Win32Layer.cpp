@@ -421,7 +421,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
     using namespace Platform;
     
     // Window messages for Imgui
-    if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
+    if (!g_cursorLocked && ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
     {
         return 1;
     }
@@ -555,20 +555,6 @@ static void ProcessWindowMessages()
                         if (!io.WantCaptureKeyboard)
                         {
                             HandleKeypressInput((uint32)msg.wParam, (uint64)msg.lParam);
-                        }
-                    }
-                    break;
-                }
-
-                case WM_MOUSEMOVE:
-                {
-                    if (ImGui::GetCurrentContext())
-                    {
-                        ImGuiIO& io = ImGui::GetIO();
-                        if (!io.WantCaptureMouse)
-                        {
-                            TranslateMessage(&msg);
-                            DispatchMessage(&msg);
                         }
                     }
                     break;
