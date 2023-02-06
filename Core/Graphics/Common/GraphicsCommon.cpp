@@ -95,13 +95,18 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
     if (multithreadedCmdRecording)
     {
-        // TODO: do this
+        // TODO: implement :)
     }
     else
     {
         uint32 currentShaderID = SHADER_ID_MAX;
         uint32 currentBlendState = BlendState::eMax;
         uint32 currentDepthState = DepthState::eMax;
+        DescriptorHandle currDescriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        {
+            currDescriptors[i] = Graphics::DefaultDescHandle_Invalid;
+        }
 
         for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
         {
@@ -113,14 +118,37 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
             {
                 case GraphicsCmd::eDrawCall:
                 {
+                    // TODO: this is kind of suboptimal, probably restructure the draw call api a little in the future
+                    const bool psoChange =
+                        currentShaderID != currentCmd.m_shader ||
+                        (currentBlendState != currentCmd.m_blendState) ||
+                        (currentDepthState != currentCmd.m_depthState);
+                    
+                    bool descChange = currentShaderID != currentCmd.m_shader;
+                    for (uint32 uiDesc = 0; !descChange && uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
+                    {
+                        descChange = descChange || (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc]);
+                    }
+
                     currentShaderID = currentCmd.m_shader;
                     currentBlendState = currentCmd.m_blendState;
                     currentDepthState = currentCmd.m_depthState;
 
-                    #ifdef VULKAN
+                    if (psoChange)
+                    {
+                        #ifdef VULKAN
+                        Graphics::VulkanRecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState, immediateSubmit);
+                        #endif
+                    }
 
-                    Graphics::VulkanRecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState,
-                        &currentCmd.m_descriptors[0], immediateSubmit);
+                    if (descChange)
+                    {
+                        #ifdef VULKAN
+                        Graphics::VulkanRecordCommandBindDescriptor(currentShaderID, &currentCmd.m_descriptors[0], immediateSubmit);
+                        #endif
+                    }
+
+                    #ifdef VULKAN
 
                     Graphics::VulkanRecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
                         currentCmd.m_numInstances, currentCmd.m_vertOffset, currentCmd.m_indexOffset,
