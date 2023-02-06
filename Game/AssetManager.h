@@ -25,7 +25,7 @@ private:
     // Texture data
     Tk::Core::LinearAllocator m_textureBufferAllocator; // Dealloc'd after all textures are uploaded to the GPU
     TextureMetadata m_allTextureMetadata[TINKER_MAX_TEXTURES];
-    Tk::Core::Graphics::ResourceHandle m_allTextureGraphicsHandles[TINKER_MAX_TEXTURES];
+    Tk::Graphics::ResourceHandle m_allTextureGraphicsHandles[TINKER_MAX_TEXTURES];
 
     void CreateVertexBufferDescriptor(uint32 meshID);
 
@@ -39,12 +39,12 @@ public:
     void FreeMemory();
 
     void LoadAllAssets();
-    void InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
+    void InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
     void DestroyAllMeshData();
     void DestroyAllTextureData();
     // TODO: declare a mapping of ID to each asset file
     StaticMeshData* GetMeshGraphicsDataByID(uint32 meshID);
-    Tk::Core::Graphics::ResourceHandle GetTextureGraphicsDataByID(uint32 textureID) const;
+    Tk::Graphics::ResourceHandle GetTextureGraphicsDataByID(uint32 textureID) const;
     const MeshAttributeData& GetMeshAttrDataByID(uint32 meshID) const;
 };
 

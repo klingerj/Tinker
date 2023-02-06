@@ -3,9 +3,6 @@
 #include "PlatformGameAPI.h"
 #include "Win32WorkerThreadPool.h"
 #include "Win32Client.h"
-#include "Graphics/Common/GraphicsCommon.h"
-#include "Graphics/Common/ShaderManager.h"
-#include "ShaderCompiler/ShaderCompiler.h"
 #include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
 
@@ -17,9 +14,6 @@
 
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
-#ifndef TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX
-#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
-#endif
 #ifndef TINKER_PLATFORM_HOTLOAD_FILENAME
 #define TINKER_PLATFORM_HOTLOAD_FILENAME "TinkerGame_hotload.dll"
 #endif
@@ -42,7 +36,6 @@ const bool enableDllHotloading = true;
 volatile bool runGame = true;
 
 HWND g_windowHandle = NULL;
-Tk::Core::Graphics::GraphicsCommandStream g_graphicsCommandStream;
 bool g_windowResized = false;
 
 Tk::Platform::InputStateDeltas g_inputStateDeltas;
@@ -322,29 +315,6 @@ static void HandleKeypressInput(uint32 win32Keycode, uint64 win32Flags)
 
         case VK_F10:
         {
-            if (isDown)
-            {
-                Tk::Core::Utility::LogMsg("Platform", "Attempting to hotload shaders...\n", Tk::Core::Utility::LogSeverity::eInfo);
-
-                uint32 result = Tk::ShaderCompiler::ErrCode::NonShaderError;
-                #ifdef VULKAN
-                result = Tk::ShaderCompiler::CompileAllShadersVK();
-                #else
-                #endif
-
-                if (result == Tk::ShaderCompiler::ErrCode::Success)
-                {
-                    Tk::Core::Graphics::ShaderManager::ReloadShaders(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-                }
-                else
-                {
-                    // TODO: grab error message from shader compiler
-                    Tk::Core::Utility::LogMsg("Platform", "Shader compilation failed.\n", Tk::Core::Utility::LogSeverity::eWarning);
-                }
-
-                Tk::Core::Utility::LogMsg("Platform", "...Done.\n", Tk::Core::Utility::LogSeverity::eInfo);
-            }
-
             gameKeyCode = Keycode::eF10;
             break;
         }
@@ -438,11 +408,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         {
             if (wParam == 1) // window minimized - can't create swap chain with size 0
             {
-                Tk::Core::Graphics::WindowMinimized();
                 g_GlobalAppParams.m_windowWidth = 0;
                 g_GlobalAppParams.m_windowHeight = 0;
             }
-            else
+
+            //else
             {
                 // Normal window resize / maximize
                 uint32 newWindowWidth = LOWORD(lParam);
@@ -639,24 +609,10 @@ wWinMain(HINSTANCE hInstance,
         g_platformWindowHandles = {};
         g_platformWindowHandles.instance = hInstance;
         g_platformWindowHandles.windowHandle = g_windowHandle;
-        Tk::Core::Graphics::CreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-
-        g_graphicsCommandStream = {};
-        g_graphicsCommandStream.m_numCommands = 0;
-        g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-        g_graphicsCommandStream.m_graphicsCommands = (Tk::Core::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Core::Graphics::GraphicsCommand), CACHE_LINE);
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
         #endif
-
-        if (Tk::ShaderCompiler::Init() != Tk::ShaderCompiler::ErrCode::Success)
-        {
-            TINKER_ASSERT(0);
-            Tk::Core::Utility::LogMsg("Platform", "Failed to init shader compiler!", Tk::Core::Utility::LogSeverity::eCritical);
-        }
-        Tk::Core::Graphics::ShaderManager::Startup();
-        Tk::Core::Graphics::ShaderManager::LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
 
         g_GameCode = {};
         bool reloaded = ReloadGameCode(&g_GameCode);
@@ -682,40 +638,20 @@ wWinMain(HINSTANCE hInstance,
                 //TIMED_SCOPED_BLOCK("Window resize check");
                 if (g_windowResized)
                 {
-                    Tk::Core::Graphics::WindowResize();
-                    Tk::Core::Graphics::ShaderManager::CreateWindowDependentResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_GameCode.GameWindowResize(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_windowResized = false;
                 }
             }
 
-            bool shouldRenderFrame = false;
             {
-                //TIMED_SCOPED_BLOCK("Acquire Frame");
-                shouldRenderFrame = Tk::Core::Graphics::AcquireFrame();
-            }
+                //TIMED_SCOPED_BLOCK("Game Update");
 
-            if (shouldRenderFrame)
-            {
+                int error = g_GameCode.GameUpdate(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
+                if (error != 0)
                 {
-                    //TIMED_SCOPED_BLOCK("Game Update");
-
-                    int error = g_GameCode.GameUpdate(&g_graphicsCommandStream, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight, &g_inputStateDeltas);
-                    if (error != 0)
-                    {
-                        Tk::Core::Utility::LogMsg("Platform", "Error occurred in game code! Shutting down application.", Tk::Core::Utility::LogSeverity::eCritical);
-                        runGame = false;
-                        break;
-                    }
-                }
-
-                // Process command stream
-                {
-                    //TIMED_SCOPED_BLOCK("Graphics command stream processing");
-                    Tk::Core::Graphics::BeginFrameRecording();
-                    Tk::Core::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
-                    Tk::Core::Graphics::EndFrameRecording();
-                    Tk::Core::Graphics::SubmitFrameToGPU();
+                    Tk::Core::Utility::LogMsg("Platform", "Error occurred in game code! Shutting down application.", Tk::Core::Utility::LogSeverity::eCritical);
+                    runGame = false;
+                    break;
                 }
             }
         }
@@ -727,11 +663,6 @@ wWinMain(HINSTANCE hInstance,
             ThreadPool::Shutdown();
             ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
             #endif
-
-            Tk::Core::Graphics::RecreateContext(&g_platformWindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
-            Tk::Core::Graphics::ShaderManager::Shutdown();
-            Tk::Core::Graphics::ShaderManager::Startup();
-            Tk::Core::Graphics::ShaderManager::LoadAllShaderResources(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
         }
     }
 
@@ -740,10 +671,6 @@ wWinMain(HINSTANCE hInstance,
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     ThreadPool::Shutdown();
     #endif
-
-    Tk::Core::Graphics::ShaderManager::Shutdown();
-    Tk::Core::Graphics::DestroyContext();
-    Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
     
     return 0;
 }

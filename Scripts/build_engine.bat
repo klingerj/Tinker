@@ -1,6 +1,5 @@
 @echo off
 setlocal
-setlocal enabledelayedexpansion
 
 if "%1" == "-h" (goto PrintHelp)
 if "%1" == "-help" (goto PrintHelp)
@@ -8,18 +7,14 @@ if "%1" == "help" (goto PrintHelp)
 goto StartScript
 
 :PrintHelp
-echo Usage: build_engine.bat ^<build_mode^> ^<graphics_api^>
+echo Usage: build_engine.bat ^<build_mode^>
 echo.
 echo build_mode:
 echo   Release
 echo   Debug
 echo.
-echo graphics_api
-echo   VK (uses VULKAN_SDK environment variable)
-echo   D3D12
-echo.
 echo For example:
-echo build_engine.bat Release VK
+echo build_engine.bat Release 
 echo.
 goto EndScript
 
@@ -29,22 +24,6 @@ set GraphicsAPI=%2
 if "%BuildConfig%" NEQ "Debug" (
     if "%BuildConfig%" NEQ "Release" (
         echo Invalid build config specified.
-        goto DoneBuild
-        )
-    )
-
-if "%GraphicsAPI%" == "VK" (
-    rem Vulkan
-    echo Using Vulkan SDK: %VULKAN_SDK%
-    echo.
-    ) else (
-        if "%GraphicsAPI%" == "D3D12" (
-        echo D3D12 not yet supported. Build canceled.
-        echo.
-        goto DoneBuild
-        ) else (
-	    set GraphicsAPI="None"
-	    echo Unsupported graphics API specified.
         goto DoneBuild
         )
     )
@@ -88,25 +67,11 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Ha
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
-
-set SourceListGraphics=
-set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/GraphicsCommon.cpp 
-set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Common/ShaderManager.cpp 
-if "%GraphicsAPI%" == "VK" (
-    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/Vulkan.cpp 
-    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCmds.cpp 
-    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanTypes.cpp 
-    set SourceListGraphics=!SourceListGraphics! %AbsolutePathPrefix%/../Core/Graphics/Vulkan/VulkanCreation.cpp 
-)
-set SourceListApp=%SourceListApp% %SourceListGraphics%
-
-if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
@@ -116,36 +81,25 @@ set CompileDefines=%CompileDefines% /DTINKER_EXPORTING
 set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
 set CompileDefines=%CompileDefines% /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll 
 set CompileDefines=%CompileDefines% /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll 
-set CompileDefines=%CompileDefines% /D_SHADERS_SPV_DIR=%AbsolutePathPrefix%\\..\\Shaders\\spv\\ 
-set CompileDefines=%CompileDefines% /D_SHADERS_SRC_DIR=%AbsolutePathPrefix%\\..\\Shaders\\hlsl\\ 
 set CompileDefines=%CompileDefines% /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ 
-
-if "%GraphicsAPI%" == "VK" (
-    set CompileDefines=!CompileDefines! /DVULKAN 
-)
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsApp=/FdTinkerApp.pdb
     set DebugLinkFlagsApp=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
-    set CompileDefines=!CompileDefines!
+    set CompileDefines=%CompileDefines%
     ) else (
     set DebugCompileFlagsApp=/FdTinkerApp.pdb
     set DebugLinkFlagsApp=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
-    set CompileDefines=!CompileDefines!
+    set CompileDefines=%CompileDefines%
     )
 
-set CompileIncludePaths=/I ../Core /I ../Tools /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/MurmurHash3 /I ../ThirdParty/imgui-docking 
+set CompileIncludePaths=/I ../Core 
+set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
 set LibsToLink=user32.lib ws2_32.lib 
 set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
 
 echo.
 echo Building TinkerApp.exe...
-
-
-if "%GraphicsAPI%" == "VK" (
-    set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
-    set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
-)
 
 set OBJDir=%cd%\obj_app\
 if NOT EXIST %OBJDir% mkdir %OBJDir%

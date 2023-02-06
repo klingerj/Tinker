@@ -12,9 +12,9 @@ struct View
     alignas(CACHE_LINE) m4f m_viewProjMatrix;
 };
 void Init(View* view);
-void Update(View* view, Tk::Core::Graphics::DescriptorSetDataHandles* descDataHandles);
+void Update(View* view, Tk::Graphics::DescriptorSetDataHandles* descDataHandles);
 
 struct GameRenderPass;
 void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPass,
-    Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 shaderID, uint32 blendState, uint32 depthState,
-    Tk::Core::Graphics::DescriptorHandle* descriptors);
+    Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 shaderID, uint32 blendState, uint32 depthState,
+    Tk::Graphics::DescriptorHandle* descriptors);

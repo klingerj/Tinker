@@ -4,8 +4,6 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 namespace ShaderManager
@@ -17,7 +15,6 @@ namespace ShaderManager
     void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight);
     void CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight);
     void ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight);
-}
 }
 }
 }

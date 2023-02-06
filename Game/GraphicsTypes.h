@@ -10,12 +10,12 @@
 // then be destroyed.
 typedef struct static_buffer_data
 {
-    Tk::Core::Graphics::ResourceHandle gpuBufferHandle;
+    Tk::Graphics::ResourceHandle gpuBufferHandle;
 } StaticBuffer;
 
 typedef struct static_mesh_data
 {
-    Tk::Core::Graphics::DescriptorHandle m_descriptor;
+    Tk::Graphics::DescriptorHandle m_descriptor;
     StaticBuffer m_positionBuffer;
     StaticBuffer m_uvBuffer;
     StaticBuffer m_normalBuffer;
@@ -48,31 +48,31 @@ enum
 
 struct TransientPrim
 {
-    Tk::Core::Graphics::ResourceHandle indexBufferHandle;
-    Tk::Core::Graphics::ResourceHandle vertexBufferHandle;
-    Tk::Core::Graphics::DescriptorHandle descriptor;
+    Tk::Graphics::ResourceHandle indexBufferHandle;
+    Tk::Graphics::ResourceHandle vertexBufferHandle;
+    Tk::Graphics::DescriptorHandle descriptor;
     uint32 numVertices;
 };
 
 void CreateAnimatedPoly(TransientPrim* prim);
 void DestroyAnimatedPoly(TransientPrim* prim);
 void UpdateAnimatedPoly(TransientPrim* prim);
-void DrawAnimatedPoly(TransientPrim* prim, Tk::Core::Graphics::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void DrawAnimatedPoly(TransientPrim* prim, Tk::Graphics::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
 
 typedef struct game_graphics_data
 {
-    Tk::Core::Graphics::ResourceHandle m_rtColorHandle;
-    Tk::Core::Graphics::ResourceHandle m_rtDepthHandle;
+    Tk::Graphics::ResourceHandle m_rtColorHandle;
+    Tk::Graphics::ResourceHandle m_rtDepthHandle;
 
-    Tk::Core::Graphics::DescriptorHandle m_DescData_Instance;
-    Tk::Core::Graphics::ResourceHandle m_DescDataBufferHandle_Instance;
+    Tk::Graphics::DescriptorHandle m_DescData_Instance;
+    Tk::Graphics::ResourceHandle m_DescDataBufferHandle_Instance;
     void* m_DescDataBufferMemPtr_Instance;
 
-    Tk::Core::Graphics::DescriptorHandle m_DescData_Global;
-    Tk::Core::Graphics::ResourceHandle m_DescDataBufferHandle_Global;
+    Tk::Graphics::DescriptorHandle m_DescData_Global;
+    Tk::Graphics::ResourceHandle m_DescDataBufferHandle_Global;
     void* m_DescDataBufferMemPtr_Global;
 
-    Tk::Core::Graphics::DescriptorHandle m_swapChainBlitDescHandle;
+    Tk::Graphics::DescriptorHandle m_swapChainBlitDescHandle;
 
     TransientPrim m_animatedPolygon;
 } GameGraphicsData;
@@ -94,7 +94,7 @@ struct default_geometry
     StaticBuffer m_uvBuffer;
     StaticBuffer m_normalBuffer;
     StaticBuffer m_indexBuffer;
-    Tk::Core::Graphics::DescriptorHandle m_descriptor;
+    Tk::Graphics::DescriptorHandle m_descriptor;
     v4f m_points[numPoints];
     v2f m_uvs[numPoints];
     v4f m_normals[numPoints];
@@ -109,22 +109,22 @@ using DefaultGeometry = struct default_geometry<numPoints, numIndices>;
 #define DEFAULT_QUAD_NUM_INDICES 6
 extern DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad;
 
-void CreateDefaultGeometry(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void CreateDefaultGeometry(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
 void DestroyDefaultGeometry();
 
 template <typename DefGeom>
 void DestroyDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
 {
-    Tk::Core::Graphics::DestroyDescriptor(geom.m_descriptor);
-    geom.m_descriptor = Tk::Core::Graphics::DefaultDescHandle_Invalid;
+    Tk::Graphics::DestroyDescriptor(geom.m_descriptor);
+    geom.m_descriptor = Tk::Graphics::DefaultDescHandle_Invalid;
 }
 
 template <typename DefGeom>
 void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
 {
-    geom.m_descriptor = Tk::Core::Graphics::CreateDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_ASSET_VBS);
+    geom.m_descriptor = Tk::Graphics::CreateDescriptor(Tk::Graphics::DESCLAYOUT_ID_ASSET_VBS);
 
-    Tk::Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    Tk::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
     descDataHandles[0].handles[0] = geom.m_positionBuffer.gpuBufferHandle;
     descDataHandles[0].handles[1] = geom.m_uvBuffer.gpuBufferHandle;
@@ -132,5 +132,5 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Tk::Core::Graphics::WriteDescriptor(Tk::Core::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0]);
+    Tk::Graphics::WriteDescriptor(Tk::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0]);
 }

@@ -10,7 +10,6 @@
 
 using namespace Tk;
 using namespace Platform;
-using namespace Core;
 
 AssetManager g_AssetManager;
 
@@ -234,7 +233,7 @@ void AssetManager::LoadAllAssets()
 
             if (strncmp(fileExt, "bmp", 3) == 0)
             {
-                Asset::BMPInfo info = Asset::GetBMPInfo(currentTextureFile);
+                Tk::Core::Asset::BMPInfo info = Tk::Core::Asset::GetBMPInfo(currentTextureFile);
 
                 // If it's a 24-bit bmp, pad to 32 bits. The 4th byte will be 255 (alpha of 1).
                 uint32 bpp = 0;
@@ -282,7 +281,7 @@ void AssetManager::LoadAllAssets()
 
             if (strncmp(fileExt, "bmp", 3) == 0)
             {
-                uint8* textureBytesStart = currentTextureFile + sizeof(Asset::BMPHeader) + sizeof(Asset::BMPInfo);
+                uint8* textureBytesStart = currentTextureFile + sizeof(Tk::Core::Asset::BMPHeader) + sizeof(Tk::Core::Asset::BMPInfo);
 
                 // Copy the bmp bytes in - no parsing for bmp
                 // If the bits per pixel is 24, copy pixel by pixel and write a 0xFF byte for each alpha byte;
@@ -325,14 +324,14 @@ void AssetManager::LoadAllAssets()
     }
 }
 
-void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
+void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // Meshes
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
     {
         // Create buffer handles
         Graphics::ResourceDesc desc;
-        desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
+        desc.resourceType = Graphics::ResourceType::eBuffer1D;
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
         void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
@@ -405,7 +404,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Core::Graphics::GraphicsComman
         // Create, submit, and execute the buffer copy commands
         {
             // Graphics command to copy from staging buffer to gpu local buffer
-            Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+            Tk::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
             // Position buffer copy
             command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
@@ -539,16 +538,16 @@ void AssetManager::DestroyAllMeshData()
         StaticMeshData* meshData = GetMeshGraphicsDataByID(uiAssetID);
 
         Graphics::DestroyResource(meshData->m_positionBuffer.gpuBufferHandle);
-        meshData->m_positionBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
+        meshData->m_positionBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
         Graphics::DestroyResource(meshData->m_uvBuffer.gpuBufferHandle);
-        meshData->m_uvBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
+        meshData->m_uvBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
         Graphics::DestroyResource(meshData->m_normalBuffer.gpuBufferHandle);
-        meshData->m_normalBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
+        meshData->m_normalBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
         Graphics::DestroyResource(meshData->m_indexBuffer.gpuBufferHandle);
-        meshData->m_indexBuffer.gpuBufferHandle = Core::Graphics::DefaultResHandle_Invalid;
+        meshData->m_indexBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
 
         Graphics::DestroyDescriptor(meshData->m_descriptor);
-        meshData->m_descriptor = Core::Graphics::DefaultDescHandle_Invalid;
+        meshData->m_descriptor = Graphics::DefaultDescHandle_Invalid;
     }
 }
 
@@ -566,7 +565,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID)
     StaticMeshData* data = g_AssetManager.GetMeshGraphicsDataByID(meshID);
     data->m_descriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS);
 
-    Core::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     descDataHandles[0].InitInvalid();
     descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
     descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;

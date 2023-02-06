@@ -20,7 +20,7 @@ CMP_LT_FUNC(CompareLessThan_InstanceByAssetID)
     return ((Instance*)A)->m_assetID < ((Instance*)B)->m_assetID;
 }
 
-void Update(Scene* scene, Tk::Core::Graphics::DescriptorSetDataHandles* descDataHandles)
+void Update(Scene* scene, Tk::Graphics::DescriptorSetDataHandles* descDataHandles)
 {
     // Sort instances for batching of draw calls
     uint32 activeInstanceCounter = 0;
@@ -51,11 +51,11 @@ void Update(Scene* scene, Tk::Core::Graphics::DescriptorSetDataHandles* descData
         scene->m_instanceData_sorted[activeInstanceCounter++] = scene->m_instanceData[instanceOrigHandle];
     }
     const DescriptorData_Instance* instanceData = (const DescriptorData_Instance*)scene->m_instanceData_sorted.Data();
-    Tk::Core::Graphics::ResourceHandle bufferHandle = descDataHandles[1].handles[0];
+    Tk::Graphics::ResourceHandle bufferHandle = descDataHandles[1].handles[0];
 
-    void* descDataBufferMemPtr_Instance = Tk::Core::Graphics::MapResource(bufferHandle);
+    void* descDataBufferMemPtr_Instance = Tk::Graphics::MapResource(bufferHandle);
     memcpy(descDataBufferMemPtr_Instance, instanceData, sizeof(DescriptorData_Instance) * scene->m_numInstances);
-    Tk::Core::Graphics::UnmapResource(bufferHandle);
+    Tk::Graphics::UnmapResource(bufferHandle);
 }
 
 uint32 CreateInstance(Scene* scene, uint32 assetID)

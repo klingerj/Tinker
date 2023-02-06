@@ -8,12 +8,9 @@ struct ImGuiContext;
 namespace Tk
 {
 
-namespace Core
-{
 namespace Graphics
 {
 struct GraphicsCommandStream;
-}
 }
 
 namespace Platform
@@ -168,9 +165,8 @@ struct InputStateDeltas
     MousecodeState mouseCodes[Mousecode::eMax];
 };
 
-
 // Game side
-#define GAME_UPDATE(name) uint32 name(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)
+#define GAME_UPDATE(name) uint32 name(uint32 windowWidth, uint32 windowHeight, const Tk::Platform::InputStateDeltas* inputStateDeltas)
 typedef GAME_UPDATE(game_update);
 
 #define GAME_DESTROY(name) void name()

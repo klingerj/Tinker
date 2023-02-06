@@ -5,8 +5,8 @@
 struct GameRenderPass
 {
     uint32 numColorRTs;
-    Tk::Core::Graphics::ResourceHandle colorRTs[MAX_MULTIPLE_RENDERTARGETS];
-    Tk::Core::Graphics::ResourceHandle depthRT;
+    Tk::Graphics::ResourceHandle colorRTs[MAX_MULTIPLE_RENDERTARGETS];
+    Tk::Graphics::ResourceHandle depthRT;
     uint32 renderWidth;
     uint32 renderHeight;
     const char* debugLabel;
@@ -17,17 +17,17 @@ struct GameRenderPass
         renderWidth = 0;
         renderWidth = 0;
         debugLabel = NULL;
-        depthRT = Tk::Core::Graphics::DefaultResHandle_Invalid;
+        depthRT = Tk::Graphics::DefaultResHandle_Invalid;
         for (uint32 i = 0; i < ARRAYCOUNT(colorRTs); ++i)
         {
-            colorRTs[i] = Tk::Core::Graphics::DefaultResHandle_Invalid;
+            colorRTs[i] = Tk::Graphics::DefaultResHandle_Invalid;
         }
     }
 };
 
-void StartRenderPass(GameRenderPass* renderPass, Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
-void EndRenderPass(GameRenderPass* renderPass, Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream);
-void DrawMeshDataCommand(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
-    uint32 numInstances, Tk::Core::Graphics::ResourceHandle indexBufferHandle,
+void StartRenderPass(GameRenderPass* renderPass, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void EndRenderPass(GameRenderPass* renderPass, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void DrawMeshDataCommand(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
+    uint32 numInstances, Tk::Graphics::ResourceHandle indexBufferHandle,
     uint32 shaderID, uint32 blendState, uint32 depthState,
-    Tk::Core::Graphics::DescriptorHandle* descriptors, const char* debugLabel);
+    Tk::Graphics::DescriptorHandle* descriptors, const char* debugLabel);

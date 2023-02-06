@@ -10,8 +10,6 @@ namespace Platform
 struct PlatformWindowHandles;
 }
 
-namespace Core
-{
 struct GraphicsCommandStream;
 
 namespace Graphics
@@ -423,42 +421,62 @@ enum
 };
 //-----
 
-#define CREATE_RESOURCE(name) TINKER_API ResourceHandle name(const ResourceDesc& resDesc)
+// Graphics API layer
+#define CREATE_RESOURCE(name) ResourceHandle name(const ResourceDesc& resDesc)
 CREATE_RESOURCE(CreateResource);
 
-#define DESTROY_RESOURCE(name) TINKER_API void name(ResourceHandle handle)
+#define DESTROY_RESOURCE(name) void name(ResourceHandle handle)
 DESTROY_RESOURCE(DestroyResource);
 
-#define MAP_RESOURCE(name) TINKER_API void* name(ResourceHandle handle)
+#define MAP_RESOURCE(name) void* name(ResourceHandle handle)
 MAP_RESOURCE(MapResource);
 
-#define UNMAP_RESOURCE(name) TINKER_API void name(ResourceHandle handle)
+#define UNMAP_RESOURCE(name) void name(ResourceHandle handle)
 UNMAP_RESOURCE(UnmapResource);
 
-#define CREATE_GRAPHICS_PIPELINE(name) TINKER_API bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat, uint32* descriptorHandles, uint32 numDescriptorHandles)
-CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline);
-
-#define CREATE_DESCRIPTOR(name) TINKER_API DescriptorHandle name(uint32 descLayoutID)
+#define CREATE_DESCRIPTOR(name) DescriptorHandle name(uint32 descLayoutID)
 CREATE_DESCRIPTOR(CreateDescriptor);
 
-#define DESTROY_DESCRIPTOR(name) TINKER_API void name(DescriptorHandle handle)
+#define DESTROY_DESCRIPTOR(name) void name(DescriptorHandle handle)
 DESTROY_DESCRIPTOR(DestroyDescriptor);
 
-#define DESTROY_ALL_DESCRIPTORS(name) TINKER_API void name()
+#define DESTROY_ALL_DESCRIPTORS(name) void name()
 DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors);
 
-#define WRITE_DESCRIPTOR(name) TINKER_API void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
+#define WRITE_DESCRIPTOR(name) void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 WRITE_DESCRIPTOR(WriteDescriptor);
 
-#define SUBMIT_CMDS_IMMEDIATE(name) TINKER_API void name(Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream)
+#define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate);
 
-// Not meant for the user
-#define CREATE_DESCRIPTOR_LAYOUT(name) TINKER_API bool name(uint32 descLayoutID, const DescriptorLayout* descLayout)
+// Graphics command recording
+void RecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 shaderID);
+void RecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height);
+void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
+    uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit);
+void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit);
+void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle* descSetHandles, bool immediateSubmit);
+void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
+    const char* debugLabel, bool immediateSubmit);
+void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT,
+    uint32 renderWidth, uint32 renderHeight, const char* debugLabel, bool immediateSubmit);
+void RecordCommandRenderPassEnd(bool immediateSubmit);
+void RecordCommandTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout,
+    const char* debugLabel, bool immediateSubmit);
+void RecordCommandClearImage(ResourceHandle imageHandle,
+    const v4f& clearValue, const char* debugLabel, bool immediateSubmit);
+//
+
+// Called only by ShaderManager
+#define CREATE_DESCRIPTOR_LAYOUT(name) bool name(uint32 descLayoutID, const DescriptorLayout* descLayout)
 CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout);
 
-#define DESTROY_GRAPHICS_PIPELINE(name) TINKER_API void name(uint32 shaderID)
+#define CREATE_GRAPHICS_PIPELINE(name) bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat, uint32* descriptorHandles, uint32 numDescriptorHandles)
+CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline);
+
+#define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 shaderID)
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
+//
 
 void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
 void RecreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
@@ -468,11 +486,10 @@ void DestroyContext();
 void DestroyAllPSOPerms();
 
 bool AcquireFrame();
-void ProcessGraphicsCommandStream(const Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit);
+void ProcessGraphicsCommandStream(const Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit);
 void BeginFrameRecording();
 void EndFrameRecording();
 void SubmitFrameToGPU();
 
-}
 }
 }

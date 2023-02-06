@@ -9,22 +9,22 @@ void Init(View* view)
     *view = {};
 }
 
-void Update(View* view, Tk::Core::Graphics::DescriptorSetDataHandles* descDataHandles)
+void Update(View* view, Tk::Graphics::DescriptorSetDataHandles* descDataHandles)
 {
     DescriptorData_Global globalData = {};
     globalData.viewProj = view->m_projMatrix * view->m_viewMatrix;
 
     // Globals
-    Tk::Core::Graphics::ResourceHandle bufferHandle = descDataHandles[0].handles[0];
-    void* descDataBufferMemPtr_Global = Tk::Core::Graphics::MapResource(bufferHandle);
+    Tk::Graphics::ResourceHandle bufferHandle = descDataHandles[0].handles[0];
+    void* descDataBufferMemPtr_Global = Tk::Graphics::MapResource(bufferHandle);
     memcpy(descDataBufferMemPtr_Global, &globalData, sizeof(DescriptorData_Global));
-    Tk::Core::Graphics::UnmapResource(bufferHandle);
+    Tk::Graphics::UnmapResource(bufferHandle);
 }
 
 // TODO: need to reorganize this? the view doesn't really do anything here
 void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPass,
-    Tk::Core::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 shaderID, uint32 blendState, uint32 depthState,
-    Tk::Core::Graphics::DescriptorHandle* descriptors)
+    Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 shaderID, uint32 blendState, uint32 depthState,
+    Tk::Graphics::DescriptorHandle* descriptors)
 {
     // Track number of instances for proper indexing into uniform buffer of instance data
     uint32 instanceCount = 0;
@@ -48,8 +48,8 @@ void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPa
                 StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
 
                 {
-                    Tk::Core::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-                    command->m_commandType = Tk::Core::Graphics::GraphicsCmd::ePushConstant;
+                    Tk::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+                    command->m_commandType = Tk::Graphics::GraphicsCmd::ePushConstant;
                     command->debugLabel = "Imgui push constant";
                     command->m_shaderForLayout = shaderID;
                     {

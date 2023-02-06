@@ -19,8 +19,6 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 
@@ -720,6 +718,5 @@ void DestroyVulkan()
     g_vulkanContextResources.vulkanDescriptorResourcePool.ExplicitFree();
 }
 
-}
 }
 }

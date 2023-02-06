@@ -1,5 +1,7 @@
 #include "Platform/PlatformGameAPI.h"
 #include "Graphics/Common/GraphicsCommon.h"
+#include "Graphics/Common/ShaderManager.h"
+#include "ShaderCompiler/ShaderCompiler.h"
 #include "Allocators.h"
 #include "Math/VectorTypes.h"
 #include "AssetFileParsing.h"
@@ -35,13 +37,15 @@
 
 using namespace Tk;
 using namespace Platform;
-using namespace Core;
 
 static bool isGameInitted = false;
 static const bool isMultiplayer = false;
 static bool connectedToServer = false;
 static uint32 currentWindowWidth = 0;
 static uint32 currentWindowHeight = 0;
+
+#define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
+Tk::Graphics::GraphicsCommandStream graphicsCommandStream;
 
 static GameGraphicsData gameGraphicsData = {};
 static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
@@ -73,6 +77,28 @@ INPUT_CALLBACK(GameCameraRotateHorizontalCallback)
 INPUT_CALLBACK(GameCameraRotateVerticalCallback)
 {
     RotateCameraAboutRight(&g_gameCamera, cameraRotSensitivityVert * -(int32)param);
+}
+
+INPUT_CALLBACK(HotloadAllShaders)
+{
+    Tk::Core::Utility::LogMsg("Game", "Attempting to hotload shaders...\n", Tk::Core::Utility::LogSeverity::eInfo);
+
+    uint32 result = Tk::ShaderCompiler::ErrCode::NonShaderError;
+    #ifdef VULKAN
+    result = Tk::ShaderCompiler::CompileAllShadersVK();
+    #else
+    #endif
+    
+    if (result == Tk::ShaderCompiler::ErrCode::Success)
+    {
+        Tk::Graphics::ShaderManager::ReloadShaders(currentWindowWidth, currentWindowHeight);
+        Tk::Core::Utility::LogMsg("Game", "...Done.\n", Tk::Core::Utility::LogSeverity::eInfo);
+    }
+    else
+    {
+        // TODO: grab error message from shader compiler
+        Tk::Core::Utility::LogMsg("Game", "Shader compilation failed.\n", Tk::Core::Utility::LogSeverity::eWarning);
+    }
 }
 
 #define MAX_INSTANCES_PER_SCENE 128
@@ -236,12 +262,29 @@ INPUT_CALLBACK(ToggleImGuiDisplay)
     DebugUI::ToggleEnable();
 }
 
-static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 windowWidth, uint32 windowHeight)
+static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
+    // Graphics init
+    // TODO get platform handles from platform layer
+    Tk::Graphics::CreateContext(&g_platformWindowHandles, windowWidth, windowHeight);
+    graphicsCommandStream = {};
+    graphicsCommandStream.m_numCommands = 0;
+    graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
+    graphicsCommandStream.m_graphicsCommands = (Tk::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(graphicsCommandStream.m_maxCommands * sizeof(Tk::Graphics::GraphicsCommand), CACHE_LINE);
+
+    if (Tk::ShaderCompiler::Init() != Tk::ShaderCompiler::ErrCode::Success)
+    {
+        TINKER_ASSERT(0);
+        Tk::Core::Utility::LogMsg("Game", "Failed to init shader compiler!", Tk::Core::Utility::LogSeverity::eCritical);
+    }
+    Tk::Graphics::ShaderManager::Startup();
+    Tk::Graphics::ShaderManager::LoadAllShaderResources(windowWidth, windowHeight);
+    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF10, HotloadAllShaders); // Bind shader hotloading hotkey
+
     // Debug UI
-    DebugUI::Init(graphicsCommandStream);
+    DebugUI::Init(&graphicsCommandStream);
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF1, ToggleImGuiDisplay); // Toggle with hotkey - TODO: move to tilde with ctrl?
 
     // Camera controls
@@ -283,10 +326,10 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
     {
         TIMED_SCOPED_BLOCK("Load game assets");
         g_AssetManager.LoadAllAssets();
-        g_AssetManager.InitAssetGraphicsResources(graphicsCommandStream);
+        g_AssetManager.InitAssetGraphicsResources(&graphicsCommandStream);
     }
 
-    CreateDefaultGeometry(graphicsCommandStream);
+    CreateDefaultGeometry(&graphicsCommandStream);
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
@@ -297,15 +340,14 @@ static uint32 GameInit(Graphics::GraphicsCommandStream* graphicsCommandStream, u
     return 0;
 }
 
-
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
-    graphicsCommandStream->m_numCommands = 0;
+    graphicsCommandStream.m_numCommands = 0;
 
     if (!isGameInitted)
     {
-        uint32 initResult = GameInit(graphicsCommandStream, windowWidth, windowHeight);
+        uint32 initResult = GameInit(windowWidth, windowHeight);
         if (initResult != 0)
         {
             return initResult;
@@ -314,6 +356,13 @@ GAME_UPDATE(GameUpdate)
     }
 
     // Start frame
+    bool shouldRenderFrame = Tk::Graphics::AcquireFrame();
+
+    if (!shouldRenderFrame)
+    {
+        return 1; // TODO error codes
+    }
+
     DebugUI::NewFrame();
 
     UpdateAxisVectors(&g_gameCamera);
@@ -344,7 +393,7 @@ GAME_UPDATE(GameUpdate)
 
     // Clear depth buffer
     {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
 
         // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
         command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
@@ -352,7 +401,7 @@ GAME_UPDATE(GameUpdate)
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
         command->m_startLayout = Graphics::ImageLayout::eUndefined;
         command->m_endLayout = Graphics::ImageLayout::eTransferDst;
-        ++graphicsCommandStream->m_numCommands;
+        ++graphicsCommandStream.m_numCommands;
         ++command;
 
         // Clear depth buffer - before z-prepass
@@ -360,7 +409,7 @@ GAME_UPDATE(GameUpdate)
         command->debugLabel = "Clear depth buffer";
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
         command->m_clearValue = v4f(1.0f, 0.0f, 0.0f, 0.0f); // depth/stencil clear uses x and y components
-        ++graphicsCommandStream->m_numCommands;
+        ++graphicsCommandStream.m_numCommands;
         ++command;
 
         // Transition of depth buffer from transfer dst to depth_attachment_optimal
@@ -369,12 +418,12 @@ GAME_UPDATE(GameUpdate)
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
         command->m_startLayout = Graphics::ImageLayout::eTransferDst;
         command->m_endLayout = Graphics::ImageLayout::eDepthOptimal;
-        ++graphicsCommandStream->m_numCommands;
+        ++graphicsCommandStream.m_numCommands;
     }
 
     // Clear color buffer
     {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
 
         // Transition from layout undefined to transfer_dst (required for clear command)
         command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
@@ -382,14 +431,14 @@ GAME_UPDATE(GameUpdate)
         command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
         command->m_startLayout = Graphics::ImageLayout::eUndefined;
         command->m_endLayout = Graphics::ImageLayout::eTransferDst;
-        ++graphicsCommandStream->m_numCommands;
+        ++graphicsCommandStream.m_numCommands;
         ++command;
 
         command->m_commandType = Graphics::GraphicsCmd::eClearImage;
         command->debugLabel = "Clear color buffer";
         command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
         command->m_clearValue = v4f(0.0f, 0.0f, 0.0f, 0.0f);
-        ++graphicsCommandStream->m_numCommands;
+        ++graphicsCommandStream.m_numCommands;
         ++command;
 
         // Transition from transfer dst to depth_attachment_optimal
@@ -398,7 +447,7 @@ GAME_UPDATE(GameUpdate)
         command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
         command->m_startLayout = Graphics::ImageLayout::eTransferDst;
         command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
-        ++graphicsCommandStream->m_numCommands;
+        ++graphicsCommandStream.m_numCommands;
     }
 
     // Record render commands for view(s)
@@ -409,25 +458,25 @@ GAME_UPDATE(GameUpdate)
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
-        StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
-        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], graphicsCommandStream);
+        StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
+        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream);
 
-        StartRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
+        StartRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
+        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
 
         UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, graphicsCommandStream);
+        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, &graphicsCommandStream);
 
-        EndRenderPass(&gameRenderPasses[eRenderPass_MainView], graphicsCommandStream);
+        EndRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
     }
 
     // Imgui menus
     DebugUI::UI_RenderPassStats();
-    DebugUI::Render(graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
+    DebugUI::Render(&graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
 
     // FINAL BLIT TO SCREEN
-    Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+    Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
 
     // Transition main view render target from render optimal to shader read
     command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
@@ -435,7 +484,7 @@ GAME_UPDATE(GameUpdate)
     command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
     command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
     command->m_endLayout = Graphics::ImageLayout::eShaderRead;
-    ++graphicsCommandStream->m_numCommands;
+    ++graphicsCommandStream.m_numCommands;
     ++command;
 
     // Transition of swap chain to render optimal
@@ -444,7 +493,7 @@ GAME_UPDATE(GameUpdate)
     command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_startLayout = Graphics::ImageLayout::eUndefined;
     command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
-    ++graphicsCommandStream->m_numCommands;
+    ++graphicsCommandStream.m_numCommands;
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
@@ -454,7 +503,7 @@ GAME_UPDATE(GameUpdate)
     command->m_depthRT = Graphics::DefaultResHandle_Invalid;
     command->m_renderWidth = windowWidth;
     command->m_renderHeight = windowHeight;
-    ++graphicsCommandStream->m_numCommands;
+    ++graphicsCommandStream.m_numCommands;
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
@@ -463,7 +512,7 @@ GAME_UPDATE(GameUpdate)
     command->m_scissorOffsetY = 0;
     command->m_scissorWidth = windowWidth;
     command->m_scissorHeight = windowHeight;
-    ++graphicsCommandStream->m_numCommands;
+    ++graphicsCommandStream.m_numCommands;
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
@@ -482,12 +531,12 @@ GAME_UPDATE(GameUpdate)
     }
     command->m_descriptors[0] = gameGraphicsData.m_swapChainBlitDescHandle;
     command->m_descriptors[1] = defaultQuad.m_descriptor;
-    ++graphicsCommandStream->m_numCommands;
+    ++graphicsCommandStream.m_numCommands;
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
     command->debugLabel = "End blit to screen render pass";
-    ++graphicsCommandStream->m_numCommands;
+    ++graphicsCommandStream.m_numCommands;
     ++command;
 
     // Transition of swap chain from render optimal to present
@@ -496,8 +545,17 @@ GAME_UPDATE(GameUpdate)
     command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
     command->m_endLayout = Graphics::ImageLayout::ePresent;
-    ++graphicsCommandStream->m_numCommands;
+    ++graphicsCommandStream.m_numCommands;
     ++command;
+
+    // Process recorded graphics command stream
+    {
+        //TIMED_SCOPED_BLOCK("Graphics command stream processing");
+        Tk::Graphics::BeginFrameRecording();
+        Tk::Graphics::ProcessGraphicsCommandStream(&graphicsCommandStream, false);
+        Tk::Graphics::EndFrameRecording();
+        Tk::Graphics::SubmitFrameToGPU();
+    }
 
     if (isGameInitted && isMultiplayer && connectedToServer)
     {
@@ -524,6 +582,16 @@ static void DestroyWindowResizeDependentResources()
 extern "C"
 GAME_WINDOW_RESIZE(GameWindowResize)
 {
+    if (newWindowWidth == 0 && newWindowHeight == 0)
+    {
+        Tk::Graphics::WindowMinimized();
+    }
+    else
+    {
+        Tk::Graphics::WindowResize();
+        Tk::Graphics::ShaderManager::CreateWindowDependentResources(newWindowWidth, newWindowHeight);
+    }
+
     currentWindowWidth = newWindowWidth;
     currentWindowHeight = newWindowHeight;
     DestroyWindowResizeDependentResources();
@@ -560,5 +628,10 @@ GAME_DESTROY(GameDestroy)
         }
 
         g_AssetManager.FreeMemory();
+
+        // Shutdown graphics
+        Tk::Graphics::ShaderManager::Shutdown();
+        Tk::Graphics::DestroyContext();
+        Tk::CoreFreeAligned(graphicsCommandStream.m_graphicsCommands);
     }
 }
