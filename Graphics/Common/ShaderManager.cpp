@@ -12,8 +12,6 @@ static Tk::Core::LinearAllocator g_ShaderBytecodeAllocator;
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 namespace ShaderManager
@@ -61,7 +59,7 @@ static bool LoadShader(const char* vertexShaderFileName, const char* fragmentSha
         Tk::Platform::ReadEntireFile(fragmentShaderFileName, fragmentShaderFileSize, fragmentShaderBuffer);
     }
 
-    const bool created = Tk::Core::Graphics::CreateGraphicsPipeline(
+    const bool created = Tk::Graphics::CreateGraphicsPipeline(
         vertexShaderBuffer, vertexShaderFileSize,
         fragmentShaderBuffer, fragmentShaderFileSize,
         shaderID, viewportWidth, viewportHeight,
@@ -185,72 +183,71 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     bool bOk = false;
 
     // Descriptor layouts
-    Tk::Core::Graphics::DescriptorLayout descriptorLayout = {};
+    Tk::Graphics::DescriptorLayout descriptorLayout = {};
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSampledImage;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[0].amount = 1;
-    descriptorLayout.params[1].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[1].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[1].amount = 1;
-    descriptorLayout.params[2].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[2].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[2].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_VBS, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSampledImage;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_TEX, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_TEX, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[0].amount = 1;
-    descriptorLayout.params[1].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[1].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[1].amount = 1;
-    descriptorLayout.params[2].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[2].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[2].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eBuffer;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eBuffer;
     descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_VIEW_GLOBAL, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_VIEW_GLOBAL, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eBuffer;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eBuffer;
     descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[0].amount = 1;
-    descriptorLayout.params[1].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[1].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[1].amount = 1;
-    descriptorLayout.params[2].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[2].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[2].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_ASSET_VBS, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_ASSET_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Core::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Core::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_POSONLY_VBS, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_POSONLY_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     LoadAllShaders(windowWidth, windowHeight);
 }
 
-}
 }
 }
 }

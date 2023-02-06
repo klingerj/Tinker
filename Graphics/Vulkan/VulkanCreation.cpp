@@ -4,8 +4,6 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 
@@ -878,6 +876,5 @@ void VulkanDestroyAllDescriptors()
     g_vulkanContextResources.descriptorPool = VK_NULL_HANDLE;
 }
 
-}
 }
 }

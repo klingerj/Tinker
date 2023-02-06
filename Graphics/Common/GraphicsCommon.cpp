@@ -9,8 +9,6 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 
@@ -136,93 +134,70 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
                     if (psoChange)
                     {
-                        #ifdef VULKAN
-                        Graphics::VulkanRecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState, immediateSubmit);
-                        #endif
+                        RecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState, immediateSubmit);
                     }
 
                     if (descChange)
                     {
-                        #ifdef VULKAN
-                        Graphics::VulkanRecordCommandBindDescriptor(currentShaderID, &currentCmd.m_descriptors[0], immediateSubmit);
-                        #endif
+                        RecordCommandBindDescriptor(currentShaderID, &currentCmd.m_descriptors[0], immediateSubmit);
                     }
 
-                    #ifdef VULKAN
-
-                    Graphics::VulkanRecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
+                    RecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
                         currentCmd.m_numInstances, currentCmd.m_vertOffset, currentCmd.m_indexOffset,
                         currentCmd.debugLabel, immediateSubmit);
-
-                    #endif
                     break;
                 }
 
                 case GraphicsCmd::eMemTransfer:
                 {
-                    #ifdef VULKAN
-                    Graphics::VulkanRecordCommandMemoryTransfer(currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
+                    RecordCommandMemoryTransfer(currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
                         currentCmd.debugLabel, immediateSubmit);
-                    #endif
 
                     break;
                 }
 
                 case GraphicsCmd::ePushConstant:
                 {
-                    #ifdef VULKAN
-                    Graphics::VulkanRecordCommandPushConstant(&currentCmd.m_pushConstantData[0], ARRAYCOUNT(currentCmd.m_pushConstantData) * sizeof(uint8), currentCmd.m_shaderForLayout);
-                    #endif
+                    RecordCommandPushConstant(&currentCmd.m_pushConstantData[0], ARRAYCOUNT(currentCmd.m_pushConstantData) * sizeof(uint8), currentCmd.m_shaderForLayout);
 
                     break;
                 }
 
                 case GraphicsCmd::eSetScissor:
                 {
-                    #ifdef VULKAN
-                    Graphics::VulkanRecordCommandSetScissor(currentCmd.m_scissorOffsetX, currentCmd.m_scissorOffsetY, currentCmd.m_scissorWidth, currentCmd.m_scissorHeight);
-                    #endif
+                    RecordCommandSetScissor(currentCmd.m_scissorOffsetX, currentCmd.m_scissorOffsetY, currentCmd.m_scissorWidth, currentCmd.m_scissorHeight);
 
                     break;
                 }
 
                 case GraphicsCmd::eRenderPassBegin:
                 {
-                    #ifdef VULKAN
-                    Graphics::VulkanRecordCommandRenderPassBegin(currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
-                        currentCmd.m_renderWidth, currentCmd.m_renderHeight,
-                        currentCmd.debugLabel, immediateSubmit);
-                    #endif
+                    RecordCommandRenderPassBegin(currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
+                        currentCmd.m_renderWidth, currentCmd.m_renderHeight, currentCmd.debugLabel, immediateSubmit);
 
                     break;
                 }
 
                 case GraphicsCmd::eRenderPassEnd:
                 {
-                    #ifdef VULKAN
-                    Graphics::VulkanRecordCommandRenderPassEnd(immediateSubmit);
-                    #endif
+                    RecordCommandRenderPassEnd(immediateSubmit);
 
                     break;
                 }
 
                 case GraphicsCmd::eLayoutTransition:
                 {
-                    #ifdef VULKAN
-                    Graphics::VulkanRecordCommandTransitionLayout(currentCmd.m_imageHandle,
+                    RecordCommandTransitionLayout(currentCmd.m_imageHandle,
                         currentCmd.m_startLayout, currentCmd.m_endLayout,
                         currentCmd.debugLabel, immediateSubmit);
-                    #endif
 
                     break;
                 }
 
                 case GraphicsCmd::eClearImage:
                 {
-                    #ifdef VULKAN
-                    Graphics::VulkanRecordCommandClearImage(currentCmd.m_imageHandle,
+                    RecordCommandClearImage(currentCmd.m_imageHandle,
                         currentCmd.m_clearValue, currentCmd.debugLabel, immediateSubmit);
-                    #endif
 
                     break;
                 }
@@ -357,6 +332,5 @@ DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
     #endif
 }
 
-}
 }
 }

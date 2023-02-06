@@ -3,14 +3,13 @@
 #include <string.h>
 
 using namespace Tk;
-using namespace Core;
 
 void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // Default Quad
     {
         Graphics::ResourceDesc desc;
-        desc.resourceType = Core::Graphics::ResourceType::eBuffer1D;
+        desc.resourceType = Graphics::ResourceType::eBuffer1D;
         desc.debugLabel = "Default Quad Vtx Attr Buffer";
 
         // Positions

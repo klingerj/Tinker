@@ -5,8 +5,6 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 
@@ -290,6 +288,5 @@ VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 bufferUsage)
     return VulkanMemPropertyFlags[bufferUsage];
 }
 
-}
 }
 }

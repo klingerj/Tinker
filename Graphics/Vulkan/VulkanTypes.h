@@ -26,8 +26,6 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 
@@ -92,7 +90,7 @@ typedef struct
 typedef struct
 {
     VkDescriptorSetLayout layout;
-    Core::Graphics::DescriptorLayout bindings;
+    DescriptorLayout bindings;
 } VulkanDescriptorLayout;
 
 typedef struct
@@ -196,6 +194,5 @@ const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType);
 VkBufferUsageFlags GetVkBufferUsageFlags(uint32 bufferUsage);
 VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 memUsage);
 
-}
 }
 }

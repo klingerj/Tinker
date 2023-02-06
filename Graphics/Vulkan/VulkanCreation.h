@@ -2,13 +2,10 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 
 void CreateSamplers();
 
-}
 }
 }

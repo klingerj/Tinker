@@ -5,8 +5,6 @@
 
 namespace Tk
 {
-namespace Core
-{
 namespace Graphics
 {
 
@@ -781,6 +779,5 @@ void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
     }
 }
 
-}
 }
 }
