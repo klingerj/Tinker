@@ -44,7 +44,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 #endif
 
 // This code exists so that we can preallocate proper VkDeviceMemory's before creating any buffers for faster GPU memory allocation
-// TODO: wrap up stuff into helpers
 static void InitGPUMemAllocators()
 {
     VkPhysicalDeviceProperties properties;
