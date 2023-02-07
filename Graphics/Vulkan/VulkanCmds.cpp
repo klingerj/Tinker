@@ -35,17 +35,14 @@ bool VulkanAcquireFrame()
         Core::Utility::LogMsg("Platform", "Failed to acquire next swap chain image!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            //TINKER_ASSERT(0); // untested code path
             Core::Utility::LogMsg("Platform", "out of date swap chain!", Core::Utility::LogSeverity::eInfo);
-            return false; // Don't present on this frame
         }
         else
         {
             Core::Utility::LogMsg("Platform", "Not recreating swap chain!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
+            TINKER_ASSERT(0); // we will probably crash
         }
-
-        return false;
+        return false; // Don't present on this frame
     }
 
     g_vulkanContextResources.currentSwapChainImage = currentSwapChainImageIndex;
@@ -95,13 +92,14 @@ void VulkanSubmitFrame()
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {
             Core::Utility::LogMsg("Platform", "Out of date / suboptimal swap chain (probably minimized window)!", Core::Utility::LogSeverity::eInfo);
-            return;
+            
         }
         else
         {
             Core::Utility::LogMsg("Platform", "Not recreating swap chain!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
+            TINKER_ASSERT(0); // we will probably crash
         }
+        return; // don't present on this frame
     }
 
     g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
