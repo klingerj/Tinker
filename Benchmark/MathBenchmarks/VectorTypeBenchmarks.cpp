@@ -1,5 +1,5 @@
 #include "VectorTypeBenchmarks.h"
-#include "Platform/PlatformCommon.h"
+#include "Platform/PlatformGameAPI.h"
 
 #include "Platform/Win32WorkerThreadPool.h"
 #include <emmintrin.h>

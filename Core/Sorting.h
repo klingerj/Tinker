@@ -72,7 +72,7 @@ inline void MergeSort(T* data, uint32 numEles, CompareLessThan Compare)
     uint8* tmpList = (uint8*)CoreMalloc(numEles * eleSize);
     memcpy(tmpList, data, numEles * eleSize);
     MergeSortRecursive((uint8*)data, numEles, eleSize, Compare, tmpList);
-    CoreFree(tmpList);
+    Tk::Core::CoreFree(tmpList);
 }
 
 }

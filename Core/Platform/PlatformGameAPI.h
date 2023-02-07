@@ -16,6 +16,13 @@ struct GraphicsCommandStream;
 namespace Platform
 {
 
+// TODO: tighten this up for other platforms, probably roll it into a window creation function
+struct WindowHandles
+{
+    uint64 procInstHandle;
+    uint64 windowInstHandle;
+};
+
 struct FileHandle
 {
     unsigned long long h;
@@ -25,8 +32,17 @@ struct FileHandle
     };
 };
 
+#define GET_PLATFORM_WINDOW_HANDLES(name) TINKER_API WindowHandles* name()
+GET_PLATFORM_WINDOW_HANDLES(GetPlatformWindowHandles);
+
 #define PRINT_DEBUG_STRING(name) TINKER_API void name(const char* str)
 PRINT_DEBUG_STRING(PrintDebugString);
+
+#define ALLOC_ALIGNED_RAW(name) TINKER_API void* name(size_t size, size_t alignment)
+ALLOC_ALIGNED_RAW(AllocAlignedRaw);
+
+#define FREE_ALIGNED_RAW(name) TINKER_API void name(void* ptr)
+FREE_ALIGNED_RAW(FreeAlignedRaw);
 
 #define READ_ENTIRE_FILE(name) TINKER_API uint32 name(const char* filename, uint32 fileSizeInBytes, uint8* buffer)
 READ_ENTIRE_FILE(ReadEntireFile);

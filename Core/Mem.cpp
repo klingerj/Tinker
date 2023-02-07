@@ -1,5 +1,5 @@
 #include "Mem.h"
-#include "Platform/PlatformCommon.h"
+#include "Platform/PlatformGameAPI.h"
 
 namespace Tk
 {

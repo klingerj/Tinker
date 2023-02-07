@@ -7,14 +7,6 @@
 
 namespace Tk
 {
-namespace Platform
-{
-struct PlatformWindowHandles;
-}
-}
-
-namespace Tk
-{
 namespace Graphics
 {
 
@@ -34,7 +26,7 @@ typedef struct vulkan_vertex_normal
 } VulkanVertexNormal;
 
 // Init/destroy - called one time
-int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height);
+int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 width, uint32 height);
 void DestroyVulkan();
 
 void VulkanCreateSwapChain();

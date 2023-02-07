@@ -25,6 +25,8 @@ goto EndScript
 
 :StartScript
 set BuildConfig=%1
+set GraphicsAPI=%2
+
 if "%BuildConfig%" NEQ "Debug" (
     if "%BuildConfig%" NEQ "Release" (
         echo Invalid build config specified. Must specify 'Release' or 'Debug'
@@ -124,6 +126,8 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines! 
     )
 
+set LibsToLink=TinkerApp.lib 
+set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
 if "%GraphicsAPI%" == "VK" (
     set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
     set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
@@ -135,7 +139,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% TinkerApp.lib /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
 
 rem Delete unnecessary files
 echo.

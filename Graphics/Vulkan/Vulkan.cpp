@@ -1,7 +1,6 @@
 #include "Graphics/Vulkan/Vulkan.h"
 #include "Graphics/Vulkan/VulkanTypes.h"
 #include "Graphics/Vulkan/VulkanCreation.h"
-#include "Platform/PlatformCommon.h"
 #include "Utility/Logging.h"
 
 #include <iostream>
@@ -9,6 +8,9 @@
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan_win32.h>
 #endif
@@ -113,7 +115,7 @@ static void InitGPUMemAllocators()
     }
 }
 
-int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles, uint32 width, uint32 height)
+int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 width, uint32 height)
 {
     g_vulkanContextResources.DataAllocator.Init(VULKAN_SCRATCH_MEM_SIZE, 1);
 
@@ -294,8 +296,8 @@ int InitVulkan(const Tk::Platform::PlatformWindowHandles* platformWindowHandles,
     #if defined(_WIN32)
     VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo = {};
     win32SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    win32SurfaceCreateInfo.hinstance = platformWindowHandles->instance;
-    win32SurfaceCreateInfo.hwnd = platformWindowHandles->windowHandle;
+    win32SurfaceCreateInfo.hinstance = (HINSTANCE)platformWindowHandles->procInstHandle;
+    win32SurfaceCreateInfo.hwnd = (HWND)platformWindowHandles->windowInstHandle;
 
     result = vkCreateWin32SurfaceKHR(g_vulkanContextResources.instance,
         &win32SurfaceCreateInfo,
