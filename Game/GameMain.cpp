@@ -43,6 +43,8 @@ static const bool isMultiplayer = false;
 static bool connectedToServer = false;
 static uint32 currentWindowWidth = 0;
 static uint32 currentWindowHeight = 0;
+static bool isWindowMinimized;
+static Tk::Platform::WindowHandles* windowHandles = nullptr;
 
 #define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
 Tk::Graphics::GraphicsCommandStream graphicsCommandStream;
@@ -266,9 +268,10 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
 
+    windowHandles = Tk::Platform::GetPlatformWindowHandles();
+
     // Graphics init
-    // TODO get platform handles from platform layer
-    Tk::Graphics::CreateContext(&g_platformWindowHandles, windowWidth, windowHeight);
+    Tk::Graphics::CreateContext(windowHandles, windowWidth, windowHeight);
     graphicsCommandStream = {};
     graphicsCommandStream.m_numCommands = 0;
     graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
@@ -360,7 +363,15 @@ GAME_UPDATE(GameUpdate)
 
     if (!shouldRenderFrame)
     {
-        return 1; // TODO error codes
+        if (isWindowMinimized)
+        {
+            return 0; // gracefully skip this frame 
+        }
+        else
+        {
+            return 1; // acquire actually failed for some reason
+            // TODO real error codes
+        }
     }
 
     DebugUI::NewFrame();
@@ -585,22 +596,24 @@ GAME_WINDOW_RESIZE(GameWindowResize)
     if (newWindowWidth == 0 && newWindowHeight == 0)
     {
         Tk::Graphics::WindowMinimized();
+        isWindowMinimized = true;
     }
     else
     {
+        isWindowMinimized = false;
         Tk::Graphics::WindowResize();
         Tk::Graphics::ShaderManager::CreateWindowDependentResources(newWindowWidth, newWindowHeight);
+
+        currentWindowWidth = newWindowWidth;
+        currentWindowHeight = newWindowHeight;
+        DestroyWindowResizeDependentResources();
+
+        // Gameplay stuff
+        g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
+
+        CreateGameRenderingResources(newWindowWidth, newWindowHeight);
+        WriteSwapChainBlitResources();
     }
-
-    currentWindowWidth = newWindowWidth;
-    currentWindowHeight = newWindowHeight;
-    DestroyWindowResizeDependentResources();
-
-    // Gameplay stuff
-    g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
-
-    CreateGameRenderingResources(newWindowWidth, newWindowHeight);
-    WriteSwapChainBlitResources();
 }
 
 extern "C"
@@ -632,6 +645,6 @@ GAME_DESTROY(GameDestroy)
         // Shutdown graphics
         Tk::Graphics::ShaderManager::Shutdown();
         Tk::Graphics::DestroyContext();
-        Tk::CoreFreeAligned(graphicsCommandStream.m_graphicsCommands);
+        Tk::Core::CoreFreeAligned(graphicsCommandStream.m_graphicsCommands);
     }
 }

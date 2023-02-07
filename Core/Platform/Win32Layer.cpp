@@ -1,5 +1,4 @@
 #include "CoreDefines.h"
-#include "PlatformCommon.h"
 #include "PlatformGameAPI.h"
 #include "Win32WorkerThreadPool.h"
 #include "Win32Client.h"
@@ -35,7 +34,7 @@ const bool enableDllHotloading = true;
 
 volatile bool runGame = true;
 
-HWND g_windowHandle = NULL;
+Tk::Platform::WindowHandles g_WindowHandles = {};
 bool g_windowResized = false;
 
 Tk::Platform::InputStateDeltas g_inputStateDeltas;
@@ -66,7 +65,6 @@ typedef struct global_app_params
 GlobalAppParams g_GlobalAppParams;
 
 SYSTEM_INFO g_SystemInfo;
-Tk::Platform::PlatformWindowHandles g_platformWindowHandles;
 
 static bool ReloadGameCode(Win32GameCode* GameCode)
 {
@@ -132,6 +130,11 @@ namespace Tk
 {
 namespace Platform
 {
+
+GET_PLATFORM_WINDOW_HANDLES(GetPlatformWindowHandles)
+{
+    return &g_WindowHandles;
+}
 
 ENQUEUE_WORKER_THREAD_JOB(EnqueueWorkerThreadJob)
 {
@@ -226,13 +229,13 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
 
 IMGUI_CREATE(ImguiCreate)
 {
-    TINKER_ASSERT(g_windowHandle);
+    TINKER_ASSERT(g_WindowHandles.windowInstHandle);
     TINKER_ASSERT(context);
 
     ImGui::SetCurrentContext(context);
     ImGui::SetAllocatorFunctions(mallocWrapper, freeWrapper);
 
-    ImGui_ImplWin32_Init(g_windowHandle);
+    ImGui_ImplWin32_Init((HWND)g_WindowHandles.windowInstHandle);
 }
 
 IMGUI_NEW_FRAME(ImguiNewFrame)
@@ -260,7 +263,7 @@ static void ToggleCursorLocked()
     g_cursorLocked = !g_cursorLocked;
     if (g_cursorLocked)
     {
-        LockCursor(g_windowHandle);
+        LockCursor((HWND)g_WindowHandles.windowInstHandle);
     }
     ShowCursor(!g_cursorLocked);
 }
@@ -410,9 +413,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
             {
                 g_GlobalAppParams.m_windowWidth = 0;
                 g_GlobalAppParams.m_windowHeight = 0;
+                g_windowResized = true; // swap chain will be recreated later when this flag is checked
             }
-
-            //else
+            else
             {
                 // Normal window resize / maximize
                 uint32 newWindowWidth = LOWORD(lParam);
@@ -441,7 +444,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
         case WM_ACTIVATEAPP:
         {
             DWORD procPrior = NORMAL_PRIORITY_CLASS;
-            if (wParam) procPrior = ABOVE_NORMAL_PRIORITY_CLASS;
+            if (wParam)
+            {
+                procPrior = ABOVE_NORMAL_PRIORITY_CLASS;
+            }
+
             if (!SetPriorityClass(GetCurrentProcess(), procPrior))
             {
                 Tk::Core::Utility::LogMsg("Platform", "Failed to change process priority when changing window focus!", Tk::Core::Utility::LogSeverity::eCritical);
@@ -461,7 +468,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
 
             if (g_cursorLocked)
             {
-                LockCursor(g_windowHandle);
+                LockCursor((HWND)g_WindowHandles.windowInstHandle);
                 SetCursorPos((int)g_GlobalAppParams.m_windowWidth / 2, (int)g_GlobalAppParams.m_windowHeight / 2);
             }
 
@@ -482,7 +489,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                 int yPos = GET_Y_LPARAM(lParam);
                 HandleMouseInput(Mousecode::eMouseMoveVertical, yPos);
                 HandleMouseInput(Mousecode::eMouseMoveHorizontal, xPos);
-                LockCursor(g_windowHandle);
+                LockCursor((HWND)g_WindowHandles.windowInstHandle);
             }
             break;
         }
@@ -586,7 +593,7 @@ wWinMain(HINSTANCE hInstance,
         RECT windowDims = { 0, 0, (LONG)g_GlobalAppParams.m_windowWidth, (LONG)g_GlobalAppParams.m_windowHeight };
         AdjustWindowRect(&windowDims, WS_OVERLAPPEDWINDOW | WS_VISIBLE, FALSE);
 
-        g_windowHandle =
+        HWND windowHandle =
             CreateWindowEx(0,
                 windowClass.lpszClassName,
                 "Tinker",
@@ -600,15 +607,14 @@ wWinMain(HINSTANCE hInstance,
                 hInstance,
                 0);
 
-        if (!g_windowHandle)
+        if (!windowHandle)
         {
             Tk::Core::Utility::LogMsg("Platform", "Failed to create window!", Tk::Core::Utility::LogSeverity::eCritical);
             return 1;
         }
 
-        g_platformWindowHandles = {};
-        g_platformWindowHandles.instance = hInstance;
-        g_platformWindowHandles.windowHandle = g_windowHandle;
+        g_WindowHandles.procInstHandle = (uint64)hInstance;
+        g_WindowHandles.windowInstHandle = (uint64)windowHandle;
 
         #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
         ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);

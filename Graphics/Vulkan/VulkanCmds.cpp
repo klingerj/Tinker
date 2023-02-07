@@ -35,10 +35,8 @@ bool VulkanAcquireFrame()
         Core::Utility::LogMsg("Platform", "Failed to acquire next swap chain image!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            TINKER_ASSERT(0); // untested code path
-            Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
-            VulkanDestroySwapChain();
-            VulkanCreateSwapChain();
+            //TINKER_ASSERT(0); // untested code path
+            Core::Utility::LogMsg("Platform", "out of date swap chain!", Core::Utility::LogSeverity::eInfo);
             return false; // Don't present on this frame
         }
         else
@@ -96,10 +94,7 @@ void VulkanSubmitFrame()
         Core::Utility::LogMsg("Platform", "Failed to present swap chain!", Core::Utility::LogSeverity::eInfo);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {
-            TINKER_ASSERT(0); // untested code path
-            Core::Utility::LogMsg("Platform", "Recreating swap chain!", Core::Utility::LogSeverity::eInfo);
-            VulkanDestroySwapChain();
-            VulkanCreateSwapChain();
+            Core::Utility::LogMsg("Platform", "Out of date / suboptimal swap chain (probably minimized window)!", Core::Utility::LogSeverity::eInfo);
             return;
         }
         else
@@ -327,7 +322,7 @@ VkCommandBuffer ChooseAppropriateCommandBuffer(bool immediateSubmit)
     return commandBuffer;
 }
 
-void VulkanRecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 shaderID)
+void RecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 shaderID)
 {
     TINKER_ASSERT(data && sizeInBytes);
 
@@ -338,7 +333,7 @@ void VulkanRecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint
     vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
 }
 
-void VulkanRecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height)
+void RecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(false);
     VkRect2D scissor = {};
@@ -347,7 +342,7 @@ void VulkanRecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, u
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 }
 
-void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
+void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
     uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit)
 {
     TINKER_ASSERT(indexBufferHandle != DefaultResHandle_Invalid);
@@ -362,7 +357,7 @@ void VulkanRecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numInd
     vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
 }
 
-void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit)
+void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit)
 {
     const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
     TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
@@ -372,7 +367,7 @@ void VulkanRecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 de
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
-void VulkanRecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle* descSetHandles, bool immediateSubmit)
+void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle* descSetHandles, bool immediateSubmit)
 {
     TINKER_ASSERT(descSetHandles);
     const VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
@@ -395,7 +390,7 @@ void VulkanRecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle* 
     }
 }
 
-void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
+void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
     const char* debugLabel, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
@@ -465,7 +460,7 @@ void VulkanRecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBuf
     }
 }
 
-void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT, uint32 renderWidth, uint32 renderHeight,
+void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT, uint32 renderWidth, uint32 renderHeight,
     const char* debugLabel, bool immediateSubmit)
 {
     const bool HasDepth = depthRT.m_hRes != TINKER_INVALID_HANDLE;
@@ -525,14 +520,14 @@ void VulkanRecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
 }
 
-void VulkanRecordCommandRenderPassEnd(bool immediateSubmit)
+void RecordCommandRenderPassEnd(bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
     vkCmdEndRendering(commandBuffer);
     DbgEndMarker(commandBuffer);
 }
 
-void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
+void RecordCommandTransitionLayout(ResourceHandle imageHandle,
     uint32 startLayout, uint32 endLayout, const char* debugLabel, bool immediateSubmit)
 {
     if (startLayout == endLayout)
@@ -704,7 +699,7 @@ void VulkanRecordCommandTransitionLayout(ResourceHandle imageHandle,
     vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void VulkanRecordCommandClearImage(ResourceHandle imageHandle,
+void RecordCommandClearImage(ResourceHandle imageHandle,
     const v4f& clearValue, const char* debugLabel, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);

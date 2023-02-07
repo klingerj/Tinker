@@ -1,5 +1,4 @@
 #include "GraphicsCommon.h"
-#include "Platform/PlatformCommon.h"
 #include "Utility/Logging.h"
 
 #ifdef VULKAN
@@ -23,7 +22,7 @@ uint32 MultiBufferedStatusFromBufferUsage[] =
 };
 static_assert(ARRAYCOUNT(MultiBufferedStatusFromBufferUsage) == BufferUsage::eMax); // Don't forget to add one here if enum is added to
 
-void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
+void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     int result = 0;
 
@@ -35,7 +34,7 @@ void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uin
         Core::Utility::LogMsg("Platform", "Failed to init graphics backend!", Core::Utility::LogSeverity::eCritical);
 }
 
-void RecreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
+void RecreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     #ifdef VULKAN
     DestroyVulkan();
@@ -237,16 +236,16 @@ void SubmitFrameToGPU()
 SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
 {
     #ifdef VULKAN
-    Graphics::BeginVulkanCommandRecordingImmediate();
+    BeginVulkanCommandRecordingImmediate();
     ProcessGraphicsCommandStream(graphicsCommandStream, true);
-    Graphics::EndVulkanCommandRecordingImmediate();
+    EndVulkanCommandRecordingImmediate();
     #endif
 }
 
 CREATE_RESOURCE(CreateResource)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateResource(resDesc);
+    return VulkanCreateResource(resDesc);
     #else
     return Graphics::DefaultResHandle_Invalid;
     #endif
@@ -255,14 +254,14 @@ CREATE_RESOURCE(CreateResource)
 DESTROY_RESOURCE(DestroyResource)
 {
     #ifdef VULKAN
-    Graphics::VulkanDestroyResource(handle);
+    VulkanDestroyResource(handle);
     #endif
 }
 
 MAP_RESOURCE(MapResource)
 {
     #ifdef VULKAN
-    return Graphics::VulkanMapResource(handle);
+    return VulkanMapResource(handle);
     #else
     return NULL;
     #endif
@@ -271,14 +270,14 @@ MAP_RESOURCE(MapResource)
 UNMAP_RESOURCE(UnmapResource)
 {
     #ifdef VULKAN
-    Graphics::VulkanUnmapResource(handle);
+    VulkanUnmapResource(handle);
     #endif
 }
 
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateGraphicsPipeline(vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
+    return VulkanCreateGraphicsPipeline(vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
         shaderID, viewportWidth, viewportHeight, numColorRTs, colorRTFormats, depthFormat, descriptorHandles, numDescriptorHandles);
     #else
     return false;
@@ -288,7 +287,7 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 CREATE_DESCRIPTOR(CreateDescriptor)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateDescriptor(descLayoutID);
+    return VulkanCreateDescriptor(descLayoutID);
     #else
     return DefaultDescHandle_Invalid;
     #endif
@@ -297,28 +296,28 @@ CREATE_DESCRIPTOR(CreateDescriptor)
 DESTROY_DESCRIPTOR(DestroyDescriptor)
 {
     #ifdef VULKAN
-    Graphics::VulkanDestroyDescriptor(handle);
+    VulkanDestroyDescriptor(handle);
     #endif
 }
 
 DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
 {
     #ifdef VULKAN
-    Graphics::VulkanDestroyAllDescriptors();
+    VulkanDestroyAllDescriptors();
     #endif
 }
 
 WRITE_DESCRIPTOR(WriteDescriptor)
 {
     #ifdef VULKAN
-    Graphics::VulkanWriteDescriptor(descLayoutID, descSetHandle, descSetDataHandles);
+    VulkanWriteDescriptor(descLayoutID, descSetHandle, descSetDataHandles);
     #endif
 }
 
 CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
 {
     #ifdef VULKAN
-    return Graphics::VulkanCreateDescriptorLayout(descLayoutID, descLayout);
+    return VulkanCreateDescriptorLayout(descLayoutID, descLayout);
     #else
     return false;
     #endif
@@ -328,7 +327,7 @@ CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
 {
     #ifdef VULKAN
-    Graphics::DestroyPSOPerms(shaderID);
+    DestroyPSOPerms(shaderID);
     #endif
 }
 

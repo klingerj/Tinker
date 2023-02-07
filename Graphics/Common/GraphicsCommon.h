@@ -7,7 +7,7 @@ namespace Tk
 
 namespace Platform
 {
-struct PlatformWindowHandles;
+struct WindowHandles;
 }
 
 struct GraphicsCommandStream;
@@ -478,8 +478,8 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline);
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
 //
 
-void CreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
-void RecreateContext(const Tk::Platform::PlatformWindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
+void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
+void RecreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
 void WindowResize();
 void WindowMinimized();
 void DestroyContext();
