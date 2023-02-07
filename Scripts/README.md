@@ -13,17 +13,17 @@ or
 #### Build scripts
 Scripts that compile code
 
-<b>build_app.bat</b> - builds engine exe and game dll into <code>Build/</code>  
-<code>> build_app.bat [Release | Debug] [VK | DX] </code>  
+<b>build_app_and_game_dll.bat</b> - builds platform app exe and game dll into <code>Build/</code>  
+<code>> build_app_and_game_dll.bat [Release | Debug] [VK | DX] </code>  
 
-<b>build_benchmarks.bat</b> - builds benchmark exe into <code>Build/</code>  
+<b>build_benchmarks.bat</b> - builds benchmark exe into <code>Build/</code>. Note game dll hotloads!  
 <code>> build_benchmarks.bat [Release | Debug] </code>  
 
-<b>build_engine.bat</b> - builds engine exe into <code>Build/</code>  
-<code>> build_engine.bat [Release | Debug] [VK | DX] </code>  
+<b>build_app.bat</b> - builds platform app exe into <code>Build/</code>  
+<code>> build_app.bat [Release | Debug] </code>  
 
-<b>build_game.bat</b> - builds game dll into <code>Build/</code>  
-<code>> build_game.bat [Release | Debug] [VK | DX] </code>  
+<b>build_game_dll.bat</b> - builds game dll into <code>Build/</code>. Note game dll hotloads!  
+<code>> build_game_dll.bat [Release | Debug] [VK | DX] </code>  
 
 <b>build_server.bat</b> - builds server exe into <code>Build/</code>  
 <code>> build_server.bat [Release | Debug] </code>  
