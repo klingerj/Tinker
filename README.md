@@ -24,13 +24,13 @@ Raytraced | Rasterized
 * <code>Benchmark/</code> - simple setup for running benchmarked code
 * <code>Core/</code> - all engine and platform code
   * <code>DataStructures/</code> - data structures, e.g. vector and hashmap
-  * <code>Graphics/</code> - graphics api layer as well as backends, e.g. Vulkan
   * <code>Math/</code> - math ops, e.g. matrix multiply (SIMD-accelerated)
   * <code>Platform/</code> - platform/threading api layer as well as application main, e.g. Windows
   * <code>Raytracing/</code> - (WIP, not done!) minimal raytracing and octree code
   * <code>Utility/</code> - logging, mem alloc tracking, code block timing
 * <code>DebugUI/</code> - debug ui / imgui layer, builds with game dll
 * <code>Game/</code> - game code, builds as dll
+* <code>Graphics/</code> - graphics api layer as well as backends, e.g. Vulkan
 * <code>Output/</code> - dumping ground for output files, e.g. raytraced image
 * <code>SPIR-V-VM/</code> - (WIP, not done!) virtual machine for evaluating SPIR-V shaders, written in pure C
 * <code>Scripts/</code> - build scripts and some helpful project scripts
