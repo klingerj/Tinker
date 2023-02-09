@@ -1,5 +1,6 @@
 #include "Platform/PlatformGameAPI.h"
 #include "Graphics/Common/GraphicsCommon.h"
+#include "Graphics/Common/GPUTimestamps.h"
 #include "Graphics/Common/ShaderManager.h"
 #include "ShaderCompiler/ShaderCompiler.h"
 #include "Allocators.h"
@@ -402,6 +403,15 @@ GAME_UPDATE(GameUpdate)
         Update(&MainView, descriptors);
     }
 
+    // Timestamp start of frame
+    {
+        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
+        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
+        command->debugLabel = "Timestamp";
+        command->m_timestampID = Graphics::GPUTimestamps::ID::BeginFrame;
+        ++graphicsCommandStream.m_numCommands;
+    }
+    
     // Clear depth buffer
     {
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
@@ -473,6 +483,12 @@ GAME_UPDATE(GameUpdate)
         RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
         EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream);
 
+        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
+        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
+        command->debugLabel = "Timestamp";
+        command->m_timestampID = Graphics::GPUTimestamps::ID::MainViewZPrepass;
+        ++graphicsCommandStream.m_numCommands;
+
         StartRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
         RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
 
@@ -480,13 +496,26 @@ GAME_UPDATE(GameUpdate)
         DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, &graphicsCommandStream);
 
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
+
+        command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
+        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
+        command->debugLabel = "Timestamp";
+        command->m_timestampID = Graphics::GPUTimestamps::ID::MainViewRender;
+        ++graphicsCommandStream.m_numCommands;
     }
 
     // Imgui menus
     DebugUI::UI_RenderPassStats();
     DebugUI::Render(&graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
+    {
+        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
+        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
+        command->debugLabel = "Timestamp";
+        command->m_timestampID = Graphics::GPUTimestamps::ID::DebugUI;
+        ++graphicsCommandStream.m_numCommands;
+    }
 
-    // FINAL BLIT TO SCREEN
+    // FINAL BLIT TO SWAP CHAIN
     Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
 
     // Transition main view render target from render optimal to shader read
@@ -508,7 +537,7 @@ GAME_UPDATE(GameUpdate)
     ++command;
 
     command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
-    command->debugLabel = "Blit to screen";
+    command->debugLabel = "Blit to swap chain";
     command->m_numColorRTs = 1;
     command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_depthRT = Graphics::DefaultResHandle_Invalid;
@@ -558,6 +587,14 @@ GAME_UPDATE(GameUpdate)
     command->m_endLayout = Graphics::ImageLayout::ePresent;
     ++graphicsCommandStream.m_numCommands;
     ++command;
+
+    {
+        command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
+        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
+        command->debugLabel = "Timestamp";
+        command->m_timestampID = Graphics::GPUTimestamps::ID::BlitToSwapChain;
+        ++graphicsCommandStream.m_numCommands;
+    }
 
     // Process recorded graphics command stream
     {

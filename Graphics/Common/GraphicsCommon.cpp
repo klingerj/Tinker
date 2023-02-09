@@ -1,4 +1,5 @@
 #include "GraphicsCommon.h"
+#include "GPUTimestamps.h"
 #include "Utility/Logging.h"
 
 #ifdef VULKAN
@@ -197,6 +198,19 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                 {
                     RecordCommandClearImage(currentCmd.m_imageHandle,
                         currentCmd.m_clearValue, currentCmd.debugLabel, immediateSubmit);
+
+                    break;
+                }
+
+                case GraphicsCmd::eGPUTimestamp:
+                {
+                    TINKER_ASSERT(currentCmd.m_timestampID < GPU_TIMESTAMP_NUM_MAX);
+                    if (currentCmd.m_timestampID == GPUTimestamps::ID::BeginFrame)
+                    {
+                        ResolveLastFrameTimestamps(GPUTimestamps::GetRawCPUSideTimestampBuffer(), false);
+                        GPUTimestamps::ProcessTimestamps();
+                    }
+                    RecordCommandGPUTimestamp(currentCmd.m_timestampID, immediateSubmit);
 
                     break;
                 }

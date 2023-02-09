@@ -4,7 +4,7 @@
 #include "Utility/Logging.h"
 
 #include <iostream>
-// TODO: move this to be a compile define
+// TODO: move this to be a compile define or ini config entry
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 
 #ifdef _WIN32
@@ -46,6 +46,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 // This code exists so that we can preallocate proper VkDeviceMemory's before creating any buffers for faster GPU memory allocation
 static void InitGPUMemAllocators()
 {
+    // TODO don't do this a second time here
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(g_vulkanContextResources.physicalDevice, &properties);
 
@@ -453,6 +454,17 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
         TINKER_ASSERT(0);
     }
 
+    const bool timestampsAvailable = physicalDeviceProperties.limits.timestampComputeAndGraphics;
+    if (!timestampsAvailable)
+    {
+        Core::Utility::LogMsg("Graphics", "Timestamps not supported on this device", Core::Utility::LogSeverity::eInfo);
+    }
+    else
+    {
+        // supported, need to query the period since it is not the same across vendors
+        g_vulkanContextResources.timestampPeriod = physicalDeviceProperties.limits.timestampPeriod;
+    }
+
     // Physical device memory heaps
     if (0)
     {
@@ -657,6 +669,24 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
         }
     }
 
+    // Timestamp query pool
+    if (timestampsAvailable)
+    {
+        VkQueryPoolCreateInfo queryPoolCreateInfo = {};
+        queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+        queryPoolCreateInfo.pNext = NULL;
+        queryPoolCreateInfo.flags = (VkQueryPoolCreateFlags)0;
+        queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+        queryPoolCreateInfo.queryCount = VULKAN_MAX_FRAMES_IN_FLIGHT * GPU_TIMESTAMP_NUM_MAX;
+        queryPoolCreateInfo.pipelineStatistics = 0;
+
+        result = vkCreateQueryPool(g_vulkanContextResources.device, &queryPoolCreateInfo, NULL, &g_vulkanContextResources.queryPoolTimestamp);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Graphics", "Failed to timestamp query pool!", Core::Utility::LogSeverity::eCritical);
+        }
+    }
+    
     CreateSamplers();
 
     InitVulkanDataTypesPerEnum();
@@ -718,6 +748,11 @@ void DestroyVulkan()
 
     g_vulkanContextResources.vulkanMemResourcePool.ExplicitFree();
     g_vulkanContextResources.vulkanDescriptorResourcePool.ExplicitFree();
+}
+
+float GetGPUTimestampPeriod()
+{
+    return g_vulkanContextResources.timestampPeriod;
 }
 
 }

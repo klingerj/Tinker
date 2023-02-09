@@ -88,6 +88,7 @@ set SourceListGame=
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GameMain.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GraphicsCommon.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/ShaderManager.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GPUTimestamps.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 if "%GraphicsAPI%" == "VK" (
     set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/Vulkan.cpp 

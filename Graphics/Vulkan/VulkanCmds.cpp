@@ -103,6 +103,7 @@ void VulkanSubmitFrame()
     }
 
     g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
+    ++g_vulkanContextResources.frameCounter;
 }
 
 void* VulkanMapResource(ResourceHandle handle)
@@ -770,6 +771,31 @@ void RecordCommandClearImage(ResourceHandle imageHandle,
             return;
         }
     }
+}
+
+void RecordCommandGPUTimestamp(uint32 gpuTimestampID, bool immediateSubmit)
+{
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+
+    uint32 queryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX + gpuTimestampID;
+    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_vulkanContextResources.queryPoolTimestamp, queryOffset);
+}
+
+void ResolveLastFrameTimestamps(void* gpuTimestampCPUSideBuffer, bool immediateSubmit)
+{
+    const uint32 queryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX;
+
+    if (g_vulkanContextResources.frameCounter > 0)
+    {
+        VkResult result = vkGetQueryPoolResults(g_vulkanContextResources.device, g_vulkanContextResources.queryPoolTimestamp, queryOffset, GPU_TIMESTAMP_NUM_MAX, GPU_TIMESTAMP_NUM_MAX * sizeof(uint64), gpuTimestampCPUSideBuffer, sizeof(uint64), VK_QUERY_RESULT_64_BIT);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Graphics", "Failed to get query pool results!", Core::Utility::LogSeverity::eCritical);
+        }
+    }
+
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+    vkCmdResetQueryPool(commandBuffer, g_vulkanContextResources.queryPoolTimestamp, queryOffset, GPU_TIMESTAMP_NUM_MAX);
 }
 
 }
