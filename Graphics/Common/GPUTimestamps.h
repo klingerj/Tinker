@@ -23,7 +23,6 @@ namespace ID
     };
 }
 
-    void Reset();
     void IncrementTimestampCount();
     void* GetRawCPUSideTimestampBuffer();
     void ProcessTimestamps();
