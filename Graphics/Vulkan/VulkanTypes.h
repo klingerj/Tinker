@@ -104,6 +104,7 @@ struct VulkanContextResources
 {
     bool isInitted = false;
     bool isSwapChainValid = false;
+    uint32 frameCounter = 0;
     
     VkInstance instance = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT debugMessenger = NULL;
@@ -165,6 +166,9 @@ struct VulkanContextResources
         eVulkanMemoryAllocatorMax,
     };
     VulkanMemoryAllocator GPUMemAllocators[eVulkanMemoryAllocatorMax];
+
+    VkQueryPool queryPoolTimestamp = VK_NULL_HANDLE;
+    float timestampPeriod = 0;
 };
 extern VulkanContextResources g_vulkanContextResources;
 

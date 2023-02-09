@@ -114,6 +114,7 @@ namespace GraphicsCmd
         eLayoutTransition,
         eClearImage,
         //eImageCopy,
+        eGPUTimestamp,
         eMax
     };
 }
@@ -294,6 +295,8 @@ typedef struct descriptor_set_data_handles
 #define DEPTH_OP DepthCompareOp::eGeOrEqual
 #endif
 
+#define GPU_TIMESTAMP_NUM_MAX 1024
+
 #define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
 
 typedef struct graphics_command
@@ -382,7 +385,11 @@ typedef struct graphics_command
             ResourceHandle m_dstImgHandle;
         };*/
 
-        // TODO: other commands
+        // GPU Timestamp
+        struct
+        {
+            uint32 m_timestampID;
+        };
     };
 } GraphicsCommand;
 
@@ -463,8 +470,9 @@ void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colo
 void RecordCommandRenderPassEnd(bool immediateSubmit);
 void RecordCommandTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout,
     const char* debugLabel, bool immediateSubmit);
-void RecordCommandClearImage(ResourceHandle imageHandle,
+void RecordCommandClearImage(ResourceHandle imageHandle, 
     const v4f& clearValue, const char* debugLabel, bool immediateSubmit);
+void RecordCommandGPUTimestamp(uint32 gpuTimestampID, bool immediateSubmit);
 //
 
 // Called only by ShaderManager
@@ -490,6 +498,9 @@ void ProcessGraphicsCommandStream(const Tk::Graphics::GraphicsCommandStream* gra
 void BeginFrameRecording();
 void EndFrameRecording();
 void SubmitFrameToGPU();
+
+float GetGPUTimestampPeriod();
+void ResolveLastFrameTimestamps(void* gpuTimestampCPUSideBuffer, bool immediateSubmit);
 
 }
 }
