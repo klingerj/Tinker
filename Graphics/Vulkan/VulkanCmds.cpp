@@ -365,15 +365,20 @@ void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthSta
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
-void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle* descSetHandles, bool immediateSubmit)
+void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
 {
-    TINKER_ASSERT(descSetHandles);
+    TINKER_ASSERT(descSetHandle != DefaultDescHandle_Invalid);
     const VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
     TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
+    VkDescriptorSet* descSet =
+        &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
+
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
+
+    /*for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
     {
         DescriptorHandle descHandle = descSetHandles[uiDesc];
         if (descHandle != DefaultDescHandle_Invalid)
@@ -385,7 +390,7 @@ void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle* descSe
                 VK_PIPELINE_BIND_POINT_GRAPHICS,
                 pipelineLayout, uiDesc, 1, descSet, 0, nullptr);
         }
-    }
+    }*/
 }
 
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
