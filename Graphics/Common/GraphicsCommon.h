@@ -462,7 +462,7 @@ void RecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 
 void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
     uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit);
 void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit);
-void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle* descSetHandles, bool immediateSubmit);
+void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit);
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
     const char* debugLabel, bool immediateSubmit);
 void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT,
