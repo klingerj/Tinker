@@ -42,11 +42,6 @@ Tk::Platform::InputStateDeltas g_inputStateDeltas;
 HCURSOR g_cursor = NULL;
 bool g_cursorLocked = false;
 
-#ifdef _SCRIPTS_DIR
-#define SCRIPTS_PATH STRINGIFY(_SCRIPTS_DIR)
-#else
-#endif
-
 #ifdef _GAME_DLL_PATH
 #define GAME_DLL_PATH STRINGIFY(_GAME_DLL_PATH)
 #else
