@@ -783,7 +783,7 @@ void RecordCommandGPUTimestamp(uint32 gpuTimestampID, bool immediateSubmit)
 
 void ResolveLastFrameTimestamps(void* gpuTimestampCPUSideBuffer, bool immediateSubmit)
 {
-    const uint32 queryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX;
+    uint32 queryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX;
 
     if (g_vulkanContextResources.frameCounter > 0)
     {

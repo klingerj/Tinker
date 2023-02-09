@@ -15,11 +15,6 @@ static float totalFrameTimeThisFrame = 0.0f;
 
 static uint32 gpuTimestampsRecordedThisFrame = 0;
 
-void Reset()
-{
-    gpuTimestampsRecordedThisFrame = 0;
-}
-
 void IncrementTimestampCount()
 {
     ++gpuTimestampsRecordedThisFrame;
@@ -48,6 +43,9 @@ void ProcessTimestamps()
     {
         gpuTimestampCPUCopyProcessed[i - 1] = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[i] - gpuTimestampCPUCopy[i - 1]));
     }
+
+    // reset
+    gpuTimestampsRecordedThisFrame = 0;
 }
 
 float GetTimestampValueByID(uint32 timestampID)

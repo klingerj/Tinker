@@ -704,6 +704,8 @@ void DestroyVulkan()
 
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
+    vkDestroyQueryPool(g_vulkanContextResources.device, g_vulkanContextResources.queryPoolTimestamp, nullptr);
+
     VulkanDestroySwapChain();
 
     vkDestroyCommandPool(g_vulkanContextResources.device, g_vulkanContextResources.commandPool, nullptr);
