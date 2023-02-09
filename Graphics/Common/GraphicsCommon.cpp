@@ -116,18 +116,11 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
             {
                 case GraphicsCmd::eDrawCall:
                 {
-                    // TODO: this is kind of suboptimal, probably restructure the draw call api a little in the future
                     const bool psoChange =
                         currentShaderID != currentCmd.m_shader ||
                         (currentBlendState != currentCmd.m_blendState) ||
                         (currentDepthState != currentCmd.m_depthState);
                     
-                    bool descChange = currentShaderID != currentCmd.m_shader;
-                    for (uint32 uiDesc = 0; !descChange && uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
-                    {
-                        descChange = descChange || (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc]);
-                    }
-
                     currentShaderID = currentCmd.m_shader;
                     currentBlendState = currentCmd.m_blendState;
                     currentDepthState = currentCmd.m_depthState;
@@ -137,9 +130,12 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                         RecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState, immediateSubmit);
                     }
 
-                    if (descChange)
+                    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
                     {
-                        RecordCommandBindDescriptor(currentShaderID, &currentCmd.m_descriptors[0], immediateSubmit);
+                        if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])
+                        {
+                            RecordCommandBindDescriptor(currentShaderID, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                        }
                     }
 
                     RecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
