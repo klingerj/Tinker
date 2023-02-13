@@ -119,7 +119,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         Tk::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
         // Transition to transfer dst optimal layout
-        command->m_commandType = Tk::Graphics::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Tk::Graphics::GraphicsCommand::eLayoutTransition;
         command->debugLabel = "Transition imgui font image layout to transfer dst optimal";
         command->m_imageHandle = fontTexture;
         command->m_startLayout = Tk::Graphics::ImageLayout::eUndefined;
@@ -128,7 +128,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         ++graphicsCommandStream->m_numCommands;
 
         // Texture buffer copy
-        command->m_commandType = Tk::Graphics::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Tk::Graphics::GraphicsCommand::eMemTransfer;
         command->debugLabel = "Update imgui font texture data";
         command->m_sizeInBytes = textureSizeInBytes;
         command->m_srcBufferHandle = imageStagingBufferHandle;
@@ -137,7 +137,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         ++graphicsCommandStream->m_numCommands;
 
         // Transition to shader read optimal layout
-        command->m_commandType = Tk::Graphics::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Tk::Graphics::GraphicsCommand::eLayoutTransition;
         command->debugLabel = "Transition imgui font image layout to shader read optimal";
         command->m_imageHandle = fontTexture;
         command->m_startLayout = Tk::Graphics::ImageLayout::eTransferDst;
@@ -223,7 +223,7 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
         const uint32 fbWidth = (uint32)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
         const uint32 fbHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
 
-        command->m_commandType = Tk::Graphics::GraphicsCmd::eRenderPassBegin;
+        command->m_commandType = Tk::Graphics::GraphicsCommand::eRenderPassBegin;
         command->debugLabel = "Imgui render pass";
         command->m_numColorRTs = 1;
         command->m_colorRTs[0] = renderTarget;
@@ -269,7 +269,7 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
             {
                 const ImDrawCmd& cmd = currDrawList->CmdBuffer[uiCmd];
 
-                command->m_commandType = Tk::Graphics::GraphicsCmd::ePushConstant;
+                command->m_commandType = Tk::Graphics::GraphicsCommand::ePushConstant;
                 command->debugLabel = "Imgui push constant";
                 command->m_shaderForLayout = Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI;
                 {
@@ -297,7 +297,7 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
                     continue;
                 }
                 
-                command->m_commandType = Tk::Graphics::GraphicsCmd::eSetScissor;
+                command->m_commandType = Tk::Graphics::GraphicsCommand::eSetScissor;
                 command->debugLabel = "Set render pass scissor state";
                 command->m_scissorOffsetX = (int32)scissorMin.x;
                 command->m_scissorOffsetY = (int32)scissorMin.y;
@@ -306,7 +306,7 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
                 ++graphicsCommandStream->m_numCommands;
                 ++command;
 
-                command->m_commandType = Tk::Graphics::GraphicsCmd::eDrawCall;
+                command->m_commandType = Tk::Graphics::GraphicsCommand::eDrawCall;
                 command->debugLabel = "Draw imgui element";
                 command->m_numIndices = cmd.ElemCount;
                 command->m_numInstances = 1;
@@ -335,7 +335,7 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
         Tk::Graphics::UnmapResource(uvBuffer);
         Tk::Graphics::UnmapResource(colorBuffer);
 
-        command->m_commandType = Tk::Graphics::GraphicsCmd::eRenderPassEnd;
+        command->m_commandType = Tk::Graphics::GraphicsCommand::eRenderPassEnd;
         command->debugLabel = "End Imgui render pass";
         ++graphicsCommandStream->m_numCommands;
         ++command;
@@ -353,15 +353,17 @@ void UI_RenderPassStats()
         return;
     }
 
-    const uint32 numTimings = 4;
-    const char* names[numTimings] = { "MainViewZPrepass", "MainViewRender", "DebugUI", "BlitToSwapChain" };
-
     if (ImGui::Begin("Render Pass Timings"))
     {
-        for (uint32 i = 0; i < GPUTimestamps::ID::Max - 1; ++i)
+        GPUTimestamps::TimestampData timestampData = GPUTimestamps::GetTimestampData();
+        for (uint32 i = 0; i < timestampData.numTimestamps; ++i)
         {
-            ImGui::Text("%s: %.2f\n", names[i], GPUTimestamps::GetTimestampValueByID(i));
+            const GPUTimestamps::Timestamp& currTimestamp = timestampData.timestamps[i];
+
+            ImGui::Text("%s: %.2f\n", currTimestamp.name, currTimestamp.timeInst);
         }
+
+        ImGui::Text("%s: %.2f\n", "Total Frame Time", timestampData.totalFrameTimeInUS);
 
         ImGui::End();
     }

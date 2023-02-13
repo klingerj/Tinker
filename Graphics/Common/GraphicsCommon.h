@@ -101,24 +101,6 @@ namespace ImageLayout
     };
 }
 
-namespace GraphicsCmd
-{
-    enum : uint32
-    {
-        eDrawCall = 0,
-        eMemTransfer,
-        ePushConstant,
-        eSetScissor,
-        eRenderPassBegin,
-        eRenderPassEnd,
-        eLayoutTransition,
-        eClearImage,
-        //eImageCopy,
-        eGPUTimestamp,
-        eMax
-    };
-}
-
 namespace DepthCompareOp
 {
     enum : uint32
@@ -303,6 +285,21 @@ typedef struct descriptor_set_data_handles
 
 typedef struct graphics_command
 {
+    enum : uint32
+    {
+        eDrawCall = 0,
+        eMemTransfer,
+        ePushConstant,
+        eSetScissor,
+        eRenderPassBegin,
+        eRenderPassEnd,
+        eLayoutTransition,
+        eClearImage,
+        //eImageCopy,
+        eGPUTimestamp,
+        eMax
+    };
+
     const char* debugLabel = "Default Label";
     uint32 m_commandType;
 
@@ -390,9 +387,19 @@ typedef struct graphics_command
         // GPU Timestamp
         struct
         {
-            uint32 m_timestampID;
+            const char* m_timestampNameStr;
+            bool m_timestampStartFrame;
         };
     };
+
+    void CmdTimestamp(const char* nameStr, const char* dbgLabel = "Timestamp", bool startFrame = false)
+    {
+        m_commandType = eGPUTimestamp;
+        debugLabel = dbgLabel;
+        m_timestampNameStr = nameStr;
+        m_timestampStartFrame = startFrame;
+    }
+
 } GraphicsCommand;
 
 struct GraphicsCommandStream

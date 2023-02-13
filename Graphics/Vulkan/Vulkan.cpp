@@ -5,7 +5,7 @@
 
 #include <iostream>
 // TODO: move this to be a compile define or ini config entry
-//#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

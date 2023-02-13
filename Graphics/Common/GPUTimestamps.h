@@ -9,26 +9,25 @@ namespace Graphics
 
 namespace GPUTimestamps
 {
-namespace ID
-{
-    // TODO: ideally we don't have to have this hard-coded
-    enum : uint32
+    struct Timestamp
     {
-        BeginFrame = 0,
-        MainViewZPrepass,
-        MainViewRender,
-        DebugUI,
-        BlitToSwapChain,
-        Max
+        float timeInst;
+        const char* name;
     };
-}
 
-    void IncrementTimestampCount();
+    struct TimestampData
+    {
+        Timestamp* timestamps;
+        uint32 numTimestamps;
+        float totalFrameTimeInUS;
+    };
+
+    void RecordName(const char* timestampName);
     void* GetRawCPUSideTimestampBuffer();
     uint32 GetMostRecentRecordedTimestampCount();
     void ProcessTimestamps();
 
-    float GetTimestampValueByID(uint32 timestampID);
+    TimestampData GetTimestampData();
 }
 
 }

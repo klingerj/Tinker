@@ -49,7 +49,7 @@ void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPa
 
                 {
                     Tk::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-                    command->m_commandType = Tk::Graphics::GraphicsCmd::ePushConstant;
+                    command->m_commandType = Tk::Graphics::GraphicsCommand::ePushConstant;
                     command->debugLabel = "Push constant";
                     command->m_shaderForLayout = shaderID;
                     {
