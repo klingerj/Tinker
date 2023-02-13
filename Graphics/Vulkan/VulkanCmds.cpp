@@ -102,7 +102,7 @@ void VulkanSubmitFrame()
         return; // don't present on this frame
     }
 
-    g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % VULKAN_MAX_FRAMES_IN_FLIGHT;
+    g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     ++g_vulkanContextResources.frameCounter;
 }
 
@@ -163,7 +163,7 @@ void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHa
 {
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
 
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         VkDescriptorSet* descriptorSet =
             &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiImage].descriptorSet;
@@ -782,17 +782,18 @@ void RecordCommandGPUTimestamp(uint32 gpuTimestampID, bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
-    uint32 queryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX + gpuTimestampID;
-    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_vulkanContextResources.queryPoolTimestamp, queryOffset);
+    uint32 currQueryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX + gpuTimestampID;
+    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_vulkanContextResources.queryPoolTimestamp, currQueryOffset);
 }
 
-void ResolveLastFrameTimestamps(void* gpuTimestampCPUSideBuffer, bool immediateSubmit)
+void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint32 numTimestampsInQuery, bool immediateSubmit)
 {
-    uint32 queryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX;
+    uint32 currQueryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX;
 
-    if (g_vulkanContextResources.frameCounter > 0)
+    // Need every virtual frame to happen once before reading real values from older frames
+    if (g_vulkanContextResources.frameCounter > MAX_FRAMES_IN_FLIGHT - 1)
     {
-        VkResult result = vkGetQueryPoolResults(g_vulkanContextResources.device, g_vulkanContextResources.queryPoolTimestamp, queryOffset, GPU_TIMESTAMP_NUM_MAX, GPU_TIMESTAMP_NUM_MAX * sizeof(uint64), gpuTimestampCPUSideBuffer, sizeof(uint64), VK_QUERY_RESULT_64_BIT);
+        VkResult result = vkGetQueryPoolResults(g_vulkanContextResources.device, g_vulkanContextResources.queryPoolTimestamp, currQueryOffset, numTimestampsInQuery, numTimestampsInQuery * sizeof(uint64), gpuTimestampCPUSideBuffer, sizeof(uint64), VK_QUERY_RESULT_64_BIT);
         if (result != VK_SUCCESS)
         {
             Core::Utility::LogMsg("Graphics", "Failed to get query pool results!", Core::Utility::LogSeverity::eCritical);
@@ -800,7 +801,7 @@ void ResolveLastFrameTimestamps(void* gpuTimestampCPUSideBuffer, bool immediateS
     }
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-    vkCmdResetQueryPool(commandBuffer, g_vulkanContextResources.queryPoolTimestamp, queryOffset, GPU_TIMESTAMP_NUM_MAX);
+    vkCmdResetQueryPool(commandBuffer, g_vulkanContextResources.queryPoolTimestamp, currQueryOffset, GPU_TIMESTAMP_NUM_MAX);
 }
 
 }

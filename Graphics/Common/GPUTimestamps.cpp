@@ -13,12 +13,12 @@ static float  gpuTimestampCPUCopyProcessed[GPU_TIMESTAMP_NUM_MAX - 1];
 
 static float totalFrameTimeThisFrame = 0.0f;
 
-static uint32 gpuTimestampsRecordedThisFrame = 0;
+static uint32 numGPUTimestampsRecorded[MAX_FRAMES_IN_FLIGHT] = {};
 
 void IncrementTimestampCount()
 {
-    ++gpuTimestampsRecordedThisFrame;
-    TINKER_ASSERT(gpuTimestampsRecordedThisFrame <= GPU_TIMESTAMP_NUM_MAX);
+    ++numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()];
+    TINKER_ASSERT(numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] <= GPU_TIMESTAMP_NUM_MAX);
 }
 
 void* GetRawCPUSideTimestampBuffer()
@@ -26,9 +26,14 @@ void* GetRawCPUSideTimestampBuffer()
     return gpuTimestampCPUCopy;
 }
 
+uint32 GetMostRecentRecordedTimestampCount()
+{
+    return numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()];
+}
+
 void ProcessTimestamps()
 {
-    if (gpuTimestampsRecordedThisFrame < 1)
+    if (numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] < 1)
     {
         return;
     }
@@ -37,15 +42,15 @@ void ProcessTimestamps()
     const double microsecondsPerTick = 1e-3 * GetGPUTimestampPeriod();
 
     // Calc total time
-    totalFrameTimeThisFrame = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[gpuTimestampsRecordedThisFrame - 1] - gpuTimestampCPUCopy[0]));
+    totalFrameTimeThisFrame = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] - 1] - gpuTimestampCPUCopy[0]));
 
-    for (uint32 i = 1; i < gpuTimestampsRecordedThisFrame; ++i)
+    for (uint32 i = 1; i < numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()]; ++i)
     {
         gpuTimestampCPUCopyProcessed[i - 1] = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[i] - gpuTimestampCPUCopy[i - 1]));
     }
 
     // reset
-    gpuTimestampsRecordedThisFrame = 0;
+    numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] = 0;
 }
 
 float GetTimestampValueByID(uint32 timestampID)

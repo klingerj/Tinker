@@ -506,7 +506,7 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
     *newResourceChain = {};
 
     uint32 isMultiBufferedResource = IsBufferUsageMultiBuffered(bufferUsage);
-    const uint32 NumCopies = isMultiBufferedResource ? VULKAN_MAX_FRAMES_IN_FLIGHT : 1u;
+    const uint32 NumCopies = isMultiBufferedResource ? MAX_FRAMES_IN_FLIGHT : 1u;
 
     const VkBufferUsageFlags usageFlags = GetVkBufferUsageFlags(bufferUsage);
     const VkMemoryPropertyFlags propertyFlags = GetVkMemoryPropertyFlags(bufferUsage);
@@ -700,7 +700,7 @@ void VulkanDestroyResource(ResourceHandle handle)
 
     VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
 
-    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes)->resourceChain[uiFrame];
 
@@ -768,7 +768,7 @@ DescriptorHandle VulkanCreateDescriptor(uint32 descriptorLayoutID)
 
     uint32 newDescriptorHandle = g_vulkanContextResources.vulkanDescriptorResourcePool.Alloc();
 
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         const VkDescriptorSetLayout& descriptorSetLayout = g_vulkanContextResources.descLayouts[descriptorLayoutID].layout;
         TINKER_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
@@ -850,7 +850,7 @@ bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLay
 void VulkanDestroyDescriptor(DescriptorHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
-    for (uint32 uiImage = 0; uiImage < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
         // TODO: destroy something?
     }

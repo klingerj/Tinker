@@ -279,6 +279,8 @@ typedef struct descriptor_set_data_handles
     }
 } DescriptorSetDataHandles;
 
+// Important graphics defines
+#define MAX_FRAMES_IN_FLIGHT 2
 #define MAX_MULTIPLE_RENDERTARGETS 8u
 
 #define IMAGE_HANDLE_SWAP_CHAIN ResourceHandle(0xFFFFFFFE) // INVALID_HANDLE - 1 reserved to refer to the swap chain image 
@@ -295,7 +297,7 @@ typedef struct descriptor_set_data_handles
 #define DEPTH_OP DepthCompareOp::eGeOrEqual
 #endif
 
-#define GPU_TIMESTAMP_NUM_MAX 1024
+#define GPU_TIMESTAMP_NUM_MAX 5
 
 #define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
 
@@ -500,7 +502,8 @@ void EndFrameRecording();
 void SubmitFrameToGPU();
 
 float GetGPUTimestampPeriod();
-void ResolveLastFrameTimestamps(void* gpuTimestampCPUSideBuffer, bool immediateSubmit);
+uint32 GetCurrentFrameInFlightIndex();
+void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint32 numTimestampsInQuery, bool immediateSubmit);
 
 }
 }
