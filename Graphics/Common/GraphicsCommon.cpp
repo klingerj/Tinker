@@ -203,10 +203,13 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     TINKER_ASSERT(currentCmd.m_timestampID < GPU_TIMESTAMP_NUM_MAX);
                     if (currentCmd.m_timestampID == GPUTimestamps::ID::BeginFrame)
                     {
-                        ResolveLastFrameTimestamps(GPUTimestamps::GetRawCPUSideTimestampBuffer(), immediateSubmit);
+                        void* cpuCopyBuffer = GPUTimestamps::GetRawCPUSideTimestampBuffer();
+                        uint32 numTimestampsRecorded = GPUTimestamps::GetMostRecentRecordedTimestampCount();
+                        ResolveMostRecentAvailableTimestamps(cpuCopyBuffer, numTimestampsRecorded, immediateSubmit);
                         GPUTimestamps::ProcessTimestamps();
                     }
                     RecordCommandGPUTimestamp(currentCmd.m_timestampID, immediateSubmit);
+                    GPUTimestamps::IncrementTimestampCount();
 
                     break;
                 }

@@ -25,6 +25,7 @@ namespace ID
 
     void IncrementTimestampCount();
     void* GetRawCPUSideTimestampBuffer();
+    uint32 GetMostRecentRecordedTimestampCount();
     void ProcessTimestamps();
 
     float GetTimestampValueByID(uint32 timestampID);

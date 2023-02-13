@@ -22,8 +22,6 @@
 #define VULKAN_MAX_RENDERTARGETS MAX_MULTIPLE_RENDERTARGETS
 #define VULKAN_MAX_RENDERTARGETS_WITH_DEPTH VULKAN_MAX_RENDERTARGETS + 1 // +1 for depth
 
-#define VULKAN_MAX_FRAMES_IN_FLIGHT 2
-
 namespace Tk
 {
 namespace Graphics
@@ -78,13 +76,13 @@ typedef struct vulkan_descriptor_resource
 // Chains of resources for multiple swap chain images
 typedef struct
 {
-    VulkanMemResource resourceChain[VULKAN_MAX_FRAMES_IN_FLIGHT];
+    VulkanMemResource resourceChain[MAX_FRAMES_IN_FLIGHT];
     ResourceDesc resDesc;
 } VulkanMemResourceChain;
 
 typedef struct
 {
-    VulkanDescriptorResource resourceChain[VULKAN_MAX_FRAMES_IN_FLIGHT];
+    VulkanDescriptorResource resourceChain[MAX_FRAMES_IN_FLIGHT];
 } VulkanDescriptorChain;
 
 typedef struct
@@ -137,7 +135,7 @@ struct VulkanContextResources
     VkSampler linearSampler = VK_NULL_HANDLE;
     Tk::Core::PoolAllocator<VulkanMemResourceChain> vulkanMemResourcePool;
     Tk::Core::PoolAllocator<VulkanDescriptorChain> vulkanDescriptorResourcePool;
-    VulkanVirtualFrameSyncData virtualFrameSyncData[VULKAN_MAX_FRAMES_IN_FLIGHT];
+    VulkanVirtualFrameSyncData virtualFrameSyncData[MAX_FRAMES_IN_FLIGHT];
     VkCommandBuffer* commandBuffers = nullptr;
     VkCommandPool commandPool = VK_NULL_HANDLE;
     VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;

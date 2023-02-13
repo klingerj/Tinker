@@ -342,30 +342,29 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
     }
 }
 
+#include "Graphics/Common/GPUTimestamps.h"
 void UI_RenderPassStats()
 {
+    using namespace Tk;
+    using namespace Graphics;
+
     if (!g_enable)
     {
         return;
     }
 
-    ImGui::ShowDemoWindow();
-
-    /*const char* names[3] = { "ZPrepass", "MainView", "PostGraph" };
-    float timings[3] = { 0.012f, 0.53f, 1.7f };
+    const uint32 numTimings = 4;
+    const char* names[numTimings] = { "MainViewZPrepass", "MainViewRender", "DebugUI", "BlitToSwapChain" };
 
     if (ImGui::Begin("Render Pass Timings"))
     {
-        if (ImGui::BeginMenuBar())
+        for (uint32 i = 0; i < GPUTimestamps::ID::Max - 1; ++i)
         {
-            for (uint32 i = 0; i < 3; ++i)
-            {
-                ImGui::Text("%s: %.2f\n", names[i], timings[i]);
-            }
+            ImGui::Text("%s: %.2f\n", names[i], GPUTimestamps::GetTimestampValueByID(i));
         }
 
         ImGui::End();
-    }*/
+    }
 }
 
 }

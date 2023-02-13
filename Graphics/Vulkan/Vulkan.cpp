@@ -5,7 +5,7 @@
 
 #include <iostream>
 // TODO: move this to be a compile define or ini config entry
-#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+//#define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -600,13 +600,13 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     }
 
     // Command buffers for per-frame submission
-    g_vulkanContextResources.commandBuffers = (VkCommandBuffer*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkCommandBuffer) * VULKAN_MAX_FRAMES_IN_FLIGHT, 1);
+    g_vulkanContextResources.commandBuffers = (VkCommandBuffer*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, 1);
 
     VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
     commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     commandBufferAllocInfo.commandPool = g_vulkanContextResources.commandPool;
     commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocInfo.commandBufferCount = VULKAN_MAX_FRAMES_IN_FLIGHT;
+    commandBufferAllocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
 
     result = vkAllocateCommandBuffers(g_vulkanContextResources.device,
         &commandBufferAllocInfo,
@@ -633,7 +633,7 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     // Virtual frame synchronization data initialization - 2 semaphores and fence
     VkSemaphoreCreateInfo semaphoreCreateInfo = {};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         result = vkCreateSemaphore(g_vulkanContextResources.device,
             &semaphoreCreateInfo,
@@ -660,7 +660,7 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         result = vkCreateFence(g_vulkanContextResources.device, &fenceCreateInfo, nullptr, &g_vulkanContextResources.virtualFrameSyncData[uiFrame].Fence);
         if (result != VK_SUCCESS)
@@ -672,12 +672,14 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     // Timestamp query pool
     if (timestampsAvailable)
     {
+        const uint32 timestampQueryCount = MAX_FRAMES_IN_FLIGHT * GPU_TIMESTAMP_NUM_MAX;
+
         VkQueryPoolCreateInfo queryPoolCreateInfo = {};
         queryPoolCreateInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         queryPoolCreateInfo.pNext = NULL;
         queryPoolCreateInfo.flags = (VkQueryPoolCreateFlags)0;
         queryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
-        queryPoolCreateInfo.queryCount = VULKAN_MAX_FRAMES_IN_FLIGHT * GPU_TIMESTAMP_NUM_MAX;
+        queryPoolCreateInfo.queryCount = timestampQueryCount;
         queryPoolCreateInfo.pipelineStatistics = 0;
 
         result = vkCreateQueryPool(g_vulkanContextResources.device, &queryPoolCreateInfo, NULL, &g_vulkanContextResources.queryPoolTimestamp);
@@ -714,7 +716,7 @@ void DestroyVulkan()
     VulkanDestroyAllPSOPerms();
     DestroyAllDescLayouts();
 
-    for (uint32 uiFrame = 0; uiFrame < VULKAN_MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].GPUWorkCompleteSema, nullptr);
         vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].ImageAvailableSema, nullptr);
@@ -755,6 +757,11 @@ void DestroyVulkan()
 float GetGPUTimestampPeriod()
 {
     return g_vulkanContextResources.timestampPeriod;
+}
+
+uint32 GetCurrentFrameInFlightIndex()
+{
+    return g_vulkanContextResources.currentVirtualFrame;
 }
 
 }
