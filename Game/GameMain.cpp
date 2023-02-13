@@ -406,9 +406,7 @@ GAME_UPDATE(GameUpdate)
     // Timestamp start of frame
     {
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
-        command->debugLabel = "Timestamp";
-        command->m_timestampID = Graphics::GPUTimestamps::ID::BeginFrame;
+        command->CmdTimestamp("Begin Frame", "Timestamp", true);
         ++graphicsCommandStream.m_numCommands;
     }
     
@@ -417,7 +415,7 @@ GAME_UPDATE(GameUpdate)
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
 
         // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
         command->debugLabel = "Transition depth to transfer_dst";
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
         command->m_startLayout = Graphics::ImageLayout::eUndefined;
@@ -426,7 +424,7 @@ GAME_UPDATE(GameUpdate)
         ++command;
 
         // Clear depth buffer - before z-prepass
-        command->m_commandType = Graphics::GraphicsCmd::eClearImage;
+        command->m_commandType = Graphics::GraphicsCommand::eClearImage;
         command->debugLabel = "Clear depth buffer";
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
         command->m_clearValue = v4f(1.0f, 0.0f, 0.0f, 0.0f); // depth/stencil clear uses x and y components
@@ -434,7 +432,7 @@ GAME_UPDATE(GameUpdate)
         ++command;
 
         // Transition of depth buffer from transfer dst to depth_attachment_optimal
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
         command->debugLabel = "Transition depth to depth_attachment_optimal";
         command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
         command->m_startLayout = Graphics::ImageLayout::eTransferDst;
@@ -442,38 +440,9 @@ GAME_UPDATE(GameUpdate)
         ++graphicsCommandStream.m_numCommands;
     }
 
-    // Clear color buffer
+    // Record render commands for z prepass
     {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-
-        // Transition from layout undefined to transfer_dst (required for clear command)
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
-        command->debugLabel = "Transition color to transfer_dst";
-        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_startLayout = Graphics::ImageLayout::eUndefined;
-        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
-        ++graphicsCommandStream.m_numCommands;
-        ++command;
-
-        command->m_commandType = Graphics::GraphicsCmd::eClearImage;
-        command->debugLabel = "Clear color buffer";
-        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_clearValue = v4f(0.0f, 0.0f, 0.0f, 0.0f);
-        ++graphicsCommandStream.m_numCommands;
-        ++command;
-
-        // Transition from transfer dst to depth_attachment_optimal
-        command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
-        command->debugLabel = "Transition color to render_optimal";
-        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
-        command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
-        ++graphicsCommandStream.m_numCommands;
-    }
-
-    // Record render commands for view(s)
-    {
-        //TIMED_SCOPED_BLOCK("Record render pass commands");
+        //TIMED_SCOPED_BLOCK("Record render pass commands zprepass");
 
         Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0] = gameGraphicsData.m_DescData_Global;
@@ -484,10 +453,46 @@ GAME_UPDATE(GameUpdate)
         EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream);
 
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
-        command->debugLabel = "Timestamp";
-        command->m_timestampID = Graphics::GPUTimestamps::ID::MainViewZPrepass;
+        command->CmdTimestamp("Main View Z Prepass", "Timestamp");
         ++graphicsCommandStream.m_numCommands;
+    }
+
+    // Clear color buffer
+    {
+        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
+
+        // Transition from layout undefined to transfer_dst (required for clear command)
+        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
+        command->debugLabel = "Transition color to transfer_dst";
+        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
+        command->m_startLayout = Graphics::ImageLayout::eUndefined;
+        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
+        ++graphicsCommandStream.m_numCommands;
+        ++command;
+
+        command->m_commandType = Graphics::GraphicsCommand::eClearImage;
+        command->debugLabel = "Clear color buffer";
+        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
+        command->m_clearValue = v4f(0.0f, 0.0f, 0.0f, 0.0f);
+        ++graphicsCommandStream.m_numCommands;
+        ++command;
+
+        // Transition from transfer dst to depth_attachment_optimal
+        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
+        command->debugLabel = "Transition color to render_optimal";
+        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
+        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
+        command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
+        ++graphicsCommandStream.m_numCommands;
+    }
+
+    // Record render commands for main view render
+    {
+        //TIMED_SCOPED_BLOCK("Record render pass commands zprepass");
+
+        Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        descriptors[0] = gameGraphicsData.m_DescData_Global;
+        descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
         StartRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
         RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
@@ -497,10 +502,8 @@ GAME_UPDATE(GameUpdate)
 
         EndRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
 
-        command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
-        command->debugLabel = "Timestamp";
-        command->m_timestampID = Graphics::GPUTimestamps::ID::MainViewRender;
+        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
+        command->CmdTimestamp("Main View Render", "Timestamp");
         ++graphicsCommandStream.m_numCommands;
     }
 
@@ -509,9 +512,7 @@ GAME_UPDATE(GameUpdate)
     DebugUI::Render(&graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
     {
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
-        command->debugLabel = "Timestamp";
-        command->m_timestampID = Graphics::GPUTimestamps::ID::DebugUI;
+        command->CmdTimestamp("Debug UI", "Timestamp");
         ++graphicsCommandStream.m_numCommands;
     }
 
@@ -519,7 +520,7 @@ GAME_UPDATE(GameUpdate)
     Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
 
     // Transition main view render target from render optimal to shader read
-    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
     command->debugLabel = "Transition main view render target to shader read for blit";
     command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
     command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
@@ -528,7 +529,7 @@ GAME_UPDATE(GameUpdate)
     ++command;
 
     // Transition of swap chain to render optimal
-    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
     command->debugLabel = "Transition swap chain to render_optimal";
     command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_startLayout = Graphics::ImageLayout::eUndefined;
@@ -536,7 +537,7 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream.m_numCommands;
     ++command;
 
-    command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
+    command->m_commandType = Graphics::GraphicsCommand::eRenderPassBegin;
     command->debugLabel = "Blit to swap chain";
     command->m_numColorRTs = 1;
     command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
@@ -546,7 +547,7 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream.m_numCommands;
     ++command;
 
-    command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
+    command->m_commandType = Graphics::GraphicsCommand::eSetScissor;
     command->debugLabel = "Set render pass scissor state";
     command->m_scissorOffsetX = 0;
     command->m_scissorOffsetY = 0;
@@ -555,7 +556,7 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream.m_numCommands;
     ++command;
 
-    command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
+    command->m_commandType = Graphics::GraphicsCommand::eDrawCall;
     command->debugLabel = "Draw default quad";
     command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
     command->m_numInstances = 1;
@@ -574,13 +575,13 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream.m_numCommands;
     ++command;
 
-    command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
+    command->m_commandType = Graphics::GraphicsCommand::eRenderPassEnd;
     command->debugLabel = "End blit to screen render pass";
     ++graphicsCommandStream.m_numCommands;
     ++command;
 
     // Transition of swap chain from render optimal to present
-    command->m_commandType = Graphics::GraphicsCmd::eLayoutTransition;
+    command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
     command->debugLabel = "Transition swap chain to present";
     command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
@@ -588,13 +589,9 @@ GAME_UPDATE(GameUpdate)
     ++graphicsCommandStream.m_numCommands;
     ++command;
 
-    {
-        command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->m_commandType = Graphics::GraphicsCmd::eGPUTimestamp;
-        command->debugLabel = "Timestamp";
-        command->m_timestampID = Graphics::GPUTimestamps::ID::BlitToSwapChain;
-        ++graphicsCommandStream.m_numCommands;
-    }
+    command->CmdTimestamp("Blit to swap chain", "Timestamp");
+    ++graphicsCommandStream.m_numCommands;
+    ++command;
 
     // Process recorded graphics command stream
     {

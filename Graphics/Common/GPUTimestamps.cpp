@@ -9,16 +9,20 @@ namespace GPUTimestamps
 {
 
 static uint64 gpuTimestampCPUCopy         [GPU_TIMESTAMP_NUM_MAX];
-static float  gpuTimestampCPUCopyProcessed[GPU_TIMESTAMP_NUM_MAX - 1];
 
-static float totalFrameTimeThisFrame = 0.0f;
+static uint32      numGPUTimestampsRecorded [MAX_FRAMES_IN_FLIGHT] = {};
+static const char* gpuTimestampNamesRecorded[MAX_FRAMES_IN_FLIGHT][GPU_TIMESTAMP_NUM_MAX] = {};
 
-static uint32 numGPUTimestampsRecorded[MAX_FRAMES_IN_FLIGHT] = {};
+static Timestamp timestampDataProcessed[GPU_TIMESTAMP_NUM_MAX - 1] = {};
+static float totalTimeThisFrameInUS = 0.0f;
 
-void IncrementTimestampCount()
+void RecordName(const char* timestampName)
 {
-    ++numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()];
-    TINKER_ASSERT(numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] <= GPU_TIMESTAMP_NUM_MAX);
+    uint32 currentFrame = GetCurrentFrameInFlightIndex();
+
+    gpuTimestampNamesRecorded[currentFrame][numGPUTimestampsRecorded[currentFrame]] = timestampName;
+    ++numGPUTimestampsRecorded[currentFrame];
+    TINKER_ASSERT(numGPUTimestampsRecorded[currentFrame] <= GPU_TIMESTAMP_NUM_MAX);
 }
 
 void* GetRawCPUSideTimestampBuffer()
@@ -33,7 +37,10 @@ uint32 GetMostRecentRecordedTimestampCount()
 
 void ProcessTimestamps()
 {
-    if (numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] < 1)
+    uint32 currentFrame = GetCurrentFrameInFlightIndex();
+    uint32 numTimestamps = numGPUTimestampsRecorded[currentFrame];
+
+    if (numTimestamps < 1)
     {
         return;
     }
@@ -42,21 +49,25 @@ void ProcessTimestamps()
     const double microsecondsPerTick = 1e-3 * GetGPUTimestampPeriod();
 
     // Calc total time
-    totalFrameTimeThisFrame = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] - 1] - gpuTimestampCPUCopy[0]));
+    totalTimeThisFrameInUS = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[numTimestamps - 1] - gpuTimestampCPUCopy[0]));
 
-    for (uint32 i = 1; i < numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()]; ++i)
+    for (uint32 i = 1; i < numTimestamps; ++i)
     {
-        gpuTimestampCPUCopyProcessed[i - 1] = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[i] - gpuTimestampCPUCopy[i - 1]));
+        timestampDataProcessed[i - 1].timeInst = (float)(microsecondsPerTick * (double)(gpuTimestampCPUCopy[i] - gpuTimestampCPUCopy[i - 1]));
+        timestampDataProcessed[i - 1].name = gpuTimestampNamesRecorded[currentFrame][i];
     }
 
     // reset
-    numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] = 0;
+    numGPUTimestampsRecorded[currentFrame] = 0;
 }
 
-float GetTimestampValueByID(uint32 timestampID)
+TimestampData GetTimestampData()
 {
-    TINKER_ASSERT(timestampID < ARRAYCOUNT(gpuTimestampCPUCopy));
-    return gpuTimestampCPUCopyProcessed[timestampID];
+    TimestampData data;
+    data.timestamps = timestampDataProcessed;
+    data.numTimestamps = numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] - 1; // drop the first 'begin frame' timestamp marker
+    data.totalFrameTimeInUS = totalTimeThisFrameInUS;
+    return data;
 }
 
 }
