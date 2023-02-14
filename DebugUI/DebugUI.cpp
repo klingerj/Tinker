@@ -353,18 +353,45 @@ void UI_RenderPassStats()
         return;
     }
 
-    if (ImGui::Begin("Render Pass Timings"))
-    {
-        GPUTimestamps::TimestampData timestampData = GPUTimestamps::GetTimestampData();
-        for (uint32 i = 0; i < timestampData.numTimestamps; ++i)
-        {
-            const GPUTimestamps::Timestamp& currTimestamp = timestampData.timestamps[i];
+    static bool selectedOverview = false;
+    static bool selectedRPTimings = false;
 
-            ImGui::Text("%s: %.2f\n", currTimestamp.name, currTimestamp.timeInst);
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("Performance"))
+        {
+            if (ImGui::MenuItem("Overview", NULL, &selectedOverview)) {}
+            if (ImGui::MenuItem("GPU Render Pass Timings", NULL, &selectedRPTimings)) {}
+
+            ImGui::EndMenu();
         }
 
-        ImGui::Text("%s: %.2f\n", "Total Frame Time", timestampData.totalFrameTimeInUS);
+    }
+    ImGui::EndMainMenuBar();
 
+    if (selectedOverview)
+    {
+        if (ImGui::Begin("Performance Overview"))
+        {
+            GPUTimestamps::TimestampData timestampData = GPUTimestamps::GetTimestampData();
+            ImGui::Text("%s: %.2f\n", "Total Frame Time", timestampData.totalFrameTimeInUS);
+        }
+        ImGui::End();
+    }
+
+    if (selectedRPTimings)
+    {
+        if (ImGui::Begin("GPU Render Pass Timings"))
+        {
+            GPUTimestamps::TimestampData timestampData = GPUTimestamps::GetTimestampData();
+            for (uint32 i = 0; i < timestampData.numTimestamps; ++i)
+            {
+                const GPUTimestamps::Timestamp& currTimestamp = timestampData.timestamps[i];
+
+                ImGui::Text("%s: %.2f\n", currTimestamp.name, currTimestamp.timeInst);
+            }
+
+        }
         ImGui::End();
     }
 }
