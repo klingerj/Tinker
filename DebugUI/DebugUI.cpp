@@ -381,16 +381,62 @@ void UI_RenderPassStats()
 
     if (selectedRPTimings)
     {
-        if (ImGui::Begin("GPU Render Pass Timings"))
+        if (ImGui::Begin("GPU Render Pass Timings", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
-            GPUTimestamps::TimestampData timestampData = GPUTimestamps::GetTimestampData();
-            for (uint32 i = 0; i < timestampData.numTimestamps; ++i)
+            ImGuiTableFlags_ tableFlags = 
+                (ImGuiTableFlags_)
+                (ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_SizingFixedSame | 
+                ImGuiTableFlags_PadOuterX | 
+                ImGuiTableFlags_Resizable | 
+                ImGuiTableFlags_Sortable | 
+                ImGuiTableFlags_SortTristate);
+
+            if (ImGui::BeginTable("GPU Render Pass Timings Table", 5, tableFlags))
             {
-                const GPUTimestamps::Timestamp& currTimestamp = timestampData.timestamps[i];
+                ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
+                ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.2f, 0.2f, 0.2f, 0.2f));
+                ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.8f, 0.8f, 0.5f));
 
-                ImGui::Text("%s: %.2f\n", currTimestamp.name, currTimestamp.timeInst);
+                // Column headers
+                ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", "Pass name");
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", "Inst");
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", "Avg");
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", "Std dev");
+                ImGui::TableNextColumn();
+                ImGui::Text("%s", "Max");
+
+                // Timestamp data rows
+                GPUTimestamps::TimestampData timestampData = GPUTimestamps::GetTimestampData();
+                for (uint32 i = 0; i < timestampData.numTimestamps; ++i)
+                {
+                    const GPUTimestamps::Timestamp& currTimestamp = timestampData.timestamps[i];
+
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%s", currTimestamp.name);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", currTimestamp.timeInst);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", 0.0f /* avg time */);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", 0.0f /* std dev */);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%.2f", 0.0f /* max time */);
+                }
+
+                ImGui::EndTable();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
             }
-
         }
         ImGui::End();
     }
