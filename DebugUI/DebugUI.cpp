@@ -496,7 +496,7 @@ void UI_RenderPassStats()
                     if (index == runningStatsMap.GetInvalidKey())
                     {
                         // First time add to map
-                            index = runningStatsMap.Insert(timestampNameHash, {});
+                        index = runningStatsMap.Insert(timestampNameHash, {});
                     }
                     entry = &(runningStatsMap.DataAtIndex(index));
 
