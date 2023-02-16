@@ -25,6 +25,11 @@ struct StrFixedBuffer
     uint32 m_len = 0;
     char m_data[tLen] = {};
 
+    uint32 LenRemaining()
+    {
+        return tLen - m_len;
+    }
+
     char* EndOfStrPtr()
     {
         return &m_data[m_len];

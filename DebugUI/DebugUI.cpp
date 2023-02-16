@@ -7,6 +7,13 @@
 
 #include "imgui.h"
 
+#include "Graphics/Common/GPUTimestamps.h"
+#include "DataStructures/Vector.h"
+#include "DataStructures/HashMap.h"
+#include "StringTypes.h"
+#include "MurmurHash3.h"
+#define SEED 0x1234
+
 static const uint32 MAX_VERTS = 1024 * 1024;
 static const uint32 MAX_IDXS = MAX_VERTS * 3;
 
@@ -342,34 +349,42 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
     }
 }
 
-#include "Graphics/Common/GPUTimestamps.h"
-void UI_RenderPassStats()
+static bool mainMenu_SelectedOverview = false;
+static bool mainMenu_SelectedRPTimings = false;
+
+void UI_MainMenu()
 {
     using namespace Tk;
     using namespace Graphics;
 
     if (!g_enable)
     {
+        mainMenu_SelectedOverview = false;
+        mainMenu_SelectedRPTimings = false;
         return;
     }
-
-    static bool selectedOverview = false;
-    static bool selectedRPTimings = false;
 
     if (ImGui::BeginMainMenuBar())
     {
         if (ImGui::BeginMenu("Performance"))
         {
-            if (ImGui::MenuItem("Overview", NULL, &selectedOverview)) {}
-            if (ImGui::MenuItem("GPU Render Pass Timings", NULL, &selectedRPTimings)) {}
+            if (ImGui::MenuItem("Overview", NULL, &mainMenu_SelectedOverview)) {}
+            if (ImGui::MenuItem("GPU Render Pass Timings", NULL, &mainMenu_SelectedRPTimings)) {}
 
             ImGui::EndMenu();
         }
 
     }
     ImGui::EndMainMenuBar();
+}
 
-    if (selectedOverview)
+void UI_PerformanceOverview()
+{
+
+    using namespace Tk;
+    using namespace Graphics;
+
+    if (mainMenu_SelectedOverview)
     {
         if (ImGui::Begin("Performance Overview"))
         {
@@ -378,11 +393,62 @@ void UI_RenderPassStats()
         }
         ImGui::End();
     }
+}
 
-    if (selectedRPTimings)
+void UI_RenderPassStats()
+{
+    using namespace Tk;
+    using namespace Graphics;
+
+    struct RunningTimestampEntry
+    {
+        uint32 numSamples = 0;
+        float runningTermQ = 0.0f;
+        float runningAvg = 0.0f;
+        float runningMax = 0.0f;
+    };
+
+    struct DisplayTimestampEntry
+    {
+        enum : uint8
+        {
+            TimeCurr,
+            TimeAvg,
+            StdDev,
+            TimeMax,
+            DisplayCount
+        };
+
+        const char* name = NULL;
+        float timeData[DisplayCount] = {};
+    };
+
+    // Track timestamp name hash to running statistics data
+    static const uint32 ReserveEles = 256;
+    static Tk::Core::HashMap<uint32, RunningTimestampEntry, Hash32> runningStatsMap;
+    runningStatsMap.Reserve(ReserveEles);
+
+    // Final list of entries to display for sorting
+    static Tk::Core::Vector<DisplayTimestampEntry> entryDisplayList;
+    entryDisplayList.Reserve(ReserveEles);
+    entryDisplayList.Clear();
+
+    if (mainMenu_SelectedRPTimings)
     {
         if (ImGui::Begin("GPU Render Pass Timings", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
+            static bool shouldCopyToClip = false;
+
+            if (ImGui::SmallButton("Clear"))
+            {
+                runningStatsMap.Clear();
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Copy"))
+            {
+                shouldCopyToClip = true;
+            }
+
             ImGuiTableFlags_ tableFlags = 
                 (ImGuiTableFlags_)
                 (ImGuiTableFlags_RowBg |
@@ -392,43 +458,164 @@ void UI_RenderPassStats()
                 ImGuiTableFlags_Sortable | 
                 ImGuiTableFlags_SortTristate);
 
-            if (ImGui::BeginTable("GPU Render Pass Timings Table", 5, tableFlags))
+            const uint32 numCols = 5;
+            if (ImGui::BeginTable("GPU Render Pass Timings Table", numCols, tableFlags))
             {
                 ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
                 ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.2f, 0.2f, 0.2f, 0.2f));
                 ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.8f, 0.8f, 0.5f));
 
+                const char* headerStrings[numCols] =
+                {
+                    "Pass name",
+                    "Curr time",
+                    "Avg time",
+                    "Std dev",
+                    "Max time",
+                };
+
                 // Column headers
-                ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", "Pass name");
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", "Inst");
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", "Avg");
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", "Std dev");
-                ImGui::TableNextColumn();
-                ImGui::Text("%s", "Max");
+                ImGui::TableSetupColumn(headerStrings[0], ImGuiTableColumnFlags_PreferSortAscending);
+                ImGui::TableSetupColumn(headerStrings[1], ImGuiTableColumnFlags_PreferSortDescending);
+                ImGui::TableSetupColumn(headerStrings[2], ImGuiTableColumnFlags_PreferSortDescending);
+                ImGui::TableSetupColumn(headerStrings[3], ImGuiTableColumnFlags_PreferSortDescending);
+                ImGui::TableSetupColumn(headerStrings[4], ImGuiTableColumnFlags_PreferSortDescending);
+                ImGui::TableHeadersRow();
 
                 // Timestamp data rows
                 GPUTimestamps::TimestampData timestampData = GPUTimestamps::GetTimestampData();
                 for (uint32 i = 0; i < timestampData.numTimestamps; ++i)
                 {
                     const GPUTimestamps::Timestamp& currTimestamp = timestampData.timestamps[i];
+                    const uint32 timestampNameHash = MurmurHash3_x86_32(currTimestamp.name, (int)strlen(currTimestamp.name), SEED);
+                    
+                    RunningTimestampEntry* entry = NULL;
+                    uint32 index = runningStatsMap.FindIndex(timestampNameHash);
+                    
+                    if (index == runningStatsMap.GetInvalidKey())
+                    {
+                        // First time add to map
+                            index = runningStatsMap.Insert(timestampNameHash, {});
+                    }
+                    entry = &(runningStatsMap.DataAtIndex(index));
+
+                    // Update stats in entry
+                    const float currentSample = currTimestamp.timeInst;
+                    const float prevRunningAvg = entry->runningAvg;
+                    entry->numSamples++;
+                    entry->runningMax = Max(entry->runningMax, currentSample);
+                    // https://en.wikipedia.org/wiki/Standard_deviation#Rapid_calculation_methods
+                    entry->runningAvg = prevRunningAvg + ((currentSample - prevRunningAvg) / entry->numSamples);
+                    entry->runningTermQ = entry->runningTermQ + (currentSample - prevRunningAvg) * (currentSample - entry->runningAvg);
+                    float currStdDev = 0.0f;
+                    if (entry->numSamples > 1)
+                    {
+                        currStdDev = sqrtf(entry->runningTermQ / (entry->numSamples - 1));
+                    }
+                    
+                    DisplayTimestampEntry displayEntry = {};
+                    displayEntry.name = currTimestamp.name;
+                    displayEntry.timeData[DisplayTimestampEntry::TimeCurr] = currentSample;
+                    displayEntry.timeData[DisplayTimestampEntry::TimeAvg] = entry->runningAvg;
+                    displayEntry.timeData[DisplayTimestampEntry::StdDev] = currStdDev;
+                    displayEntry.timeData[DisplayTimestampEntry::TimeMax] = entry->runningMax;
+                    entryDisplayList.PushBackRaw(displayEntry);
+                }
+
+                ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
+                if (sortSpecs->SpecsCount)
+                {
+                    const ImGuiTableColumnSortSpecs* tableSortSpecs = sortSpecs->Specs;
+
+                    Tk::Core::MergeSort((DisplayTimestampEntry*)entryDisplayList.Data(), entryDisplayList.Size(), [=](const void* A, const void* B)
+                        {
+                            const DisplayTimestampEntry* entryA = (DisplayTimestampEntry*)A;
+                            const DisplayTimestampEntry* entryB = (DisplayTimestampEntry*)B;
+
+                            bool compareResult = 0;
+                            switch (tableSortSpecs->ColumnIndex)
+                            {
+                                case 0:
+                                {
+                                    compareResult = strcmp(entryA->name, entryB->name) < 0 ? 1 : 0;
+                                    break;
+                                }
+                                case 1:
+                                case 2:
+                                case 3:
+                                case 4:
+                                {
+                                    compareResult = entryA->timeData[tableSortSpecs->ColumnIndex - 1] < entryB->timeData[tableSortSpecs->ColumnIndex - 1];
+                                    break;
+                                }
+
+                                default:
+                                {
+                                    break;
+                                }
+                            }
+
+                            if (tableSortSpecs->SortDirection == ImGuiSortDirection_Descending)
+                            {
+                                compareResult = !compareResult;
+                            }
+
+                            return compareResult;
+                        });
+                }
+
+                if (shouldCopyToClip)
+                {
+                    static Tk::Core::StrFixedBuffer<1048576> csvOutput;
+                    csvOutput.Clear();
+
+                    // Headers
+                    const char* delimiter = ",";
+                    for (uint32 uiValue = 0; uiValue < numCols; ++uiValue)
+                    {
+                        csvOutput.Append(headerStrings[uiValue]);
+                        csvOutput.Append(delimiter);
+                    }
+                    csvOutput.Append("\n");
+
+                    // Data
+                    for (uint32 i = 0; i < entryDisplayList.Size(); ++i)
+                    {
+                        const DisplayTimestampEntry& displayEntry = entryDisplayList[i];
+                        
+                        csvOutput.Append(displayEntry.name);
+                        csvOutput.Append(delimiter);
+                        for (uint32 uiValue = 0; uiValue < DisplayTimestampEntry::DisplayCount; ++uiValue)
+                        {
+                            int result = sprintf_s(csvOutput.EndOfStrPtr(), csvOutput.LenRemaining(), "%.2f", displayEntry.timeData[uiValue]);
+                            TINKER_ASSERT(result != -1);
+                            csvOutput.m_len += result;
+                            csvOutput.Append(delimiter);
+                        }
+                        csvOutput.Append("\n");
+                    }
+                    csvOutput.NullTerminate();
+                    ImGui::SetClipboardText(csvOutput.m_data);
+
+                    shouldCopyToClip = false;
+                }
+
+                for (uint32 i = 0; i < entryDisplayList.Size(); ++i)
+                {
+                    const DisplayTimestampEntry& displayEntry = entryDisplayList[i];
 
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::Text("%s", currTimestamp.name);
+                    ImGui::Text("%s", displayEntry.name);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", currTimestamp.timeInst);
+                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeCurr]);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", 0.0f /* avg time */);
+                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeAvg]);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", 0.0f /* std dev */);
+                    ImGui::Text((const char*)u8"± %.2f", displayEntry.timeData[DisplayTimestampEntry::StdDev]);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", 0.0f /* max time */);
+                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeMax]);
                 }
 
                 ImGui::EndTable();

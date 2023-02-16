@@ -8,24 +8,24 @@ namespace Tk
 namespace Core
 {
 
-HashMapBase::~HashMapBase()
+TINKER_API HashMapBase::~HashMapBase()
 {
     CoreFree(m_data);
     m_data = nullptr;
     m_size = 0;
 }
 
-void HashMapBase::Reserve(uint32 numEles, uint32 eleSize)
+TINKER_API void HashMapBase::Reserve(uint32 numEles, uint32 dataPairSize)
 {
     if (numEles > m_size)
     {
-        const size_t BytesToAllocate = (size_t)numEles * (size_t)eleSize;
+        const size_t BytesToAllocate = (size_t)numEles * (size_t)dataPairSize;
         TINKER_ASSERT(BytesToAllocate <= (size_t)MAX_UINT32);
         void* newData = CoreMalloc(BytesToAllocate);
 
         if (m_data && m_size > 0)
         {
-            memcpy(newData, m_data, m_size * eleSize);
+            memcpy(newData, m_data, m_size * dataPairSize);
             CoreFree(m_data); // free old data
         }
 
@@ -33,13 +33,18 @@ void HashMapBase::Reserve(uint32 numEles, uint32 eleSize)
 
         // Init all other elements to invalid
         uint32 numRemainingEles = numEles - m_size;
-        memset(m_data + m_size * eleSize, 255, numRemainingEles * eleSize);
+        memset(m_data + m_size * dataPairSize, 0xFF, numRemainingEles * dataPairSize);
 
         m_size = numEles;
     }
 }
 
-uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, bool CompareKeysFunc(const void*, const void*), const void* m_InvalidKey) const
+TINKER_API void HashMapBase::Clear(size_t dataPairSize)
+{
+    memset(m_data, 0xFF, m_size * dataPairSize);
+}
+
+TINKER_API uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, bool CompareKeysFunc(const void*, const void*), const void* m_InvalidKey) const
 {
     if (CompareKeysFunc(key, m_InvalidKey))
         return eInvalidIndex;
@@ -59,7 +64,7 @@ uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, bool
     return eInvalidIndex;
 }
 
-void* HashMapBase::DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const
+TINKER_API void* HashMapBase::DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const
 {
     TINKER_ASSERT(index < m_size);
     return m_data + index * dataPairSize + dataValueOffset;
@@ -71,7 +76,7 @@ TINKER_API void* HashMapBase::KeyAtIndex(uint32 index, size_t dataPairSize) cons
     return m_data + index * dataPairSize;
 }
 
-uint32 HashMapBase::Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey)
+TINKER_API uint32 HashMapBase::Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey)
 {
     if (CompareKeysFunc(key, m_InvalidKey))
         return eInvalidIndex;
