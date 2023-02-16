@@ -11,7 +11,7 @@ void DrawMeshDataCommand(Graphics::GraphicsCommandStream* graphicsCommandStream,
 {
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
+    command->m_commandType = Graphics::GraphicsCommand::eDrawCall;
     command->debugLabel = debugLabel;
 
     command->m_numIndices = numIndices;
@@ -30,7 +30,7 @@ void StartRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream
 {
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = Graphics::GraphicsCmd::eRenderPassBegin;
+    command->m_commandType = Graphics::GraphicsCommand::eRenderPassBegin;
     command->debugLabel = renderPass->debugLabel;
     
     uint32 numColorRTs = renderPass->numColorRTs;
@@ -44,7 +44,7 @@ void StartRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream
     ++command;
 
     // Set scissor state
-    command->m_commandType = Graphics::GraphicsCmd::eSetScissor;
+    command->m_commandType = Graphics::GraphicsCommand::eSetScissor;
     command->debugLabel = "Set render pass scissor state";
     command->m_scissorOffsetX = 0;
     command->m_scissorOffsetY = 0;
@@ -57,7 +57,7 @@ void EndRenderPass(GameRenderPass* renderPass, Graphics::GraphicsCommandStream* 
 {
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = Graphics::GraphicsCmd::eRenderPassEnd;
+    command->m_commandType = Graphics::GraphicsCommand::eRenderPassEnd;
     command->debugLabel = renderPass->debugLabel;
     ++graphicsCommandStream->m_numCommands;
 }

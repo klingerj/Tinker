@@ -19,20 +19,22 @@ inline CMP_LT_FUNC(CompareLessThan_uint32)
     return *(uint32*)A < *(uint32*)B;
 }
 
-inline void Merge(uint8* data, uint32 numElesLeft, uint32 numElesRight, uint32 eleSize, CompareLessThan Compare, const uint8* tmpList)
+template <typename CmpFunc>
+void Merge(uint8* data, uint32 numElesLeft, uint32 numElesRight, uint32 eleSize, CmpFunc Compare, const uint8* tmpList)
 {
     uint32 totalEles = numElesLeft + numElesRight;
 
     uint32 i = 0, j = 0;
     while (1)
     {
-        if (i + j == totalEles) break;
+        if (i + j == totalEles)
+            break;
 
         // Assuming that left and right are actually contiguous
         uint8* dstList = data + (i + j) * eleSize;
         
         // Copy over left's next ele if i is not done counting AND either j is done, or ith < jth ele
-        if ((Compare(&tmpList[i * eleSize], &tmpList[(numElesLeft + j) * eleSize]) || j >= numElesRight) && i < numElesLeft)
+        if ((j >= numElesRight || Compare(&tmpList[i * eleSize], &tmpList[(numElesLeft + j) * eleSize])) && i < numElesLeft)
         {
             memcpy(dstList, &tmpList[i * eleSize], eleSize);
             ++i;
@@ -45,9 +47,11 @@ inline void Merge(uint8* data, uint32 numElesLeft, uint32 numElesRight, uint32 e
     }
 }
 
-inline void MergeSortRecursive(uint8* data, uint32 numEles, uint32 eleSize, CompareLessThan Compare, uint8* tmpList)
+template <typename CmpFunc>
+void MergeSortRecursive(uint8* data, uint32 numEles, uint32 eleSize, CmpFunc Compare, uint8* tmpList)
 {
-    if (numEles == 1) return;
+    if (numEles == 1)
+        return;
 
     uint32 midpoint = numEles / 2;
 
@@ -64,8 +68,8 @@ inline void MergeSortRecursive(uint8* data, uint32 numEles, uint32 eleSize, Comp
     Merge(left, leftSize, rightSize, eleSize, Compare, tmpList);
 }
 
-template <typename T>
-inline void MergeSort(T* data, uint32 numEles, CompareLessThan Compare)
+template <typename T, typename CmpFunc>
+void MergeSort(T* data, uint32 numEles, CmpFunc Compare)
 {
     const uint32 eleSize = sizeof(T);
     // TODO: remove this temp alloc
@@ -77,4 +81,3 @@ inline void MergeSort(T* data, uint32 numEles, CompareLessThan Compare)
 
 }
 }
-
