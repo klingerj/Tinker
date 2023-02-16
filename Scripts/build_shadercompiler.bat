@@ -8,15 +8,11 @@ if "%1" == "help" (goto PrintHelp)
 goto StartScript
 
 :PrintHelp
-echo Usage: build_sc.bat ^<build_mode^> ^<graphics_api^>
+echo Usage: build_sc.bat ^<build_mode^> 
 echo.
 echo build_mode:
 echo   Release
 echo   Debug
-echo.
-echo graphics_api
-echo   VK
-echo   D3D12
 echo.
 echo For example:
 echo build_sc.bat Release VK
@@ -32,30 +28,6 @@ if "%BuildConfig%" NEQ "Debug" (
         goto DoneBuild
         )
     )
-
-if "%GraphicsAPI%" == "VK" (
-	set GraphicsAPIChosen="VK"
-    ) else (
-        if "%GraphicsAPI%" == "D3D12" (
-	    set GraphicsAPIChosen="D3D12"
-        ) else (
-	    set GraphicsAPIChosen="None"
-	    echo Unsupported graphics API specified.
-        goto DoneBuild
-        )
-    )
-
-if %GraphicsAPIChosen% == "VK" (
-    rem Vulkan
-    echo Using Vulkan SDK: %VULKAN_SDK%
-    echo.
-) else (
-    if %GraphicsAPIChosen% == "D3D12" (
-        rem echo D3D12 not yet supported. Build canceled.
-        rem echo.
-        rem goto DoneBuild
-    )
-)
 
 echo ***** Building Tinker Shader Compiler *****
 
@@ -88,6 +60,7 @@ set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/DataStructures/Vect
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Mem.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32File.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32Logging.cpp 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32PlatformGameAPI.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
 
 rem Calculate absolute path prefix for application path parameters here

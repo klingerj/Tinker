@@ -26,12 +26,12 @@ call %VcVarsCmd%
 echo.
 
 rem Run other build scripts
-call build_app.bat Release VK
+call build_app_and_game_dll.bat Release VK
 call build_server.bat Release
 call build_benchmarks.bat Release
 call build_tests.bat Release
 
 echo.
 echo Build finished.
-echo Try running run_game.bat, run_benchmarks.bat, or run_test.bat!
+echo Try running run_game.bat, run_benchmarks.bat, or run_tests.bat!
 pause
