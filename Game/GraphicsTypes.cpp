@@ -59,7 +59,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
 
         // Do GPU buffer copies
         Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Pos Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_points);
         command->m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
@@ -67,7 +67,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx UV Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_uvs);
         command->m_dstBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
@@ -75,7 +75,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Norm Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_normals);
         command->m_dstBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
@@ -83,7 +83,7 @@ void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStrea
         ++graphicsCommandStream->m_numCommands;
         ++command;
 
-        command->m_commandType = Graphics::GraphicsCmd::eMemTransfer;
+        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
         command->debugLabel = "Update Default Quad Vtx Idx Buf";
         command->m_sizeInBytes = sizeof(defaultQuad.m_indices);
         command->m_dstBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
@@ -227,7 +227,7 @@ void DrawAnimatedPoly(TransientPrim* prim, Graphics::DescriptorHandle globalData
 {
     Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-    command->m_commandType = Graphics::GraphicsCmd::eDrawCall;
+    command->m_commandType = Graphics::GraphicsCommand::eDrawCall;
     command->debugLabel = "Draw animated poly";
     command->m_numIndices = (prim->numVertices - 1) * 3;
     command->m_numInstances = 1;

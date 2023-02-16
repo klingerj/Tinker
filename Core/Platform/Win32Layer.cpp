@@ -562,8 +562,8 @@ wWinMain(HINSTANCE hInstance,
 
         // TODO: load from settings file
         g_GlobalAppParams = {};
-        g_GlobalAppParams.m_windowWidth = 1920;
-        g_GlobalAppParams.m_windowHeight = 1080;
+        g_GlobalAppParams.m_windowWidth = 800;
+        g_GlobalAppParams.m_windowHeight = 600;
 
         // Get system info
         g_SystemInfo = {};

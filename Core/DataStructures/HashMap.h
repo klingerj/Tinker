@@ -58,7 +58,8 @@ protected:
     uint8* m_data;
     uint32 m_size;
 
-    TINKER_API void Reserve(uint32 numEles, uint32 eleSize);
+    TINKER_API void Reserve(uint32 numEles, uint32 dataPairSize);
+    TINKER_API void Clear(size_t dataPairSize);
     TINKER_API uint32 FindIndex(uint32 index, void* key, size_t dataPairSize, bool CompareKeysFunc(const void*, const void*), const void* m_InvalidKey) const;
     TINKER_API void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const;
     TINKER_API void* KeyAtIndex(uint32 index, size_t dataPairSize) const;
@@ -110,6 +111,11 @@ public:
     void Reserve(uint32 numEles)
     {
         HashMapBase::Reserve(numEles, ePairSize);
+    }
+
+    void Clear()
+    {
+        HashMapBase::Clear(ePairSize);
     }
 
     uint32 FindIndex(tKey key) const

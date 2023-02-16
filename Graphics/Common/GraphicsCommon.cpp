@@ -1,4 +1,5 @@
 #include "GraphicsCommon.h"
+#include "GPUTimestamps.h"
 #include "Utility/Logging.h"
 
 #ifdef VULKAN
@@ -107,13 +108,13 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
         for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
         {
-            TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < GraphicsCmd::eMax);
+            TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < GraphicsCommand::eMax);
 
             const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
 
             switch (currentCmd.m_commandType)
             {
-                case GraphicsCmd::eDrawCall:
+                case GraphicsCommand::eDrawCall:
                 {
                     const bool psoChange =
                         currentShaderID != currentCmd.m_shader ||
@@ -143,7 +144,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
-                case GraphicsCmd::eMemTransfer:
+                case GraphicsCommand::eMemTransfer:
                 {
                     RecordCommandMemoryTransfer(currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
                         currentCmd.debugLabel, immediateSubmit);
@@ -151,21 +152,21 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
-                case GraphicsCmd::ePushConstant:
+                case GraphicsCommand::ePushConstant:
                 {
                     RecordCommandPushConstant(&currentCmd.m_pushConstantData[0], ARRAYCOUNT(currentCmd.m_pushConstantData) * sizeof(uint8), currentCmd.m_shaderForLayout);
 
                     break;
                 }
 
-                case GraphicsCmd::eSetScissor:
+                case GraphicsCommand::eSetScissor:
                 {
                     RecordCommandSetScissor(currentCmd.m_scissorOffsetX, currentCmd.m_scissorOffsetY, currentCmd.m_scissorWidth, currentCmd.m_scissorHeight);
 
                     break;
                 }
 
-                case GraphicsCmd::eRenderPassBegin:
+                case GraphicsCommand::eRenderPassBegin:
                 {
                     RecordCommandRenderPassBegin(currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
                         currentCmd.m_renderWidth, currentCmd.m_renderHeight, currentCmd.debugLabel, immediateSubmit);
@@ -173,14 +174,14 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
-                case GraphicsCmd::eRenderPassEnd:
+                case GraphicsCommand::eRenderPassEnd:
                 {
                     RecordCommandRenderPassEnd(immediateSubmit);
 
                     break;
                 }
 
-                case GraphicsCmd::eLayoutTransition:
+                case GraphicsCommand::eLayoutTransition:
                 {
                     RecordCommandTransitionLayout(currentCmd.m_imageHandle,
                         currentCmd.m_startLayout, currentCmd.m_endLayout,
@@ -189,10 +190,27 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
-                case GraphicsCmd::eClearImage:
+                case GraphicsCommand::eClearImage:
                 {
                     RecordCommandClearImage(currentCmd.m_imageHandle,
                         currentCmd.m_clearValue, currentCmd.debugLabel, immediateSubmit);
+
+                    break;
+                }
+
+                case GraphicsCommand::eGPUTimestamp:
+                {
+                    TINKER_ASSERT(GPUTimestamps::GetMostRecentRecordedTimestampCount() <= GPU_TIMESTAMP_NUM_MAX);
+                    if (currentCmd.m_timestampStartFrame)
+                    {
+                        void* cpuCopyBuffer = GPUTimestamps::GetRawCPUSideTimestampBuffer();
+                        const uint32 numTimestampsRecorded = GPUTimestamps::GetMostRecentRecordedTimestampCount();
+                        ResolveMostRecentAvailableTimestamps(cpuCopyBuffer, numTimestampsRecorded, immediateSubmit);
+                        GPUTimestamps::ProcessTimestamps();
+                    }
+
+                    RecordCommandGPUTimestamp(GPUTimestamps::GetMostRecentRecordedTimestampCount(), immediateSubmit);
+                    GPUTimestamps::RecordName(currentCmd.m_timestampNameStr);
 
                     break;
                 }
