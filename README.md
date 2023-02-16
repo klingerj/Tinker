@@ -58,6 +58,7 @@ Raytraced | Rasterized
   * API-agnostic graphics layer, compiles with desired backend
     * Vulkan backend support
       * Use of dynamic rendering API feature
+    * Render pass timing with GPU timestamps
   * Builds with game dll, meaning the graphics system is hotloadable
   * Draw call batching
   * Instanced rendering
