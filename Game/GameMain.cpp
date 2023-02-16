@@ -508,6 +508,8 @@ GAME_UPDATE(GameUpdate)
     }
 
     // Imgui menus
+    DebugUI::UI_MainMenu();
+    DebugUI::UI_PerformanceOverview();
     DebugUI::UI_RenderPassStats();
     DebugUI::Render(&graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
     {

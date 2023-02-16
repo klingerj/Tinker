@@ -96,6 +96,7 @@ if "%GraphicsAPI%" == "VK" (
     set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanTypes.cpp 
     set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanCreation.cpp 
 )
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
 if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
 
 rem Calculate absolute path prefix for application path parameters here

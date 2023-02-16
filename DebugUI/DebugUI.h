@@ -17,5 +17,7 @@ namespace DebugUI
     void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Graphics::ResourceHandle renderTarget);
     void ToggleEnable();
 
+    void UI_MainMenu();
+    void UI_PerformanceOverview();
     void UI_RenderPassStats();
 }
