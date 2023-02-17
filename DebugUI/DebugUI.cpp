@@ -438,6 +438,8 @@ void UI_RenderPassStats()
         if (ImGui::Begin("GPU Render Pass Timings", NULL, ImGuiWindowFlags_AlwaysAutoResize))
         {
             static bool shouldCopyToClip = false;
+            static int displayFactorBtnIdx = 0;
+            static float displayConversionFactor = 1.0f;
 
             if (ImGui::SmallButton("Clear"))
             {
@@ -447,6 +449,16 @@ void UI_RenderPassStats()
             if (ImGui::SmallButton("Copy"))
             {
                 shouldCopyToClip = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("US", &displayFactorBtnIdx, 0))
+            {
+                displayConversionFactor = 1.0f;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("MS", &displayFactorBtnIdx, 1))
+            {
+                displayConversionFactor = 0.001f;
             }
 
             ImGuiTableFlags_ tableFlags = 
@@ -609,13 +621,13 @@ void UI_RenderPassStats()
                     ImGui::TableNextColumn();
                     ImGui::Text("%s", displayEntry.name);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeCurr]);
+                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeCurr] * displayConversionFactor);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeAvg]);
+                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeAvg] * displayConversionFactor);
                     ImGui::TableNextColumn();
-                    ImGui::Text((const char*)u8"± %.2f", displayEntry.timeData[DisplayTimestampEntry::StdDev]);
+                    ImGui::Text((const char*)u8"± %.2f", displayEntry.timeData[DisplayTimestampEntry::StdDev] * displayConversionFactor);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeMax]);
+                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeMax] * displayConversionFactor);
                 }
 
                 ImGui::EndTable();
