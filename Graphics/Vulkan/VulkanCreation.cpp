@@ -147,7 +147,7 @@ void VulkanCreateSwapChain()
         &numAvailablePresentModes,
         availablePresentModes);
 
-    VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR; // required to be supported!
+    VkPresentModeKHR chosenPresentMode = VK_PRESENT_MODE_FIFO_KHR;
     for (uint32 uiAvailPresMode = 0; uiAvailPresMode < numAvailablePresentModes; ++uiAvailPresMode)
     {
         /*if (availablePresentModes[uiAvailPresMode] == VK_PRESENT_MODE_MAILBOX_KHR)

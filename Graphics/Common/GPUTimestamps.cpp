@@ -63,9 +63,16 @@ void ProcessTimestamps()
 
 TimestampData GetTimestampData()
 {
+    uint32 numTimestamps = numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()];
+    if (numTimestamps > 0)
+    {
+        // We assume the game has recorded a "begin frame" marker that we effectively ignore after calculating differences
+        --numTimestamps;
+    }
+
     TimestampData data;
     data.timestamps = timestampDataProcessed;
-    data.numTimestamps = numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()] - 1; // drop the first 'begin frame' timestamp marker
+    data.numTimestamps = numTimestamps;
     data.totalFrameTimeInUS = totalTimeThisFrameInUS;
     return data;
 }

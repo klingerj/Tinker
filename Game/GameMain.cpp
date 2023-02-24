@@ -488,7 +488,7 @@ GAME_UPDATE(GameUpdate)
 
     // Record render commands for main view render
     {
-        //TIMED_SCOPED_BLOCK("Record render pass commands zprepass");
+        //TIMED_SCOPED_BLOCK("Record render pass commands render main view");
 
         Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0] = gameGraphicsData.m_DescData_Global;
