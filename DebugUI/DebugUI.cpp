@@ -628,13 +628,13 @@ void UI_RenderPassStats()
                     ImGui::TableNextColumn();
                     ImGui::Text("%s", displayEntry.name);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeCurr] * displayConversionFactor);
+                    ImGui::Text("%.3f", displayEntry.timeData[DisplayTimestampEntry::TimeCurr] * displayConversionFactor);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeAvg] * displayConversionFactor);
+                    ImGui::Text("%.3f", displayEntry.timeData[DisplayTimestampEntry::TimeAvg] * displayConversionFactor);
                     ImGui::TableNextColumn();
                     ImGui::Text((const char*)u8"± %.2f", displayEntry.timeData[DisplayTimestampEntry::StdDev] * displayConversionFactor);
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f", displayEntry.timeData[DisplayTimestampEntry::TimeMax] * displayConversionFactor);
+                    ImGui::Text("%.3f", displayEntry.timeData[DisplayTimestampEntry::TimeMax] * displayConversionFactor);
                 }
 
                 ImGui::EndTable();
