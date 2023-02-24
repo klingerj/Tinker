@@ -1,6 +1,5 @@
 #define PositionDataType float4
 #define UVDataType float2
-#define NormalDataType float4
 
 [[vk::binding(0, 1)]] StructuredBuffer<PositionDataType> PositionData;
 

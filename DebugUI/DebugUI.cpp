@@ -10,6 +10,7 @@
 #include "Graphics/Common/GPUTimestamps.h"
 #include "DataStructures/Vector.h"
 #include "DataStructures/HashMap.h"
+#include "Sorting.h"
 #include "StringTypes.h"
 #include "MurmurHash3.h"
 #define SEED 0x1234
@@ -500,6 +501,12 @@ void UI_RenderPassStats()
                 for (uint32 i = 0; i < timestampData.numTimestamps; ++i)
                 {
                     const GPUTimestamps::Timestamp& currTimestamp = timestampData.timestamps[i];
+
+                    if (!currTimestamp.name)
+                    {
+                        continue;
+                    }
+
                     const uint32 timestampNameHash = MurmurHash3_x86_32(currTimestamp.name, (int)strlen(currTimestamp.name), SEED);
                     
                     RunningTimestampEntry* entry = NULL;
