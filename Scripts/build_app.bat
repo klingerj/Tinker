@@ -73,14 +73,12 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docki
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
 
 rem Calculate absolute path prefix for application path parameters here
-set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
 set CompileDefines=/DTINKER_APP 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 set CompileDefines=%CompileDefines% /DTINKER_EXPORTING 
 set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
-set CompileDefines=%CompileDefines% /D_GAME_DLL_PATH=%AbsolutePathPrefix%\\TinkerGame.dll 
-set CompileDefines=%CompileDefines% /D_GAME_DLL_HOTLOADCOPY_PATH=%AbsolutePathPrefix%\\TinkerGame_hotload.dll 
-set CompileDefines=%CompileDefines% /D_SCRIPTS_DIR=%AbsolutePathPrefix%\\..\\Scripts\\ 
+set CompileDefines=%CompileDefines% /D_GAME_DLL_PATH=TinkerGame.dll 
+set CompileDefines=%CompileDefines% /D_GAME_DLL_HOTLOADCOPY_PATH=TinkerGame_hotload.dll 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsApp=/FdTinkerApp.pdb
