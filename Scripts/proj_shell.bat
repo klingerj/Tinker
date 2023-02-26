@@ -1,5 +1,6 @@
 @echo off
 setlocal
+title TinkerProjectShell
 
 set VcVarsPathComm="C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat"
 set VcVarsPathPro="C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat"
