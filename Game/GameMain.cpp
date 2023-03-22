@@ -9,6 +9,9 @@
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
 #include "RenderPasses/RenderPass.h"
+#include "RenderPasses/ZPrepassRenderPass.h"
+#include "RenderPasses/ForwardRenderPass.h"
+#include "RenderPasses/SwapChainBlitRenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
 #include "Raytracing.h"
@@ -23,6 +26,8 @@
 #include "RenderPasses/RenderPass.cpp"
 #include "RenderPasses/ZPrepassRenderPass.cpp"
 #include "RenderPasses/ForwardRenderPass.cpp"
+#include "RenderPasses/DebugUIRenderPass.cpp"
+#include "RenderPasses/SwapChainBlitRenderPass.cpp"
 #include "Raytracing.cpp"
 #include "View.cpp"
 #include "Scene.cpp"
@@ -234,7 +239,7 @@ static void CreateAllDescriptors()
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, gameGraphicsData.m_DescData_Instance, &descDataHandles[0]);
 }
-#include "RenderPasses/ZPrepassRenderPass.h"
+
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
 {
     Graphics::ResourceDesc desc;
@@ -263,8 +268,26 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_MainView].depthRT = gameGraphicsData.m_rtDepthHandle;
     gameRenderPassList[eRenderPass_MainView].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_MainView].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Render View";
+    gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
     gameRenderPassList[eRenderPass_MainView].Execute = ForwardRenderPass::Execute;
+
+    gameRenderPassList[eRenderPass_DebugUI].Init();
+    gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_DebugUI].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_DebugUI].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_DebugUI].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_DebugUI].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_DebugUI].debugLabel = "Debug UI";
+    gameRenderPassList[eRenderPass_DebugUI].Execute = DebugUIRenderPass::Execute;
+
+    gameRenderPassList[eRenderPass_SwapChainBlit].Init();
+    gameRenderPassList[eRenderPass_SwapChainBlit].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_SwapChainBlit].colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
+    gameRenderPassList[eRenderPass_SwapChainBlit].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_SwapChainBlit].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_SwapChainBlit].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_SwapChainBlit].debugLabel = "Swap Chain Blit";
+    gameRenderPassList[eRenderPass_SwapChainBlit].Execute = SwapChainBlitRenderPass::Execute;
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
@@ -411,6 +434,11 @@ GAME_UPDATE(GameUpdate)
         Update(&MainView, descriptors);
     }
 
+    // Update Imgui menus
+    DebugUI::UI_MainMenu();
+    DebugUI::UI_PerformanceOverview();
+    DebugUI::UI_RenderPassStats();
+
     // Timestamp start of frame
     {
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
@@ -428,94 +456,6 @@ GAME_UPDATE(GameUpdate)
         command->CmdTimestamp(currRP.debugLabel);
         ++graphicsCommandStream.m_numCommands;
     }
-
-    // Imgui menus
-    DebugUI::UI_MainMenu();
-    DebugUI::UI_PerformanceOverview();
-    DebugUI::UI_RenderPassStats();
-    DebugUI::Render(&graphicsCommandStream, gameGraphicsData.m_rtColorHandle);
-    {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->CmdTimestamp("Debug UI", "Timestamp");
-        ++graphicsCommandStream.m_numCommands;
-    }
-
-    // FINAL BLIT TO SWAP CHAIN
-    Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-
-    // Transition main view render target from render optimal to shader read
-    command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
-    command->debugLabel = "Transition main view render target to shader read for blit";
-    command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-    command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
-    command->m_endLayout = Graphics::ImageLayout::eShaderRead;
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
-
-    // Transition of swap chain to render optimal
-    command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
-    command->debugLabel = "Transition swap chain to render_optimal";
-    command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-    command->m_startLayout = Graphics::ImageLayout::eUndefined;
-    command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
-
-    command->m_commandType = Graphics::GraphicsCommand::eRenderPassBegin;
-    command->debugLabel = "Blit to swap chain";
-    command->m_numColorRTs = 1;
-    command->m_colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-    command->m_depthRT = Graphics::DefaultResHandle_Invalid;
-    command->m_renderWidth = windowWidth;
-    command->m_renderHeight = windowHeight;
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
-
-    command->m_commandType = Graphics::GraphicsCommand::eSetScissor;
-    command->debugLabel = "Set render pass scissor state";
-    command->m_scissorOffsetX = 0;
-    command->m_scissorOffsetY = 0;
-    command->m_scissorWidth = windowWidth;
-    command->m_scissorHeight = windowHeight;
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
-
-    command->m_commandType = Graphics::GraphicsCommand::eDrawCall;
-    command->debugLabel = "Draw default quad";
-    command->m_numIndices = DEFAULT_QUAD_NUM_INDICES;
-    command->m_numInstances = 1;
-    command->m_vertOffset = 0;
-    command->m_indexOffset = 0;
-    command->m_indexBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
-    command->m_shader = Graphics::SHADER_ID_SWAP_CHAIN_BLIT;
-    command->m_blendState = Graphics::BlendState::eReplace;
-    command->m_depthState = Graphics::DepthState::eOff_NoCull;
-    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
-    {
-        command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
-    }
-    command->m_descriptors[0] = gameGraphicsData.m_swapChainBlitDescHandle;
-    command->m_descriptors[1] = defaultQuad.m_descriptor;
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
-
-    command->m_commandType = Graphics::GraphicsCommand::eRenderPassEnd;
-    command->debugLabel = "End blit to screen render pass";
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
-
-    // Transition of swap chain from render optimal to present
-    command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
-    command->debugLabel = "Transition swap chain to present";
-    command->m_imageHandle = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-    command->m_startLayout = Graphics::ImageLayout::eRenderOptimal;
-    command->m_endLayout = Graphics::ImageLayout::ePresent;
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
-
-    command->CmdTimestamp("Blit to swap chain", "Timestamp");
-    ++graphicsCommandStream.m_numCommands;
-    ++command;
 
     // Process recorded graphics command stream
     {

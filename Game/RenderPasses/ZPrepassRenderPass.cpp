@@ -11,7 +11,7 @@ namespace ZPrepassRenderPass
     {
         Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
 
-        // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
+        // Transition of depth buffer from layout undefined to transfer_dst
         command->CmdTransitionLayout(renderPass->depthRT, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition main view depth to transfer_dst");
         ++graphicsCommandStream->m_numCommands;
         ++command;
