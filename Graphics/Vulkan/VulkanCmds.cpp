@@ -501,7 +501,7 @@ void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colo
     VkRenderingAttachmentInfo depthAttachment = {};
     depthAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     depthAttachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     depthAttachment.clearValue.color = { DEPTH_MAX, 0 };
     if (HasDepth)

@@ -73,7 +73,7 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set CompileIncludePaths=/I ../ 
-set CompileIncludePaths=%CompileIncludePaths% /I ../Core  
+set CompileIncludePaths=%CompileIncludePaths% /I ../Core 
 set CompileIncludePaths=%CompileIncludePaths% /I ../Tools 
 set CompileIncludePaths=%CompileIncludePaths% /I ../DebugUI 
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/dxc_2022_07_18 
