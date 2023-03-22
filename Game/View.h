@@ -3,7 +3,6 @@
 #include "Platform/PlatformGameAPI.h"
 #include "Math/VectorTypes.h"
 #include "GraphicsTypes.h"
-#include "Scene.h"
 
 struct View
 {
@@ -13,8 +12,3 @@ struct View
 };
 void Init(View* view);
 void Update(View* view, Tk::Graphics::DescriptorSetDataHandles* descDataHandles);
-
-struct GameRenderPass;
-void RecordRenderPassCommands(View* view, Scene* scene, GameRenderPass* renderPass,
-    Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 shaderID, uint32 blendState, uint32 depthState,
-    Tk::Graphics::DescriptorHandle* descriptors);

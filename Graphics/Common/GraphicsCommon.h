@@ -392,6 +392,23 @@ typedef struct graphics_command
         };
     };
 
+    void CmdTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout, const char* dbgLabel = "Transition")
+    {
+        m_commandType = eLayoutTransition;
+        debugLabel = dbgLabel;
+        m_imageHandle = imageHandle;
+        m_startLayout = startLayout;
+        m_endLayout = endLayout;
+    }
+
+    void CmdClear(ResourceHandle imageHandle, const v4f& clearValue, const char* dbgLabel = "Clear")
+    {
+        m_commandType = eClearImage;
+        debugLabel = dbgLabel;
+        m_imageHandle = imageHandle;
+        m_clearValue = clearValue;
+    }
+
     void CmdTimestamp(const char* nameStr, const char* dbgLabel = "Timestamp", bool startFrame = false)
     {
         m_commandType = eGPUTimestamp;

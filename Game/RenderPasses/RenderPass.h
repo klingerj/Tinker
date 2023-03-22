@@ -2,14 +2,25 @@
 
 #include "Graphics/Common/GraphicsCommon.h"
 
+struct GameRenderPass;
+#define RENDER_PASS_EXEC_FUNC(name) void name(GameRenderPass* renderPass, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
+
+inline RENDER_PASS_EXEC_FUNC(RenderPassExecStub)
+{
+    TINKER_ASSERT(0 && "Render Pass Exec Func empty!\n");
+}
+
 struct GameRenderPass
 {
-    uint32 numColorRTs;
     Tk::Graphics::ResourceHandle colorRTs[MAX_MULTIPLE_RENDERTARGETS];
     Tk::Graphics::ResourceHandle depthRT;
+    const char* debugLabel;
+    uint32 numColorRTs;
     uint32 renderWidth;
     uint32 renderHeight;
-    const char* debugLabel;
+
+    typedef RENDER_PASS_EXEC_FUNC(RenderPassExecuteFunc);
+    RenderPassExecuteFunc* Execute = RenderPassExecStub;
 
     void Init()
     {
@@ -31,3 +42,9 @@ void DrawMeshDataCommand(Tk::Graphics::GraphicsCommandStream* graphicsCommandStr
     uint32 numInstances, Tk::Graphics::ResourceHandle indexBufferHandle,
     uint32 shaderID, uint32 blendState, uint32 depthState,
     Tk::Graphics::DescriptorHandle* descriptors, const char* debugLabel);
+
+struct View;
+struct Scene;
+void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* scene,
+    Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 shaderID, uint32 blendState, uint32 depthState,
+    Tk::Graphics::DescriptorHandle* descriptors);
