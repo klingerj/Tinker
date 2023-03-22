@@ -65,7 +65,6 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Ve
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/HashMap.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Raytracing/RayIntersection.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 

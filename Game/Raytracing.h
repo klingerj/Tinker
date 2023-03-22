@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Raytracing/RayIntersection.h"
+#include "Graphics/CPURaytracing/RayIntersection.h"
 
 void RayMeshIntersectNaive(Tk::Core::Raytracing::Intersection& isx);
 void RaytraceTest();

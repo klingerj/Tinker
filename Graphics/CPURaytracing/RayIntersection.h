@@ -32,8 +32,7 @@ struct Intersection
     }
 };
 
-TINKER_API void IntersectRayTriangle(const Ray& ray, const v3f* triangle, Intersection& isx);
-//void IntersectRayCube(const Ray& ray, const Box& box);
+void IntersectRayTriangle(const Ray& ray, const v3f* triangle, Intersection& isx);
 
 }
 }
