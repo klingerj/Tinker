@@ -22,6 +22,7 @@
 #include "AssetManager.cpp"
 #include "RenderPasses/RenderPass.cpp"
 #include "RenderPasses/ZPrepassRenderPass.cpp"
+#include "RenderPasses/ForwardRenderPass.cpp"
 #include "Raytracing.cpp"
 #include "View.cpp"
 #include "Scene.cpp"
@@ -263,6 +264,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_MainView].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_MainView].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Render View";
+    gameRenderPassList[eRenderPass_MainView].Execute = ForwardRenderPass::Execute;
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
@@ -417,63 +419,13 @@ GAME_UPDATE(GameUpdate)
     }
     
     // Run the "render graph"
-    for (uint32 uiRenderPass = 0; uiRenderPass <= eRenderPass_ZPrePass /*< eRenderPass_Max*/; ++uiRenderPass)
+    for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
     {
         GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
         currRP.Execute(&currRP, &graphicsCommandStream);
 
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
         command->CmdTimestamp(currRP.debugLabel);
-        ++graphicsCommandStream.m_numCommands;
-    }
-
-    // Clear color buffer
-    {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-
-        // Transition from layout undefined to transfer_dst (required for clear command)
-        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
-        command->debugLabel = "Transition color to transfer_dst";
-        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_startLayout = Graphics::ImageLayout::eUndefined;
-        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
-        ++graphicsCommandStream.m_numCommands;
-        ++command;
-
-        command->m_commandType = Graphics::GraphicsCommand::eClearImage;
-        command->debugLabel = "Clear color buffer";
-        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_clearValue = v4f(0.0f, 0.0f, 0.0f, 0.0f);
-        ++graphicsCommandStream.m_numCommands;
-        ++command;
-
-        // Transition from transfer dst to depth_attachment_optimal
-        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
-        command->debugLabel = "Transition color to render_optimal";
-        command->m_imageHandle = gameGraphicsData.m_rtColorHandle;
-        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
-        command->m_endLayout = Graphics::ImageLayout::eRenderOptimal;
-        ++graphicsCommandStream.m_numCommands;
-    }
-
-    // Record render commands for main view render
-    {
-        //TIMED_SCOPED_BLOCK("Record render pass commands render main view");
-
-        Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-        descriptors[0] = gameGraphicsData.m_DescData_Global;
-        descriptors[1] = gameGraphicsData.m_DescData_Instance;
-
-        StartRenderPass(&gameRenderPassList[eRenderPass_MainView], &graphicsCommandStream);
-        RecordRenderPassCommands(&gameRenderPassList[eRenderPass_MainView], &MainView, &MainScene, &graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
-
-        UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, &graphicsCommandStream);
-
-        EndRenderPass(&gameRenderPassList[eRenderPass_MainView], &graphicsCommandStream);
-
-        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->CmdTimestamp("Main View Render", "Timestamp");
         ++graphicsCommandStream.m_numCommands;
     }
 
