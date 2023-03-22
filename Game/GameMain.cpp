@@ -8,7 +8,7 @@
 #include "AssetFileParsing.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
-#include "RenderPass.h"
+#include "RenderPasses/RenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
 #include "Raytracing.h"
@@ -20,7 +20,8 @@
 // Unity style build
 #include "GraphicsTypes.cpp"
 #include "AssetManager.cpp"
-#include "RenderPass.cpp"
+#include "RenderPasses/RenderPass.cpp"
+#include "RenderPasses/ZPrepassRenderPass.cpp"
 #include "Raytracing.cpp"
 #include "View.cpp"
 #include "Scene.cpp"
@@ -50,8 +51,9 @@ static Tk::Platform::WindowHandles* windowHandles = nullptr;
 #define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
 Tk::Graphics::GraphicsCommandStream graphicsCommandStream;
 
-static GameGraphicsData gameGraphicsData = {};
-static GameRenderPass gameRenderPasses[eRenderPass_Max] = {};
+// For now, this owns all RTs
+GameGraphicsData gameGraphicsData = {};
+static GameRenderPass gameRenderPassList[eRenderPass_Max] = {};
 
 static Camera g_gameCamera = {};
 static const float cameraPanSensitivity = 0.1f;
@@ -105,9 +107,11 @@ INPUT_CALLBACK(HotloadAllShaders)
 }
 
 #define MAX_INSTANCES_PER_SCENE 128
-static Scene MainScene;
+extern Scene MainScene;
+extern View MainView;
 
-static View MainView;
+Scene MainScene = {};
+View MainView = {};
 
 INPUT_CALLBACK(RaytraceTestCallback)
 {
@@ -229,7 +233,7 @@ static void CreateAllDescriptors()
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, gameGraphicsData.m_DescData_Instance, &descDataHandles[0]);
 }
-
+#include "RenderPasses/ZPrepassRenderPass.h"
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
 {
     Graphics::ResourceDesc desc;
@@ -244,20 +248,21 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.debugLabel = "MainViewDepth";
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
-    gameRenderPasses[eRenderPass_ZPrePass].Init();
-    gameRenderPasses[eRenderPass_ZPrePass].numColorRTs = 0;
-    gameRenderPasses[eRenderPass_ZPrePass].depthRT = gameGraphicsData.m_rtDepthHandle;
-    gameRenderPasses[eRenderPass_ZPrePass].renderWidth = windowWidth;
-    gameRenderPasses[eRenderPass_ZPrePass].renderHeight = windowHeight;
-    gameRenderPasses[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
+    gameRenderPassList[eRenderPass_ZPrePass].Init();
+    gameRenderPassList[eRenderPass_ZPrePass].numColorRTs = 0;
+    gameRenderPassList[eRenderPass_ZPrePass].depthRT = gameGraphicsData.m_rtDepthHandle;
+    gameRenderPassList[eRenderPass_ZPrePass].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_ZPrePass].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
+    gameRenderPassList[eRenderPass_ZPrePass].Execute = ZPrepassRenderPass::Execute;
 
-    gameRenderPasses[eRenderPass_MainView].Init();
-    gameRenderPasses[eRenderPass_MainView].numColorRTs = 1;
-    gameRenderPasses[eRenderPass_MainView].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
-    gameRenderPasses[eRenderPass_MainView].depthRT = gameGraphicsData.m_rtDepthHandle;
-    gameRenderPasses[eRenderPass_MainView].renderWidth = windowWidth;
-    gameRenderPasses[eRenderPass_MainView].renderHeight = windowHeight;
-    gameRenderPasses[eRenderPass_MainView].debugLabel = "Main Render View";
+    gameRenderPassList[eRenderPass_MainView].Init();
+    gameRenderPassList[eRenderPass_MainView].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_MainView].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_MainView].depthRT = gameGraphicsData.m_rtDepthHandle;
+    gameRenderPassList[eRenderPass_MainView].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_MainView].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Render View";
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
@@ -268,6 +273,9 @@ INPUT_CALLBACK(ToggleImGuiDisplay)
 static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
+
+    currentWindowWidth = windowWidth;
+    currentWindowHeight = windowHeight;
 
     windowHandles = Tk::Platform::GetPlatformWindowHandles();
 
@@ -308,8 +316,6 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 
     g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
     g_gameCamera.m_eye = v3f(27.0f, 27.0f, 27.0f);
-    currentWindowWidth = windowWidth;
-    currentWindowHeight = windowHeight;
     g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
     // Init network connection if multiplayer
@@ -410,50 +416,14 @@ GAME_UPDATE(GameUpdate)
         ++graphicsCommandStream.m_numCommands;
     }
     
-    // Clear depth buffer
+    // Run the "render graph"
+    for (uint32 uiRenderPass = 0; uiRenderPass <= eRenderPass_ZPrePass /*< eRenderPass_Max*/; ++uiRenderPass)
     {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-
-        // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
-        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
-        command->debugLabel = "Transition depth to transfer_dst";
-        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
-        command->m_startLayout = Graphics::ImageLayout::eUndefined;
-        command->m_endLayout = Graphics::ImageLayout::eTransferDst;
-        ++graphicsCommandStream.m_numCommands;
-        ++command;
-
-        // Clear depth buffer - before z-prepass
-        command->m_commandType = Graphics::GraphicsCommand::eClearImage;
-        command->debugLabel = "Clear depth buffer";
-        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
-        command->m_clearValue = v4f(1.0f, 0.0f, 0.0f, 0.0f); // depth/stencil clear uses x and y components
-        ++graphicsCommandStream.m_numCommands;
-        ++command;
-
-        // Transition of depth buffer from transfer dst to depth_attachment_optimal
-        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
-        command->debugLabel = "Transition depth to depth_attachment_optimal";
-        command->m_imageHandle = gameGraphicsData.m_rtDepthHandle;
-        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
-        command->m_endLayout = Graphics::ImageLayout::eDepthOptimal;
-        ++graphicsCommandStream.m_numCommands;
-    }
-
-    // Record render commands for z prepass
-    {
-        //TIMED_SCOPED_BLOCK("Record render pass commands zprepass");
-
-        Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-        descriptors[0] = gameGraphicsData.m_DescData_Global;
-        descriptors[1] = gameGraphicsData.m_DescData_Instance;
-
-        StartRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream, Graphics::SHADER_ID_BASIC_ZPrepass, Graphics::BlendState::eNoColorAttachment, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
-        EndRenderPass(&gameRenderPasses[eRenderPass_ZPrePass], &graphicsCommandStream);
+        GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
+        currRP.Execute(&currRP, &graphicsCommandStream);
 
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->CmdTimestamp("Main View Z Prepass", "Timestamp");
+        command->CmdTimestamp(currRP.debugLabel);
         ++graphicsCommandStream.m_numCommands;
     }
 
@@ -494,13 +464,13 @@ GAME_UPDATE(GameUpdate)
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
 
-        StartRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
-        RecordRenderPassCommands(&MainView, &MainScene, &gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
+        StartRenderPass(&gameRenderPassList[eRenderPass_MainView], &graphicsCommandStream);
+        RecordRenderPassCommands(&gameRenderPassList[eRenderPass_MainView], &MainView, &MainScene, &graphicsCommandStream, Graphics::SHADER_ID_BASIC_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
 
         UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
         DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Graphics::BlendState::eAlphaBlend, Graphics::DepthState::eTestOnWriteOn_CCW, &graphicsCommandStream);
 
-        EndRenderPass(&gameRenderPasses[eRenderPass_MainView], &graphicsCommandStream);
+        EndRenderPass(&gameRenderPassList[eRenderPass_MainView], &graphicsCommandStream);
 
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
         command->CmdTimestamp("Main View Render", "Timestamp");

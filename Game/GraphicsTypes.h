@@ -76,6 +76,7 @@ typedef struct game_graphics_data
 
     TransientPrim m_animatedPolygon;
 } GameGraphicsData;
+extern GameGraphicsData gameGraphicsData;
 
 typedef struct descriptor_instance_data
 {
