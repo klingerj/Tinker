@@ -43,6 +43,8 @@ enum
 {
     eRenderPass_ZPrePass = 0,
     eRenderPass_MainView,
+    eRenderPass_DebugUI,
+    eRenderPass_SwapChainBlit,
     eRenderPass_Max
 };
 
