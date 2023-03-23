@@ -225,6 +225,23 @@ void WriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, 
                         break;
                     }
 
+                    case DescriptorType::eStorageImage:
+                    {
+                        VkImageView* imageView = &resChain->resourceChain[resIndex].imageView; // Should be index 0 for images
+
+                        descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+                        descImageInfo[descriptorCount].imageView = *imageView;
+                        descImageInfo[descriptorCount].sampler = VK_NULL_HANDLE;
+
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pImageInfo = &descImageInfo[descriptorCount];
+                        break;
+                    }
+
                     default:
                     {
                         break;
@@ -581,6 +598,14 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
             break;
         }
 
+        case ImageLayout::eGeneral:
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+            srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            break;
+        }
+
         default:
         {
             Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
@@ -601,7 +626,7 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         case ImageLayout::eShaderRead:
         {
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
         }
 
@@ -615,7 +640,7 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         case ImageLayout::eDepthOptimal:
         {
             barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
             break;
         }
 
@@ -623,6 +648,13 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         {
             barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            break;
+        }
+
+        case ImageLayout::eGeneral:
+        {
+            barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
             break;
         }
 

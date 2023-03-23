@@ -1,7 +1,5 @@
 #include "SwapChainBlitRenderPass.h"
 
-#include "Game/GraphicsTypes.h"
-
 extern GameGraphicsData gameGraphicsData;
 
 namespace SwapChainBlitRenderPass
@@ -10,19 +8,11 @@ namespace SwapChainBlitRenderPass
     RENDER_PASS_EXEC_FUNC(Execute)
     {
 
-        {
-            Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
+        // Transition main view render target from render optimal to shader read
+        graphicsCommandStream->CmdTransitionLayout(gameGraphicsData.m_rtColorHandle, Graphics::ImageLayout::eRenderOptimal, Graphics::ImageLayout::eShaderRead, "Transition main view render target to shader read for blit");
 
-            // Transition main view render target from render optimal to shader read
-            command->CmdTransitionLayout(gameGraphicsData.m_rtColorHandle, Graphics::ImageLayout::eRenderOptimal, Graphics::ImageLayout::eShaderRead, "Transition main view render target to shader read for blit");
-            ++graphicsCommandStream->m_numCommands;
-            ++command;
-
-            // Transition of swap chain to render optimal
-            command->CmdTransitionLayout(Graphics::IMAGE_HANDLE_SWAP_CHAIN, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eRenderOptimal, "Transition swap chain to render_optimal");
-            ++graphicsCommandStream->m_numCommands;
-            ++command;
-        }
+        // Transition of swap chain to render optimal
+        graphicsCommandStream->CmdTransitionLayout(Graphics::IMAGE_HANDLE_SWAP_CHAIN, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eRenderOptimal, "Transition swap chain to render_optimal");
 
         StartRenderPass(renderPass, graphicsCommandStream);
 
@@ -52,12 +42,7 @@ namespace SwapChainBlitRenderPass
         EndRenderPass(renderPass, graphicsCommandStream);
 
         // Transition swap chain to present
-        {
-            Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-            command->CmdTransitionLayout(Graphics::IMAGE_HANDLE_SWAP_CHAIN, Graphics::ImageLayout::eRenderOptimal, Graphics::ImageLayout::ePresent, "Transition swap chain to present");
-            ++graphicsCommandStream->m_numCommands;
-            ++command;
-        }
+        graphicsCommandStream->CmdTransitionLayout(Graphics::IMAGE_HANDLE_SWAP_CHAIN, Graphics::ImageLayout::eRenderOptimal, Graphics::ImageLayout::ePresent, "Transition swap chain to present");
     }
 
 }

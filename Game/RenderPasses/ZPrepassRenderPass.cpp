@@ -9,22 +9,14 @@ namespace ZPrepassRenderPass
 
     RENDER_PASS_EXEC_FUNC(Execute)
     {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-
         // Transition of depth buffer from layout undefined to transfer_dst
-        command->CmdTransitionLayout(renderPass->depthRT, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition main view depth to transfer_dst");
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdTransitionLayout(renderPass->depthRT, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition main view depth to transfer_dst");
 
         // Clear depth buffer
-        command->CmdClear(renderPass->depthRT, v4f(1.0f, 0.0f, 0.0f, 0.0f), "Clear main view depth buffer");
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdClear(renderPass->depthRT, v4f(1.0f, 0.0f, 0.0f, 0.0f), "Clear main view depth buffer");
 
         // Transition of depth buffer from transfer dst to depth_attachment_optimal
-        command->CmdTransitionLayout(renderPass->depthRT, Graphics::ImageLayout::eTransferDst, Graphics::ImageLayout::eDepthOptimal, "Transition main view depth to depth_attachment_optimal");
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdTransitionLayout(renderPass->depthRT, Graphics::ImageLayout::eTransferDst, Graphics::ImageLayout::eDepthOptimal, "Transition main view depth to depth_attachment_optimal");
 
         // Draw
         Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
