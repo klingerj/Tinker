@@ -106,7 +106,7 @@ void VulkanSubmitFrame()
     ++g_vulkanContextResources.frameCounter;
 }
 
-void* VulkanMapResource(ResourceHandle handle)
+void* MapResource(ResourceHandle handle)
 {
     VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
     const ResourceDesc& desc = resourceChain->resDesc;
@@ -133,7 +133,7 @@ void* VulkanMapResource(ResourceHandle handle)
     }
 }
 
-void VulkanUnmapResource(ResourceHandle handle)
+void UnmapResource(ResourceHandle handle)
 {
     VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
     const ResourceDesc& desc = resourceChain->resDesc;
@@ -159,7 +159,7 @@ void VulkanUnmapResource(ResourceHandle handle)
     }
 }
 
-void VulkanWriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
+void WriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 {
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
 
@@ -378,20 +378,6 @@ void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSet
         &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
 
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
-
-    /*for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
-    {
-        DescriptorHandle descHandle = descSetHandles[uiDesc];
-        if (descHandle != DefaultDescHandle_Invalid)
-        {
-            VkDescriptorSet* descSet =
-                &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
-
-            vkCmdBindDescriptorSets(commandBuffer,
-                VK_PIPELINE_BIND_POINT_GRAPHICS,
-                pipelineLayout, uiDesc, 1, descSet, 0, nullptr);
-        }
-    }*/
 }
 
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,

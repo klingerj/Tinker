@@ -580,7 +580,7 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
         &g_vulkanContextResources.graphicsQueue);
 
     // Swap chain
-    VulkanCreateSwapChain();
+    CreateSwapChain();
 
     // Command pool
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
@@ -699,7 +699,7 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     return 0;
 }
 
-void DestroyVulkan()
+void DestroyContext()
 {
     if (!g_vulkanContextResources.isInitted)
         return;
@@ -708,12 +708,12 @@ void DestroyVulkan()
 
     vkDestroyQueryPool(g_vulkanContextResources.device, g_vulkanContextResources.queryPoolTimestamp, nullptr);
 
-    VulkanDestroySwapChain();
+    DestroySwapChain();
 
     vkDestroyCommandPool(g_vulkanContextResources.device, g_vulkanContextResources.commandPool, nullptr);
     g_vulkanContextResources.commandBuffers = nullptr;
 
-    VulkanDestroyAllPSOPerms();
+    DestroyAllPSOPerms();
     DestroyAllDescLayouts();
 
     for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
@@ -752,6 +752,11 @@ void DestroyVulkan()
 
     g_vulkanContextResources.vulkanMemResourcePool.ExplicitFree();
     g_vulkanContextResources.vulkanDescriptorResourcePool.ExplicitFree();
+}
+
+void WindowMinimized()
+{
+    g_vulkanContextResources.isSwapChainValid = false;
 }
 
 float GetGPUTimestampPeriod()

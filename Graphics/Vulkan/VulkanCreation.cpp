@@ -73,7 +73,7 @@ static VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShade
     return shaderModule;
 }
 
-void VulkanCreateSwapChain()
+void CreateSwapChain()
 {
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_vulkanContextResources.physicalDevice,
@@ -225,7 +225,7 @@ void VulkanCreateSwapChain()
     g_vulkanContextResources.isSwapChainValid = true;
 }
 
-void VulkanDestroySwapChain()
+void DestroySwapChain()
 {
     g_vulkanContextResources.isSwapChainValid = false;
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
@@ -240,7 +240,7 @@ void VulkanDestroySwapChain()
 }
 
 
-bool VulkanCreateGraphicsPipeline(
+bool CreateGraphicsPipeline(
     void* vertexShaderCode, uint32 numVertexShaderBytes,
     void* fragmentShaderCode, uint32 numFragmentShaderBytes,
     uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight,
@@ -462,7 +462,7 @@ bool VulkanCreateGraphicsPipeline(
     return true;
 }
 
-void DestroyPSOPerms(uint32 shaderID)
+void DestroyGraphicsPipeline(uint32 shaderID)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
@@ -487,13 +487,13 @@ void DestroyPSOPerms(uint32 shaderID)
     }
 }
 
-void VulkanDestroyAllPSOPerms()
+void DestroyAllPSOPerms()
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
     for (uint32 shaderID = 0; shaderID < VulkanContextResources::eMaxShaders; ++shaderID)
     {
-        DestroyPSOPerms(shaderID);
+        DestroyGraphicsPipeline(shaderID);
     }
 }
 
@@ -662,7 +662,7 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     return ResourceHandle(newResourceHandle);
 }
 
-ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc)
+ResourceHandle CreateResource(const ResourceDesc& resDesc)
 {
     ResourceHandle newHandle = DefaultResHandle_Invalid;
 
@@ -694,7 +694,7 @@ ResourceHandle VulkanCreateResource(const ResourceDesc& resDesc)
     return newHandle;
 }
 
-void VulkanDestroyResource(ResourceHandle handle)
+void DestroyResource(ResourceHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
@@ -758,7 +758,7 @@ void CreateSamplers()
     }
 }
 
-DescriptorHandle VulkanCreateDescriptor(uint32 descriptorLayoutID)
+DescriptorHandle CreateDescriptor(uint32 descriptorLayoutID)
 {
     if (g_vulkanContextResources.descriptorPool == VK_NULL_HANDLE)
     {
@@ -795,7 +795,7 @@ DescriptorHandle VulkanCreateDescriptor(uint32 descriptorLayoutID)
     return DescriptorHandle(newDescriptorHandle);
 }
 
-bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout)
+bool CreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout)
 {
     // Descriptor layout
     VkDescriptorSetLayoutBinding descLayoutBinding[MAX_BINDINGS_PER_SET] = {};
@@ -847,7 +847,7 @@ bool VulkanCreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLay
     return true;
 }
 
-void VulkanDestroyDescriptor(DescriptorHandle handle)
+void DestroyDescriptor(DescriptorHandle handle)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
     for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
@@ -870,7 +870,7 @@ void DestroyAllDescLayouts()
     }
 }
 
-void VulkanDestroyAllDescriptors()
+void DestroyAllDescriptors()
 {
     vkDestroyDescriptorPool(g_vulkanContextResources.device, g_vulkanContextResources.descriptorPool, nullptr);
     g_vulkanContextResources.descriptorPool = VK_NULL_HANDLE;

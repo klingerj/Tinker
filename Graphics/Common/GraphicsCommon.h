@@ -514,6 +514,8 @@ DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
 
 void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
 void RecreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);
+void CreateSwapChain();
+void DestroySwapChain();
 void WindowResize();
 void WindowMinimized();
 void DestroyContext();

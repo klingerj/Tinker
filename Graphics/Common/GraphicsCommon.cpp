@@ -37,49 +37,24 @@ void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 wind
 
 void RecreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
+    DestroyContext();
+
     #ifdef VULKAN
-    DestroyVulkan();
     InitVulkan(windowHandles, windowWidth, windowHeight);
     #endif
 }
 
 void WindowResize()
 {
-    #ifdef VULKAN
-    VulkanDestroyAllPSOPerms();
-    VulkanDestroySwapChain();
-    VulkanCreateSwapChain();
-    #endif
-}
-
-void WindowMinimized()
-{
-    #ifdef VULKAN
-    g_vulkanContextResources.isSwapChainValid = false;
-    #endif
-}
-
-void DestroyContext()
-{
-    #ifdef VULKAN
-    DestroyVulkan();
-    #endif
-}
-
-void DestroyAllPSOPerms()
-{
-    #ifdef VULKAN
-    VulkanDestroyAllPSOPerms();
-    #endif
+    DestroyAllPSOPerms();
+    DestroySwapChain();
+    CreateSwapChain();
 }
 
 bool AcquireFrame()
 {
     #ifdef VULKAN
-    if (g_vulkanContextResources.isSwapChainValid)
-        return VulkanAcquireFrame();
-    
-    return false;
+    return g_vulkanContextResources.isSwapChainValid && VulkanAcquireFrame();
     #else
     return false;
     #endif
@@ -253,95 +228,6 @@ SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
     BeginVulkanCommandRecordingImmediate();
     ProcessGraphicsCommandStream(graphicsCommandStream, true);
     EndVulkanCommandRecordingImmediate();
-    #endif
-}
-
-CREATE_RESOURCE(CreateResource)
-{
-    #ifdef VULKAN
-    return VulkanCreateResource(resDesc);
-    #else
-    return Graphics::DefaultResHandle_Invalid;
-    #endif
-}
-
-DESTROY_RESOURCE(DestroyResource)
-{
-    #ifdef VULKAN
-    VulkanDestroyResource(handle);
-    #endif
-}
-
-MAP_RESOURCE(MapResource)
-{
-    #ifdef VULKAN
-    return VulkanMapResource(handle);
-    #else
-    return NULL;
-    #endif
-}
-
-UNMAP_RESOURCE(UnmapResource)
-{
-    #ifdef VULKAN
-    VulkanUnmapResource(handle);
-    #endif
-}
-
-CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
-{
-    #ifdef VULKAN
-    return VulkanCreateGraphicsPipeline(vertexShaderCode, numVertexShaderBytes, fragmentShaderCode, numFragmentShaderBytes,
-        shaderID, viewportWidth, viewportHeight, numColorRTs, colorRTFormats, depthFormat, descriptorHandles, numDescriptorHandles);
-    #else
-    return false;
-    #endif
-}
-
-CREATE_DESCRIPTOR(CreateDescriptor)
-{
-    #ifdef VULKAN
-    return VulkanCreateDescriptor(descLayoutID);
-    #else
-    return DefaultDescHandle_Invalid;
-    #endif
-}
-
-DESTROY_DESCRIPTOR(DestroyDescriptor)
-{
-    #ifdef VULKAN
-    VulkanDestroyDescriptor(handle);
-    #endif
-}
-
-DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors)
-{
-    #ifdef VULKAN
-    VulkanDestroyAllDescriptors();
-    #endif
-}
-
-WRITE_DESCRIPTOR(WriteDescriptor)
-{
-    #ifdef VULKAN
-    VulkanWriteDescriptor(descLayoutID, descSetHandle, descSetDataHandles);
-    #endif
-}
-
-CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout)
-{
-    #ifdef VULKAN
-    return VulkanCreateDescriptorLayout(descLayoutID, descLayout);
-    #else
-    return false;
-    #endif
-
-}
-
-DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
-{
-    #ifdef VULKAN
-    DestroyPSOPerms(shaderID);
     #endif
 }
 
