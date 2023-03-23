@@ -260,7 +260,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_ZPrePass].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_ZPrePass].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
-    gameRenderPassList[eRenderPass_ZPrePass].Execute = ZPrepassRenderPass::Execute;
+    gameRenderPassList[eRenderPass_ZPrePass].ExecuteFn = ZPrepassRenderPass::Execute;
 
     gameRenderPassList[eRenderPass_MainView].Init();
     gameRenderPassList[eRenderPass_MainView].numColorRTs = 1;
@@ -269,7 +269,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_MainView].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_MainView].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
-    gameRenderPassList[eRenderPass_MainView].Execute = ForwardRenderPass::Execute;
+    gameRenderPassList[eRenderPass_MainView].ExecuteFn = ForwardRenderPass::Execute;
 
     gameRenderPassList[eRenderPass_DebugUI].Init();
     gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;
@@ -278,7 +278,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_DebugUI].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_DebugUI].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_DebugUI].debugLabel = "Debug UI";
-    gameRenderPassList[eRenderPass_DebugUI].Execute = DebugUIRenderPass::Execute;
+    gameRenderPassList[eRenderPass_DebugUI].ExecuteFn = DebugUIRenderPass::Execute;
 
     gameRenderPassList[eRenderPass_SwapChainBlit].Init();
     gameRenderPassList[eRenderPass_SwapChainBlit].numColorRTs = 1;
@@ -287,7 +287,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_SwapChainBlit].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_SwapChainBlit].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_SwapChainBlit].debugLabel = "Swap Chain Blit";
-    gameRenderPassList[eRenderPass_SwapChainBlit].Execute = SwapChainBlitRenderPass::Execute;
+    gameRenderPassList[eRenderPass_SwapChainBlit].ExecuteFn = SwapChainBlitRenderPass::Execute;
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
@@ -450,7 +450,7 @@ GAME_UPDATE(GameUpdate)
     for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
     {
         GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
-        currRP.Execute(&currRP, &graphicsCommandStream);
+        currRP.ExecuteFn(&currRP, &graphicsCommandStream);
 
         Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
         command->CmdTimestamp(currRP.debugLabel);

@@ -20,7 +20,7 @@ struct GameRenderPass
     uint32 renderHeight;
 
     typedef RENDER_PASS_EXEC_FUNC(RenderPassExecuteFunc);
-    RenderPassExecuteFunc* Execute = RenderPassExecStub;
+    RenderPassExecuteFunc* ExecuteFn = RenderPassExecStub;
 
     void Init()
     {
