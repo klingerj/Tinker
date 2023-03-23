@@ -1,7 +1,5 @@
 #include "ForwardRenderPass.h"
 
-#include "Game/GraphicsTypes.h"
-
 extern GameGraphicsData gameGraphicsData;
 extern Scene MainScene;
 extern View MainView;
@@ -11,22 +9,14 @@ namespace ForwardRenderPass
 
     RENDER_PASS_EXEC_FUNC(Execute)
     {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-
         // Transition of depth buffer from layout undefined to transfer_dst (required for clear command)
-        command->CmdTransitionLayout(renderPass->colorRTs[0], Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition main view color to transfer_dst");
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdTransitionLayout(renderPass->colorRTs[0], Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition main view color to transfer_dst");
 
         // Clear color buffer
-        command->CmdClear(renderPass->colorRTs[0], v4f(0.0f, 0.0f, 0.0f, 0.0f), "Clear main view color buffer");
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdClear(renderPass->colorRTs[0], v4f(0.0f, 0.0f, 0.0f, 0.0f), "Clear main view color buffer");
 
         // Transition of depth buffer from transfer dst to depth_attachment_optimal
-        command->CmdTransitionLayout(renderPass->colorRTs[0], Graphics::ImageLayout::eTransferDst, Graphics::ImageLayout::eRenderOptimal, "Transition main view color to render_optimal");
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdTransitionLayout(renderPass->colorRTs[0], Graphics::ImageLayout::eTransferDst, Graphics::ImageLayout::eRenderOptimal, "Transition main view color to render_optimal");
 
         // Draw
         Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];

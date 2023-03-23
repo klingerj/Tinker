@@ -441,20 +441,20 @@ GAME_UPDATE(GameUpdate)
 
     // Timestamp start of frame
     {
-        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->CmdTimestamp("Begin Frame", "Timestamp", true);
-        ++graphicsCommandStream.m_numCommands;
+        graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
     }
     
     // Run the "render graph"
-    for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
     {
-        GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
-        currRP.ExecuteFn(&currRP, &graphicsCommandStream);
+        //TIMED_SCOPED_BLOCK("Graphics command stream recording");
 
-        Graphics::GraphicsCommand* command = &graphicsCommandStream.m_graphicsCommands[graphicsCommandStream.m_numCommands];
-        command->CmdTimestamp(currRP.debugLabel);
-        ++graphicsCommandStream.m_numCommands;
+        for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
+        {
+            GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
+            currRP.ExecuteFn(&currRP, &graphicsCommandStream);
+
+            graphicsCommandStream.CmdTimestamp(currRP.debugLabel);
+        }
     }
 
     // Process recorded graphics command stream

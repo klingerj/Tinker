@@ -230,6 +230,7 @@ void InitVulkanDataTypesPerEnum()
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     VulkanDescriptorTypes[DescriptorType::eSSBO] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    VulkanDescriptorTypes[DescriptorType::eStorageImage] = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 
     VulkanBufferUsageFlags[BufferUsage::eVertex] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vertex buffers are actually SSBOs for now
     VulkanBufferUsageFlags[BufferUsage::eIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;

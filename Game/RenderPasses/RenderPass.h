@@ -7,7 +7,7 @@ struct GameRenderPass;
 
 inline RENDER_PASS_EXEC_FUNC(RenderPassExecStub)
 {
-    //TINKER_ASSERT(0 && "Render Pass Exec Func empty!\n");
+    TINKER_ASSERT(0 && "Render Pass Exec Func empty!\n");
 }
 
 struct GameRenderPass
