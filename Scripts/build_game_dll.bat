@@ -86,31 +86,19 @@ rem TinkerGame - shared library
 set AbsolutePathPrefix=%cd%
 
 set SourceListGame= 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GameMain.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GraphicsTypes.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/RenderPass.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/ZPrepassRenderPass.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/ForwardRenderPass.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/DebugUIRenderPass.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/SwapChainBlitRenderPass.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Raytracing.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/View.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Scene.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Camera.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/AssetManager.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../DebugUI/DebugUI.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GraphicsCommon.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/ShaderManager.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GPUTimestamps.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/CPURaytracing/RayIntersection.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
+rem Glob all files in desired directories
+for /r %AbsolutePathPrefix%/../Game/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%/../DebugUI/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%/../Graphics/Common/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%/../Graphics/CPURaytracing/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+
 if "%GraphicsAPI%" == "VK" (
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/Vulkan.cpp 
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanCmds.cpp 
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanTypes.cpp 
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanCreation.cpp 
+    for /r %AbsolutePathPrefix%/../Graphics/Vulkan/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
 )
+
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
+
+rem Don't glob third party folders right now
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
@@ -169,10 +157,10 @@ set LibsToLink=TinkerApp.lib
 set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
 if "%GraphicsAPI%" == "VK" (
     set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
-    set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
+    set LibsToLink=!LibsToLink! %VULKAN_SDK%/Lib/vulkan-1.lib
 )
 
-set OBJDir=%cd%\obj_game\
+set OBJDir=%cd%/obj_game/
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
@@ -183,8 +171,8 @@ cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlag
 rem Copy needed dependency DLLs to exe directory
 echo.
 echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
 echo Done.
 
 rem Delete unnecessary files
