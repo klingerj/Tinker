@@ -160,7 +160,7 @@ if "%GraphicsAPI%" == "VK" (
     set LibsToLink=!LibsToLink! %VULKAN_SDK%/Lib/vulkan-1.lib
 )
 
-set OBJDir=%cd%/obj_game/
+set OBJDir=%cd%\obj_game\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
