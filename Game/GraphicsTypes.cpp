@@ -4,7 +4,7 @@
 
 using namespace Tk;
 
-void CreateDefaultGeometry(Graphics::GraphicsCommandStream* graphicsCommandStream)
+void CreateDefaultGeometry(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // Default Quad
     {

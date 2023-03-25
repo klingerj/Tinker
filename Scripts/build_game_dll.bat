@@ -71,6 +71,7 @@ if "%BuildConfig%" == "Debug" (
     echo Release mode specified.
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
+echo.
 
 set CompileIncludePaths=/I ../ 
 set CompileIncludePaths=%CompileIncludePaths% /I ../Core 
@@ -86,6 +87,19 @@ set AbsolutePathPrefix=%cd%
 
 set SourceListGame= 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GameMain.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GraphicsTypes.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/RenderPass.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/ZPrepassRenderPass.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/ForwardRenderPass.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/DebugUIRenderPass.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/RenderPasses/SwapChainBlitRenderPass.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Raytracing.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/View.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Scene.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/Camera.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/AssetManager.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/InputManager.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../DebugUI/DebugUI.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GraphicsCommon.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/ShaderManager.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GPUTimestamps.cpp 
@@ -98,7 +112,30 @@ if "%GraphicsAPI%" == "VK" (
     set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanCreation.cpp 
 )
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
+
+rem Create unity build file will all cpp files included
+set "SourceListGame=%SourceListGame:\=/%" rem convert backslashes to forward slashes
+set UnityBuildCppFile=GameUnityBuildFile.cpp
+set INCLUDE_PREFIX=#include
+
+echo Deleting old unity build cpp source file %UnityBuildCppFile%.
+if exist %UnityBuildCppFile% del %UnityBuildCppFile%
+echo ...Done.
+echo.
+
+echo Source files included in build:
+for %%i in (%SourceListGame%) do (
+    echo %%i
+    echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+)
+echo Generated: %UnityBuildCppFile%
+rem 
 
 rem Calculate absolute path prefix for application path parameters here
 set CompileDefines=/DTINKER_GAME 
@@ -141,7 +178,14 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %UnityBuildCppFile% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+
+rem Copy needed dependency DLLs to exe directory
+echo.
+echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
+echo Done.
 
 rem Delete unnecessary files
 echo.

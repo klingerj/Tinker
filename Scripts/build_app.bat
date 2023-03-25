@@ -109,13 +109,6 @@ if EXIST TinkerApp.exp (
     del TinkerApp.exp
     )
 
-rem Copy needed DLLs to exe directory
-echo.
-echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
-echo Done.
-
 :DoneBuild
 echo.
 popd

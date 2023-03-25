@@ -63,7 +63,7 @@ struct StrFixedBuffer
 
         if (VerifyNoOverflow(m_len, (uint32)numCharsWritten))
         {
-            uint32 maxBytesToWrite = min((uint32)numCharsWritten, tLen - m_len);
+            uint32 maxBytesToWrite = Min((uint32)numCharsWritten, tLen - m_len);
             wcstombs_s(&numCharsWritten, &m_data[m_len], maxBytesToWrite, strToAppend, strToAppendLen);
 
             /* Note: wcstombs_s will write a null terminator if one was not encountered in the src str.
