@@ -71,7 +71,25 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docki
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
 
-rem Calculate absolute path prefix for application path parameters here
+rem Create unity build file will all cpp files included
+set "SourceListApp=%SourceListApp:\=/%" rem convert backslashes to forward slashes
+set UnityBuildCppFile=AppUnityBuildFile.cpp
+set INCLUDE_PREFIX=#include
+
+echo Deleting old unity build cpp source file %UnityBuildCppFile%.
+if exist %UnityBuildCppFile% del %UnityBuildCppFile%
+echo ...Done.
+echo.
+
+echo Source files included in build:
+for %%i in (%SourceListApp%) do (
+    echo %%i
+    echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+)
+echo Generated: %UnityBuildCppFile%
+rem 
+
+rem Defines 
 set CompileDefines=/DTINKER_APP 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 set CompileDefines=%CompileDefines% /DTINKER_EXPORTING 
@@ -100,7 +118,7 @@ set OBJDir=%cd%\obj_app\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %SourceListApp% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %UnityBuildCppFile% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
 
 echo.
 if EXIST TinkerApp.exp (

@@ -137,7 +137,7 @@ for %%i in (%SourceListGame%) do (
 echo Generated: %UnityBuildCppFile%
 rem 
 
-rem Calculate absolute path prefix for application path parameters here
+rem Defines 
 set CompileDefines=/DTINKER_GAME 
 set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
