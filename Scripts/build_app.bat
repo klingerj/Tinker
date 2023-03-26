@@ -109,7 +109,7 @@ if "%BuildConfig%" == "Debug" (
 
 set CompileIncludePaths=/I ../Core 
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
-set LibsToLink=user32.lib ws2_32.lib 
+set LibsToLink=user32.lib ws2_32.lib Shlwapi.lib 
 
 echo.
 echo Building TinkerApp.exe...
