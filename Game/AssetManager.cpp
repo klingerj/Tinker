@@ -65,28 +65,31 @@ namespace AssetCooker
 {
     static const char* fileSuffix = "ckMsh";
 
+    typedef struct file_header
+    {
+        uint32 numVertices;
+        uint32 pad[3];
+    } FileHeader;
+
+    typedef struct parsed_file_data
+    {
+        FileHeader header;
+        const uint8* dataPtr;
+    } ParsedFileData;
+
     void Init()
     {
-        //FileAllocator.Init(MAX_COOKED_BUFFER_SIZE, CACHE_LINE);
         // TODO: create the COOKED_ASSETS_PATH dir if not present
     }
 
-    void FreeMemory()
+    ParsedFileData ParseFile(const uint8* fileBuffer, uint32 fileSizeInBytes)
     {
-        //FileAllocator.ExplicitFree();
+        ParsedFileData FileData = {};
+        FileData.header = *(FileHeader*)fileBuffer;
+        FileData.dataPtr = fileBuffer + sizeof(FileHeader);
+        return FileData;
     }
 
-    /*uint8* LoadCookedDataIntoBuffer(const char* filename)
-    {
-        const uint32 fileSize = Tk::Platform::GetEntireFileSize(filename);
-
-        uint8* fileBuffer = FileAllocator.Alloc(fileSize + 1, CACHE_LINE);
-        
-        Tk::Platform::ReadEntireFile(filename, fileSize + 1, fileBuffer);
-        fileBuffer[fileSize] = '\0'; // manual 'EOF' byte
-
-        return fileBuffer;
-    }*/
 
     void GetCookedDataFileName(const char* inAssetFileName, char* outCookedFileName, uint32 outNameMaxLen)
     {
@@ -302,24 +305,33 @@ void AssetManager::LoadAllAssets()
                         Tk::Core::StrFixedBuffer<2048> AssetLoadPath;
                         AssetLoadPath.Clear();
 
-                        // Check if cooked asset data file exists and use that size instead
-                        meshFileAlreadyCooked[uiAsset] = (uint32)AssetCooker::IsCookedDataFilePresentForAsset(meshFileNames[uiAsset]);
                         // NOTE: This is exactly how the graphics buffer will be written to. That code should unified with this logic 
-                        uint8* cookedDataBufferPos = CookedDataAllocator.Alloc(sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices, CACHE_LINE);
-                        uint8* cookedDataBufferUV = CookedDataAllocator.Alloc(sizeof(v2f) * m_allMeshData[uiAsset].m_numVertices, 4); // TODO: natural alignment
-                        uint8* cookedDataBufferNormal = CookedDataAllocator.Alloc(sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices, 4);
-                        uint8* cookedDataBufferIndex = CookedDataAllocator.Alloc(sizeof(uint32) * m_allMeshData[uiAsset].m_numVertices, 4);
-                        memcpy(cookedDataBufferPos, m_allMeshData[uiAsset].m_vertexBufferData_Pos, sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices);
-                        memcpy(cookedDataBufferUV, m_allMeshData[uiAsset].m_vertexBufferData_UV, sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices);
-                        memcpy(cookedDataBufferNormal, m_allMeshData[uiAsset].m_vertexBufferData_Normal, sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices);
-                        memcpy(cookedDataBufferIndex, m_allMeshData[uiAsset].m_vertexBufferData_Index, sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices);
-                        const uint32 cookedDataBufferSize = sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices +
+
+                        AssetCooker::FileHeader header = {};
+                        header.numVertices = m_allMeshData[uiAsset].m_numVertices;
+
+                        const uint32 cookedDataBufferSize =
+                            sizeof(header) +
+                            sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices +
                             sizeof(v2f) * m_allMeshData[uiAsset].m_numVertices +
                             sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices +
                             sizeof(uint32) * m_allMeshData[uiAsset].m_numVertices;
+                        uint8* cookedDataBufferHeader = CookedDataAllocator.Alloc(sizeof(header), CACHE_LINE);
+                        uint8* cookedDataBufferPos = cookedDataBufferHeader + sizeof(header);
+                        uint8* cookedDataBufferUV = cookedDataBufferPos + sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices;
+                        uint8* cookedDataBufferNormal = cookedDataBufferUV + sizeof(v2f) * m_allMeshData[uiAsset].m_numVertices;
+                        uint8* cookedDataBufferIndex = cookedDataBufferNormal + sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices;
+                        TINKER_ASSERT(cookedDataBufferSize == (uint32)(cookedDataBufferIndex - cookedDataBufferHeader) + sizeof(uint32) * m_allMeshData[uiAsset].m_numVertices);
+                        memcpy(cookedDataBufferHeader, &header, sizeof(header));
+                        memcpy(cookedDataBufferPos, m_allMeshData[uiAsset].m_vertexBufferData_Pos, sizeof(v4f) * header.numVertices);
+                        memcpy(cookedDataBufferUV, m_allMeshData[uiAsset].m_vertexBufferData_UV, sizeof(v2f) * header.numVertices);
+                        memcpy(cookedDataBufferNormal, m_allMeshData[uiAsset].m_vertexBufferData_Normal, sizeof(v4f) * header.numVertices);
+                        memcpy(cookedDataBufferIndex, m_allMeshData[uiAsset].m_vertexBufferData_Index, sizeof(uint32) * header.numVertices);
 
                         AssetCooker::GetCookedDataFileName(meshFileNames[uiAsset], AssetLoadPath.EndOfStrPtr(), AssetLoadPath.LenRemaining());
-                        Tk::Platform::WriteEntireFile(AssetLoadPath.m_data, cookedDataBufferSize, cookedDataBufferPos);
+                        Tk::Platform::WriteEntireFile(AssetLoadPath.m_data, cookedDataBufferSize, cookedDataBufferHeader);
+
+                        AssetCooker::ParsedFileData data = AssetCooker::ParseFile(cookedDataBufferHeader, cookedDataBufferSize);
                     }
 
                     ScratchBuffers.ResetState();
@@ -327,14 +339,18 @@ void AssetManager::LoadAllAssets()
                 }
                 else
                 {
-                    // TODO: need to embed numVertices in the cooked data file header
-                    // TODO: "Parse" this file with a function in AssetCooker:: to get the starting binary pointer
-                    AssetCooker::ParsedFileData data = AssetCooker::ParseFile(currentMeshFile, currentMeshFileSize);
-                    m_allMeshData[uiAsset].m_numVertices = data.numVertices;
-                    m_allMeshData[uiAsset].m_vertexBufferData_Pos = data.startPtr;
-                    m_allMeshData[uiAsset].m_vertexBufferData_UV = data.startPtr + sizeof(v4f) * accumNumVerts; // offset from previous buffer end location
-                    m_allMeshData[uiAsset].m_vertexBufferData_Normal = data.startPtr + sizeof(v2f) * accumNumVerts;
-                    m_allMeshData[uiAsset].m_vertexBufferData_Index = data.startPtr + sizeof(v4f) * accumNumVerts;
+                    // Move the cooked file data into persisntent mem
+                    // TODO: this is only to store it until we create the graphics resource. This should get refactored and not happen
+                    const uint32 fileDataSize = currentMeshFileSize - sizeof(AssetCooker::FileHeader);
+                    uint8* cookedDataPtr = CookedDataAllocator.Alloc(fileDataSize, CACHE_LINE);
+                    memcpy(cookedDataPtr, currentMeshFile, fileDataSize);
+
+                    AssetCooker::ParsedFileData data = AssetCooker::ParseFile(cookedDataPtr, currentMeshFileSize);
+                    m_allMeshData[uiAsset].m_numVertices = data.header.numVertices;
+                    m_allMeshData[uiAsset].m_vertexBufferData_Pos = data.dataPtr;
+                    m_allMeshData[uiAsset].m_vertexBufferData_UV = data.dataPtr + sizeof(v4f) * data.header.numVertices; // offset from previous buffer end location
+                    m_allMeshData[uiAsset].m_vertexBufferData_Normal = m_allMeshData[uiAsset].m_vertexBufferData_UV + sizeof(v2f) * data.header.numVertices;
+                    m_allMeshData[uiAsset].m_vertexBufferData_Index = m_allMeshData[uiAsset].m_vertexBufferData_Normal + sizeof(v4f) * data.header.numVertices;
                 }
             }
         }
