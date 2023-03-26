@@ -3,11 +3,17 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shlwapi.h>
 
 namespace Tk
 {
 namespace Platform
 {
+
+FILE_EXISTS(CheckFileExists)
+{
+    return PathFileExists(filename);
+}
 
 GET_ENTIRE_FILE_SIZE(GetEntireFileSize)
 {

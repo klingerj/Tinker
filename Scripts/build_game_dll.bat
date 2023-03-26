@@ -130,6 +130,7 @@ set CompileDefines=/DTINKER_GAME
 set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 set CompileDefines=%CompileDefines% /D_ASSETS_DIR=..\\Assets\\ 
+set CompileDefines=%CompileDefines% /D_COOKED_ASSETS_DIR=.\\CookedAssets\\ 
 set CompileDefines=%CompileDefines% /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ 
 set CompileDefines=%CompileDefines% /D_SHADERS_SRC_DIR=..\\Shaders\\hlsl\\ 
 if "%GraphicsAPI%" == "VK" (
