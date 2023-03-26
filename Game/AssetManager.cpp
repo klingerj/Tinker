@@ -82,14 +82,13 @@ namespace AssetCooker
         // TODO: create the COOKED_ASSETS_PATH dir if not present
     }
 
-    ParsedFileData ParseFile(const uint8* fileBuffer, uint32 fileSizeInBytes)
+    ParsedFileData ParseFile(const uint8* fileBuffer)
     {
         ParsedFileData FileData = {};
         FileData.header = *(FileHeader*)fileBuffer;
         FileData.dataPtr = fileBuffer + sizeof(FileHeader);
         return FileData;
     }
-
 
     void GetCookedDataFileName(const char* inAssetFileName, char* outCookedFileName, uint32 outNameMaxLen)
     {
@@ -339,11 +338,10 @@ void AssetManager::LoadAllAssets()
                 {
                     // Move the cooked file data into persistent mem
                     // TODO: this is only to store it until we create the graphics resource. This should get refactored and not happen
-                    const uint32 fileDataSize = currentMeshFileSize - sizeof(AssetCooker::FileHeader);
-                    uint8* cookedDataPtr = CookedDataAllocator.Alloc(fileDataSize, CACHE_LINE);
-                    memcpy(cookedDataPtr, currentMeshFile, fileDataSize);
+                    uint8* cookedDataPtr = CookedDataAllocator.Alloc(currentMeshFileSize, CACHE_LINE);
+                    memcpy(cookedDataPtr, currentMeshFile, currentMeshFileSize);
 
-                    AssetCooker::ParsedFileData data = AssetCooker::ParseFile(cookedDataPtr, currentMeshFileSize);
+                    AssetCooker::ParsedFileData data = AssetCooker::ParseFile(cookedDataPtr);
                     m_allMeshData[uiAsset].m_numVertices = data.header.numVertices;
                     m_allMeshData[uiAsset].m_vertexBufferData_Pos = data.dataPtr;
                     m_allMeshData[uiAsset].m_vertexBufferData_UV = m_allMeshData[uiAsset].m_vertexBufferData_Pos + sizeof(v4f) * data.header.numVertices; // offset from previous buffer end location
