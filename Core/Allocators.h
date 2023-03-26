@@ -48,7 +48,10 @@ struct LinearAllocator
         // If the current memory pointer is not aligned, add the alignment as offset
         size_t alignmentBits = LOG2(alignment);
         size_t alignedPtrAsNum = (memPtrAsNum >> alignmentBits) << alignmentBits;
-        if (alignedPtrAsNum != memPtrAsNum)alignedPtrAsNum += alignment;
+        if (alignedPtrAsNum != memPtrAsNum)
+        {
+            alignedPtrAsNum += alignment;
+        }
         
         // Check that there is room for this size allocation
         size_t allocSize = size + (alignedPtrAsNum - memPtrAsNum);
