@@ -120,6 +120,7 @@ namespace AssetCooker
         Tk::Core::StrFixedBuffer<2048> MeshNameStr;
         MeshNameStr.Clear();
         GetCookedDataFileName(assetName, MeshNameStr.EndOfStrPtr(), MeshNameStr.LenRemaining());
+        MeshNameStr.UpdateLen();
 
         return Tk::Platform::CheckFileExists(MeshNameStr.m_data);
     }
@@ -162,6 +163,7 @@ void AssetManager::LoadAllAssets()
             if (meshFileAlreadyCooked[uiAsset])
             {
                 AssetCooker::GetCookedDataFileName(meshFileNames[uiAsset], AssetLoadPath.EndOfStrPtr(), AssetLoadPath.LenRemaining());
+                AssetLoadPath.UpdateLen();
             }
             else
             {
@@ -209,16 +211,12 @@ void AssetManager::LoadAllAssets()
                     if (meshFileAlreadyCooked[uiAsset])
                     {
                         AssetCooker::GetCookedDataFileName(meshFileNames[uiAsset], AssetLoadPath.EndOfStrPtr(), AssetLoadPath.LenRemaining());
+                        AssetLoadPath.UpdateLen();
                     }
                     else
                     {
                         AssetLoadPath.Append(meshFilePaths[uiAsset]);
                     }
-
-                    /*if (meshFileAlreadyCooked[uiAsset])
-                    {
-                        uint8* cookedData = AssetCooker::LoadCookedDataIntoBuffer();
-                    }*/
 
                     jobs.m_jobs[uiAsset] = Platform::CreateNewThreadJob([=]()
                         {
@@ -249,6 +247,7 @@ void AssetManager::LoadAllAssets()
                     if (meshFileAlreadyCooked[uiAsset])
                     {
                         AssetCooker::GetCookedDataFileName(meshFileNames[uiAsset], AssetLoadPath.EndOfStrPtr(), AssetLoadPath.LenRemaining());
+                        AssetLoadPath.UpdateLen();
                     }
                     else
                     {
@@ -291,7 +290,7 @@ void AssetManager::LoadAllAssets()
                 {
                     uint32 numObjVerts = 0;
                     Tk::Core::Asset::ParseOBJ(VertPosAllocator, VertUVAllocator, VertNormalAllocator, VertIndexAllocator, ScratchBuffers, currentMeshFile, currentMeshFileSize, &numObjVerts);
-                    TINKER_ASSERT(numObjVerts); // TODO: log actually
+                    TINKER_ASSERT(numObjVerts); // TODO: log instead
                     m_allMeshData[uiAsset].m_numVertices = numObjVerts;
                     m_allMeshData[uiAsset].m_vertexBufferData_Pos = VertPosAllocator.m_ownedMemPtr + sizeof(v4f) * accumNumVerts;
                     m_allMeshData[uiAsset].m_vertexBufferData_UV = VertUVAllocator.m_ownedMemPtr + sizeof(v2f) * accumNumVerts;
@@ -316,7 +315,7 @@ void AssetManager::LoadAllAssets()
                             sizeof(v2f) * m_allMeshData[uiAsset].m_numVertices +
                             sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices +
                             sizeof(uint32) * m_allMeshData[uiAsset].m_numVertices;
-                        uint8* cookedDataBufferHeader = CookedDataAllocator.Alloc(sizeof(header), CACHE_LINE);
+                        uint8* cookedDataBufferHeader = CookedDataAllocator.Alloc(cookedDataBufferSize, CACHE_LINE);
                         uint8* cookedDataBufferPos = cookedDataBufferHeader + sizeof(header);
                         uint8* cookedDataBufferUV = cookedDataBufferPos + sizeof(v4f) * m_allMeshData[uiAsset].m_numVertices;
                         uint8* cookedDataBufferNormal = cookedDataBufferUV + sizeof(v2f) * m_allMeshData[uiAsset].m_numVertices;
@@ -329,9 +328,8 @@ void AssetManager::LoadAllAssets()
                         memcpy(cookedDataBufferIndex, m_allMeshData[uiAsset].m_vertexBufferData_Index, sizeof(uint32) * header.numVertices);
 
                         AssetCooker::GetCookedDataFileName(meshFileNames[uiAsset], AssetLoadPath.EndOfStrPtr(), AssetLoadPath.LenRemaining());
+                        AssetLoadPath.UpdateLen();
                         Tk::Platform::WriteEntireFile(AssetLoadPath.m_data, cookedDataBufferSize, cookedDataBufferHeader);
-
-                        AssetCooker::ParsedFileData data = AssetCooker::ParseFile(cookedDataBufferHeader, cookedDataBufferSize);
                     }
 
                     ScratchBuffers.ResetState();
@@ -339,7 +337,7 @@ void AssetManager::LoadAllAssets()
                 }
                 else
                 {
-                    // Move the cooked file data into persisntent mem
+                    // Move the cooked file data into persistent mem
                     // TODO: this is only to store it until we create the graphics resource. This should get refactored and not happen
                     const uint32 fileDataSize = currentMeshFileSize - sizeof(AssetCooker::FileHeader);
                     uint8* cookedDataPtr = CookedDataAllocator.Alloc(fileDataSize, CACHE_LINE);
@@ -348,7 +346,7 @@ void AssetManager::LoadAllAssets()
                     AssetCooker::ParsedFileData data = AssetCooker::ParseFile(cookedDataPtr, currentMeshFileSize);
                     m_allMeshData[uiAsset].m_numVertices = data.header.numVertices;
                     m_allMeshData[uiAsset].m_vertexBufferData_Pos = data.dataPtr;
-                    m_allMeshData[uiAsset].m_vertexBufferData_UV = data.dataPtr + sizeof(v4f) * data.header.numVertices; // offset from previous buffer end location
+                    m_allMeshData[uiAsset].m_vertexBufferData_UV = m_allMeshData[uiAsset].m_vertexBufferData_Pos + sizeof(v4f) * data.header.numVertices; // offset from previous buffer end location
                     m_allMeshData[uiAsset].m_vertexBufferData_Normal = m_allMeshData[uiAsset].m_vertexBufferData_UV + sizeof(v2f) * data.header.numVertices;
                     m_allMeshData[uiAsset].m_vertexBufferData_Index = m_allMeshData[uiAsset].m_vertexBufferData_Normal + sizeof(v4f) * data.header.numVertices;
                 }
