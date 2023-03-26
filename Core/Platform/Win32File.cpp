@@ -15,6 +15,11 @@ FILE_EXISTS(CheckFileExists)
     return PathFileExists(filename);
 }
 
+MAKE_DIRECTORY(MakeDirectory)
+{
+    CreateDirectoryA(pathname, NULL);
+}
+
 GET_ENTIRE_FILE_SIZE(GetEntireFileSize)
 {
     HANDLE fileHandle = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
