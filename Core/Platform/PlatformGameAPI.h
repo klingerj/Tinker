@@ -53,6 +53,9 @@ WRITE_ENTIRE_FILE(WriteEntireFile);
 #define GET_ENTIRE_FILE_SIZE(name) TINKER_API uint32 name(const char* filename)
 GET_ENTIRE_FILE_SIZE(GetEntireFileSize);
 
+#define MAKE_DIRECTORY(name) TINKER_API void name(const char* pathname)
+MAKE_DIRECTORY(MakeDirectory);
+
 #define FILE_EXISTS(name) TINKER_API bool name(const char* filename)
 FILE_EXISTS(CheckFileExists);
 

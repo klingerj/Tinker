@@ -79,7 +79,7 @@ namespace AssetCooker
 
     void Init()
     {
-        // TODO: create the COOKED_ASSETS_PATH dir if not present
+        Tk::Platform::MakeDirectory(COOKED_ASSETS_PATH);
     }
 
     ParsedFileData ParseFile(const uint8* fileBuffer)
