@@ -1,5 +1,7 @@
 #pragma once
 
+#define NOMINMAX
+
 #include <stdint.h>
 #include <math.h>
 #include <cmath>
@@ -57,7 +59,7 @@ T LOG2(T x)
 {
     T i = 1;
     for (; x >> i; ++i) {}
-    return i;
+    return i - 1;
 }
 
 inline uint32 POW2(uint32 x)

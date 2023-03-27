@@ -75,6 +75,7 @@ Raytraced | Rasterized
 * Compile-time and run-time string hashing using Murmur
 * Asset file loading
   * OBJ models, BMP textures
+  * Cooking of mesh vertex buffers into memcpy-able binary format
 * ImGui debug UI
 * Simple unit testing and benchmarking frameworks
 * WIP features
@@ -86,7 +87,6 @@ Raytraced | Rasterized
 ### Roadmap of future features:
 * Compute shader support
 * Post processing
-* Asset file cooking
 * DX12 graphics backend
 * Asset streaming
 

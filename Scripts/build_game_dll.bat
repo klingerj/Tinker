@@ -59,8 +59,7 @@ pushd .\Build
 del TinkerGame*.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
-rem /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
+set CommonCompileFlags=/nologo /std:c++20 /GL /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -71,6 +70,7 @@ if "%BuildConfig%" == "Debug" (
     echo Release mode specified.
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
+echo.
 
 set CompileIncludePaths=/I ../ 
 set CompileIncludePaths=%CompileIncludePaths% /I ../Core 
@@ -85,26 +85,51 @@ rem TinkerGame - shared library
 set AbsolutePathPrefix=%cd%
 
 set SourceListGame= 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Game/GameMain.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GraphicsCommon.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/ShaderManager.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/Common/GPUTimestamps.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Graphics/CPURaytracing/RayIntersection.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
+rem Glob all files in desired directories
+for /r %AbsolutePathPrefix%/../Game/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%/../DebugUI/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%/../Graphics/Common/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%/../Graphics/CPURaytracing/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+
 if "%GraphicsAPI%" == "VK" (
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/Vulkan.cpp 
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanCmds.cpp 
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanTypes.cpp 
-    set SourceListGame=!SourceListGame! %AbsolutePathPrefix%/../Graphics/Vulkan/VulkanCreation.cpp 
+    for /r %AbsolutePathPrefix%/../Graphics/Vulkan/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
 )
+
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
+
+rem Don't glob third party folders right now
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
 
-rem Calculate absolute path prefix for application path parameters here
+rem Create unity build file will all cpp files included
+set "SourceListGame=%SourceListGame:\=/%" rem convert backslashes to forward slashes
+set UnityBuildCppFile=GameUnityBuildFile.cpp
+set INCLUDE_PREFIX=#include
+
+echo Deleting old unity build cpp source file %UnityBuildCppFile%.
+if exist %UnityBuildCppFile% del %UnityBuildCppFile%
+echo ...Done.
+echo.
+
+echo Source files included in build:
+for %%i in (%SourceListGame%) do (
+    echo %%i
+    echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+)
+echo Generated: %UnityBuildCppFile%
+rem 
+
+rem Defines 
 set CompileDefines=/DTINKER_GAME 
 set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 set CompileDefines=%CompileDefines% /D_ASSETS_DIR=..\\Assets\\ 
+set CompileDefines=%CompileDefines% /D_COOKED_ASSETS_DIR=..\\CookedAssets\\ 
 set CompileDefines=%CompileDefines% /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ 
 set CompileDefines=%CompileDefines% /D_SHADERS_SRC_DIR=..\\Shaders\\hlsl\\ 
 if "%GraphicsAPI%" == "VK" (
@@ -132,7 +157,7 @@ set LibsToLink=TinkerApp.lib
 set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
 if "%GraphicsAPI%" == "VK" (
     set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
-    set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
+    set LibsToLink=!LibsToLink! %VULKAN_SDK%/Lib/vulkan-1.lib
 )
 
 set OBJDir=%cd%\obj_game\
@@ -141,7 +166,14 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceListGame% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %UnityBuildCppFile% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+
+rem Copy needed dependency DLLs to exe directory
+echo.
+echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
+echo Done.
 
 rem Delete unnecessary files
 echo.

@@ -16,7 +16,6 @@ struct AssetManager
 {
 private:
     // Mesh Buffer data
-    Tk::Core::LinearAllocator m_meshBufferAllocator; // Persists after meshes are uploaded to the GPU
     MeshAttributeData m_allMeshData[TINKER_MAX_MESHES];
 
     // Mesh graphics resources

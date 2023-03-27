@@ -9,10 +9,12 @@
 // Compile time hash
 uint32 testHash = MurmurHash3_x86_32("henlo ", 6, 0x54321);
 
-// Run time hasn
+// Run time hash
 const char* str = "henlo ";
 uint32 testHash2 = MurmurHash3_x86_32(str, (int)strlen(str), 0x54321);
 */
+
+#define DEFAULT_STRING_HASH_SEED 0x54321
 
 namespace Tk
 {
@@ -28,6 +30,11 @@ struct StrFixedBuffer
     uint32 LenRemaining()
     {
         return tLen - m_len;
+    }
+
+    void UpdateLen()
+    {
+        m_len = (uint32)strlen(m_data);
     }
 
     char* EndOfStrPtr()
@@ -63,7 +70,7 @@ struct StrFixedBuffer
 
         if (VerifyNoOverflow(m_len, (uint32)numCharsWritten))
         {
-            uint32 maxBytesToWrite = min((uint32)numCharsWritten, tLen - m_len);
+            uint32 maxBytesToWrite = Min((uint32)numCharsWritten, tLen - m_len);
             wcstombs_s(&numCharsWritten, &m_data[m_len], maxBytesToWrite, strToAppend, strToAppendLen);
 
             /* Note: wcstombs_s will write a null terminator if one was not encountered in the src str.
