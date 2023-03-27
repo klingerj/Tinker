@@ -11,6 +11,7 @@
 #include "RenderPasses/RenderPass.h"
 #include "RenderPasses/ZPrepassRenderPass.h"
 #include "RenderPasses/ForwardRenderPass.h"
+#include "RenderPasses/DebugUIRenderPass.h"
 #include "RenderPasses/SwapChainBlitRenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
@@ -19,27 +20,6 @@
 #include "Scene.h"
 #include "InputManager.h"
 #include "DebugUI.h"
-
-// Unity style build
-#include "GraphicsTypes.cpp"
-#include "AssetManager.cpp"
-#include "RenderPasses/RenderPass.cpp"
-#include "RenderPasses/ZPrepassRenderPass.cpp"
-#include "RenderPasses/ForwardRenderPass.cpp"
-#include "RenderPasses/DebugUIRenderPass.cpp"
-#include "RenderPasses/SwapChainBlitRenderPass.cpp"
-#include "Raytracing.cpp"
-#include "View.cpp"
-#include "Scene.cpp"
-#include "Camera.cpp"
-#include "InputManager.cpp"
-#include "DebugUI.cpp"
-#include "imgui.cpp"
-#include "imgui_demo.cpp"
-#include "imgui_draw.cpp"
-#include "imgui_tables.cpp"
-#include "imgui_widgets.cpp"
-//
 
 #include <string.h>
 
@@ -52,10 +32,10 @@ static bool connectedToServer = false;
 static uint32 currentWindowWidth = 0;
 static uint32 currentWindowHeight = 0;
 static bool isWindowMinimized;
-static Tk::Platform::WindowHandles* windowHandles = nullptr;
+static Tk::Platform::WindowHandles* g_windowHandles = nullptr;
 
 #define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
-Tk::Graphics::GraphicsCommandStream graphicsCommandStream;
+Tk::Graphics::GraphicsCommandStream g_graphicsCommandStream;
 
 // For now, this owns all RTs
 GameGraphicsData gameGraphicsData = {};
@@ -302,14 +282,14 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     currentWindowWidth = windowWidth;
     currentWindowHeight = windowHeight;
 
-    windowHandles = Tk::Platform::GetPlatformWindowHandles();
+    g_windowHandles = Tk::Platform::GetPlatformWindowHandles();
 
     // Graphics init
-    Tk::Graphics::CreateContext(windowHandles, windowWidth, windowHeight);
-    graphicsCommandStream = {};
-    graphicsCommandStream.m_numCommands = 0;
-    graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-    graphicsCommandStream.m_graphicsCommands = (Tk::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(graphicsCommandStream.m_maxCommands * sizeof(Tk::Graphics::GraphicsCommand), CACHE_LINE);
+    Tk::Graphics::CreateContext(g_windowHandles, windowWidth, windowHeight);
+    g_graphicsCommandStream = {};
+    g_graphicsCommandStream.m_numCommands = 0;
+    g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
+    g_graphicsCommandStream.m_graphicsCommands = (Tk::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Graphics::GraphicsCommand), CACHE_LINE);
 
     if (Tk::ShaderCompiler::Init() != Tk::ShaderCompiler::ErrCode::Success)
     {
@@ -321,7 +301,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF11, HotloadAllShaders); // Bind shader hotloading hotkey
 
     // Debug UI
-    DebugUI::Init(&graphicsCommandStream);
+    DebugUI::Init(&g_graphicsCommandStream);
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF1, ToggleImGuiDisplay); // Toggle with hotkey - TODO: move to tilde with ctrl?
 
     // Camera controls
@@ -361,10 +341,10 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     {
         TIMED_SCOPED_BLOCK("Load game assets");
         g_AssetManager.LoadAllAssets();
-        g_AssetManager.InitAssetGraphicsResources(&graphicsCommandStream);
+        g_AssetManager.InitAssetGraphicsResources(&g_graphicsCommandStream);
     }
 
-    CreateDefaultGeometry(&graphicsCommandStream);
+    CreateDefaultGeometry(&g_graphicsCommandStream);
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
@@ -378,7 +358,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
-    graphicsCommandStream.m_numCommands = 0;
+    g_graphicsCommandStream.m_numCommands = 0;
 
     if (!isGameInitted)
     {
@@ -441,7 +421,7 @@ GAME_UPDATE(GameUpdate)
 
     // Timestamp start of frame
     {
-        graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
+        g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
     }
     
     // Run the "render graph"
@@ -451,9 +431,9 @@ GAME_UPDATE(GameUpdate)
         for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
         {
             GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
-            currRP.ExecuteFn(&currRP, &graphicsCommandStream);
+            currRP.ExecuteFn(&currRP, &g_graphicsCommandStream);
 
-            graphicsCommandStream.CmdTimestamp(currRP.debugLabel);
+            g_graphicsCommandStream.CmdTimestamp(currRP.debugLabel);
         }
     }
 
@@ -461,7 +441,7 @@ GAME_UPDATE(GameUpdate)
     {
         //TIMED_SCOPED_BLOCK("Graphics command stream processing");
         Tk::Graphics::BeginFrameRecording();
-        Tk::Graphics::ProcessGraphicsCommandStream(&graphicsCommandStream, false);
+        Tk::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
         Tk::Graphics::EndFrameRecording();
         Tk::Graphics::SubmitFrameToGPU();
     }
@@ -543,6 +523,6 @@ GAME_DESTROY(GameDestroy)
         // Shutdown graphics
         Tk::Graphics::ShaderManager::Shutdown();
         Tk::Graphics::DestroyContext();
-        Tk::Core::CoreFreeAligned(graphicsCommandStream.m_graphicsCommands);
+        Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
     }
 }

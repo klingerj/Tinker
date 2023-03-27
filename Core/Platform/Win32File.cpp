@@ -3,11 +3,22 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shlwapi.h>
 
 namespace Tk
 {
 namespace Platform
 {
+
+FILE_EXISTS(CheckFileExists)
+{
+    return PathFileExists(filename);
+}
+
+MAKE_DIRECTORY(MakeDirectory)
+{
+    CreateDirectoryA(pathname, NULL);
+}
 
 GET_ENTIRE_FILE_SIZE(GetEntireFileSize)
 {

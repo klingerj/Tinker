@@ -1,6 +1,6 @@
 #include "RenderPass.h"
-#include "View.h"
-#include "Scene.h"
+#include "Game/View.h"
+#include "Game/Scene.h"
 
 #include <string.h>
 

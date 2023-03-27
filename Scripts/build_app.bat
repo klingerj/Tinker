@@ -36,7 +36,7 @@ del TinkerApp.pdb > NUL 2> NUL
 
 rem *********************************************************************************************************
 rem /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
+set CommonCompileFlags=/nologo /std:c++20 /GL /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -71,7 +71,25 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docki
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
 
-rem Calculate absolute path prefix for application path parameters here
+rem Create unity build file will all cpp files included
+set "SourceListApp=%SourceListApp:\=/%" rem convert backslashes to forward slashes
+set UnityBuildCppFile=AppUnityBuildFile.cpp
+set INCLUDE_PREFIX=#include
+
+echo Deleting old unity build cpp source file %UnityBuildCppFile%.
+if exist %UnityBuildCppFile% del %UnityBuildCppFile%
+echo ...Done.
+echo.
+
+echo Source files included in build:
+for %%i in (%SourceListApp%) do (
+    echo %%i
+    echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+)
+echo Generated: %UnityBuildCppFile%
+rem 
+
+rem Defines 
 set CompileDefines=/DTINKER_APP 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 set CompileDefines=%CompileDefines% /DTINKER_EXPORTING 
@@ -91,7 +109,7 @@ if "%BuildConfig%" == "Debug" (
 
 set CompileIncludePaths=/I ../Core 
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
-set LibsToLink=user32.lib ws2_32.lib 
+set LibsToLink=user32.lib ws2_32.lib Shlwapi.lib 
 
 echo.
 echo Building TinkerApp.exe...
@@ -100,7 +118,7 @@ set OBJDir=%cd%\obj_app\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %SourceListApp% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %UnityBuildCppFile% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
 
 echo.
 if EXIST TinkerApp.exp (
@@ -108,13 +126,6 @@ if EXIST TinkerApp.exp (
     echo.
     del TinkerApp.exp
     )
-
-rem Copy needed DLLs to exe directory
-echo.
-echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll 
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll 
-echo Done.
 
 :DoneBuild
 echo.
