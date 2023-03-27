@@ -104,7 +104,7 @@ You should now be able to run the game via <code>run_game.bat</code>.
 You can find more detailed info on the various build projects [here](Scripts/README.md).
 
 ### Dependencies
-* [DirectXShaderCompiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler)
+* [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler)
 * [Murmur Hash 3, MIT license](https://github.com/aappleby/smhasher)
   * Also referenced [this gist](https://gist.github.com/oteguro/10538695) when implementing compile-time hashing with murmur
 * [Imgui - docking branch, MIT license](https://github.com/ocornut/imgui)
