@@ -295,7 +295,7 @@ typedef struct descriptor_set_data_handles
 #define DEPTH_OP DepthCompareOp::eGeOrEqual
 #endif
 
-#define GPU_TIMESTAMP_NUM_MAX 5
+#define GPU_TIMESTAMP_NUM_MAX 1024
 
 #define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
 
@@ -304,6 +304,7 @@ typedef struct graphics_command
     enum : uint32
     {
         eDrawCall = 0,
+        eDispatch,
         eMemTransfer,
         ePushConstant,
         eSetScissor,
@@ -333,6 +334,15 @@ typedef struct graphics_command
             uint32 m_depthState;
             ResourceHandle m_indexBufferHandle;
             DescriptorHandle m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        };
+
+        // Dispatch
+        struct
+        {
+            uint32 m_threadGroupsX;
+            uint32 m_threadGroupsY;
+            uint32 m_threadGroupsZ;
+            uint32 m_shader;
         };
 
         // Memory transfer
@@ -415,6 +425,18 @@ struct GraphicsCommandStream
     GraphicsCommand* m_graphicsCommands;
     uint32 m_numCommands;
     uint32 m_maxCommands;
+
+    void CmdDispatch(uint32 threadGroupsX, uint32 threadGroupsY, uint32 threadGroupsZ, uint32 shaderID, const char* dbgLabel = "Dispatch")
+    {
+        TINKER_ASSERT(m_numCommands < m_maxCommands);
+        GraphicsCommand* command = &m_graphicsCommands[m_numCommands++];
+
+        command->m_commandType = GraphicsCommand::eDispatch;
+        command->debugLabel = dbgLabel;
+        command->m_threadGroupsX = threadGroupsX;
+        command->m_threadGroupsY = threadGroupsY;
+        command->m_threadGroupsZ = threadGroupsZ;
+    }
 
     void CmdTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout, const char* dbgLabel = "Transition")
     {
@@ -518,6 +540,7 @@ void RecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 sha
 void RecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height);
 void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
     uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit);
+void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, uint32 shaderID, const char* debugLabel, bool immediateSubmit);
 void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit);
 void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit);
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,

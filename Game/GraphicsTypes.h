@@ -43,7 +43,7 @@ enum
 {
     eRenderPass_ZPrePass = 0,
     eRenderPass_MainView,
-    //eRenderPass_ComputeCopy,
+    eRenderPass_ComputeCopy,
     eRenderPass_DebugUI,
     eRenderPass_ToneMapping,
     eRenderPass_Max
@@ -66,6 +66,8 @@ typedef struct game_graphics_data
 {
     Tk::Graphics::ResourceHandle m_rtColorHandle;
     Tk::Graphics::ResourceHandle m_rtDepthHandle;
+
+    Tk::Graphics::ResourceHandle m_computeColorHandle;
 
     Tk::Graphics::DescriptorHandle m_DescData_Instance;
     Tk::Graphics::ResourceHandle m_DescDataBufferHandle_Instance;

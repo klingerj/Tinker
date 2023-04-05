@@ -119,6 +119,13 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
+                case GraphicsCommand::eDispatch:
+                {
+                    // TODO: bind descriptors (and eventually pso)
+                    RecordCommandDispatch(currentCmd.m_threadGroupsX, currentCmd.m_threadGroupsY, currentCmd.m_threadGroupsZ, currentCmd.m_shader, currentCmd.debugLabel, immediateSubmit);
+                    break;
+                }
+
                 case GraphicsCommand::eMemTransfer:
                 {
                     RecordCommandMemoryTransfer(currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
