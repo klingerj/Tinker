@@ -226,11 +226,13 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.resourceType = Graphics::ResourceType::eImage2D;
     desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
-    desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
+    desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::TransferDst | Graphics::ImageUsageFlags::Sampled;
     desc.debugLabel = "MainViewColor";
     gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
 
     desc.imageFormat = Graphics::ImageFormat::Depth_32F;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::DepthStencil | Graphics::ImageUsageFlags::TransferDst;
     desc.debugLabel = "MainViewDepth";
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
@@ -250,6 +252,16 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_MainView].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
     gameRenderPassList[eRenderPass_MainView].ExecuteFn = ForwardRenderPass::Execute;
+
+    /*gameRenderPassList[eRenderPass_ComputeCopy].Init();
+    gameRenderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_ComputeCopy].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_ComputeCopy].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_ComputeCopy].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_ComputeCopy].debugLabel = "Compute Copy";
+    gameRenderPassList[eRenderPass_ComputeCopy].ExecuteFn = ForwardRenderPass::Execute;*/
 
     gameRenderPassList[eRenderPass_DebugUI].Init();
     gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;
