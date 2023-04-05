@@ -155,7 +155,7 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[1] = Graphics::DESCLAYOUT_ID_IMGUI_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
-    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA8_SRGB;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
@@ -180,7 +180,7 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
-    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA8_SRGB;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
     bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 3);
     TINKER_ASSERT(bOk);
@@ -193,7 +193,7 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
-    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA8_SRGB;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
     bOk = LoadShader(shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);

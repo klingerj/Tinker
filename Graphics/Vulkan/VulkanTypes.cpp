@@ -222,6 +222,7 @@ void InitVulkanDataTypesPerEnum()
     VulkanImageLayouts[ImageLayout::ePresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VulkanImageFormats[ImageFormat::Invalid] = VK_FORMAT_UNDEFINED;
+    VulkanImageFormats[ImageFormat::RGBA16_Float] = VK_FORMAT_R16G16B16A16_SFLOAT;
     VulkanImageFormats[ImageFormat::BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
     VulkanImageFormats[ImageFormat::RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
     VulkanImageFormats[ImageFormat::Depth_32F] = VK_FORMAT_D32_SFLOAT;

@@ -690,6 +690,7 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
 
         switch (memResourceChain->resDesc.imageFormat)
         {
+            case ImageFormat::RGBA16_Float:
             case ImageFormat::BGRA8_SRGB:
             case ImageFormat::RGBA8_SRGB:
             {
@@ -753,6 +754,7 @@ void RecordCommandClearImage(ResourceHandle imageHandle,
 
     switch (imageFormat)
     {
+        case ImageFormat::RGBA16_Float:
         case ImageFormat::BGRA8_SRGB:
         case ImageFormat::RGBA8_SRGB:
         {

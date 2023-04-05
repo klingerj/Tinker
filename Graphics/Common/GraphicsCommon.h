@@ -42,6 +42,18 @@ namespace BufferUsage
     };
 }
 
+namespace ImageUsageFlags
+{
+    enum : uint32
+    {
+        RenderTarget = 0x1,
+        UAV = 0x2,
+        TransferDst = 0x4,
+        Sampled = 0x8,
+        DepthStencil = 0x10,
+    };
+}
+
 namespace ResourceType
 {
     enum : uint32
@@ -82,6 +94,7 @@ namespace ImageFormat
         Invalid = 0,
         BGRA8_SRGB,
         RGBA8_SRGB,
+        RGBA16_Float,
         Depth_32F,
         TheSwapChainFormat,
         eMax
@@ -166,6 +179,7 @@ typedef struct graphics_resource_description
         {
             uint32 imageFormat;
             uint32 arrayEles;
+            uint32 imageUsageFlags;
         };
     };
 

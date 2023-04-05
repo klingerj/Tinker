@@ -212,14 +212,16 @@ void CreateSwapChain()
     g_vulkanContextResources.numSwapChainImages = numSwapChainImages;
 
     for (uint32 i = 0; i < numSwapChainImages; ++i)
+    {
         g_vulkanContextResources.swapChainImages[i] = VK_NULL_HANDLE;
+        g_vulkanContextResources.swapChainImageViews[i] = VK_NULL_HANDLE;
+    }
+    
     vkGetSwapchainImagesKHR(g_vulkanContextResources.device,
         g_vulkanContextResources.swapChain,
         &numSwapChainImages,
         g_vulkanContextResources.swapChainImages);
 
-    for (uint32 i = 0; i < numSwapChainImages; ++i)
-        g_vulkanContextResources.swapChainImageViews[i] = VK_NULL_HANDLE;
     for (uint32 uiImageView = 0; uiImageView < numSwapChainImages; ++uiImageView)
     {
         CreateImageView(g_vulkanContextResources.device,
@@ -654,10 +656,11 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
     return ResourceHandle(newResourceHandle);
 }
 
-static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles, const char* debugLabel)
+static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 imageUsageFlags, uint32 width, uint32 height, uint32 numArrayEles, const char* debugLabel)
 {
     uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
     TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
+    TINKER_ASSERT(imageUsageFlags);
     VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
 
@@ -677,29 +680,29 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     imageCreateInfo.format = GetVkImageFormat(imageFormat);
     imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     
-    // TODO: collapse this switch into an array of data
-    switch (imageFormat)
+    if (imageUsageFlags & ImageUsageFlags::RenderTarget)
     {
-        case ImageFormat::BGRA8_SRGB:
-        case ImageFormat::RGBA8_SRGB:
-        {
-            imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-            break;
-        }
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
 
-        case ImageFormat::Depth_32F:
-        {
-            imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-            break;
-        }
+    if (imageUsageFlags & ImageUsageFlags::DepthStencil)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
 
-        case ImageFormat::Invalid:
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            break;
-        }
+    if (imageUsageFlags & ImageUsageFlags::UAV)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
+
+    if (imageUsageFlags & ImageUsageFlags::TransferDst)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if (imageUsageFlags & ImageUsageFlags::Sampled)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
 
     VkResult result = vkCreateImage(g_vulkanContextResources.device, &imageCreateInfo, nullptr, &newResource->image);
@@ -730,6 +733,7 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     // TODO: collapse this switch into an array of data
     switch (imageFormat)
     {
+        case ImageFormat::RGBA16_Float:
         case ImageFormat::BGRA8_SRGB:
         case ImageFormat::RGBA8_SRGB:
         {
@@ -776,7 +780,7 @@ ResourceHandle CreateResource(const ResourceDesc& resDesc)
 
         case ResourceType::eImage2D:
         {
-            newHandle = CreateImageResource(resDesc.imageFormat, resDesc.dims.x, resDesc.dims.y, resDesc.arrayEles, resDesc.debugLabel);
+            newHandle = CreateImageResource(resDesc.imageFormat, resDesc.imageUsageFlags, resDesc.dims.x, resDesc.dims.y, resDesc.arrayEles, resDesc.debugLabel);
             break;
         }
 
