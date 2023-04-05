@@ -219,6 +219,7 @@ void InitVulkanDataTypesPerEnum()
     VulkanImageLayouts[ImageLayout::eTransferDst] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     VulkanImageLayouts[ImageLayout::eDepthOptimal] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     VulkanImageLayouts[ImageLayout::eRenderOptimal] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VulkanImageLayouts[ImageLayout::eGeneral] = VK_IMAGE_LAYOUT_GENERAL;
     VulkanImageLayouts[ImageLayout::ePresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VulkanImageFormats[ImageFormat::Invalid] = VK_FORMAT_UNDEFINED;

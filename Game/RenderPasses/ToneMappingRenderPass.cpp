@@ -33,7 +33,7 @@ namespace ToneMappingRenderPass
             {
                 command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
             }
-            command->m_descriptors[0] = gameGraphicsData.m_swapChainBlitDescHandle;
+            command->m_descriptors[0] = gameGraphicsData.m_toneMappingDescHandle;
             command->m_descriptors[1] = defaultQuad.m_descriptor;
             ++graphicsCommandStream->m_numCommands;
             ++command;

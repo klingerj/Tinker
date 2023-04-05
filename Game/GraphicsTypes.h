@@ -43,8 +43,8 @@ enum
 {
     eRenderPass_ZPrePass = 0,
     eRenderPass_MainView,
-    eRenderPass_ComputeCopy,
     eRenderPass_DebugUI,
+    eRenderPass_ComputeCopy,
     eRenderPass_ToneMapping,
     eRenderPass_Max
 };
@@ -77,7 +77,8 @@ typedef struct game_graphics_data
     Tk::Graphics::ResourceHandle m_DescDataBufferHandle_Global;
     void* m_DescDataBufferMemPtr_Global;
 
-    Tk::Graphics::DescriptorHandle m_swapChainBlitDescHandle;
+    Tk::Graphics::DescriptorHandle m_toneMappingDescHandle;
+    Tk::Graphics::DescriptorHandle m_computeCopyDescHandle;
 
     TransientPrim m_animatedPolygon;
 } GameGraphicsData;

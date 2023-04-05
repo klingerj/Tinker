@@ -373,21 +373,12 @@ void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, 
     vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
 }
 
-void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, uint32 shaderID, const char* debugLabel, bool immediateSubmit)
+void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, const char* debugLabel, bool immediateSubmit)
 {
     TINKER_ASSERT(threadGroupX > 0);
     TINKER_ASSERT(threadGroupY > 0);
     TINKER_ASSERT(threadGroupZ > 0);
-    // TODO: move compute shader binding out to another command?
-    TINKER_ASSERT(shaderID < SHADER_ID_COMPUTE_MAX);
-
-    const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.computePipeline[shaderID];
-    TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
-
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
-
     vkCmdDispatch(commandBuffer, threadGroupX, threadGroupY, threadGroupZ);
 }
 
@@ -403,10 +394,22 @@ void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthSta
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
-void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
+void RecordCommandBindComputeShader(uint32 shaderID, bool immediateSubmit)
+{
+    TINKER_ASSERT(shaderID < SHADER_ID_COMPUTE_MAX);
+
+    const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.computePipeline[shaderID];
+    TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
+
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+}
+
+void RecordCommandBindDescriptor(uint32 shaderID, bool compute, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
 {
     TINKER_ASSERT(descSetHandle != DefaultDescHandle_Invalid);
-    const VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
+    const VkPipelineLayout& pipelineLayout = compute ? g_vulkanContextResources.psoPermutations.computePipelineLayout[shaderID] : g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
     TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
@@ -414,7 +417,7 @@ void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSet
     VkDescriptorSet* descSet =
         &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, compute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
 }
 
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,

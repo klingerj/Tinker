@@ -157,8 +157,8 @@ static void InitDemo()
 
 static void DestroyDescriptors()
 {
-    Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
-    gameGraphicsData.m_swapChainBlitDescHandle = Graphics::DefaultDescHandle_Invalid;
+    Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
+    gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
 
     Graphics::DestroyDescriptor(gameGraphicsData.m_DescData_Instance);
     gameGraphicsData.m_DescData_Instance = Graphics::DefaultDescHandle_Invalid;
@@ -173,12 +173,12 @@ static void DestroyDescriptors()
     Graphics::DestroyAllDescriptors(); // destroys descriptor pool
 }
 
-static void WriteSwapChainBlitResources()
+static void WriteToneMappingResources()
 {
-    Graphics::DescriptorSetDataHandles blitHandles = {};
-    blitHandles.InitInvalid();
-    blitHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    Graphics::DescriptorSetDataHandles toneMapHandles = {};
+    toneMapHandles.InitInvalid();
+    toneMapHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
@@ -188,11 +188,24 @@ static void WriteSwapChainBlitResources()
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, defaultQuad.m_descriptor, &vbHandles);
 }
 
+static void WriteComputeCopyResources()
+{
+    Graphics::DescriptorSetDataHandles computeHandles = {};
+    computeHandles.InitInvalid();
+    computeHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
+    computeHandles.handles[1] = gameGraphicsData.m_computeColorHandle;
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_COMPUTE_COPY, gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
+}
+
 static void CreateAllDescriptors()
 {
-    // Swap chain blit
-    gameGraphicsData.m_swapChainBlitDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
-    WriteSwapChainBlitResources();
+    // Tone mapping
+    gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
+    WriteToneMappingResources();
+
+    // Compute copy
+    gameGraphicsData.m_computeCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_COMPUTE_COPY);
+    WriteComputeCopyResources();
 
     // Descriptor data
     Graphics::ResourceDesc desc;
@@ -228,7 +241,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
-    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::TransferDst;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::TransferDst | Graphics::ImageUsageFlags::Sampled;
     desc.debugLabel = "MainViewColor";
     gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
 
@@ -262,7 +275,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_ComputeCopy].Init();
     gameRenderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
     gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
-    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] = gameGraphicsData.m_computeColorHandle;
     gameRenderPassList[eRenderPass_ComputeCopy].depthRT = Graphics::DefaultResHandle_Invalid;
     gameRenderPassList[eRenderPass_ComputeCopy].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_ComputeCopy].renderHeight = windowHeight;
@@ -508,7 +521,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
         g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
         CreateGameRenderingResources(newWindowWidth, newWindowHeight);
-        WriteSwapChainBlitResources();
+        WriteToneMappingResources();
     }
 }
 

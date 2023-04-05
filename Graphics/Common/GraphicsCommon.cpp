@@ -109,7 +109,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     {
                         if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])
                         {
-                            RecordCommandBindDescriptor(currentShaderID, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            RecordCommandBindDescriptor(currentShaderID, false, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
                         }
                     }
 
@@ -121,8 +121,18 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
                 case GraphicsCommand::eDispatch:
                 {
-                    // TODO: bind descriptors (and eventually pso)
-                    RecordCommandDispatch(currentCmd.m_threadGroupsX, currentCmd.m_threadGroupsY, currentCmd.m_threadGroupsZ, currentCmd.m_shader, currentCmd.debugLabel, immediateSubmit);
+                    // TODO: currently binds pso unconditionally
+                    RecordCommandBindComputeShader(currentCmd.m_shader, immediateSubmit);
+
+                    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
+                    {
+                        if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])
+                        {
+                            RecordCommandBindDescriptor(currentCmd.m_shader, true, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                        }
+                    }
+
+                    RecordCommandDispatch(currentCmd.m_threadGroupsX, currentCmd.m_threadGroupsY, currentCmd.m_threadGroupsZ, currentCmd.debugLabel, immediateSubmit);
                     break;
                 }
 
