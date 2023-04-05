@@ -203,9 +203,9 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
 
     /// Compute
     
-    // Grayscale
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_COMPUTE_GRAYSCALE;
-    bOk = LoadComputeShader(shaderFilePaths[8], Graphics::SHADER_ID_COMPUTE_GRAYSCALE, descLayouts, 1);
+    // Copy
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_COMPUTE_COPY;
+    bOk = LoadComputeShader(shaderFilePaths[8], Graphics::SHADER_ID_COMPUTE_COPY, descLayouts, 1);
     TINKER_ASSERT(bOk);
 }
 
@@ -281,7 +281,7 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     descriptorLayout.params[0].amount = 1;
     descriptorLayout.params[1].type = Tk::Graphics::DescriptorType::eStorageImage;
     descriptorLayout.params[1].amount = 1;
-    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_COMPUTE_GRAYSCALE, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_COMPUTE_COPY, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     LoadAllShaders(windowWidth, windowHeight);
