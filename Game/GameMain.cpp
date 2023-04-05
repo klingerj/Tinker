@@ -12,7 +12,7 @@
 #include "RenderPasses/ZPrepassRenderPass.h"
 #include "RenderPasses/ForwardRenderPass.h"
 #include "RenderPasses/DebugUIRenderPass.h"
-#include "RenderPasses/SwapChainBlitRenderPass.h"
+#include "RenderPasses/ToneMappingRenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
 #include "Raytracing.h"
@@ -272,14 +272,14 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_DebugUI].debugLabel = "Debug UI";
     gameRenderPassList[eRenderPass_DebugUI].ExecuteFn = DebugUIRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_SwapChainBlit].Init();
-    gameRenderPassList[eRenderPass_SwapChainBlit].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_SwapChainBlit].colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-    gameRenderPassList[eRenderPass_SwapChainBlit].depthRT = Graphics::DefaultResHandle_Invalid;
-    gameRenderPassList[eRenderPass_SwapChainBlit].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_SwapChainBlit].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_SwapChainBlit].debugLabel = "Swap Chain Blit";
-    gameRenderPassList[eRenderPass_SwapChainBlit].ExecuteFn = SwapChainBlitRenderPass::Execute;
+    gameRenderPassList[eRenderPass_ToneMapping].Init();
+    gameRenderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
+    gameRenderPassList[eRenderPass_ToneMapping].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_ToneMapping].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_ToneMapping].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_ToneMapping].debugLabel = "Tone Mapping";
+    gameRenderPassList[eRenderPass_ToneMapping].ExecuteFn = ToneMappingRenderPass::Execute;
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)

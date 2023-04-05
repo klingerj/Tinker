@@ -1,8 +1,8 @@
-#include "SwapChainBlitRenderPass.h"
+#include "ToneMappingRenderPass.h"
 
 extern GameGraphicsData gameGraphicsData;
 
-namespace SwapChainBlitRenderPass
+namespace ToneMappingRenderPass
 {
 
     RENDER_PASS_EXEC_FUNC(Execute)
