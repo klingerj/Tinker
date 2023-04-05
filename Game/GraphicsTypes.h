@@ -45,7 +45,7 @@ enum
     eRenderPass_MainView,
     //eRenderPass_ComputeCopy,
     eRenderPass_DebugUI,
-    eRenderPass_SwapChainBlit,
+    eRenderPass_ToneMapping,
     eRenderPass_Max
 };
 
