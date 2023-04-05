@@ -373,8 +373,28 @@ void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, 
     vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
 }
 
+void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, uint32 shaderID, const char* debugLabel, bool immediateSubmit)
+{
+    TINKER_ASSERT(threadGroupX > 0);
+    TINKER_ASSERT(threadGroupY > 0);
+    TINKER_ASSERT(threadGroupZ > 0);
+    // TODO: move compute shader binding out to another command?
+    TINKER_ASSERT(shaderID < SHADER_ID_COMPUTE_MAX);
+
+    const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.computePipeline[shaderID];
+    TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
+
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+
+    vkCmdDispatch(commandBuffer, threadGroupX, threadGroupY, threadGroupZ);
+}
+
 void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit)
 {
+    TINKER_ASSERT(shaderID < SHADER_ID_MAX);
+
     const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
     TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
 

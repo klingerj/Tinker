@@ -11,6 +11,7 @@
 #include "RenderPasses/RenderPass.h"
 #include "RenderPasses/ZPrepassRenderPass.h"
 #include "RenderPasses/ForwardRenderPass.h"
+#include "RenderPasses/ComputeCopyRenderPass.h"
 #include "RenderPasses/DebugUIRenderPass.h"
 #include "RenderPasses/ToneMappingRenderPass.h"
 #include "AssetManager.h"
@@ -176,7 +177,7 @@ static void WriteSwapChainBlitResources()
 {
     Graphics::DescriptorSetDataHandles blitHandles = {};
     blitHandles.InitInvalid();
-    blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
+    blitHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
@@ -227,7 +228,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
-    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::TransferDst | Graphics::ImageUsageFlags::Sampled;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::TransferDst;
     desc.debugLabel = "MainViewColor";
     gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
 
@@ -235,6 +236,11 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.imageUsageFlags = Graphics::ImageUsageFlags::DepthStencil | Graphics::ImageUsageFlags::TransferDst;
     desc.debugLabel = "MainViewDepth";
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
+
+    desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::UAV | Graphics::ImageUsageFlags::Sampled;
+    desc.debugLabel = "MainViewColor_ComputeCopy";
+    gameGraphicsData.m_computeColorHandle = Graphics::CreateResource(desc);
 
     gameRenderPassList[eRenderPass_ZPrePass].Init();
     gameRenderPassList[eRenderPass_ZPrePass].numColorRTs = 0;
@@ -253,7 +259,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
     gameRenderPassList[eRenderPass_MainView].ExecuteFn = ForwardRenderPass::Execute;
 
-    /*gameRenderPassList[eRenderPass_ComputeCopy].Init();
+    gameRenderPassList[eRenderPass_ComputeCopy].Init();
     gameRenderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
     gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
     gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] = gameGraphicsData.m_rtColorHandle;
@@ -261,7 +267,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_ComputeCopy].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_ComputeCopy].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_ComputeCopy].debugLabel = "Compute Copy";
-    gameRenderPassList[eRenderPass_ComputeCopy].ExecuteFn = ForwardRenderPass::Execute;*/
+    gameRenderPassList[eRenderPass_ComputeCopy].ExecuteFn = ComputeCopyRenderPass::Execute;
 
     gameRenderPassList[eRenderPass_DebugUI].Init();
     gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;

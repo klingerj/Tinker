@@ -9,7 +9,7 @@ namespace ToneMappingRenderPass
     {
 
         // Transition main view render target from render optimal to shader read
-        graphicsCommandStream->CmdTransitionLayout(gameGraphicsData.m_rtColorHandle, Graphics::ImageLayout::eRenderOptimal, Graphics::ImageLayout::eShaderRead, "Transition main view render target to shader read for blit");
+        graphicsCommandStream->CmdTransitionLayout(gameGraphicsData.m_computeColorHandle, Graphics::ImageLayout::eGeneral, Graphics::ImageLayout::eShaderRead, "Transition hdr compute to shader read");
 
         // Transition of swap chain to render optimal
         graphicsCommandStream->CmdTransitionLayout(Graphics::IMAGE_HANDLE_SWAP_CHAIN, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eRenderOptimal, "Transition swap chain to render_optimal");
