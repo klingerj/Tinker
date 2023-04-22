@@ -160,6 +160,9 @@ static void DestroyDescriptors()
     Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
     gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
 
+    Graphics::DestroyDescriptor(gameGraphicsData.m_computeCopyDescHandle);
+    gameGraphicsData.m_computeCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
+
     Graphics::DestroyDescriptor(gameGraphicsData.m_DescData_Instance);
     gameGraphicsData.m_DescData_Instance = Graphics::DefaultDescHandle_Invalid;
     Graphics::DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
@@ -497,6 +500,7 @@ static void DestroyWindowResizeDependentResources()
 {
     Graphics::DestroyResource(gameGraphicsData.m_rtColorHandle);
     Graphics::DestroyResource(gameGraphicsData.m_rtDepthHandle);
+    Graphics::DestroyResource(gameGraphicsData.m_computeColorHandle);
 }
 
 extern "C"

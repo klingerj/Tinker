@@ -437,6 +437,7 @@ struct GraphicsCommandStream
         command->m_threadGroupsX = threadGroupsX;
         command->m_threadGroupsY = threadGroupsY;
         command->m_threadGroupsZ = threadGroupsZ;
+        command->m_shader = shaderID;
 
         for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         {
