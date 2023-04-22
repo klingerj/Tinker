@@ -109,7 +109,12 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     {
                         if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])
                         {
-                            RecordCommandBindDescriptor(currentShaderID, false, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            currDescriptors[uiDesc] = currentCmd.m_descriptors[uiDesc];
+
+                            if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
+                            {
+                                RecordCommandBindDescriptor(currentShaderID, false, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            }
                         }
                     }
 
@@ -128,7 +133,12 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     {
                         if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])
                         {
-                            RecordCommandBindDescriptor(currentCmd.m_shader, true, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            currDescriptors[uiDesc] = currentCmd.m_descriptors[uiDesc];
+                            
+                            if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
+                            {
+                                RecordCommandBindDescriptor(currentCmd.m_shader, true, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            }
                         }
                     }
 

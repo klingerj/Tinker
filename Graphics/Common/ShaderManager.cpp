@@ -122,7 +122,7 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     const char* shaderFilePaths[numShaderFilepaths] =
     {
         SHADERS_SPV_PATH "blit_VS.spv",
-        SHADERS_SPV_PATH "blit_PS.spv",
+        SHADERS_SPV_PATH "tonemapping_PS.spv",
         SHADERS_SPV_PATH "basic_VS.spv",
         SHADERS_SPV_PATH "basic_PS.spv",
         SHADERS_SPV_PATH "animpoly_VS.spv",
