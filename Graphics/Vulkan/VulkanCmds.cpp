@@ -624,8 +624,8 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         case ImageLayout::eGeneral:
         {
             barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            barrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-            srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
         }
 
@@ -676,8 +676,8 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
 
         case ImageLayout::eGeneral:
         {
-            barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-            dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
         }
 

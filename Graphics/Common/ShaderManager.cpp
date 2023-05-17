@@ -277,7 +277,7 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSampledImage;
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eStorageImage;
     descriptorLayout.params[0].amount = 1;
     descriptorLayout.params[1].type = Tk::Graphics::DescriptorType::eStorageImage;
     descriptorLayout.params[1].amount = 1;

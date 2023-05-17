@@ -299,6 +299,8 @@ typedef struct descriptor_set_data_handles
 
 #define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
 
+#define THREADGROUP_ROUND(x, tg) ((x + tg - 1) / tg)
+
 typedef struct graphics_command
 {
     enum : uint32
