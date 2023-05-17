@@ -9,10 +9,10 @@ namespace ComputeCopyRenderPass
     {
 
         // Transition main view render target from render optimal to shader read
-        graphicsCommandStream->CmdTransitionLayout(gameGraphicsData.m_rtColorHandle, Graphics::ImageLayout::eRenderOptimal, Graphics::ImageLayout::eShaderRead, "Transition main view render target to shader read");
+        graphicsCommandStream->CmdTransitionLayout(gameGraphicsData.m_rtColorHandle, Graphics::ImageLayout::eRenderOptimal, Graphics::ImageLayout::eGeneral, "Transition main view render target to UAV");
 
         // Transition compute copy target to UAV
-        graphicsCommandStream->CmdTransitionLayout(gameGraphicsData.m_computeColorHandle, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eGeneral, "Transition compute copy target to UAV dst");
+        graphicsCommandStream->CmdTransitionLayout(gameGraphicsData.m_computeColorHandle, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eGeneral, "Transition compute copy target to UAV");
 
         // Dispatch the CS
         const uint32 groupSize = 16;
@@ -22,7 +22,7 @@ namespace ComputeCopyRenderPass
             descriptors[i] = Graphics::DefaultDescHandle_Invalid;
         }
         descriptors[0] = gameGraphicsData.m_computeCopyDescHandle;
-        graphicsCommandStream->CmdDispatch(1, 1, 1, Graphics::SHADER_ID_COMPUTE_COPY, descriptors, "Compute Copy");
+        graphicsCommandStream->CmdDispatch(THREADGROUP_ROUND(renderPass->renderWidth, groupSize), THREADGROUP_ROUND(renderPass->renderHeight, groupSize), 1, Graphics::SHADER_ID_COMPUTE_COPY, descriptors, "Compute Copy");
     }
 
 }
