@@ -217,6 +217,18 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     break;
                 }
 
+                case GraphicsCommand::eDebugMarkerStart:
+                {
+                    RecordCommandDebugMarkerStart(immediateSubmit, currentCmd.debugLabel);
+                    break;
+                }
+
+                case GraphicsCommand::eDebugMarkerEnd:
+                {
+                    RecordCommandDebugMarkerEnd(immediateSubmit);
+                    break;
+                }
+
                 default:
                 {
                     // Invalid command type

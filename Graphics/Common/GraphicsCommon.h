@@ -326,6 +326,8 @@ typedef struct graphics_command
         eClearImage,
         //eImageCopy,
         eGPUTimestamp,
+        eDebugMarkerStart,
+        eDebugMarkerEnd,
         eMax
     };
 
@@ -429,6 +431,10 @@ typedef struct graphics_command
             const char* m_timestampNameStr;
             bool m_timestampStartFrame;
         };
+        
+        // Debug marker start
+        // Debug marker end
+        // no data required here, uses debug string above 
     };
 
 } GraphicsCommand;
@@ -489,6 +495,24 @@ struct GraphicsCommandStream
         command->debugLabel = dbgLabel;
         command->m_timestampNameStr = nameStr;
         command->m_timestampStartFrame = startFrame;
+    }
+
+    void CmdDebugMarkerStart(const char* dbgLabel = "Debug Marker Start")
+    {
+        TINKER_ASSERT(m_numCommands < m_maxCommands);
+        GraphicsCommand* command = &m_graphicsCommands[m_numCommands++];
+
+        command->m_commandType = GraphicsCommand::eDebugMarkerStart;
+        command->debugLabel = dbgLabel;
+    }
+
+    void CmdDebugMarkerEnd(const char* dbgLabel = "Debug Marker End")
+    {
+        TINKER_ASSERT(m_numCommands < m_maxCommands);
+        GraphicsCommand* command = &m_graphicsCommands[m_numCommands++];
+
+        command->m_commandType = GraphicsCommand::eDebugMarkerEnd;
+        command->debugLabel = dbgLabel;
     }
 };
 
@@ -573,6 +597,8 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle, uint32 startLayou
 void RecordCommandClearImage(ResourceHandle imageHandle, 
     const v4f& clearValue, const char* debugLabel, bool immediateSubmit);
 void RecordCommandGPUTimestamp(uint32 gpuTimestampID, bool immediateSubmit);
+void RecordCommandDebugMarkerStart(bool immediateSubmit, const char* debugLabel);
+void RecordCommandDebugMarkerEnd(bool immediateSubmit);
 //
 
 // Called only by ShaderManager

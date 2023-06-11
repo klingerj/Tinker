@@ -465,9 +465,14 @@ GAME_UPDATE(GameUpdate)
         for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
         {
             GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
+
+            g_graphicsCommandStream.CmdDebugMarkerStart(currRP.debugLabel);
+
             currRP.ExecuteFn(&currRP, &g_graphicsCommandStream);
 
             g_graphicsCommandStream.CmdTimestamp(currRP.debugLabel);
+
+            g_graphicsCommandStream.CmdDebugMarkerEnd();
         }
     }
 
