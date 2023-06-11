@@ -23,6 +23,7 @@ namespace DescriptorType
         eBuffer = 0,
         eSampledImage,
         eSSBO,
+        eStorageImage,
         eMax
     };
 }
@@ -38,6 +39,18 @@ namespace BufferUsage
         eStaging,
         eUniform,
         eMax
+    };
+}
+
+namespace ImageUsageFlags
+{
+    enum : uint32
+    {
+        RenderTarget = 0x1,
+        UAV = 0x2,
+        TransferDst = 0x4,
+        Sampled = 0x8,
+        DepthStencil = 0x10,
     };
 }
 
@@ -81,6 +94,7 @@ namespace ImageFormat
         Invalid = 0,
         BGRA8_SRGB,
         RGBA8_SRGB,
+        RGBA16_Float,
         Depth_32F,
         TheSwapChainFormat,
         eMax
@@ -96,6 +110,7 @@ namespace ImageLayout
         eTransferDst,
         eRenderOptimal,
         eDepthOptimal,
+        eGeneral,
         ePresent,
         eMax
     };
@@ -108,6 +123,16 @@ namespace DepthCompareOp
         eLeOrEqual = 0,
         eGeOrEqual,
         // TODO: support strictly less than for normal rendering?
+        eMax
+    };
+}
+
+namespace BindPoint
+{
+    enum : uint32
+    {
+        eGraphics = 0,
+        eCompute,
         eMax
     };
 }
@@ -164,6 +189,7 @@ typedef struct graphics_resource_description
         {
             uint32 imageFormat;
             uint32 arrayEles;
+            uint32 imageUsageFlags;
         };
     };
 
@@ -279,15 +305,18 @@ typedef struct descriptor_set_data_handles
 #define DEPTH_OP DepthCompareOp::eGeOrEqual
 #endif
 
-#define GPU_TIMESTAMP_NUM_MAX 5
+#define GPU_TIMESTAMP_NUM_MAX 1024
 
 #define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
+
+#define THREADGROUP_ROUND(x, tg) ((x + tg - 1) / tg)
 
 typedef struct graphics_command
 {
     enum : uint32
     {
         eDrawCall = 0,
+        eDispatch,
         eMemTransfer,
         ePushConstant,
         eSetScissor,
@@ -316,6 +345,16 @@ typedef struct graphics_command
             uint32 m_blendState;
             uint32 m_depthState;
             ResourceHandle m_indexBufferHandle;
+            DescriptorHandle m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        };
+
+        // Dispatch
+        struct
+        {
+            uint32 m_threadGroupsX;
+            uint32 m_threadGroupsY;
+            uint32 m_threadGroupsZ;
+            uint32 m_shader;
             DescriptorHandle m_descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         };
 
@@ -392,31 +431,6 @@ typedef struct graphics_command
         };
     };
 
-    void CmdTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout, const char* dbgLabel = "Transition")
-    {
-        m_commandType = eLayoutTransition;
-        debugLabel = dbgLabel;
-        m_imageHandle = imageHandle;
-        m_startLayout = startLayout;
-        m_endLayout = endLayout;
-    }
-
-    void CmdClear(ResourceHandle imageHandle, const v4f& clearValue, const char* dbgLabel = "Clear")
-    {
-        m_commandType = eClearImage;
-        debugLabel = dbgLabel;
-        m_imageHandle = imageHandle;
-        m_clearValue = clearValue;
-    }
-
-    void CmdTimestamp(const char* nameStr, const char* dbgLabel = "Timestamp", bool startFrame = false)
-    {
-        m_commandType = eGPUTimestamp;
-        debugLabel = dbgLabel;
-        m_timestampNameStr = nameStr;
-        m_timestampStartFrame = startFrame;
-    }
-
 } GraphicsCommand;
 
 struct GraphicsCommandStream
@@ -424,8 +438,59 @@ struct GraphicsCommandStream
     GraphicsCommand* m_graphicsCommands;
     uint32 m_numCommands;
     uint32 m_maxCommands;
-};
 
+    void CmdDispatch(uint32 threadGroupsX, uint32 threadGroupsY, uint32 threadGroupsZ, uint32 shaderID, DescriptorHandle* descriptors, const char* dbgLabel = "Dispatch")
+    {
+        TINKER_ASSERT(m_numCommands < m_maxCommands);
+        GraphicsCommand* command = &m_graphicsCommands[m_numCommands++];
+
+        command->m_commandType = GraphicsCommand::eDispatch;
+        command->debugLabel = dbgLabel;
+        command->m_threadGroupsX = threadGroupsX;
+        command->m_threadGroupsY = threadGroupsY;
+        command->m_threadGroupsZ = threadGroupsZ;
+        command->m_shader = shaderID;
+
+        for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        {
+            command->m_descriptors[i] = descriptors[i];
+        }
+    }
+
+    void CmdTransitionLayout(ResourceHandle imageHandle, uint32 startLayout, uint32 endLayout, const char* dbgLabel = "Transition")
+    {
+        TINKER_ASSERT(m_numCommands < m_maxCommands);
+        GraphicsCommand* command = &m_graphicsCommands[m_numCommands++];
+
+        command->m_commandType = GraphicsCommand::eLayoutTransition;
+        command->debugLabel = dbgLabel;
+        command->m_imageHandle = imageHandle;
+        command->m_startLayout = startLayout;
+        command->m_endLayout = endLayout;
+    }
+
+    void CmdClear(ResourceHandle imageHandle, const v4f& clearValue, const char* dbgLabel = "Clear")
+    {
+        TINKER_ASSERT(m_numCommands < m_maxCommands);
+        GraphicsCommand* command = &m_graphicsCommands[m_numCommands++];
+
+        command->m_commandType = GraphicsCommand::eClearImage;
+        command->debugLabel = dbgLabel;
+        command->m_imageHandle = imageHandle;
+        command->m_clearValue = clearValue;
+    }
+
+    void CmdTimestamp(const char* nameStr, const char* dbgLabel = "Timestamp", bool startFrame = false)
+    {
+        TINKER_ASSERT(m_numCommands < m_maxCommands);
+        GraphicsCommand* command = &m_graphicsCommands[m_numCommands++];
+
+        command->m_commandType = GraphicsCommand::eGPUTimestamp;
+        command->debugLabel = dbgLabel;
+        command->m_timestampNameStr = nameStr;
+        command->m_timestampStartFrame = startFrame;
+    }
+};
 
 // TODO: move all this, and also autogenerate this eventually?
 // TODO: don't use them as uint32's 
@@ -440,7 +505,8 @@ enum
     DESCLAYOUT_ID_POSONLY_VBS,
     DESCLAYOUT_ID_IMGUI_VBS,
     DESCLAYOUT_ID_IMGUI_TEX,
-    DESCLAYOUT_ID_MAX,
+    DESCLAYOUT_ID_COMPUTE_COPY,
+    DESCLAYOUT_ID_MAX
 };
 
 enum
@@ -450,7 +516,13 @@ enum
     SHADER_ID_BASIC_ZPrepass,
     SHADER_ID_BASIC_MainView,
     SHADER_ID_ANIMATEDPOLY_MainView,
-    SHADER_ID_MAX,
+    SHADER_ID_MAX
+};
+
+enum
+{
+    SHADER_ID_COMPUTE_COPY = 0,
+    SHADER_ID_COMPUTE_MAX
 };
 //-----
 
@@ -487,8 +559,10 @@ void RecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 sha
 void RecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height);
 void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
     uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit);
+void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, const char* debugLabel, bool immediateSubmit);
 void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit);
-void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit);
+void RecordCommandBindComputeShader(uint32 shaderID, bool immediateSubmit);
+void RecordCommandBindDescriptor(uint32 shaderID, uint32 bindPoint, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit);
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
     const char* debugLabel, bool immediateSubmit);
 void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT,
@@ -505,11 +579,17 @@ void RecordCommandGPUTimestamp(uint32 gpuTimestampID, bool immediateSubmit);
 #define CREATE_DESCRIPTOR_LAYOUT(name) bool name(uint32 descLayoutID, const DescriptorLayout* descLayout)
 CREATE_DESCRIPTOR_LAYOUT(CreateDescriptorLayout);
 
-#define CREATE_GRAPHICS_PIPELINE(name) bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat, uint32* descriptorHandles, uint32 numDescriptorHandles)
+#define CREATE_GRAPHICS_PIPELINE(name) bool name(void* vertexShaderCode, uint32 numVertexShaderBytes, void* fragmentShaderCode, uint32 numFragmentShaderBytes, uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight, uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat, uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles)
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline);
 
 #define DESTROY_GRAPHICS_PIPELINE(name) void name(uint32 shaderID)
 DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline);
+
+#define CREATE_COMPUTE_PIPELINE(name) bool name(void* computeShaderCode, uint32 numComputeShaderBytes, uint32 shaderID, uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles)
+CREATE_COMPUTE_PIPELINE(CreateComputePipeline);
+
+#define DESTROY_COMPUTE_PIPELINE(name) void name(uint32 shaderID)
+DESTROY_COMPUTE_PIPELINE(DestroyComputePipeline);
 //
 
 void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight);

@@ -165,6 +165,7 @@ static VkFormat                              VulkanImageFormats    [ImageFormat:
 static VkDescriptorType                      VulkanDescriptorTypes [DescriptorType::eMax] = {};
 static VkBufferUsageFlags                    VulkanBufferUsageFlags[BufferUsage::eMax]    = {};
 static VkMemoryPropertyFlagBits              VulkanMemPropertyFlags[BufferUsage::eMax]    = {};
+static VkPipelineBindPoint                   VulkanBindPoints      [BindPoint::eMax]      = {};
 
 void InitVulkanDataTypesPerEnum()
 {
@@ -219,9 +220,11 @@ void InitVulkanDataTypesPerEnum()
     VulkanImageLayouts[ImageLayout::eTransferDst] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     VulkanImageLayouts[ImageLayout::eDepthOptimal] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     VulkanImageLayouts[ImageLayout::eRenderOptimal] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VulkanImageLayouts[ImageLayout::eGeneral] = VK_IMAGE_LAYOUT_GENERAL;
     VulkanImageLayouts[ImageLayout::ePresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VulkanImageFormats[ImageFormat::Invalid] = VK_FORMAT_UNDEFINED;
+    VulkanImageFormats[ImageFormat::RGBA16_Float] = VK_FORMAT_R16G16B16A16_SFLOAT;
     VulkanImageFormats[ImageFormat::BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
     VulkanImageFormats[ImageFormat::RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
     VulkanImageFormats[ImageFormat::Depth_32F] = VK_FORMAT_D32_SFLOAT;
@@ -230,6 +233,7 @@ void InitVulkanDataTypesPerEnum()
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eSampledImage] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     VulkanDescriptorTypes[DescriptorType::eSSBO] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    VulkanDescriptorTypes[DescriptorType::eStorageImage] = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 
     VulkanBufferUsageFlags[BufferUsage::eVertex] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vertex buffers are actually SSBOs for now
     VulkanBufferUsageFlags[BufferUsage::eIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -244,6 +248,9 @@ void InitVulkanDataTypesPerEnum()
     VulkanMemPropertyFlags[BufferUsage::eTransientIndex] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VulkanMemPropertyFlags[BufferUsage::eStaging] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VulkanMemPropertyFlags[BufferUsage::eUniform] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    
+    VulkanBindPoints[BindPoint::eGraphics] = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    VulkanBindPoints[BindPoint::eCompute] = VK_PIPELINE_BIND_POINT_COMPUTE;
 }
 
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState)
@@ -286,6 +293,12 @@ VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 bufferUsage)
 {
     TINKER_ASSERT(bufferUsage < BufferUsage::eMax);
     return VulkanMemPropertyFlags[bufferUsage];
+}
+
+VkPipelineBindPoint GetVkBindPoint(uint32 bindPoint)
+{
+    TINKER_ASSERT(bindPoint < BindPoint::eMax);
+    return VulkanBindPoints[bindPoint];
 }
 
 }

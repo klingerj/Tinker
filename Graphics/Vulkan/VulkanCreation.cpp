@@ -16,12 +16,20 @@ static void CreateDescriptorPool()
     descPoolSizes[1].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
     descPoolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     descPoolSizes[2].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS;
+    descPoolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    descPoolSizes[3].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_IMAGES;
+
+    uint32 maxSets = 0;
+    for (uint32 i = 0; i < VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES; ++i)
+    {
+        maxSets += descPoolSizes[i].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_IMAGES;
+    }
 
     VkDescriptorPoolCreateInfo descPoolCreateInfo = {};
     descPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     descPoolCreateInfo.poolSizeCount = VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES;
     descPoolCreateInfo.pPoolSizes = descPoolSizes;
-    descPoolCreateInfo.maxSets = VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS + VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES;
+    descPoolCreateInfo.maxSets = maxSets;
 
     VkResult result = vkCreateDescriptorPool(g_vulkanContextResources.device, &descPoolCreateInfo, nullptr, &g_vulkanContextResources.descriptorPool);
     if (result != VK_SUCCESS)
@@ -204,14 +212,16 @@ void CreateSwapChain()
     g_vulkanContextResources.numSwapChainImages = numSwapChainImages;
 
     for (uint32 i = 0; i < numSwapChainImages; ++i)
+    {
         g_vulkanContextResources.swapChainImages[i] = VK_NULL_HANDLE;
+        g_vulkanContextResources.swapChainImageViews[i] = VK_NULL_HANDLE;
+    }
+    
     vkGetSwapchainImagesKHR(g_vulkanContextResources.device,
         g_vulkanContextResources.swapChain,
         &numSwapChainImages,
         g_vulkanContextResources.swapChainImages);
 
-    for (uint32 i = 0; i < numSwapChainImages; ++i)
-        g_vulkanContextResources.swapChainImageViews[i] = VK_NULL_HANDLE;
     for (uint32 uiImageView = 0; uiImageView < numSwapChainImages; ++uiImageView)
     {
         CreateImageView(g_vulkanContextResources.device,
@@ -239,13 +249,7 @@ void DestroySwapChain()
     vkDestroySwapchainKHR(g_vulkanContextResources.device, g_vulkanContextResources.swapChain, nullptr);
 }
 
-
-bool CreateGraphicsPipeline(
-    void* vertexShaderCode, uint32 numVertexShaderBytes,
-    void* fragmentShaderCode, uint32 numFragmentShaderBytes,
-    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight,
-    uint32 numColorRTs, const uint32* colorRTFormats, uint32 depthFormat,
-    uint32* descriptorLayoutHandles, uint32 numDescriptorLayoutHandles)
+CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
 {
     VkShaderModule vertexShaderModule = VK_NULL_HANDLE;
     VkShaderModule fragmentShaderModule = VK_NULL_HANDLE;
@@ -357,101 +361,103 @@ bool CreateGraphicsPipeline(
     pushConstantRange.offset = 0;
     pushConstantRange.size = MIN_PUSH_CONSTANTS_SIZE;
 
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = numDescriptorLayoutHandles;
-    pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts;
-    pipelineLayoutInfo.pushConstantRangeCount = numPushConstants;
-    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+    pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo.setLayoutCount = numDescriptorLayoutHandles;
+    pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts;
+    pipelineLayoutCreateInfo.pushConstantRangeCount = numPushConstants;
+    pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
 
     VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
     VkResult result = vkCreatePipelineLayout(g_vulkanContextResources.device,
-        &pipelineLayoutInfo,
+        &pipelineLayoutCreateInfo,
         nullptr,
         &pipelineLayout);
 
     if (result != VK_SUCCESS)
     {
-        Core::Utility::LogMsg("Platform", "Failed to create Vulkan pipeline layout!", Core::Utility::LogSeverity::eCritical);
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline layout!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
     }
-
-    for (uint32 blendState = 0; blendState < VulkanContextResources::eMaxBlendStates; ++blendState)
+    else
     {
-        for (uint32 depthState = 0; depthState < VulkanContextResources::eMaxDepthStates; ++depthState)
+        for (uint32 blendState = 0; blendState < VulkanContextResources::eMaxBlendStates; ++blendState)
         {
-            VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
-
-            DepthCullState depthCullState = GetVkDepthCullState(depthState);
-            VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
-
-            if (numColorRTs == 0)
+            for (uint32 depthState = 0; depthState < VulkanContextResources::eMaxDepthStates; ++depthState)
             {
-                colorBlending.attachmentCount = 0;
-                colorBlending.pAttachments = nullptr;
-            }
-            else
-            {
-                colorBlending.attachmentCount = numColorRTs;
-                colorBlending.pAttachments = &colorBlendAttachment;
-            }
+                VkPipeline& graphicsPipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
 
-            VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
-            pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-            pipelineRenderingCreateInfo.colorAttachmentCount = numColorRTs;
-            VkFormat formats[MAX_MULTIPLE_RENDERTARGETS] = {};
-            for (uint32 uiFmt = 0; uiFmt < Min(numColorRTs, (uint32)ARRAYCOUNT(formats)); ++uiFmt)
-            {
-                formats[uiFmt] = GetVkImageFormat(colorRTFormats[uiFmt]);
-            }
-            pipelineRenderingCreateInfo.pColorAttachmentFormats = formats;
+                DepthCullState depthCullState = GetVkDepthCullState(depthState);
+                VkPipelineColorBlendAttachmentState colorBlendAttachment = GetVkBlendState(blendState);
 
-            pipelineRenderingCreateInfo.depthAttachmentFormat = GetVkImageFormat(depthFormat);
-            pipelineRenderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+                if (numColorRTs == 0)
+                {
+                    colorBlending.attachmentCount = 0;
+                    colorBlending.pAttachments = nullptr;
+                }
+                else
+                {
+                    colorBlending.attachmentCount = numColorRTs;
+                    colorBlending.pAttachments = &colorBlendAttachment;
+                }
 
-            VkPipelineRasterizationStateCreateInfo rasterizer = {};
-            rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-            rasterizer.depthClampEnable = VK_FALSE;
-            rasterizer.rasterizerDiscardEnable = VK_FALSE;
-            rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-            rasterizer.lineWidth = 1.0f;
-            rasterizer.cullMode = depthCullState.cullMode;
-            rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-            rasterizer.depthBiasEnable = VK_FALSE;
-            rasterizer.depthBiasConstantFactor = 0.0f;
-            rasterizer.depthBiasClamp = 0.0f;
-            rasterizer.depthBiasSlopeFactor = 0.0f;
+                VkPipelineRenderingCreateInfo pipelineRenderingCreateInfo = {};
+                pipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+                pipelineRenderingCreateInfo.colorAttachmentCount = numColorRTs;
+                VkFormat formats[MAX_MULTIPLE_RENDERTARGETS] = {};
+                for (uint32 uiFmt = 0; uiFmt < Min(numColorRTs, (uint32)ARRAYCOUNT(formats)); ++uiFmt)
+                {
+                    formats[uiFmt] = GetVkImageFormat(colorRTFormats[uiFmt]);
+                }
+                pipelineRenderingCreateInfo.pColorAttachmentFormats = formats;
 
-            VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
-            pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-            pipelineCreateInfo.pNext = &pipelineRenderingCreateInfo; // for dynamic rendering
-            pipelineCreateInfo.stageCount = numStages;
-            pipelineCreateInfo.pStages = shaderStages;
-            pipelineCreateInfo.pVertexInputState = &vertexInputInfo;
-            pipelineCreateInfo.pInputAssemblyState = &inputAssembly;
-            pipelineCreateInfo.pViewportState = &viewportState;
-            pipelineCreateInfo.pRasterizationState = &rasterizer;
-            pipelineCreateInfo.pMultisampleState = &multisampling;
-            pipelineCreateInfo.pDepthStencilState = &depthCullState.depthState;
-            pipelineCreateInfo.pColorBlendState = &colorBlending;
-            pipelineCreateInfo.pDynamicState = &dynamicState;
-            pipelineCreateInfo.layout = pipelineLayout;
-            pipelineCreateInfo.renderPass = VK_NULL_HANDLE; // for dynamic rendering
-            pipelineCreateInfo.subpass = 0;
-            pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-            pipelineCreateInfo.basePipelineIndex = -1;
+                pipelineRenderingCreateInfo.depthAttachmentFormat = GetVkImageFormat(depthFormat);
+                pipelineRenderingCreateInfo.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
 
-            result = vkCreateGraphicsPipelines(g_vulkanContextResources.device,
-                VK_NULL_HANDLE,
-                1,
-                &pipelineCreateInfo,
-                nullptr,
-                &graphicsPipeline);
+                VkPipelineRasterizationStateCreateInfo rasterizer = {};
+                rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+                rasterizer.depthClampEnable = VK_FALSE;
+                rasterizer.rasterizerDiscardEnable = VK_FALSE;
+                rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+                rasterizer.lineWidth = 1.0f;
+                rasterizer.cullMode = depthCullState.cullMode;
+                rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+                rasterizer.depthBiasEnable = VK_FALSE;
+                rasterizer.depthBiasConstantFactor = 0.0f;
+                rasterizer.depthBiasClamp = 0.0f;
+                rasterizer.depthBiasSlopeFactor = 0.0f;
 
-            if (result != VK_SUCCESS)
-            {
-                Core::Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
+                VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+                pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+                pipelineCreateInfo.pNext = &pipelineRenderingCreateInfo; // for dynamic rendering
+                pipelineCreateInfo.stageCount = numStages;
+                pipelineCreateInfo.pStages = shaderStages;
+                pipelineCreateInfo.pVertexInputState = &vertexInputInfo;
+                pipelineCreateInfo.pInputAssemblyState = &inputAssembly;
+                pipelineCreateInfo.pViewportState = &viewportState;
+                pipelineCreateInfo.pRasterizationState = &rasterizer;
+                pipelineCreateInfo.pMultisampleState = &multisampling;
+                pipelineCreateInfo.pDepthStencilState = &depthCullState.depthState;
+                pipelineCreateInfo.pColorBlendState = &colorBlending;
+                pipelineCreateInfo.pDynamicState = &dynamicState;
+                pipelineCreateInfo.layout = pipelineLayout;
+                pipelineCreateInfo.renderPass = VK_NULL_HANDLE; // for dynamic rendering
+                pipelineCreateInfo.subpass = 0;
+                pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+                pipelineCreateInfo.basePipelineIndex = -1;
+
+                result = vkCreateGraphicsPipelines(g_vulkanContextResources.device,
+                    VK_NULL_HANDLE,
+                    1,
+                    &pipelineCreateInfo,
+                    nullptr,
+                    &graphicsPipeline);
+
+                if (result != VK_SUCCESS)
+                {
+                    Core::Utility::LogMsg("Platform", "Failed to create Vulkan graphics pipeline!", Core::Utility::LogSeverity::eCritical);
+                    TINKER_ASSERT(0);
+                }
             }
         }
     }
@@ -459,10 +465,10 @@ bool CreateGraphicsPipeline(
     vkDestroyShaderModule(g_vulkanContextResources.device, vertexShaderModule, nullptr);
     vkDestroyShaderModule(g_vulkanContextResources.device, fragmentShaderModule, nullptr);
 
-    return true;
+    return result == VK_SUCCESS;
 }
 
-void DestroyGraphicsPipeline(uint32 shaderID)
+DESTROY_GRAPHICS_PIPELINE(DestroyGraphicsPipeline)
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
@@ -487,6 +493,97 @@ void DestroyGraphicsPipeline(uint32 shaderID)
     }
 }
 
+CREATE_COMPUTE_PIPELINE(CreateComputePipeline)
+{
+    VkShaderModule computeShaderModule = VK_NULL_HANDLE;
+
+    const uint32 numStages = 1;
+    if (numComputeShaderBytes > 0)
+    {
+        computeShaderModule = CreateShaderModule((const char*)computeShaderCode, numComputeShaderBytes, g_vulkanContextResources.device);
+    }
+
+    // Programmable shader stages
+    VkPipelineShaderStageCreateInfo shaderStage = {};
+    shaderStage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    shaderStage.module = computeShaderModule;
+    shaderStage.pName = "main";
+
+    // Descriptor layouts
+    TINKER_ASSERT(numDescriptorLayoutHandles <= MAX_DESCRIPTOR_SETS_PER_SHADER);
+
+    VkDescriptorSetLayout descriptorSetLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    for (uint32 uiDesc = 0; uiDesc < numDescriptorLayoutHandles; ++uiDesc)
+    {
+        uint32 descLayoutID = descriptorLayoutHandles[uiDesc];
+        if (descLayoutID != DESCLAYOUT_ID_MAX)
+            descriptorSetLayouts[uiDesc] = g_vulkanContextResources.descLayouts[descLayoutID].layout;
+    }
+
+    VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {};
+    pipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutCreateInfo.setLayoutCount = numDescriptorLayoutHandles;
+    pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts;
+
+    VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.computePipelineLayout[shaderID];
+    VkResult result = vkCreatePipelineLayout(g_vulkanContextResources.device,
+        &pipelineLayoutCreateInfo,
+        nullptr,
+        &pipelineLayout);
+
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create Vulkan compute pipeline layout!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+    else
+    {
+        VkComputePipelineCreateInfo pipelineCreateInfo = {};
+        pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipelineCreateInfo.layout = pipelineLayout;
+        pipelineCreateInfo.stage = shaderStage;
+
+        VkPipeline& computePipeline = g_vulkanContextResources.psoPermutations.computePipeline[shaderID];
+
+        result = vkCreateComputePipelines(g_vulkanContextResources.device,
+            VK_NULL_HANDLE,
+            1,
+            &pipelineCreateInfo,
+            nullptr,
+            &computePipeline);
+
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan compute pipeline!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+        }
+    }
+
+    vkDestroyShaderModule(g_vulkanContextResources.device, computeShaderModule, nullptr);
+
+    return result == VK_SUCCESS;
+}
+
+DESTROY_COMPUTE_PIPELINE(DestroyComputePipeline)
+{
+    vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
+
+    VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.computePipelineLayout[shaderID];
+    if (pipelineLayout != VK_NULL_HANDLE)
+    {
+        vkDestroyPipelineLayout(g_vulkanContextResources.device, pipelineLayout, nullptr);
+        pipelineLayout = VK_NULL_HANDLE;
+    }
+
+    VkPipeline& computePipeline = g_vulkanContextResources.psoPermutations.computePipeline[shaderID];
+    if (computePipeline != VK_NULL_HANDLE)
+    {
+        vkDestroyPipeline(g_vulkanContextResources.device, computePipeline, nullptr);
+        computePipeline = VK_NULL_HANDLE;
+    }
+}
+
 void DestroyAllPSOPerms()
 {
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
@@ -494,6 +591,11 @@ void DestroyAllPSOPerms()
     for (uint32 shaderID = 0; shaderID < VulkanContextResources::eMaxShaders; ++shaderID)
     {
         DestroyGraphicsPipeline(shaderID);
+    }
+
+    for (uint32 shaderID = 0; shaderID < VulkanContextResources::eMaxShadersCompute; ++shaderID)
+    {
+        DestroyComputePipeline(shaderID);
     }
 }
 
@@ -554,10 +656,11 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
     return ResourceHandle(newResourceHandle);
 }
 
-static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint32 height, uint32 numArrayEles, const char* debugLabel)
+static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 imageUsageFlags, uint32 width, uint32 height, uint32 numArrayEles, const char* debugLabel)
 {
     uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
     TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
+    TINKER_ASSERT(imageUsageFlags);
     VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
 
@@ -577,29 +680,29 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     imageCreateInfo.format = GetVkImageFormat(imageFormat);
     imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     
-    // TODO: collapse this switch into an array of data
-    switch (imageFormat)
+    if (imageUsageFlags & ImageUsageFlags::RenderTarget)
     {
-        case ImageFormat::BGRA8_SRGB:
-        case ImageFormat::RGBA8_SRGB:
-        {
-            imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; // TODO: make this a parameter?
-            break;
-        }
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
 
-        case ImageFormat::Depth_32F:
-        {
-            imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-            break;
-        }
+    if (imageUsageFlags & ImageUsageFlags::DepthStencil)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
 
-        case ImageFormat::Invalid:
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            break;
-        }
+    if (imageUsageFlags & ImageUsageFlags::UAV)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
+
+    if (imageUsageFlags & ImageUsageFlags::TransferDst)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+
+    if (imageUsageFlags & ImageUsageFlags::Sampled)
+    {
+        imageCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
 
     VkResult result = vkCreateImage(g_vulkanContextResources.device, &imageCreateInfo, nullptr, &newResource->image);
@@ -630,6 +733,7 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 width, uint
     // TODO: collapse this switch into an array of data
     switch (imageFormat)
     {
+        case ImageFormat::RGBA16_Float:
         case ImageFormat::BGRA8_SRGB:
         case ImageFormat::RGBA8_SRGB:
         {
@@ -676,7 +780,7 @@ ResourceHandle CreateResource(const ResourceDesc& resDesc)
 
         case ResourceType::eImage2D:
         {
-            newHandle = CreateImageResource(resDesc.imageFormat, resDesc.dims.x, resDesc.dims.y, resDesc.arrayEles, resDesc.debugLabel);
+            newHandle = CreateImageResource(resDesc.imageFormat, resDesc.imageUsageFlags, resDesc.dims.x, resDesc.dims.y, resDesc.arrayEles, resDesc.debugLabel);
             break;
         }
 
@@ -809,7 +913,7 @@ bool CreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* d
             descLayoutBinding[numBindings].descriptorType = GetVkDescriptorType(type);
             descLayoutBinding[numBindings].descriptorCount = descriptorLayout->params[uiDesc].amount;
             descLayoutBinding[numBindings].binding = uiDesc;
-            descLayoutBinding[numBindings].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+            descLayoutBinding[numBindings].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
             descLayoutBinding[numBindings].pImmutableSamplers = nullptr;
             ++numBindings;
         }

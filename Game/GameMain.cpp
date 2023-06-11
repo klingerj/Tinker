@@ -11,8 +11,9 @@
 #include "RenderPasses/RenderPass.h"
 #include "RenderPasses/ZPrepassRenderPass.h"
 #include "RenderPasses/ForwardRenderPass.h"
+#include "RenderPasses/ComputeCopyRenderPass.h"
 #include "RenderPasses/DebugUIRenderPass.h"
-#include "RenderPasses/SwapChainBlitRenderPass.h"
+#include "RenderPasses/ToneMappingRenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
 #include "Raytracing.h"
@@ -156,8 +157,11 @@ static void InitDemo()
 
 static void DestroyDescriptors()
 {
-    Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainBlitDescHandle);
-    gameGraphicsData.m_swapChainBlitDescHandle = Graphics::DefaultDescHandle_Invalid;
+    Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
+    gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
+
+    Graphics::DestroyDescriptor(gameGraphicsData.m_computeCopyDescHandle);
+    gameGraphicsData.m_computeCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
 
     Graphics::DestroyDescriptor(gameGraphicsData.m_DescData_Instance);
     gameGraphicsData.m_DescData_Instance = Graphics::DefaultDescHandle_Invalid;
@@ -172,12 +176,12 @@ static void DestroyDescriptors()
     Graphics::DestroyAllDescriptors(); // destroys descriptor pool
 }
 
-static void WriteSwapChainBlitResources()
+static void WriteToneMappingResources()
 {
-    Graphics::DescriptorSetDataHandles blitHandles = {};
-    blitHandles.InitInvalid();
-    blitHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_swapChainBlitDescHandle, &blitHandles);
+    Graphics::DescriptorSetDataHandles toneMapHandles = {};
+    toneMapHandles.InitInvalid();
+    toneMapHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
@@ -187,11 +191,24 @@ static void WriteSwapChainBlitResources()
     Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, defaultQuad.m_descriptor, &vbHandles);
 }
 
+static void WriteComputeCopyResources()
+{
+    Graphics::DescriptorSetDataHandles computeHandles = {};
+    computeHandles.InitInvalid();
+    computeHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
+    computeHandles.handles[1] = gameGraphicsData.m_computeColorHandle;
+    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_COMPUTE_COPY, gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
+}
+
 static void CreateAllDescriptors()
 {
-    // Swap chain blit
-    gameGraphicsData.m_swapChainBlitDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
-    WriteSwapChainBlitResources();
+    // Tone mapping
+    gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
+    WriteToneMappingResources();
+
+    // Compute copy
+    gameGraphicsData.m_computeCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_COMPUTE_COPY);
+    WriteComputeCopyResources();
 
     // Descriptor data
     Graphics::ResourceDesc desc;
@@ -226,13 +243,20 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.resourceType = Graphics::ResourceType::eImage2D;
     desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
-    desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
+    desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::TransferDst | Graphics::ImageUsageFlags::Sampled | Graphics::ImageUsageFlags::UAV;
     desc.debugLabel = "MainViewColor";
     gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
 
     desc.imageFormat = Graphics::ImageFormat::Depth_32F;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::DepthStencil | Graphics::ImageUsageFlags::TransferDst;
     desc.debugLabel = "MainViewDepth";
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
+
+    desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::UAV | Graphics::ImageUsageFlags::Sampled;
+    desc.debugLabel = "MainViewColor_ComputeCopy";
+    gameGraphicsData.m_computeColorHandle = Graphics::CreateResource(desc);
 
     gameRenderPassList[eRenderPass_ZPrePass].Init();
     gameRenderPassList[eRenderPass_ZPrePass].numColorRTs = 0;
@@ -251,6 +275,16 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
     gameRenderPassList[eRenderPass_MainView].ExecuteFn = ForwardRenderPass::Execute;
 
+    gameRenderPassList[eRenderPass_ComputeCopy].Init();
+    gameRenderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] = gameGraphicsData.m_computeColorHandle;
+    gameRenderPassList[eRenderPass_ComputeCopy].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_ComputeCopy].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_ComputeCopy].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_ComputeCopy].debugLabel = "Compute Copy";
+    gameRenderPassList[eRenderPass_ComputeCopy].ExecuteFn = ComputeCopyRenderPass::Execute;
+
     gameRenderPassList[eRenderPass_DebugUI].Init();
     gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;
     gameRenderPassList[eRenderPass_DebugUI].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
@@ -260,14 +294,14 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_DebugUI].debugLabel = "Debug UI";
     gameRenderPassList[eRenderPass_DebugUI].ExecuteFn = DebugUIRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_SwapChainBlit].Init();
-    gameRenderPassList[eRenderPass_SwapChainBlit].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_SwapChainBlit].colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
-    gameRenderPassList[eRenderPass_SwapChainBlit].depthRT = Graphics::DefaultResHandle_Invalid;
-    gameRenderPassList[eRenderPass_SwapChainBlit].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_SwapChainBlit].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_SwapChainBlit].debugLabel = "Swap Chain Blit";
-    gameRenderPassList[eRenderPass_SwapChainBlit].ExecuteFn = SwapChainBlitRenderPass::Execute;
+    gameRenderPassList[eRenderPass_ToneMapping].Init();
+    gameRenderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
+    gameRenderPassList[eRenderPass_ToneMapping].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_ToneMapping].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_ToneMapping].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_ToneMapping].debugLabel = "Tone Mapping";
+    gameRenderPassList[eRenderPass_ToneMapping].ExecuteFn = ToneMappingRenderPass::Execute;
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
@@ -421,20 +455,20 @@ GAME_UPDATE(GameUpdate)
 
     // Timestamp start of frame
     {
-        Graphics::GraphicsCommand* command = &g_graphicsCommandStream.m_graphicsCommands[g_graphicsCommandStream.m_numCommands];
-        command->CmdTimestamp("Begin Frame", "Timestamp", true);
-        ++g_graphicsCommandStream.m_numCommands;
+        g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
     }
     
     // Run the "render graph"
-    for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
     {
-        GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
-        currRP.ExecuteFn(&currRP, &g_graphicsCommandStream);
+        //TIMED_SCOPED_BLOCK("Graphics command stream recording");
 
-        Graphics::GraphicsCommand* command = &g_graphicsCommandStream.m_graphicsCommands[g_graphicsCommandStream.m_numCommands];
-        command->CmdTimestamp(currRP.debugLabel);
-        ++g_graphicsCommandStream.m_numCommands;
+        for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
+        {
+            GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
+            currRP.ExecuteFn(&currRP, &g_graphicsCommandStream);
+
+            g_graphicsCommandStream.CmdTimestamp(currRP.debugLabel);
+        }
     }
 
     // Process recorded graphics command stream
@@ -466,6 +500,7 @@ static void DestroyWindowResizeDependentResources()
 {
     Graphics::DestroyResource(gameGraphicsData.m_rtColorHandle);
     Graphics::DestroyResource(gameGraphicsData.m_rtDepthHandle);
+    Graphics::DestroyResource(gameGraphicsData.m_computeColorHandle);
 }
 
 extern "C"
@@ -490,7 +525,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
         g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
         CreateGameRenderingResources(newWindowWidth, newWindowHeight);
-        WriteSwapChainBlitResources();
+        WriteToneMappingResources();
     }
 }
 
