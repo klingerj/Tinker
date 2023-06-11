@@ -548,8 +548,6 @@ void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colo
     renderingInfo.pDepthAttachment = HasDepth ? &depthAttachment : nullptr;
     renderingInfo.pStencilAttachment = nullptr;
 
-    DbgStartMarker(commandBuffer, debugLabel);
-
     vkCmdBeginRendering(commandBuffer, &renderingInfo);
 }
 
@@ -557,7 +555,6 @@ void RecordCommandRenderPassEnd(bool immediateSubmit)
 {
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
     vkCmdEndRendering(commandBuffer);
-    DbgEndMarker(commandBuffer);
 }
 
 void RecordCommandTransitionLayout(ResourceHandle imageHandle,
@@ -848,6 +845,18 @@ void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint3
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
     vkCmdResetQueryPool(commandBuffer, g_vulkanContextResources.queryPoolTimestamp, currQueryOffset, GPU_TIMESTAMP_NUM_MAX);
+}
+
+void RecordCommandDebugMarkerStart(bool immediateSubmit, const char* debugLabel)
+{
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+    DbgStartMarker(commandBuffer, debugLabel);
+}
+
+void RecordCommandDebugMarkerEnd(bool immediateSubmit)
+{
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+    DbgEndMarker(commandBuffer);
 }
 
 }
