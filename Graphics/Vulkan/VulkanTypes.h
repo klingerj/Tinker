@@ -200,6 +200,7 @@ const VkFormat& GetVkImageFormat(uint32 gameImageFormat);
 const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType);
 VkBufferUsageFlags GetVkBufferUsageFlags(uint32 bufferUsage);
 VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 memUsage);
+VkPipelineBindPoint GetVkBindPoint(uint32 bindPoint);
 
 }
 }

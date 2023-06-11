@@ -113,7 +113,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
                             if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
                             {
-                                RecordCommandBindDescriptor(currentShaderID, false, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                                RecordCommandBindDescriptor(currentShaderID, BindPoint::eGraphics, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
                             }
                         }
                     }
@@ -126,7 +126,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
                 case GraphicsCommand::eDispatch:
                 {
-                    // TODO: currently binds pso unconditionally
+                    // currently binds pso unconditionally, but it's probably fine 
                     RecordCommandBindComputeShader(currentCmd.m_shader, immediateSubmit);
 
                     for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
@@ -137,7 +137,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                             
                             if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
                             {
-                                RecordCommandBindDescriptor(currentCmd.m_shader, true, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                                RecordCommandBindDescriptor(currentCmd.m_shader, BindPoint::eCompute, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
                             }
                         }
                     }

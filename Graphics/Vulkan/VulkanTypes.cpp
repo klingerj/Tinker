@@ -165,6 +165,7 @@ static VkFormat                              VulkanImageFormats    [ImageFormat:
 static VkDescriptorType                      VulkanDescriptorTypes [DescriptorType::eMax] = {};
 static VkBufferUsageFlags                    VulkanBufferUsageFlags[BufferUsage::eMax]    = {};
 static VkMemoryPropertyFlagBits              VulkanMemPropertyFlags[BufferUsage::eMax]    = {};
+static VkPipelineBindPoint                   VulkanBindPoints      [BindPoint::eMax]      = {};
 
 void InitVulkanDataTypesPerEnum()
 {
@@ -247,6 +248,9 @@ void InitVulkanDataTypesPerEnum()
     VulkanMemPropertyFlags[BufferUsage::eTransientIndex] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VulkanMemPropertyFlags[BufferUsage::eStaging] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VulkanMemPropertyFlags[BufferUsage::eUniform] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    
+    VulkanBindPoints[BindPoint::eGraphics] = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    VulkanBindPoints[BindPoint::eCompute] = VK_PIPELINE_BIND_POINT_COMPUTE;
 }
 
 const VkPipelineColorBlendAttachmentState& GetVkBlendState(uint32 gameBlendState)
@@ -289,6 +293,12 @@ VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 bufferUsage)
 {
     TINKER_ASSERT(bufferUsage < BufferUsage::eMax);
     return VulkanMemPropertyFlags[bufferUsage];
+}
+
+VkPipelineBindPoint GetVkBindPoint(uint32 bindPoint)
+{
+    TINKER_ASSERT(bindPoint < BindPoint::eMax);
+    return VulkanBindPoints[bindPoint];
 }
 
 }
