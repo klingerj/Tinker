@@ -109,13 +109,40 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     {
                         if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])
                         {
-                            RecordCommandBindDescriptor(currentShaderID, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            currDescriptors[uiDesc] = currentCmd.m_descriptors[uiDesc];
+
+                            if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
+                            {
+                                RecordCommandBindDescriptor(currentShaderID, BindPoint::eGraphics, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            }
                         }
                     }
 
                     RecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
                         currentCmd.m_numInstances, currentCmd.m_vertOffset, currentCmd.m_indexOffset,
                         currentCmd.debugLabel, immediateSubmit);
+                    break;
+                }
+
+                case GraphicsCommand::eDispatch:
+                {
+                    // currently binds pso unconditionally, but it's probably fine 
+                    RecordCommandBindComputeShader(currentCmd.m_shader, immediateSubmit);
+
+                    for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
+                    {
+                        if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])
+                        {
+                            currDescriptors[uiDesc] = currentCmd.m_descriptors[uiDesc];
+                            
+                            if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
+                            {
+                                RecordCommandBindDescriptor(currentCmd.m_shader, BindPoint::eCompute, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                            }
+                        }
+                    }
+
+                    RecordCommandDispatch(currentCmd.m_threadGroupsX, currentCmd.m_threadGroupsY, currentCmd.m_threadGroupsZ, currentCmd.debugLabel, immediateSubmit);
                     break;
                 }
 

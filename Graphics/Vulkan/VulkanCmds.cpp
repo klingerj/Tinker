@@ -225,6 +225,23 @@ void WriteDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, 
                         break;
                     }
 
+                    case DescriptorType::eStorageImage:
+                    {
+                        VkImageView* imageView = &resChain->resourceChain[resIndex].imageView; // Should be index 0 for images
+
+                        descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+                        descImageInfo[descriptorCount].imageView = *imageView;
+                        descImageInfo[descriptorCount].sampler = VK_NULL_HANDLE;
+
+                        descSetWrites[descriptorCount].dstSet = *descriptorSet;
+                        descSetWrites[descriptorCount].dstBinding = descriptorCount;
+                        descSetWrites[descriptorCount].dstArrayElement = 0;
+                        descSetWrites[descriptorCount].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                        descSetWrites[descriptorCount].descriptorCount = 1;
+                        descSetWrites[descriptorCount].pImageInfo = &descImageInfo[descriptorCount];
+                        break;
+                    }
+
                     default:
                     {
                         break;
@@ -356,8 +373,19 @@ void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, 
     vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
 }
 
+void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, const char* debugLabel, bool immediateSubmit)
+{
+    TINKER_ASSERT(threadGroupX > 0);
+    TINKER_ASSERT(threadGroupY > 0);
+    TINKER_ASSERT(threadGroupZ > 0);
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+    vkCmdDispatch(commandBuffer, threadGroupX, threadGroupY, threadGroupZ);
+}
+
 void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit)
 {
+    TINKER_ASSERT(shaderID < SHADER_ID_MAX);
+
     const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
     TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
 
@@ -366,10 +394,25 @@ void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthSta
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
-void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
+void RecordCommandBindComputeShader(uint32 shaderID, bool immediateSubmit)
 {
+    TINKER_ASSERT(shaderID < SHADER_ID_COMPUTE_MAX);
+
+    const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.computePipeline[shaderID];
+    TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
+
+    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+}
+
+void RecordCommandBindDescriptor(uint32 shaderID, uint32 bindPoint, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
+{
+    TINKER_ASSERT((shaderID < SHADER_ID_MAX && bindPoint == BindPoint::eGraphics) || (shaderID < SHADER_ID_COMPUTE_MAX && bindPoint == BindPoint::eCompute));
+    TINKER_ASSERT(bindPoint < BindPoint::eMax);
     TINKER_ASSERT(descSetHandle != DefaultDescHandle_Invalid);
-    const VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
+    const VkPipelineLayout pipelineLayout = bindPoint == BindPoint::eGraphics ? g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID] :
+        bindPoint == BindPoint::eCompute ? g_vulkanContextResources.psoPermutations.computePipelineLayout[shaderID] : VK_NULL_HANDLE;
     TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
@@ -377,7 +420,7 @@ void RecordCommandBindDescriptor(uint32 shaderID, const DescriptorHandle descSet
     VkDescriptorSet* descSet =
         &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, GetVkBindPoint(bindPoint), pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
 }
 
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
@@ -581,6 +624,14 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
             break;
         }
 
+        case ImageLayout::eGeneral:
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+            break;
+        }
+
         default:
         {
             Core::Utility::LogMsg("Platform", "Invalid dst image resource layout specified for layout transition!", Core::Utility::LogSeverity::eCritical);
@@ -601,7 +652,7 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         case ImageLayout::eShaderRead:
         {
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
         }
 
@@ -615,7 +666,7 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         case ImageLayout::eDepthOptimal:
         {
             barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            dstStage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+            dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
             break;
         }
 
@@ -623,6 +674,13 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         {
             barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
             dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            break;
+        }
+
+        case ImageLayout::eGeneral:
+        {
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+            dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
         }
 
@@ -658,6 +716,7 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
 
         switch (memResourceChain->resDesc.imageFormat)
         {
+            case ImageFormat::RGBA16_Float:
             case ImageFormat::BGRA8_SRGB:
             case ImageFormat::RGBA8_SRGB:
             {
@@ -721,6 +780,7 @@ void RecordCommandClearImage(ResourceHandle imageHandle,
 
     switch (imageFormat)
     {
+        case ImageFormat::RGBA16_Float:
         case ImageFormat::BGRA8_SRGB:
         case ImageFormat::RGBA8_SRGB:
         {

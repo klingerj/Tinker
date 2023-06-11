@@ -106,6 +106,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         desc.resourceType = Tk::Graphics::ResourceType::eImage2D;
         desc.arrayEles = 1;
         desc.imageFormat = Tk::Graphics::ImageFormat::RGBA8_SRGB;
+        desc.imageUsageFlags = Tk::Graphics::ImageUsageFlags::Sampled | Tk::Graphics::ImageUsageFlags::TransferDst;
         desc.dims = v3ui(width, height, 1);
         desc.debugLabel = "Imgui font image";
         fontTexture = Tk::Graphics::CreateResource(desc);

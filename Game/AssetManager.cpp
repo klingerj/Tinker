@@ -669,6 +669,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
         desc.arrayEles = 1;
 
         desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB; // TODO: don't hard code this
+        desc.imageUsageFlags = Tk::Graphics::ImageUsageFlags::Sampled | Tk::Graphics::ImageUsageFlags::TransferDst;
         desc.dims = m_allTextureMetadata[uiAsset].m_dims;
         m_allTextureGraphicsHandles[uiAsset] = Graphics::CreateResource(desc);
 

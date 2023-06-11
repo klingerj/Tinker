@@ -14,10 +14,11 @@
 
 #define VULKAN_RESOURCE_POOL_MAX 512
 
-#define VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES 3
+#define VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES 4
 #define VULKAN_DESCRIPTOR_POOL_MAX_UNIFORM_BUFFERS 64
-#define VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES 64
+#define VULKAN_DESCRIPTOR_POOL_MAX_SAMPLED_IMAGES  64
 #define VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS 64
+#define VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_IMAGES  64
 
 #define VULKAN_MAX_RENDERTARGETS MAX_MULTIPLE_RENDERTARGETS
 #define VULKAN_MAX_RENDERTARGETS_WITH_DEPTH VULKAN_MAX_RENDERTARGETS + 1 // +1 for depth
@@ -142,15 +143,19 @@ struct VulkanContextResources
 
     enum
     {
-        eMaxShaders      = SHADER_ID_MAX,
-        eMaxBlendStates  = BlendState::eMax,
-        eMaxDepthStates  = DepthState::eMax,
-        eMaxDescLayouts  = DESCLAYOUT_ID_MAX,
+        eMaxShaders        = SHADER_ID_MAX,
+        eMaxShadersCompute = SHADER_ID_COMPUTE_MAX,
+        eMaxBlendStates    = BlendState::eMax,
+        eMaxDepthStates    = DepthState::eMax,
+        eMaxDescLayouts    = DESCLAYOUT_ID_MAX,
     };
     struct PSOPerms
     {
         VkPipeline       graphicsPipeline[eMaxShaders][eMaxBlendStates][eMaxDepthStates];
         VkPipelineLayout pipelineLayout[eMaxShaders];
+
+        VkPipeline       computePipeline[eMaxShadersCompute];
+        VkPipelineLayout computePipelineLayout[eMaxShadersCompute];
     } psoPermutations;
     VulkanDescriptorLayout descLayouts[eMaxDescLayouts];
 
@@ -195,6 +200,7 @@ const VkFormat& GetVkImageFormat(uint32 gameImageFormat);
 const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType);
 VkBufferUsageFlags GetVkBufferUsageFlags(uint32 bufferUsage);
 VkMemoryPropertyFlags GetVkMemoryPropertyFlags(uint32 memUsage);
+VkPipelineBindPoint GetVkBindPoint(uint32 bindPoint);
 
 }
 }
