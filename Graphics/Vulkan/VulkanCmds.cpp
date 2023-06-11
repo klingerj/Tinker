@@ -406,10 +406,13 @@ void RecordCommandBindComputeShader(uint32 shaderID, bool immediateSubmit)
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 }
 
-void RecordCommandBindDescriptor(uint32 shaderID, bool compute, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
+void RecordCommandBindDescriptor(uint32 shaderID, uint32 bindPoint, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
 {
+    TINKER_ASSERT((shaderID < SHADER_ID_MAX && bindPoint == BindPoint::eGraphics) || (shaderID < SHADER_ID_COMPUTE_MAX && bindPoint == BindPoint::eCompute));
+    TINKER_ASSERT(bindPoint < BindPoint::eMax);
     TINKER_ASSERT(descSetHandle != DefaultDescHandle_Invalid);
-    const VkPipelineLayout& pipelineLayout = compute ? g_vulkanContextResources.psoPermutations.computePipelineLayout[shaderID] : g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
+    const VkPipelineLayout pipelineLayout = bindPoint == BindPoint::eGraphics ? g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID] :
+        bindPoint == BindPoint::eCompute ? g_vulkanContextResources.psoPermutations.computePipelineLayout[shaderID] : VK_NULL_HANDLE;
     TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
     VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
@@ -417,7 +420,7 @@ void RecordCommandBindDescriptor(uint32 shaderID, bool compute, const Descriptor
     VkDescriptorSet* descSet =
         &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
 
-    vkCmdBindDescriptorSets(commandBuffer, compute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, GetVkBindPoint(bindPoint), pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
 }
 
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,

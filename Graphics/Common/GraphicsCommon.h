@@ -127,6 +127,16 @@ namespace DepthCompareOp
     };
 }
 
+namespace BindPoint
+{
+    enum : uint32
+    {
+        eGraphics = 0,
+        eCompute,
+        eMax
+    };
+}
+
 extern uint32 MultiBufferedStatusFromBufferUsage[BufferUsage::eMax];
 inline uint32 IsBufferUsageMultiBuffered(uint32 bufferUsage)
 {
@@ -552,7 +562,7 @@ void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, 
 void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, const char* debugLabel, bool immediateSubmit);
 void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit);
 void RecordCommandBindComputeShader(uint32 shaderID, bool immediateSubmit);
-void RecordCommandBindDescriptor(uint32 shaderID, bool compute, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit);
+void RecordCommandBindDescriptor(uint32 shaderID, uint32 bindPoint, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit);
 void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
     const char* debugLabel, bool immediateSubmit);
 void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT,
