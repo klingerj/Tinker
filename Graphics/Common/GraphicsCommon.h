@@ -21,9 +21,11 @@ namespace DescriptorType
     enum : uint32
     {
         eBuffer = 0,
+        eDynamicBuffer,
         eSampledImage,
         eSSBO,
         eStorageImage,
+        eArrayOfTextures,
         eMax
     };
 }
@@ -287,6 +289,13 @@ typedef struct descriptor_set_data_handles
     }
 } DescriptorSetDataHandles;
 
+// resource entries in a bindless descriptor array 
+typedef struct descriptor_array_resource_entry
+{
+    ResourceHandle res;
+    uint32 index;
+} DescArrayResEntry;
+
 // Important graphics defines
 #define MAX_FRAMES_IN_FLIGHT 2
 #define MAX_MULTIPLE_RENDERTARGETS 8u
@@ -516,14 +525,21 @@ struct GraphicsCommandStream
     }
 };
 
-// TODO: move all this, and also autogenerate this eventually?
 // TODO: don't use them as uint32's 
 // IDs must be uniquely named and have their id ascend monotonically from 0
 enum
 {
-    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX = 0,
+    DESCLAYOUT_ID_CB_GLOBAL = 0,
+    DESCLAYOUT_ID_CB_PER_VIEW,
+    DESCLAYOUT_ID_CB_PER_MATERIAL,
+    DESCLAYOUT_ID_CB_PER_INSTANCE,
+
+    DESCLAYOUT_ID_TEXTURES_UINT,
+    DESCLAYOUT_ID_TEXTURES_FLOAT,
+
+    // TODO: All of these should be able to get deleted after going bindless 
+    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX,
     DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS,
-    DESCLAYOUT_ID_VIEW_GLOBAL,
     DESCLAYOUT_ID_ASSET_INSTANCE,
     DESCLAYOUT_ID_ASSET_VBS,
     DESCLAYOUT_ID_POSONLY_VBS,
