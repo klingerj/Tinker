@@ -28,8 +28,19 @@ struct DescInstance
 #define UVDataType float2
 #define NormalDataType float4
 
-[[vk::binding(0, 0)]] cbuffer Global   { DescGlobal GlobalData; };
-[[vk::binding(0, 1)]] cbuffer Instance { DescInstance InstanceData; };
+[[vk::binding(0, 0)]] cbuffer Global      { DescGlobal GlobalData; };
+[[vk::binding(1, 0)]] cbuffer PerView     { DescPerView ViewData; };
+[[vk::binding(2, 0)]] cbuffer PerMaterial { DescPerMaterial MatData; };
+[[vk::binding(3, 0)]] cbuffer PerInstance { DescPerInstance InstanceData; };
+
+//[[vk::binding(0, 1)]] ByteAddressBuffer BindlessBuffers[];
+//[[vk::binding(1, 1)]] ByteAddressBuffer BindlessBuffers[];
+
+[[vk::binding(0, 1)]] Texture2D BindlessTextures[];
+[[vk::binding(0, 1)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different spot or desc set 
+//[[vk::binding(1, 1)]] Texture2D BindlessTexturesUint[];
+//TODO: 3D textures and storage images 
+
 [[vk::binding(0, 2)]] StructuredBuffer<PositionDataType> PositionData;
 [[vk::binding(1, 2)]] StructuredBuffer<UVDataType>       UVData;
 [[vk::binding(2, 2)]] StructuredBuffer<NormalDataType>   NormalData;

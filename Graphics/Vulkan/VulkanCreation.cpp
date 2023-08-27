@@ -870,12 +870,22 @@ DescriptorHandle CreateDescriptor(uint32 descriptorLayoutID)
         CreateDescriptorPool();
     }
 
+    const VulkanDescriptorLayout& vulkanDescriptorLayout = g_vulkanContextResources.descLayouts[descriptorLayoutID];
+    const VkDescriptorSetLayout& descriptorSetLayout = vulkanDescriptorLayout.layout;
+    TINKER_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
+
+    for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+    {
+        if (vulkanDescriptorLayout.bindings[uiDesc].type == DescriptorType::eArrayOfTextures)
+        {
+            vulkanDescriptorLayout.descriptorArrayHandles[uiDesc].Init(VULKAN_DESCRIPTOR_BINDLESS_ARRAY_LIMIT, 16);
+        }
+    }
+
     uint32 newDescriptorHandle = g_vulkanContextResources.vulkanDescriptorResourcePool.Alloc();
 
     for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
     {
-        const VkDescriptorSetLayout& descriptorSetLayout = g_vulkanContextResources.descLayouts[descriptorLayoutID].layout;
-        TINKER_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
 
         if (descriptorSetLayout != VK_NULL_HANDLE)
         {
@@ -885,9 +895,9 @@ DescriptorHandle CreateDescriptor(uint32 descriptorLayoutID)
             descSetAllocInfo.descriptorSetCount = 1;
             descSetAllocInfo.pSetLayouts = &descriptorSetLayout;
 
-            VkResult result = vkAllocateDescriptorSets(g_vulkanContextResources.device,
-                &descSetAllocInfo,
-                &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiImage].descriptorSet);
+            VulkanDescriptor& vulkanDescriptor = g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiImage];
+
+            VkResult result = vkAllocateDescriptorSets(g_vulkanContextResources.device, &descSetAllocInfo, &vulkanDescriptor.descriptorSet);
             if (result != VK_SUCCESS)
             {
                 Core::Utility::LogMsg("Platform", "Failed to create Vulkan descriptor set!", Core::Utility::LogSeverity::eCritical);
@@ -965,11 +975,21 @@ void DestroyAllDescLayouts()
 {
     for (uint32 desc = 0; desc < VulkanContextResources::eMaxDescLayouts; ++desc)
     {
-        VkDescriptorSetLayout& descLayout = g_vulkanContextResources.descLayouts[desc].layout;
+        VulkanDescriptorLayout& vulkanDescriptorLayout = g_vulkanContextResources.descLayouts[desc];
+        VkDescriptorSetLayout& descLayout = vulkanDescriptorLayout.layout;
         if (descLayout != VK_NULL_HANDLE)
         {
             vkDestroyDescriptorSetLayout(g_vulkanContextResources.device, descLayout, nullptr);
             descLayout = VK_NULL_HANDLE;
+        }
+
+        // Free pools of available handles for bindless descriptors 
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+        {
+            if (vulkanDescriptorLayout.bindings[uiDesc].type == DescriptorType::eArrayOfTextures)
+            {
+                vulkanDescriptorLayout.descriptorArrayHandles[uiDesc].ExplicitFree();
+            }
         }
     }
 }

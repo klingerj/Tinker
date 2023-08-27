@@ -20,6 +20,8 @@
 #define VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_BUFFERS 64
 #define VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_IMAGES  64
 
+#define VULKAN_DESCRIPTOR_BINDLESS_ARRAY_LIMIT 1024
+
 #define VULKAN_MAX_RENDERTARGETS MAX_MULTIPLE_RENDERTARGETS
 #define VULKAN_MAX_RENDERTARGETS_WITH_DEPTH VULKAN_MAX_RENDERTARGETS + 1 // +1 for depth
 
@@ -72,7 +74,7 @@ typedef struct vulkan_mem_resource
 typedef struct vulkan_descriptor_resource
 {
     VkDescriptorSet descriptorSet;
-} VulkanDescriptorResource;
+} VulkanDescriptor;
 
 // Chains of resources for multiple swap chain images
 typedef struct
@@ -83,13 +85,18 @@ typedef struct
 
 typedef struct
 {
-    VulkanDescriptorResource resourceChain[MAX_FRAMES_IN_FLIGHT];
+    VulkanDescriptor resourceChain[MAX_FRAMES_IN_FLIGHT];
 } VulkanDescriptorChain;
 
 typedef struct
 {
     VkDescriptorSetLayout layout;
     DescriptorLayout bindings;
+
+    // For bindless support, use pool allocation for resource handles. You can have a sparse arrangement 
+    // of resources in the descriptor. This pool is fully ignored for "ordinary" descriptors that aren't arrays
+    // of resources. 
+    Tk::Core::PoolAllocator<uint32> descriptorArrayHandles[MAX_BINDINGS_PER_SET];
 } VulkanDescriptorLayout;
 
 typedef struct
