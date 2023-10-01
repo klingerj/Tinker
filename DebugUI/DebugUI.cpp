@@ -91,7 +91,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         descDataHandles.handles[1] = uvBuffer;
         descDataHandles.handles[2] = colorBuffer;
 
-        Tk::Graphics::WriteDescriptor(Tk::Graphics::DESCLAYOUT_ID_IMGUI_VBS, vbDesc, &descDataHandles);
+        Tk::Graphics::WriteDescriptorSimple(Tk::Graphics::DESCLAYOUT_ID_IMGUI_VBS, vbDesc, &descDataHandles);
     }
 
     // Font texture
@@ -166,7 +166,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         Tk::Graphics::DescriptorSetDataHandles descHandles = {};
         descHandles.InitInvalid();
         descHandles.handles[0] = fontTexture;
-        Tk::Graphics::WriteDescriptor(Tk::Graphics::DESCLAYOUT_ID_IMGUI_TEX, texDesc, &descHandles);
+        Tk::Graphics::WriteDescriptorSimple(Tk::Graphics::DESCLAYOUT_ID_IMGUI_TEX, texDesc, &descHandles);
     }
 }
 

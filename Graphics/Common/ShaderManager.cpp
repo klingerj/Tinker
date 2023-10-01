@@ -163,9 +163,10 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
 
     // ZPrepass
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
+    descLayouts[3] = Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES;
     pipelineFormats.Init();
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
     bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, pipelineFormats, descLayouts, 3);
@@ -175,21 +176,22 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
 
     // Main view
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
+    descLayouts[3] = Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
-    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 3);
+    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 4);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
 
     // Animated poly
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_VIEW_GLOBAL;
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
@@ -217,9 +219,31 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     Tk::Graphics::DescriptorLayout descriptorLayout = {};
 
     descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eBuffer;
+    descriptorLayout.params[0].amount = 1;
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_CB_GLOBAL, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eArrayOfTextures;
+    descriptorLayout.params[0].amount = 2;
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
     bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
+    descriptorLayout.params[1].type = Tk::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[1].amount = 1;
+    descriptorLayout.params[2].type = Tk::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[2].amount = 1;
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
@@ -236,22 +260,6 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
     bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_TEX, &descriptorLayout);
-    TINKER_ASSERT(bOk);
-
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
-    descriptorLayout.params[0].amount = 1;
-    descriptorLayout.params[1].type = Tk::Graphics::DescriptorType::eSSBO;
-    descriptorLayout.params[1].amount = 1;
-    descriptorLayout.params[2].type = Tk::Graphics::DescriptorType::eSSBO;
-    descriptorLayout.params[2].amount = 1;
-    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &descriptorLayout);
-    TINKER_ASSERT(bOk);
-
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eBuffer;
-    descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_VIEW_GLOBAL, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();

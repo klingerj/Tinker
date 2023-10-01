@@ -84,10 +84,9 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
             if (!finalDrawCall) nextAssetID = scene->m_instances_sorted[uiInstance].m_assetID;
             if (finalDrawCall || nextAssetID != currentAssetID)
             {
-                // TODO: ideally this would be named
-                descriptors[2] = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID)->m_descriptor;
-
                 StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
+                
+                descriptors[2] = meshData->m_descriptor;
 
                 {
                     Tk::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];

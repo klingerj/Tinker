@@ -159,90 +159,96 @@ void UnmapResource(ResourceHandle handle)
     }
 }
 
-void WriteArrayDescriptor(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, DescArrayResEntry* entries, uint32 numEntries)
+void WriteDescriptorArray(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, uint32 numEntries, DescArrayResEntry* entries)
 {
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
 
-    for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         VkDescriptorSet* descriptorSet =
-            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiImage].descriptorSet;
+            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiFrame].descriptorSet;
+
+        // TODO: clean up the memory allocation here
 
         // Descriptor layout
         static Tk::Core::Vector<VkWriteDescriptorSet> descSetWrites;
-        descSetWrites.Reserve(VULKAN_DESCRIPTOR_BINDLESS_ARRAY_LIMIT);
+        descSetWrites.Reserve(DESCRIPTOR_BINDLESS_ARRAY_LIMIT);
         descSetWrites.Clear();
 
         // Desc set info data
-        VkDescriptorBufferInfo descBufferInfo[MAX_BINDINGS_PER_SET] = {};
-        VkDescriptorImageInfo descImageInfo[MAX_BINDINGS_PER_SET] = {};
+        static Tk::Core::Vector<VkDescriptorBufferInfo> descBufferInfo[MAX_BINDINGS_PER_SET];
+        static Tk::Core::Vector<VkDescriptorImageInfo> descImageInfo[MAX_BINDINGS_PER_SET];
+
+        for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
+        {
+            descBufferInfo[uiDesc].Clear();
+            descBufferInfo[uiDesc].Resize(DESCRIPTOR_BINDLESS_ARRAY_LIMIT);
+            descImageInfo[uiDesc].Clear();
+            descImageInfo[uiDesc].Resize(DESCRIPTOR_BINDLESS_ARRAY_LIMIT);
+        }
 
         for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
         {
             VkWriteDescriptorSet descSetWrite;
+            descSetWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descSetWrite.pNext = nullptr;
 
             for (uint32 uiEntry = 0; uiEntry < numEntries; ++uiEntry)
             {
-                descSetWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-
                 uint32 type = descLayout->params[uiDesc].type;
                 if (type != DescriptorType::eMax)
                 {
-                    VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(entries[uiEntry].res);
+                    VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(entries[uiEntry].res.m_hRes);
                     uint32 resIndex = 0;
 
                     switch (type)
                     {
-                        // TODO: buffers? 
+                        // TODO: buffers
 
                         case DescriptorType::eArrayOfTextures:
                         {
                             VkImageView* imageView = &resChain->resourceChain[resIndex].imageView; // Should be index 0 for images
 
-                            descImageInfo[descriptorCount].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                            descImageInfo[descriptorCount].imageView = *imageView;
-                            descImageInfo[descriptorCount].sampler = g_vulkanContextResources.linearSampler;
+                            descImageInfo[uiDesc][uiEntry].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                            descImageInfo[uiDesc][uiEntry].imageView = *imageView;
+                            descImageInfo[uiDesc][uiEntry].sampler = g_vulkanContextResources.linearSampler;
 
                             descSetWrite.dstSet = *descriptorSet;
-                            descSetWrite.dstBinding = descriptorCount;
+                            descSetWrite.dstBinding = uiDesc;
                             descSetWrite.dstArrayElement = entries[uiEntry].index;
                             descSetWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                             descSetWrite.descriptorCount = 1;
-                            descSetWrite.pImageInfo = &descImageInfo[descriptorCount];
+                            descSetWrite.pImageInfo = &descImageInfo[uiDesc][uiEntry];
                             break;
                         }
 
                         default:
                         {
-                            // Don't call this function on "normal" non-array descriptors, it's presumably for bindless. Use WriteDescriptorImmediate()
+                            // Don't call this function on "normal" non-array descriptors, it's presumably for bindless. Use WriteDescriptorSimple()
                             TINKER_ASSERT(0);
                             break;
                         }
                     }
                     descSetWrites.PushBackRaw(descSetWrite);
                 }
-                else
-                {
-                    TINKER_ASSERT(0); // Invalid descriptor type
-                }
             }
         }
 
-        if (descriptorCount > 0)
+        if (numEntries > 0)
         {
             vkUpdateDescriptorSets(g_vulkanContextResources.device, descSetWrites.Size(), &descSetWrites[0], 0, nullptr);
         }
     }
 }
 
-void WriteDescriptorImmediate(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
+void WriteDescriptorSimple(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 {
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
 
-    for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         VkDescriptorSet* descriptorSet =
-            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiImage].descriptorSet;
+            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiFrame].descriptorSet;
 
         // Descriptor layout
         VkWriteDescriptorSet descSetWrites[MAX_BINDINGS_PER_SET] = {};
@@ -267,7 +273,7 @@ void WriteDescriptorImmediate(uint32 descriptorLayoutID, DescriptorHandle descSe
                     case DescriptorType::eBuffer:
                     case DescriptorType::eSSBO:
                     {
-                        resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiImage : 0u;
+                        resIndex = IsBufferUsageMultiBuffered(resChain->resDesc.bufferUsage) ? uiFrame : 0u;
 
                         VkBuffer* buffer = &resChain->resourceChain[resIndex].buffer;
 
@@ -336,10 +342,6 @@ void WriteDescriptorImmediate(uint32 descriptorLayoutID, DescriptorHandle descSe
                     }
                 }
                 ++descriptorCount;
-            }
-            else
-            {
-                TINKER_ASSERT(0); // Invalid descriptor type
             }
         }
 
