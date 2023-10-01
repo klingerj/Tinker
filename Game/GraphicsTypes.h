@@ -80,6 +80,8 @@ typedef struct game_graphics_data
     Tk::Graphics::DescriptorHandle m_toneMappingDescHandle;
     Tk::Graphics::DescriptorHandle m_computeCopyDescHandle;
 
+    Tk::Graphics::DescriptorHandle BindlessTexturesSampled;
+
     TransientPrim m_animatedPolygon;
 } GameGraphicsData;
 extern GameGraphicsData gameGraphicsData;
@@ -139,5 +141,5 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
 
-    Tk::Graphics::WriteDescriptor(Tk::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0]);
+    Tk::Graphics::WriteDescriptorSimple(Tk::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0]);
 }

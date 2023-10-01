@@ -870,15 +870,15 @@ DescriptorHandle CreateDescriptor(uint32 descriptorLayoutID)
         CreateDescriptorPool();
     }
 
-    const VulkanDescriptorLayout& vulkanDescriptorLayout = g_vulkanContextResources.descLayouts[descriptorLayoutID];
+    VulkanDescriptorLayout& vulkanDescriptorLayout = g_vulkanContextResources.descLayouts[descriptorLayoutID];
     const VkDescriptorSetLayout& descriptorSetLayout = vulkanDescriptorLayout.layout;
     TINKER_ASSERT(descriptorSetLayout != VK_NULL_HANDLE);
 
     for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
     {
-        if (vulkanDescriptorLayout.bindings[uiDesc].type == DescriptorType::eArrayOfTextures)
+        if (vulkanDescriptorLayout.bindings.params[uiDesc].type == DescriptorType::eArrayOfTextures)
         {
-            vulkanDescriptorLayout.descriptorArrayHandles[uiDesc].Init(VULKAN_DESCRIPTOR_BINDLESS_ARRAY_LIMIT, 16);
+            vulkanDescriptorLayout.descriptorArrayHandles[uiDesc].Init(DESCRIPTOR_BINDLESS_ARRAY_LIMIT, 16);
         }
     }
 
@@ -986,7 +986,7 @@ void DestroyAllDescLayouts()
         // Free pools of available handles for bindless descriptors 
         for (uint32 uiDesc = 0; uiDesc < MAX_BINDINGS_PER_SET; ++uiDesc)
         {
-            if (vulkanDescriptorLayout.bindings[uiDesc].type == DescriptorType::eArrayOfTextures)
+            if (vulkanDescriptorLayout.bindings.params[uiDesc].type == DescriptorType::eArrayOfTextures)
             {
                 vulkanDescriptorLayout.descriptorArrayHandles[uiDesc].ExplicitFree();
             }

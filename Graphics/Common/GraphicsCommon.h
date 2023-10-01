@@ -254,6 +254,7 @@ struct DescriptorHandle
 
 #define MAX_DESCRIPTOR_SETS_PER_SHADER 4
 #define MAX_BINDINGS_PER_SET 3
+#define DESCRIPTOR_BINDLESS_ARRAY_LIMIT 1024
 
 typedef struct descriptor_layout_params
 {
@@ -530,12 +531,12 @@ struct GraphicsCommandStream
 enum
 {
     DESCLAYOUT_ID_CB_GLOBAL = 0,
-    DESCLAYOUT_ID_CB_PER_VIEW,
-    DESCLAYOUT_ID_CB_PER_MATERIAL,
+    //DESCLAYOUT_ID_CB_PER_VIEW,
+    //DESCLAYOUT_ID_CB_PER_MATERIAL,
     DESCLAYOUT_ID_CB_PER_INSTANCE,
 
-    DESCLAYOUT_ID_TEXTURES_UINT,
-    DESCLAYOUT_ID_TEXTURES_FLOAT,
+    DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
+    //DESCLAYOUT_ID_TEXTURES_UINT,
 
     // TODO: All of these should be able to get deleted after going bindless 
     DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX,
@@ -588,8 +589,11 @@ DESTROY_DESCRIPTOR(DestroyDescriptor);
 #define DESTROY_ALL_DESCRIPTORS(name) void name()
 DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors);
 
-#define WRITE_DESCRIPTOR(name) void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
-WRITE_DESCRIPTOR(WriteDescriptor);
+#define WRITE_DESCRIPTOR_SIMPLE(name) void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
+WRITE_DESCRIPTOR_SIMPLE(WriteDescriptorSimple);
+
+#define WRITE_DESCRIPTOR_ARRAY(name) void name(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, uint32 numEntries, DescArrayResEntry* entries)
+WRITE_DESCRIPTOR_ARRAY(WriteDescriptorArray);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate);

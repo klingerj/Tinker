@@ -28,16 +28,18 @@ struct DescInstance
 #define UVDataType float2
 #define NormalDataType float4
 
+// TODO: setup constant buffers to be like this and then move it into a Bindless.h header or something
 [[vk::binding(0, 0)]] cbuffer Global      { DescGlobal GlobalData; };
-[[vk::binding(1, 0)]] cbuffer PerView     { DescPerView ViewData; };
-[[vk::binding(2, 0)]] cbuffer PerMaterial { DescPerMaterial MatData; };
-[[vk::binding(3, 0)]] cbuffer PerInstance { DescPerInstance InstanceData; };
+//[[vk::binding(1, 0)]] cbuffer PerView     { DescPerView ViewData; };
+//[[vk::binding(2, 0)]] cbuffer PerMaterial { DescPerMaterial MatData; };
+//[[vk::binding(3, 0)]] cbuffer PerInstance { DescInstance InstanceData; }; // TODO rename to PerInstance
+[[vk::binding(0, 1)]] cbuffer PerInstance { DescInstance InstanceData; }; // TODO get rid of this one 
 
 //[[vk::binding(0, 1)]] ByteAddressBuffer BindlessBuffers[];
 //[[vk::binding(1, 1)]] ByteAddressBuffer BindlessBuffers[];
 
-[[vk::binding(0, 1)]] Texture2D BindlessTextures[];
-[[vk::binding(0, 1)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different spot or desc set 
+[[vk::binding(0, 3)]] Texture2D BindlessTextures[];
+[[vk::binding(0, 3)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different desc set entirely eventually 
 //[[vk::binding(1, 1)]] Texture2D BindlessTexturesUint[];
 //TODO: 3D textures and storage images 
 
@@ -48,7 +50,7 @@ struct DescInstance
 struct VSOutput
 {
     [[vk::location(0)]] float4 Position : SV_POSITION;
-    //[[vk::location(1)]] float2 UV       : TEXCOORD0;
+    [[vk::location(1)]] float2 UV       : TEXCOORD0;
     [[vk::location(2)]] float3 Normal   : NORMAL;
 };
 
@@ -63,7 +65,7 @@ VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID
 
     VSOutput Out;
     Out.Position = mul(ViewProjMat, mul(ModelMat, ModelPos));
-    //Out.UV = UV;
+    Out.UV = UV;
     Out.Normal = Normal;
     return Out;
 }

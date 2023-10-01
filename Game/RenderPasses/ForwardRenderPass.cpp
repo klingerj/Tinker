@@ -22,6 +22,7 @@ namespace ForwardRenderPass
         Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
+        descriptors[3] = gameGraphicsData.BindlessTexturesSampled;
 
         StartRenderPass(renderPass, graphicsCommandStream);
 
