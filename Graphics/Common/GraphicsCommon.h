@@ -526,6 +526,20 @@ struct GraphicsCommandStream
     }
 };
 
+// Default/fallback texture resources
+typedef struct default_tex
+{
+    ResourceHandle res;
+    v4f clearValue;
+} DefaultTexture;
+
+enum : uint32
+{
+    DefaultTex_Black2x2,
+    DefaultTex_Max
+};
+//
+
 // TODO: don't use them as uint32's 
 // IDs must be uniquely named and have their id ascend monotonically from 0
 enum
@@ -656,6 +670,9 @@ void SubmitFrameToGPU();
 float GetGPUTimestampPeriod();
 uint32 GetCurrentFrameInFlightIndex();
 void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint32 numTimestampsInQuery, bool immediateSubmit);
+
+void CreateAllDefaultTextures();
+DefaultTexture GetDefaultTextureRes(uint32 defaultTexID);
 
 }
 }

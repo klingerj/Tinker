@@ -23,6 +23,8 @@ uint32 MultiBufferedStatusFromBufferUsage[] =
 };
 static_assert(ARRAYCOUNT(MultiBufferedStatusFromBufferUsage) == BufferUsage::eMax); // Don't forget to add one here if enum is added to
 
+static DefaultTexture DefaultTextures[DefaultTex_Max] = {};
+
 void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
     int result = 0;
@@ -268,6 +270,26 @@ SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
     ProcessGraphicsCommandStream(graphicsCommandStream, true);
     EndVulkanCommandRecordingImmediate();
     #endif
+}
+
+void CreateAllDefaultTextures()
+{
+    DefaultTexture& tex = DefaultTextures[DefaultTex_Black2x2];
+    ResourceDesc desc = {};
+    desc.resourceType = ResourceType::eImage2D;
+    desc.arrayEles = 1;
+    desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
+    desc.imageUsageFlags = Tk::Graphics::ImageUsageFlags::Sampled;// | Tk::Graphics::ImageUsageFlags::TransferDst;
+    desc.dims = v3ui(2, 2, 1);
+    tex.res = CreateResource(desc);
+    tex.clearValue = v4f(0, 0, 0, 0);
+    // TODO create cmd list to clear textures 
+}
+
+DefaultTexture GetDefaultTextureRes(uint32 defaultTexID)
+{
+    TINKER_ASSERT(defaultTexID < DefaultTex_Max);
+    return DefaultTextures[defaultTexID];
 }
 
 }
