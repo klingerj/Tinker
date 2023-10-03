@@ -527,7 +527,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
     {
         // Create buffer handles
-        Graphics::ResourceDesc desc;
+        Graphics::ResourceDesc desc = {};
         desc.resourceType = Graphics::ResourceType::eBuffer1D;
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;

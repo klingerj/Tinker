@@ -396,6 +396,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     }
 
     CreateDefaultGeometry(&g_graphicsCommandStream);
+    Graphics::CreateAllDefaultTextures();
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
