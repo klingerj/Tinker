@@ -671,7 +671,8 @@ float GetGPUTimestampPeriod();
 uint32 GetCurrentFrameInFlightIndex();
 void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint32 numTimestampsInQuery, bool immediateSubmit);
 
-void CreateAllDefaultTextures();
+void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void DestroyDefaultTextures();
 DefaultTexture GetDefaultTextureRes(uint32 defaultTexID);
 
 }

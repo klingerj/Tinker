@@ -38,8 +38,8 @@ struct DescInstance
 //[[vk::binding(0, 1)]] ByteAddressBuffer BindlessBuffers[];
 //[[vk::binding(1, 1)]] ByteAddressBuffer BindlessBuffers[];
 
-[[vk::binding(0, 3)]] Texture2D BindlessTextures[];
-[[vk::binding(0, 3)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different desc set entirely eventually 
+//[[vk::binding(0, 3)]] Texture2D BindlessTextures[];
+//[[vk::binding(0, 3)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different desc set entirely eventually 
 //[[vk::binding(1, 1)]] Texture2D BindlessTexturesUint[];
 //TODO: 3D textures and storage images 
 
