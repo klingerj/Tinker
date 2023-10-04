@@ -226,7 +226,7 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
 
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eArrayOfTextures;
-    descriptorLayout.params[0].amount = 2;
+    descriptorLayout.params[0].amount = DESCRIPTOR_BINDLESS_ARRAY_LIMIT;
     bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES, &descriptorLayout);
     TINKER_ASSERT(bOk);
 

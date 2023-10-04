@@ -202,7 +202,14 @@ static void WriteComputeCopyResources()
 
 static void WriteBindlessTexturesDesciptors()
 {
-    Graphics::DescArrayResEntry allTextureEntries[2] = {};
+    Graphics::DescArrayResEntry allTextureEntries[DESCRIPTOR_BINDLESS_ARRAY_LIMIT] = {};
+
+    // Initialize all texture to default / fallback textures
+    for (uint32 i = 0; i < ARRAYCOUNT(allTextureEntries); ++i)
+    {
+        allTextureEntries[i].res = GetDefaultTextureRes(Graphics::DefaultTex_Black2x2).res;
+        allTextureEntries[i].index = i;
+    }
 
     uint32 descArrayIdxCounter = 0; // This will become a pool that allocates mid frame at some point 
 
@@ -210,6 +217,7 @@ static void WriteBindlessTexturesDesciptors()
     allTextureEntries[0].index = descArrayIdxCounter++;
     allTextureEntries[1].res = g_AssetManager.GetTextureGraphicsDataByID(1);
     allTextureEntries[1].index = descArrayIdxCounter++;
+
     Graphics::WriteDescriptorArray(Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES, gameGraphicsData.BindlessTexturesSampled, ARRAYCOUNT(allTextureEntries), &allTextureEntries[0]);
 }
 
@@ -396,7 +404,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     }
 
     CreateDefaultGeometry(&g_graphicsCommandStream);
-    Graphics::CreateAllDefaultTextures();
+    Graphics::CreateAllDefaultTextures(&g_graphicsCommandStream);
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
@@ -564,6 +572,7 @@ GAME_DESTROY(GameDestroy)
 
         DestroyDefaultGeometry();
         DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
+        Graphics::DestroyDefaultTextures();
         
         DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
 

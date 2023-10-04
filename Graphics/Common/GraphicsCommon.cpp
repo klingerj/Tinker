@@ -272,18 +272,40 @@ SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
     #endif
 }
 
-void CreateAllDefaultTextures()
+void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     DefaultTexture& tex = DefaultTextures[DefaultTex_Black2x2];
     ResourceDesc desc = {};
     desc.resourceType = ResourceType::eImage2D;
-    desc.arrayEles = 1;
+    desc.debugLabel = "Default Texture Black2x2";
     desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB;
-    desc.imageUsageFlags = Tk::Graphics::ImageUsageFlags::Sampled;// | Tk::Graphics::ImageUsageFlags::TransferDst;
     desc.dims = v3ui(2, 2, 1);
+    desc.imageUsageFlags = Tk::Graphics::ImageUsageFlags::Sampled | Tk::Graphics::ImageUsageFlags::TransferDst;
+    desc.arrayEles = 1;
     tex.res = CreateResource(desc);
-    tex.clearValue = v4f(0, 0, 0, 0);
-    // TODO create cmd list to clear textures 
+    tex.clearValue = v4f(0.0, 0.0, 0.0, 0.0);
+    
+    for (uint32 i = 0; i < DefaultTex_Max; ++i)
+    {
+        DefaultTexture& currTex = DefaultTextures[i];
+        
+        graphicsCommandStream->CmdTransitionLayout(currTex.res, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition default texture to clear optimal");
+        graphicsCommandStream->CmdClear(currTex.res, currTex.clearValue, "Clear default texture");
+        graphicsCommandStream->CmdTransitionLayout(currTex.res, Graphics::ImageLayout::eTransferDst, Graphics::ImageLayout::eShaderRead, "Transition default texture to shader read");
+    }
+
+    Graphics::SubmitCmdsImmediate(graphicsCommandStream);
+    graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+}
+
+void DestroyDefaultTextures()
+{
+    for (uint32 i = 0; i < DefaultTex_Max; ++i)
+    {
+        DefaultTexture& currTex = DefaultTextures[i];
+        Graphics::DestroyResource(currTex.res);
+        currTex.res = Graphics::DefaultResHandle_Invalid;
+    }
 }
 
 DefaultTexture GetDefaultTextureRes(uint32 defaultTexID)
