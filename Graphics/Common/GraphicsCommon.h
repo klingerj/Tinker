@@ -290,13 +290,6 @@ typedef struct descriptor_set_data_handles
     }
 } DescriptorSetDataHandles;
 
-// resource entries in a bindless descriptor array 
-typedef struct descriptor_array_resource_entry
-{
-    ResourceHandle res;
-    uint32 index;
-} DescArrayResEntry;
-
 // Important graphics defines
 #define MAX_FRAMES_IN_FLIGHT 2
 #define MAX_MULTIPLE_RENDERTARGETS 8u
@@ -533,11 +526,14 @@ typedef struct default_tex
     v4f clearValue;
 } DefaultTexture;
 
-enum : uint32
+namespace DefaultTextureID
 {
-    DefaultTex_Black2x2,
-    DefaultTex_Max
-};
+    enum : uint32
+    {
+        eBlack2x2,
+        eMax
+    };
+}
 //
 
 // TODO: don't use them as uint32's 
@@ -606,7 +602,7 @@ DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors);
 #define WRITE_DESCRIPTOR_SIMPLE(name) void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 WRITE_DESCRIPTOR_SIMPLE(WriteDescriptorSimple);
 
-#define WRITE_DESCRIPTOR_ARRAY(name) void name(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, uint32 numEntries, DescArrayResEntry* entries)
+#define WRITE_DESCRIPTOR_ARRAY(name) void name(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, uint32 numEntries, ResourceHandle* entries)
 WRITE_DESCRIPTOR_ARRAY(WriteDescriptorArray);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
@@ -673,7 +669,7 @@ void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint3
 
 void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
 void DestroyDefaultTextures();
-DefaultTexture GetDefaultTextureRes(uint32 defaultTexID);
+DefaultTexture GetDefaultTexture(uint32 defaultTexID);
 
 }
 }

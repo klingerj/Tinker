@@ -80,8 +80,6 @@ typedef struct game_graphics_data
     Tk::Graphics::DescriptorHandle m_toneMappingDescHandle;
     Tk::Graphics::DescriptorHandle m_computeCopyDescHandle;
 
-    Tk::Graphics::DescriptorHandle BindlessTexturesSampled;
-
     TransientPrim m_animatedPolygon;
 } GameGraphicsData;
 extern GameGraphicsData gameGraphicsData;
