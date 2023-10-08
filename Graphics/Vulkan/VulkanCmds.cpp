@@ -159,11 +159,13 @@ void UnmapResource(ResourceHandle handle)
     }
 }
 
-void WriteDescriptorArray(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, uint32 numEntries, DescArrayResEntry* entries)
+void WriteDescriptorArray(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, uint32 numEntries, ResourceHandle* entries)
 {
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descriptorLayoutID].bindings;
 
-    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    // TODO decide how to rename this since it updates only the current descriptor for the current frame, transient?
+    //for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    uint32 uiFrame = g_vulkanContextResources.currentVirtualFrame;
     {
         VkDescriptorSet* descriptorSet =
             &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiFrame].descriptorSet;
@@ -198,7 +200,7 @@ void WriteDescriptorArray(uint32 descriptorLayoutID, DescriptorHandle descSetHan
                 uint32 type = descLayout->params[uiDesc].type;
                 if (type != DescriptorType::eMax)
                 {
-                    VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(entries[uiEntry].res.m_hRes);
+                    VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(entries[uiEntry].m_hRes);
                     uint32 resIndex = 0;
 
                     switch (type)
@@ -215,7 +217,7 @@ void WriteDescriptorArray(uint32 descriptorLayoutID, DescriptorHandle descSetHan
 
                             descSetWrite.dstSet = *descriptorSet;
                             descSetWrite.dstBinding = uiDesc;
-                            descSetWrite.dstArrayElement = entries[uiEntry].index;
+                            descSetWrite.dstArrayElement = uiEntry;
                             descSetWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                             descSetWrite.descriptorCount = 1;
                             descSetWrite.pImageInfo = &descImageInfo[uiDesc][uiEntry];

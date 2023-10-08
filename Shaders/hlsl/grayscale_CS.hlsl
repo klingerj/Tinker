@@ -13,5 +13,5 @@ void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 
     float3 Color = SrcColorImage[Coord].rgb;
     float Grayscale = Color.r; // todo do the dot product
-    DstImage[Coord].rgb = Grayscale.rrr;
+    DstImage[Coord].rgb = Color.rgb;// Grayscale.rrr;
 }

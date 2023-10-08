@@ -166,7 +166,6 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
-    descLayouts[3] = Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES;
     pipelineFormats.Init();
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
     bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, pipelineFormats, descLayouts, 3);

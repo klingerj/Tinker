@@ -8,6 +8,7 @@
 #include "AssetFileParsing.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
+#include "BindlessSystem.h"
 #include "RenderPasses/RenderPass.h"
 #include "RenderPasses/ZPrepassRenderPass.h"
 #include "RenderPasses/ForwardRenderPass.h"
@@ -200,32 +201,17 @@ static void WriteComputeCopyResources()
     Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_COMPUTE_COPY, gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
 }
 
-static void WriteBindlessTexturesDesciptors()
+static void RegisterActiveTextures()
 {
-    Graphics::DescArrayResEntry allTextureEntries[DESCRIPTOR_BINDLESS_ARRAY_LIMIT] = {};
-
-    // Initialize all texture to default / fallback textures
-    for (uint32 i = 0; i < ARRAYCOUNT(allTextureEntries); ++i)
-    {
-        allTextureEntries[i].res = GetDefaultTextureRes(Graphics::DefaultTex_Black2x2).res;
-        allTextureEntries[i].index = i;
-    }
-
-    uint32 descArrayIdxCounter = 0; // This will become a pool that allocates mid frame at some point 
-
-    allTextureEntries[0].res = g_AssetManager.GetTextureGraphicsDataByID(0);
-    allTextureEntries[0].index = descArrayIdxCounter++;
-    allTextureEntries[1].res = g_AssetManager.GetTextureGraphicsDataByID(1);
-    allTextureEntries[1].index = descArrayIdxCounter++;
-
-    Graphics::WriteDescriptorArray(Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES, gameGraphicsData.BindlessTexturesSampled, ARRAYCOUNT(allTextureEntries), &allTextureEntries[0]);
+    uint32 index = BindlessSystem::BindlessIndexMax;
+    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(0), BindlessSystem::BindlessArrayID::eTexturesSampled);
+    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(1), BindlessSystem::BindlessArrayID::eTexturesSampled);
+    // TODO: eventually these indices will be hooked up to a material system so that at draw time we can pass these indices as a constant to the gpu for bindless descriptor indexing
 }
 
 static void CreateAllDescriptors()
 {
-    // Bindless texures
-    gameGraphicsData.BindlessTexturesSampled = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES);
-    WriteBindlessTexturesDesciptors();
+    BindlessSystem::Create();
 
     // Tone mapping
     gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
@@ -458,7 +444,10 @@ GAME_UPDATE(GameUpdate)
         g_InputManager.UpdateAndDoCallbacks(inputStateDeltas);
     }
 
+    BindlessSystem::ResetFrame();
+
     // Update scene and view
+    // TODO: these update calls shouldnt take descriptors directly 
     {
         Graphics::DescriptorSetDataHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0].InitInvalid();
@@ -478,6 +467,10 @@ GAME_UPDATE(GameUpdate)
     DebugUI::UI_MainMenu();
     DebugUI::UI_PerformanceOverview();
     DebugUI::UI_RenderPassStats();
+
+    // Update bindless resource descriptors 
+    RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
+    BindlessSystem::Flush();
 
     // Timestamp start of frame
     {

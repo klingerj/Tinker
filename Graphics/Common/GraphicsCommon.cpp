@@ -23,7 +23,7 @@ uint32 MultiBufferedStatusFromBufferUsage[] =
 };
 static_assert(ARRAYCOUNT(MultiBufferedStatusFromBufferUsage) == BufferUsage::eMax); // Don't forget to add one here if enum is added to
 
-static DefaultTexture DefaultTextures[DefaultTex_Max] = {};
+static DefaultTexture DefaultTextures[DefaultTextureID::eMax] = {};
 
 void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
 {
@@ -274,7 +274,7 @@ SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
 
 void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
-    DefaultTexture& tex = DefaultTextures[DefaultTex_Black2x2];
+    DefaultTexture& tex = DefaultTextures[DefaultTextureID::eBlack2x2];
     ResourceDesc desc = {};
     desc.resourceType = ResourceType::eImage2D;
     desc.debugLabel = "Default Texture Black2x2";
@@ -285,7 +285,7 @@ void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsComma
     tex.res = CreateResource(desc);
     tex.clearValue = v4f(0.0, 0.0, 0.0, 0.0);
     
-    for (uint32 i = 0; i < DefaultTex_Max; ++i)
+    for (uint32 i = 0; i < DefaultTextureID::eMax; ++i)
     {
         DefaultTexture& currTex = DefaultTextures[i];
         
@@ -300,7 +300,7 @@ void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsComma
 
 void DestroyDefaultTextures()
 {
-    for (uint32 i = 0; i < DefaultTex_Max; ++i)
+    for (uint32 i = 0; i < DefaultTextureID::eMax; ++i)
     {
         DefaultTexture& currTex = DefaultTextures[i];
         Graphics::DestroyResource(currTex.res);
@@ -308,9 +308,9 @@ void DestroyDefaultTextures()
     }
 }
 
-DefaultTexture GetDefaultTextureRes(uint32 defaultTexID)
+DefaultTexture GetDefaultTexture(uint32 defaultTexID)
 {
-    TINKER_ASSERT(defaultTexID < DefaultTex_Max);
+    TINKER_ASSERT(defaultTexID < DefaultTextureID::eMax);
     return DefaultTextures[defaultTexID];
 }
 
