@@ -90,11 +90,6 @@ typedef struct
 {
     VkDescriptorSetLayout layout;
     DescriptorLayout bindings;
-
-    // For bindless support, use pool allocation for resource handles. You can have a sparse arrangement 
-    // of resources in the descriptor. This pool is fully ignored for "ordinary" descriptors that aren't arrays
-    // of resources. 
-    Tk::Core::PoolAllocator<uint32> descriptorArrayHandles[MAX_BINDINGS_PER_SET];
 } VulkanDescriptorLayout;
 
 typedef struct

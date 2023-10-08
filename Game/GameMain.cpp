@@ -158,6 +158,8 @@ static void InitDemo()
 
 static void DestroyDescriptors()
 {
+    BindlessSystem::Destroy();
+
     Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
     gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
 
@@ -550,6 +552,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 
         CreateGameRenderingResources(newWindowWidth, newWindowHeight);
         WriteToneMappingResources();
+        WriteComputeCopyResources();
     }
 }
 
