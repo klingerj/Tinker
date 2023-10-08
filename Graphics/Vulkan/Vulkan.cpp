@@ -340,6 +340,7 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
 
     VkPhysicalDeviceProperties physicalDeviceProperties = {};
     VkPhysicalDeviceFeatures2 physicalDeviceFeatures2 = {};
+    VkPhysicalDeviceVulkan12Features physicalDeviceVulkan12Features = {};
     VkPhysicalDeviceVulkan13Features physicalDeviceVulkan13Features = {};
 
     for (uint32 uiPhysicalDevice = 0; uiPhysicalDevice < numPhysicalDevices; ++uiPhysicalDevice)
@@ -351,10 +352,19 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
 
         physicalDeviceFeatures2 = {};
         physicalDeviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+        physicalDeviceVulkan12Features = {};
+        physicalDeviceVulkan12Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
         physicalDeviceVulkan13Features = {};
         physicalDeviceVulkan13Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-        physicalDeviceFeatures2.pNext = &physicalDeviceVulkan13Features;
+        physicalDeviceFeatures2.pNext = &physicalDeviceVulkan12Features;
+        physicalDeviceVulkan12Features.pNext = &physicalDeviceVulkan13Features;
         vkGetPhysicalDeviceFeatures2(currPhysicalDevice, &physicalDeviceFeatures2);
+
+        // Required device feature for bindless descriptors
+        if (physicalDeviceVulkan12Features.runtimeDescriptorArray == VK_FALSE)
+        {
+            continue;
+        }
         
         // Required device feature - can't use this device if not available
         if (physicalDeviceVulkan13Features.dynamicRendering == VK_FALSE)
@@ -536,14 +546,17 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfos;
     deviceCreateInfo.queueCreateInfoCount = numQueues;
     VkPhysicalDeviceFeatures requestedPhysicalDeviceFeatures = {};
-    // TODO: request physical device features
     deviceCreateInfo.pEnabledFeatures = &requestedPhysicalDeviceFeatures;
     deviceCreateInfo.enabledLayerCount = 0;
     deviceCreateInfo.ppEnabledLayerNames = nullptr;
     deviceCreateInfo.enabledExtensionCount = numRequiredPhysicalDeviceExtensions;
     deviceCreateInfo.ppEnabledExtensionNames = requiredPhysicalDeviceExtensions;
+
+    // Requested device features
+    physicalDeviceVulkan12Features.runtimeDescriptorArray = VK_TRUE;
+    physicalDeviceVulkan12Features.pNext = &physicalDeviceVulkan13Features;
     physicalDeviceVulkan13Features.dynamicRendering = VK_TRUE;
-    deviceCreateInfo.pNext = &physicalDeviceVulkan13Features;
+    deviceCreateInfo.pNext = &physicalDeviceVulkan12Features;
 
     result = vkCreateDevice(g_vulkanContextResources.physicalDevice,
         &deviceCreateInfo,

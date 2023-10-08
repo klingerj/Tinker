@@ -527,7 +527,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
     for (uint32 uiAsset = 0; uiAsset < m_numMeshAssets; ++uiAsset)
     {
         // Create buffer handles
-        Graphics::ResourceDesc desc;
+        Graphics::ResourceDesc desc = {};
         desc.resourceType = Graphics::ResourceType::eBuffer1D;
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
@@ -712,7 +712,14 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
         ++command;
         ++graphicsCommandStream->m_numCommands;
 
-        // TODO: transition image to shader read optimal?
+        // Transition to transfer dst optimal layout
+        command->m_commandType = Graphics::GraphicsCommand::eLayoutTransition;
+        command->debugLabel = "Transition image layout to shader read optimal";
+        command->m_imageHandle = m_allTextureGraphicsHandles[uiAsset];
+        command->m_startLayout = Graphics::ImageLayout::eTransferDst;
+        command->m_endLayout = Graphics::ImageLayout::eShaderRead;
+        ++command;
+        ++graphicsCommandStream->m_numCommands;
     }
 
     // Perform the copies
@@ -764,14 +771,15 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID)
     data->m_descriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS);
 
     Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
-    descDataHandles[0].InitInvalid();
+    for (uint32 i = 0; i < ARRAYCOUNT(descDataHandles); ++i)
+    {
+        descDataHandles[i].InitInvalid();
+    }
     descDataHandles[0].handles[0] = data->m_positionBuffer.gpuBufferHandle;
     descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;
     descDataHandles[0].handles[2] = data->m_normalBuffer.gpuBufferHandle;
-    descDataHandles[1].InitInvalid();
-    descDataHandles[2].InitInvalid();
 
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_VBS, data->m_descriptor, &descDataHandles[0]);
+    Graphics::WriteDescriptorSimple(data->m_descriptor, &descDataHandles[0]);
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

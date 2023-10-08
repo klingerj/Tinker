@@ -132,12 +132,13 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
     geom.m_descriptor = Tk::Graphics::CreateDescriptor(Tk::Graphics::DESCLAYOUT_ID_ASSET_VBS);
 
     Tk::Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
-    descDataHandles[0].InitInvalid();
+    for (uint32 i = 0; i < ARRAYCOUNT(descDataHandles); ++i)
+    {
+        descDataHandles[i].InitInvalid();
+    }
     descDataHandles[0].handles[0] = geom.m_positionBuffer.gpuBufferHandle;
     descDataHandles[0].handles[1] = geom.m_uvBuffer.gpuBufferHandle;
     descDataHandles[0].handles[2] = geom.m_normalBuffer.gpuBufferHandle;
-    descDataHandles[1].InitInvalid();
-    descDataHandles[2].InitInvalid();
 
-    Tk::Graphics::WriteDescriptor(Tk::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0]);
+    Tk::Graphics::WriteDescriptorSimple(geom.m_descriptor, &descDataHandles[0]);
 }

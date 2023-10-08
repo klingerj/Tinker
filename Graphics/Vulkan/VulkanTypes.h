@@ -72,7 +72,7 @@ typedef struct vulkan_mem_resource
 typedef struct vulkan_descriptor_resource
 {
     VkDescriptorSet descriptorSet;
-} VulkanDescriptorResource;
+} VulkanDescriptor;
 
 // Chains of resources for multiple swap chain images
 typedef struct
@@ -83,7 +83,7 @@ typedef struct
 
 typedef struct
 {
-    VulkanDescriptorResource resourceChain[MAX_FRAMES_IN_FLIGHT];
+    VulkanDescriptor resourceChain[MAX_FRAMES_IN_FLIGHT];
 } VulkanDescriptorChain;
 
 typedef struct

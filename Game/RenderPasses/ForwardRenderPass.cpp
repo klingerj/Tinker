@@ -1,5 +1,7 @@
 #include "ForwardRenderPass.h"
 
+#include "../BindlessSystem.h"
+
 extern GameGraphicsData gameGraphicsData;
 extern Scene MainScene;
 extern View MainView;
@@ -22,6 +24,7 @@ namespace ForwardRenderPass
         Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0] = gameGraphicsData.m_DescData_Global;
         descriptors[1] = gameGraphicsData.m_DescData_Instance;
+        descriptors[3] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eTexturesSampled);
 
         StartRenderPass(renderPass, graphicsCommandStream);
 

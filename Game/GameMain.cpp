@@ -8,6 +8,7 @@
 #include "AssetFileParsing.h"
 #include "Utility/ScopedTimer.h"
 #include "GraphicsTypes.h"
+#include "BindlessSystem.h"
 #include "RenderPasses/RenderPass.h"
 #include "RenderPasses/ZPrepassRenderPass.h"
 #include "RenderPasses/ForwardRenderPass.h"
@@ -157,6 +158,8 @@ static void InitDemo()
 
 static void DestroyDescriptors()
 {
+    BindlessSystem::Destroy();
+
     Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
     gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
 
@@ -181,14 +184,14 @@ static void WriteToneMappingResources()
     Graphics::DescriptorSetDataHandles toneMapHandles = {};
     toneMapHandles.InitInvalid();
     toneMapHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
     vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
     vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
     vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, defaultQuad.m_descriptor, &vbHandles);
+    Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
 }
 
 static void WriteComputeCopyResources()
@@ -197,11 +200,21 @@ static void WriteComputeCopyResources()
     computeHandles.InitInvalid();
     computeHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
     computeHandles.handles[1] = gameGraphicsData.m_computeColorHandle;
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_COMPUTE_COPY, gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
+}
+
+static void RegisterActiveTextures()
+{
+    uint32 index = BindlessSystem::BindlessIndexMax;
+    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(0), BindlessSystem::BindlessArrayID::eTexturesSampled);
+    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(1), BindlessSystem::BindlessArrayID::eTexturesSampled);
+    // TODO: eventually these indices will be hooked up to a material system so that at draw time we can pass these indices as a constant to the gpu for bindless descriptor indexing
 }
 
 static void CreateAllDescriptors()
 {
+    BindlessSystem::Create();
+
     // Tone mapping
     gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
     WriteToneMappingResources();
@@ -221,20 +234,20 @@ static void CreateAllDescriptors()
     desc.debugLabel = "Descriptor Buffer Global Constant Data";
     gameGraphicsData.m_DescDataBufferHandle_Global = Graphics::CreateResource(desc);
 
-    gameGraphicsData.m_DescData_Global = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_VIEW_GLOBAL);
+    gameGraphicsData.m_DescData_Global = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_CB_GLOBAL);
 
     Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descDataHandles[i].InitInvalid();
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_VIEW_GLOBAL, gameGraphicsData.m_DescData_Global, &descDataHandles[0]);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_DescData_Global, &descDataHandles[0]);
 
     gameGraphicsData.m_DescData_Instance = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descDataHandles[i].InitInvalid();
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
-    Graphics::WriteDescriptor(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, gameGraphicsData.m_DescData_Instance, &descDataHandles[0]);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_DescData_Instance, &descDataHandles[0]);
 }
 
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
@@ -379,6 +392,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     }
 
     CreateDefaultGeometry(&g_graphicsCommandStream);
+    Graphics::CreateAllDefaultTextures(&g_graphicsCommandStream);
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
@@ -432,7 +446,10 @@ GAME_UPDATE(GameUpdate)
         g_InputManager.UpdateAndDoCallbacks(inputStateDeltas);
     }
 
+    BindlessSystem::ResetFrame();
+
     // Update scene and view
+    // TODO: these update calls shouldnt take descriptors directly 
     {
         Graphics::DescriptorSetDataHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0].InitInvalid();
@@ -452,6 +469,10 @@ GAME_UPDATE(GameUpdate)
     DebugUI::UI_MainMenu();
     DebugUI::UI_PerformanceOverview();
     DebugUI::UI_RenderPassStats();
+
+    // Update bindless resource descriptors 
+    RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
+    BindlessSystem::Flush();
 
     // Timestamp start of frame
     {
@@ -531,6 +552,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 
         CreateGameRenderingResources(newWindowWidth, newWindowHeight);
         WriteToneMappingResources();
+        WriteComputeCopyResources();
     }
 }
 
@@ -546,6 +568,7 @@ GAME_DESTROY(GameDestroy)
 
         DestroyDefaultGeometry();
         DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
+        Graphics::DestroyDefaultTextures();
         
         DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
 
