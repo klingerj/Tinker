@@ -897,7 +897,7 @@ DescriptorHandle CreateDescriptor(uint32 descriptorLayoutID)
         }
     }
 
-    return DescriptorHandle(newDescriptorHandle);
+    return DescriptorHandle(newDescriptorHandle, descriptorLayoutID);
 }
 
 bool CreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* descriptorLayout)

@@ -779,7 +779,7 @@ void AssetManager::CreateVertexBufferDescriptor(uint32 meshID)
     descDataHandles[0].handles[1] = data->m_uvBuffer.gpuBufferHandle;
     descDataHandles[0].handles[2] = data->m_normalBuffer.gpuBufferHandle;
 
-    Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_ASSET_VBS, data->m_descriptor, &descDataHandles[0]);
+    Graphics::WriteDescriptorSimple(data->m_descriptor, &descDataHandles[0]);
 }
 
 StaticMeshData* AssetManager::GetMeshGraphicsDataByID(uint32 meshID)

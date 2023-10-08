@@ -184,14 +184,14 @@ static void WriteToneMappingResources()
     Graphics::DescriptorSetDataHandles toneMapHandles = {};
     toneMapHandles.InitInvalid();
     toneMapHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
-    Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
     vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
     vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
     vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
-    Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, defaultQuad.m_descriptor, &vbHandles);
+    Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
 }
 
 static void WriteComputeCopyResources()
@@ -200,7 +200,7 @@ static void WriteComputeCopyResources()
     computeHandles.InitInvalid();
     computeHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
     computeHandles.handles[1] = gameGraphicsData.m_computeColorHandle;
-    Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_COMPUTE_COPY, gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
 }
 
 static void RegisterActiveTextures()
@@ -240,14 +240,14 @@ static void CreateAllDescriptors()
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descDataHandles[i].InitInvalid();
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
-    Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_CB_GLOBAL, gameGraphicsData.m_DescData_Global, &descDataHandles[0]);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_DescData_Global, &descDataHandles[0]);
 
     gameGraphicsData.m_DescData_Instance = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
         descDataHandles[i].InitInvalid();
     descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
-    Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, gameGraphicsData.m_DescData_Instance, &descDataHandles[0]);
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_DescData_Instance, &descDataHandles[0]);
 }
 
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)

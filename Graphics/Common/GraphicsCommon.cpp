@@ -106,7 +106,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     {
                         RecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState, immediateSubmit);
                     }
-
+                    
                     for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
                     {
                         if (currDescriptors[uiDesc] != currentCmd.m_descriptors[uiDesc])

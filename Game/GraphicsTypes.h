@@ -140,5 +140,5 @@ void CreateDefaultGeometryVertexBufferDescriptor(DefGeom& geom)
     descDataHandles[0].handles[1] = geom.m_uvBuffer.gpuBufferHandle;
     descDataHandles[0].handles[2] = geom.m_normalBuffer.gpuBufferHandle;
 
-    Tk::Graphics::WriteDescriptorSimple(Tk::Graphics::DESCLAYOUT_ID_ASSET_VBS, geom.m_descriptor, &descDataHandles[0]);
+    Tk::Graphics::WriteDescriptorSimple(geom.m_descriptor, &descDataHandles[0]);
 }
