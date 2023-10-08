@@ -578,6 +578,14 @@ namespace DefaultTextureID
 }
 //
 
+namespace DescUpdateConfigFlags
+{
+    enum : uint32
+    {
+        Transient = 0x1,
+    };
+}
+
 // Graphics API layer
 #define CREATE_RESOURCE(name) ResourceHandle name(const ResourceDesc& resDesc)
 CREATE_RESOURCE(CreateResource);
@@ -603,7 +611,7 @@ DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors);
 #define WRITE_DESCRIPTOR_SIMPLE(name) void name(DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 WRITE_DESCRIPTOR_SIMPLE(WriteDescriptorSimple);
 
-#define WRITE_DESCRIPTOR_ARRAY(name) void name(DescriptorHandle descSetHandle, uint32 numEntries, ResourceHandle* entries)
+#define WRITE_DESCRIPTOR_ARRAY(name) void name(DescriptorHandle descSetHandle, uint32 numEntries, ResourceHandle* entries, uint32 updateFlags)
 WRITE_DESCRIPTOR_ARRAY(WriteDescriptorArray);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)

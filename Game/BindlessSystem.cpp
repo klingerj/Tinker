@@ -66,7 +66,7 @@ namespace BindlessSystem
             {
                 BindlessDescriptorData.PushBackRaw(fallbackResource);
             }
-            Graphics::WriteDescriptorArray(BindlessDescriptors[i], DESCRIPTOR_BINDLESS_ARRAY_LIMIT, (Graphics::ResourceHandle*)BindlessDescriptorData.Data());
+            Graphics::WriteDescriptorArray(BindlessDescriptors[i], DESCRIPTOR_BINDLESS_ARRAY_LIMIT, (Graphics::ResourceHandle*)BindlessDescriptorData.Data(), Graphics::DescUpdateConfigFlags::Transient);
         }
     }
 

@@ -159,16 +159,22 @@ void UnmapResource(ResourceHandle handle)
     }
 }
 
-void WriteDescriptorArray(DescriptorHandle descSetHandle, uint32 numEntries, ResourceHandle* entries)
+WRITE_DESCRIPTOR_ARRAY(WriteDescriptorArray)
 {
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descSetHandle.m_layoutID].bindings;
 
-    // TODO decide how to rename this since it updates only the current descriptor for the current frame, transient?
-    //for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
-    uint32 uiFrame = g_vulkanContextResources.currentVirtualFrame;
+    uint32 uiFrameCounter = 0;
+    uint32 uiFrameCounterMax = MAX_FRAMES_IN_FLIGHT;
+    if (updateFlags & DescUpdateConfigFlags::Transient)
+    {
+        uiFrameCounter = g_vulkanContextResources.currentVirtualFrame;
+        uiFrameCounterMax = uiFrameCounter + 1;
+    }
+
+    for (; uiFrameCounter < uiFrameCounterMax; ++uiFrameCounter)
     {
         VkDescriptorSet* descriptorSet =
-            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiFrame].descriptorSet;
+            &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[uiFrameCounter].descriptorSet;
 
         // TODO: clean up the memory allocation here
 
@@ -243,7 +249,7 @@ void WriteDescriptorArray(DescriptorHandle descSetHandle, uint32 numEntries, Res
     }
 }
 
-void WriteDescriptorSimple(DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
+WRITE_DESCRIPTOR_SIMPLE(WriteDescriptorSimple)
 {
     DescriptorLayout* descLayout = &g_vulkanContextResources.descLayouts[descSetHandle.m_layoutID].bindings;
 
