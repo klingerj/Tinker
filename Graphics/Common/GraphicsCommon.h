@@ -146,6 +146,74 @@ inline uint32 IsBufferUsageMultiBuffered(uint32 bufferUsage)
     return MultiBufferedStatusFromBufferUsage[bufferUsage];
 }
 
+// IDs must be uniquely named and have their id ascend monotonically from 0
+enum
+{
+    DESCLAYOUT_ID_CB_GLOBAL = 0,
+    //DESCLAYOUT_ID_CB_PER_VIEW,
+    //DESCLAYOUT_ID_CB_PER_MATERIAL,
+    DESCLAYOUT_ID_CB_PER_INSTANCE,
+
+    DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
+    //DESCLAYOUT_ID_TEXTURES_UINT,
+
+    // TODO: All of these should be able to get deleted after going bindless 
+    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX,
+    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS,
+    DESCLAYOUT_ID_ASSET_INSTANCE,
+    DESCLAYOUT_ID_ASSET_VBS,
+    DESCLAYOUT_ID_POSONLY_VBS,
+    DESCLAYOUT_ID_IMGUI_VBS,
+    DESCLAYOUT_ID_IMGUI_TEX,
+    DESCLAYOUT_ID_COMPUTE_COPY,
+    DESCLAYOUT_ID_MAX
+};
+
+enum
+{
+    SHADER_ID_SWAP_CHAIN_BLIT = 0,
+    SHADER_ID_IMGUI_DEBUGUI,
+    SHADER_ID_BASIC_ZPrepass,
+    SHADER_ID_BASIC_MainView,
+    SHADER_ID_ANIMATEDPOLY_MainView,
+    SHADER_ID_MAX
+};
+
+enum
+{
+    SHADER_ID_COMPUTE_COPY = 0,
+    SHADER_ID_COMPUTE_MAX
+};
+//-----
+
+#define MAX_DESCRIPTOR_SETS_PER_SHADER 4
+#define MAX_BINDINGS_PER_SET 3
+#define DESCRIPTOR_BINDLESS_ARRAY_LIMIT 1024
+
+// Important graphics defines
+#define MAX_FRAMES_IN_FLIGHT 2
+#define MAX_MULTIPLE_RENDERTARGETS 8u
+
+#define IMAGE_HANDLE_SWAP_CHAIN ResourceHandle(0xFFFFFFFE) // INVALID_HANDLE - 1 reserved to refer to the swap chain image 
+
+//#define DEPTH_REVERSED
+#ifndef DEPTH_REVERSED
+#define DEPTH_MIN 0.0f
+#define DEPTH_MAX 1.0f
+#define DEPTH_OP DepthCompareOp::eLeOrEqual
+#else
+// TODO: untested
+#define DEPTH_MIN 1.0f
+#define DEPTH_MAX 0.0f
+#define DEPTH_OP DepthCompareOp::eGeOrEqual
+#endif
+
+#define GPU_TIMESTAMP_NUM_MAX 1024
+
+#define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
+
+#define THREADGROUP_ROUND(x, tg) ((x + tg - 1) / tg)
+
 // Concrete type for resource handle to catch errors at compile time, e.g.
 // Try to free a descriptor set with a resource handle, which can happen if all handles
 // are just plain uint32.
@@ -174,7 +242,6 @@ struct ResourceHandle
         return m_hRes != other.m_hRes;
     }
 };
-#define DefaultResHandle_Invalid ResourceHandle()
 
 typedef struct graphics_resource_description
 {
@@ -223,38 +290,36 @@ struct FramebufferHandle
         return m_hFramebuffer != other.m_hFramebuffer;
     }
 };
-#define DefaultFramebufferHandle_Invalid FramebufferHandle()
 
 struct DescriptorHandle
 {
     uint32 m_hDesc;
+    uint32 m_layoutID;
 
     DescriptorHandle()
     {
         m_hDesc = TINKER_INVALID_HANDLE;
+        m_layoutID = DESCLAYOUT_ID_MAX;
     }
 
     // Warning: probably don't pass around handles as uint32 willy-nilly
-    explicit DescriptorHandle(uint32 h)
+    explicit DescriptorHandle(uint32 h, uint32 lID)
     {
         m_hDesc = h;
+        m_layoutID = lID;
     }
 
     inline bool operator==(const DescriptorHandle& other) const
     {
-        return m_hDesc == other.m_hDesc;
+        return m_hDesc == other.m_hDesc &&
+            m_layoutID == other.m_layoutID;
     }
 
     inline bool operator!=(const DescriptorHandle& other) const
     {
-        return m_hDesc != other.m_hDesc;
+        return !(*this == other);
     }
 };
-#define DefaultDescHandle_Invalid DescriptorHandle()
-
-#define MAX_DESCRIPTOR_SETS_PER_SHADER 4
-#define MAX_BINDINGS_PER_SET 3
-#define DESCRIPTOR_BINDLESS_ARRAY_LIMIT 1024
 
 typedef struct descriptor_layout_params
 {
@@ -276,7 +341,11 @@ typedef struct descriptor_layout
     }
 } DescriptorLayout;
 
-// list of resource handles in a descriptor set
+#define DefaultResHandle_Invalid ResourceHandle()
+#define DefaultFramebufferHandle_Invalid FramebufferHandle()
+#define DefaultDescHandle_Invalid DescriptorHandle()
+
+// List of resource handles in a descriptor set, convenience struct 
 typedef struct descriptor_set_data_handles
 {
     ResourceHandle handles[MAX_BINDINGS_PER_SET];
@@ -289,30 +358,6 @@ typedef struct descriptor_set_data_handles
         }
     }
 } DescriptorSetDataHandles;
-
-// Important graphics defines
-#define MAX_FRAMES_IN_FLIGHT 2
-#define MAX_MULTIPLE_RENDERTARGETS 8u
-
-#define IMAGE_HANDLE_SWAP_CHAIN ResourceHandle(0xFFFFFFFE) // INVALID_HANDLE - 1 reserved to refer to the swap chain image 
-
-//#define DEPTH_REVERSED
-#ifndef DEPTH_REVERSED
-#define DEPTH_MIN 0.0f
-#define DEPTH_MAX 1.0f
-#define DEPTH_OP DepthCompareOp::eLeOrEqual
-#else
-// TODO: untested
-#define DEPTH_MIN 1.0f
-#define DEPTH_MAX 0.0f
-#define DEPTH_OP DepthCompareOp::eGeOrEqual
-#endif
-
-#define GPU_TIMESTAMP_NUM_MAX 1024
-
-#define MIN_PUSH_CONSTANTS_SIZE 128 // bytes
-
-#define THREADGROUP_ROUND(x, tg) ((x + tg - 1) / tg)
 
 typedef struct graphics_command
 {
@@ -400,9 +445,6 @@ typedef struct graphics_command
 
         // End render pass
         // NOTE: no actual data required
-        /* struct
-        {
-        }; */
 
         // Image Layout Transition
         struct
@@ -437,7 +479,7 @@ typedef struct graphics_command
         
         // Debug marker start
         // Debug marker end
-        // no data required here, uses debug string above 
+        // NOTE: no actual data required
     };
 
 } GraphicsCommand;
@@ -536,47 +578,6 @@ namespace DefaultTextureID
 }
 //
 
-// TODO: don't use them as uint32's 
-// IDs must be uniquely named and have their id ascend monotonically from 0
-enum
-{
-    DESCLAYOUT_ID_CB_GLOBAL = 0,
-    //DESCLAYOUT_ID_CB_PER_VIEW,
-    //DESCLAYOUT_ID_CB_PER_MATERIAL,
-    DESCLAYOUT_ID_CB_PER_INSTANCE,
-
-    DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
-    //DESCLAYOUT_ID_TEXTURES_UINT,
-
-    // TODO: All of these should be able to get deleted after going bindless 
-    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX,
-    DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS,
-    DESCLAYOUT_ID_ASSET_INSTANCE,
-    DESCLAYOUT_ID_ASSET_VBS,
-    DESCLAYOUT_ID_POSONLY_VBS,
-    DESCLAYOUT_ID_IMGUI_VBS,
-    DESCLAYOUT_ID_IMGUI_TEX,
-    DESCLAYOUT_ID_COMPUTE_COPY,
-    DESCLAYOUT_ID_MAX
-};
-
-enum
-{
-    SHADER_ID_SWAP_CHAIN_BLIT = 0,
-    SHADER_ID_IMGUI_DEBUGUI,
-    SHADER_ID_BASIC_ZPrepass,
-    SHADER_ID_BASIC_MainView,
-    SHADER_ID_ANIMATEDPOLY_MainView,
-    SHADER_ID_MAX
-};
-
-enum
-{
-    SHADER_ID_COMPUTE_COPY = 0,
-    SHADER_ID_COMPUTE_MAX
-};
-//-----
-
 // Graphics API layer
 #define CREATE_RESOURCE(name) ResourceHandle name(const ResourceDesc& resDesc)
 CREATE_RESOURCE(CreateResource);
@@ -599,10 +600,10 @@ DESTROY_DESCRIPTOR(DestroyDescriptor);
 #define DESTROY_ALL_DESCRIPTORS(name) void name()
 DESTROY_ALL_DESCRIPTORS(DestroyAllDescriptors);
 
-#define WRITE_DESCRIPTOR_SIMPLE(name) void name(uint32 descLayoutID, DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
+#define WRITE_DESCRIPTOR_SIMPLE(name) void name(DescriptorHandle descSetHandle, const DescriptorSetDataHandles* descSetDataHandles)
 WRITE_DESCRIPTOR_SIMPLE(WriteDescriptorSimple);
 
-#define WRITE_DESCRIPTOR_ARRAY(name) void name(uint32 descriptorLayoutID, DescriptorHandle descSetHandle, uint32 numEntries, ResourceHandle* entries)
+#define WRITE_DESCRIPTOR_ARRAY(name) void name(DescriptorHandle descSetHandle, uint32 numEntries, ResourceHandle* entries)
 WRITE_DESCRIPTOR_ARRAY(WriteDescriptorArray);
 
 #define SUBMIT_CMDS_IMMEDIATE(name) void name(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)

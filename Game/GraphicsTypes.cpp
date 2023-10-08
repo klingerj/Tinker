@@ -171,8 +171,7 @@ void CreateAnimatedPoly(TransientPrim* prim)
     descDataHandles[0].handles[0] = prim->vertexBufferHandle;
     descDataHandles[1].InitInvalid();
     descDataHandles[2].InitInvalid();
-
-    Graphics::WriteDescriptorSimple(Graphics::DESCLAYOUT_ID_POSONLY_VBS, prim->descriptor, &descDataHandles[0]);
+    Graphics::WriteDescriptorSimple(prim->descriptor, &descDataHandles[0]);
 }
 
 void DestroyAnimatedPoly(TransientPrim* prim)
