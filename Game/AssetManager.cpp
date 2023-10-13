@@ -34,15 +34,15 @@ static const char* demoMeshAssetNames[numDemoMeshAssets] =
 {
     "UnitSphere",
     "UnitCube",
-    "FireElemental",
-    "RTX3090"
+    "UnitCube2",
+    "UnitCube3"
 };
 static const char* demoMeshFilePaths[numDemoMeshAssets] =
 {
     ASSETS_PATH "UnitSphere\\sphere.obj",
     ASSETS_PATH "UnitCube\\cube.obj",
-    ASSETS_PATH "FireElemental\\fire_elemental.obj",
-    ASSETS_PATH "RTX3090\\rtx3090.obj"
+    ASSETS_PATH "UnitCube\\cube.obj",
+    ASSETS_PATH "UnitCube\\cube.obj"
 };
 
 static const uint32 numDemoTextureAssets = 2;
