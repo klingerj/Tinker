@@ -54,6 +54,7 @@ static const char* demoTextureFilePaths[numDemoTextureAssets] =
 
 
 #include "StringTypes.h"
+#include "Hashing.h"
 
 #ifdef _COOKED_ASSETS_DIR
 #define COOKED_ASSETS_PATH STRINGIFY(_COOKED_ASSETS_DIR)
@@ -97,8 +98,8 @@ namespace AssetCooker
 
         MeshNameStr.Append(COOKED_ASSETS_PATH);
         MeshNameStr.Append("Mesh_");
-        const uint32 nameHash = MurmurHash3_x86_32(inAssetFileName, (int)strlen(inAssetFileName), DEFAULT_STRING_HASH_SEED);
-        _ultoa_s(nameHash, MeshNameStr.EndOfStrPtr(), MeshNameStr.LenRemaining(), 10);
+        const Tk::Core::Hash nameHash = Tk::Core::Hash64(inAssetFileName, (uint32)strlen(inAssetFileName));
+        _ui64toa_s(nameHash.m_val, MeshNameStr.EndOfStrPtr(), MeshNameStr.LenRemaining(), 10);
         MeshNameStr.UpdateLen();
         MeshNameStr.Append(".");
         MeshNameStr.Append(fileSuffix);

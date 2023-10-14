@@ -3,11 +3,6 @@
 #include "CoreDefines.h"
 #include "Mem.h"
 
-#include <string.h>
-
-//#define CMP_KEY_FUNC(name) bool name(const void* A, const void* B)
-//typedef CMP_KEY_FUNC(CompareKeyFunc);
-
 template <typename tKey>
 bool CompareKeys(const void* A, const void* B)
 {
@@ -15,7 +10,7 @@ bool CompareKeys(const void* A, const void* B)
 }
 
 // Good hash functions taken from here: https://nullprogram.com/blog/2018/07/31/ 
-inline uint32 Hash32(uint32 x)
+inline uint32 MapHashFn32(uint32 x)
 {
     x ^= x >> 15;
     x *= 0x2c1b3c6dU;
@@ -25,8 +20,8 @@ inline uint32 Hash32(uint32 x)
     return x;
 }
 
-// Changed to return a uint32
-inline uint32 Hash64(uint64 x)
+//NOTE: Changed to return a uint32
+inline uint32 MapHashFn64(uint64 x)
 {
     x ^= x >> 32;
     x *= 0xd6e8feb86659fd93U;
@@ -147,8 +142,8 @@ public:
 };
 
 // Common hashmap specializations
-typedef HashMap<uint32, uint32, Hash32> HashMapU32;
-typedef HashMap<uint64, uint64, Hash64> HashMapU64;
+typedef HashMap<uint32, uint32, MapHashFn32> HashMapU32;
+typedef HashMap<uint64, uint64, MapHashFn64> HashMapU64;
 
 }
 }

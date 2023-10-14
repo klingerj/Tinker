@@ -12,8 +12,6 @@
 #include "DataStructures/HashMap.h"
 #include "Sorting.h"
 #include "StringTypes.h"
-#include "MurmurHash3.h"
-#define SEED 0x1234
 
 static const uint32 MAX_VERTS = 1024 * 1024;
 static const uint32 MAX_IDXS = MAX_VERTS * 3;
@@ -426,7 +424,7 @@ void UI_RenderPassStats()
 
     // Track timestamp name hash to running statistics data
     static const uint32 ReserveEles = 256;
-    static Tk::Core::HashMap<uint32, RunningTimestampEntry, Hash32> runningStatsMap;
+    static Tk::Core::HashMap<uint64, RunningTimestampEntry, MapHashFn64> runningStatsMap;
     runningStatsMap.Reserve(ReserveEles);
 
     // Final list of entries to display for sorting
@@ -507,15 +505,15 @@ void UI_RenderPassStats()
                         continue;
                     }
 
-                    const uint32 timestampNameHash = MurmurHash3_x86_32(currTimestamp.name, (int)strlen(currTimestamp.name), SEED);
+                    const Core::Hash timestampNameHash = Core::Hash64(currTimestamp.name, (uint32)strlen(currTimestamp.name));
                     
                     RunningTimestampEntry* entry = NULL;
-                    uint32 index = runningStatsMap.FindIndex(timestampNameHash);
+                    uint32 index = runningStatsMap.FindIndex(timestampNameHash.m_val);
                     
-                    if (index == runningStatsMap.GetInvalidKey())
+                    if (index == HashMapBase::eInvalidIndex)
                     {
                         // First time add to map
-                        index = runningStatsMap.Insert(timestampNameHash, {});
+                        index = runningStatsMap.Insert(timestampNameHash.m_val, {});
                     }
                     entry = &(runningStatsMap.DataAtIndex(index));
 

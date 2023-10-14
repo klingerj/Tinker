@@ -65,11 +65,13 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Ve
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/HashMap.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Hashing.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/xxHash-0.8.2/xxhash.c 
 
 rem Create unity build file will all cpp files included
 set "SourceListApp=%SourceListApp:\=/%" rem convert backslashes to forward slashes
@@ -108,7 +110,7 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set CompileIncludePaths=/I ../Core 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
+set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking /I ../ThirdParty/xxHash-0.8.2 
 set LibsToLink=user32.lib ws2_32.lib Shlwapi.lib 
 
 echo.

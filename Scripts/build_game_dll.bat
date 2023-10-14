@@ -77,7 +77,7 @@ set CompileIncludePaths=%CompileIncludePaths% /I ../Core
 set CompileIncludePaths=%CompileIncludePaths% /I ../Tools 
 set CompileIncludePaths=%CompileIncludePaths% /I ../DebugUI 
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/dxc_2022_07_18 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/MurmurHash3 
+set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/xxHash-0.8.2 
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
 
 rem *********************************************************************************************************
@@ -98,7 +98,6 @@ if "%GraphicsAPI%" == "VK" (
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
 
 rem Don't glob third party folders right now
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 

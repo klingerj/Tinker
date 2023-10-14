@@ -39,7 +39,7 @@ struct MemRecord
 #define MAX_ALLOCS_RECORDED 65536
 struct MemTracker
 {
-    HashMap<uint64, MemRecord, Hash64> m_AllocRecords;
+    HashMap<uint64, MemRecord, MapHashFn64> m_AllocRecords;
     uint8 bEnableAllocRecording = 0;
 
     MemTracker()

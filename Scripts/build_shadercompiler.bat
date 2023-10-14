@@ -61,7 +61,7 @@ set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Mem.cpp
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32File.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32Logging.cpp 
 set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../Core/Platform/Win32PlatformGameAPI.cpp 
-set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../ThirdParty/MurmurHash3/MurmurHash3.cpp 
+set SourceListSC=%SourceListSC% %AbsolutePathPrefix%/../ThirdParty/xxHash-0.8.2/xxhash.c 
 
 rem Calculate absolute path prefix for application path parameters here
 set AbsolutePathPrefix=%AbsolutePathPrefix:\=\\%
@@ -77,7 +77,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines!
     )
 
-set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/MurmurHash3
+set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/xxHash-0.8.2 
 set LibsToLink=user32.lib ws2_32.lib ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib
 
 echo.
