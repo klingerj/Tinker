@@ -105,6 +105,3 @@ You can find more detailed info on the various build scripts [here](Scripts/READ
 * [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler): HLSL shader compiler [(LLVM Release License)](https://github.com/microsoft/DirectXShaderCompiler/blob/main/LICENSE.TXT)
 * [xxHash](https://github.com/Cyan4973/xxHash): Compile-time hashing [(2-Clause BSD License)](ThirdParty/xxHash-0.8.2/LICENSE)
 * [Imgui - docking branch](https://github.com/ocornut/imgui): Debug ui [(MIT license)](ThirdParty/imgui-docking/LICENSE.txt)
-
-### Assets used
-* 
