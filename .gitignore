@@ -1,7 +1,8 @@
-*.obj
+Assets/LicensedAssets/
 Build/
 CookedAssets/
 ToolsBin/.vs/
+ToolsBin/*/*.obj
 Shaders/spv/*.spv
 *.swp
 *.swo
