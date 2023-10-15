@@ -29,20 +29,22 @@ static Tk::Core::LinearAllocator VertIndexAllocator;
 static const uint32 MAX_COOKED_BUFFER_SIZE = 1024 * 1024 * 64;
 static Tk::Core::LinearAllocator CookedDataAllocator;
 
-static const uint32 numDemoMeshAssets = 4;
+static const uint32 numDemoMeshAssets = 5;
 static const char* demoMeshAssetNames[numDemoMeshAssets] =
 {
     "UnitSphere",
     "UnitCube",
-    "UnitCube2",
-    "UnitCube3"
+    "ChickenLowPoly",
+    "SheepLowPoly",
+    "WolfLowPoly",
 };
 static const char* demoMeshFilePaths[numDemoMeshAssets] =
 {
     ASSETS_PATH "UnitSphere\\sphere.obj",
     ASSETS_PATH "UnitCube\\cube.obj",
-    ASSETS_PATH "UnitCube\\cube.obj",
-    ASSETS_PATH "UnitCube\\cube.obj"
+    ASSETS_PATH "LicensedAssets\\Animals\\Chicken.obj",
+    ASSETS_PATH "LicensedAssets\\Animals\\Sheep.obj",
+    ASSETS_PATH "LicensedAssets\\Animals\\Wolf.obj",
 };
 
 static const uint32 numDemoTextureAssets = 2;

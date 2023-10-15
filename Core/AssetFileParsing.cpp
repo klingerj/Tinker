@@ -177,6 +177,14 @@ void ParseOBJ(Tk::Core::LinearAllocator& PosAllocator, Tk::Core::LinearAllocator
 
                 ++indicesCounter;
             }
+
+            if (!HitSpecialChar(EntireFileBuffer[currentIndex], LineEndingChars, ARRAYCOUNT(LineEndingChars)))
+            {
+                TINKER_ASSERT(0 && "Improper OBJ file input");
+                // NOTE: OBJ files must be triangulated before they can be loaded.
+                // If you hit this assert, then the third face index in the file was not followed by a line ending, 
+                // but something else instead - presumably, another face index, indicating it was not triangulated.
+            }
         }
         else
         {
