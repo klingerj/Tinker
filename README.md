@@ -2,9 +2,6 @@
 
 My second game engine project. Made with things learned from Handmade Hero, coworkers, and lessons learned from the older [Joe Engine](https://github.com/klingerj/Joe-Engine). Nearly everything written from scratch, extremely minimal libraries/dependencies. Tinker has superior software architecture, minimal dependencies, compiles faster, and has other debatably cooler features and capabilities than the Joe Engine.
 
-Currently, the project renders a few instanced models with a Z prepass (fairly barebones graphics-wise):  
-![](Output/TestImages/gameScreenshot.png)
-
 ### Platforms supported
 | | Windows | Linux |
 |-|:-------:|:------:
