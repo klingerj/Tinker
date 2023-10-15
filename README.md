@@ -8,16 +8,19 @@ Currently, the project renders a few instanced models with a Z prepass (fairly b
 Output from the SPIR-V virtual machine, evaluating a very simple Lambertian shader:  
 ![](Output/TestImages/spirv_output.bmp)
 
-<!--- Early in the project, I added very simple software raytracing to try to match the hardware rasterized output of the game: 
-Raytraced | Rasterized  
-:--------:|:----------:  
-![](Output/TestImages/raytraceOutput.bmp) | ![](Output/TestImages/rasterRef.bmp) --->
+### Platforms supported
+| | Windows | Linux |
+|-|:-------:|:------:
+|Vulkan| Y | N |
+|DX12  | N | N |
 
-### Platforms supported currently:
-* Windows 10 / x86
-
-### Graphics API backends supported currently:
-* Vulkan
+### Table of Contents
+* [Project hierarchy description](#project-hierarchy-description)
+* [Feature List](#feature-list)
+* [Feature Roadmap](#feature-roadmap)
+* [Build Instructions](#build-instructions)
+* [Depenencies and Licensing](#dependencies-and-licensing)
+* [Assets Used](#assets-used)
 
 ### Project hierarchy description
 * <code>Assets/</code> - art files to load
@@ -42,13 +45,13 @@ Raytraced | Rasterized
 * <code>ThirdParty/</code> - external libraries
   * <code>dxc_2022_07_18/</code> - dxc release lib
   * <code>imgui-docking/</code> - Imgui lib, docking branch
-  * <code>MurmurHash3/</code> - Murmur3 run-time and compile-time string hashing - some modifications by me
+  * <code>xxHash-0.8.2/</code> - xxHash run-time and compile-time string hashing 
 * <code>Tools/</code> - code for separate tools
   * <code>ShaderCompiler/</code> - code that calls into DXC to compile HLSL shaders to SPIR-V (+DXIL eventually) 
 * <code>ToolsBin/</code> - built binaries of code from <code>Tools/</code>
 * <code>Utils/</code> - random stuff, e.g. Natvis files
 
-### List of features implemented currently:
+### Feature List
 * Platform layer
   * Builds as the exe
   * Win32 backend support 
@@ -58,6 +61,7 @@ Raytraced | Rasterized
   * API-agnostic graphics layer, compiles with desired backend
     * Vulkan backend support
       * Use of dynamic rendering API feature
+    * Bindless rendering 
     * Render pass timing with GPU timestamps
   * Builds with game dll, meaning the graphics system is hotloadable
   * Draw call batching
@@ -72,7 +76,7 @@ Raytraced | Rasterized
 * Simple linear algebra library
 * Custom memory allocators
 * Memory allocation tracking
-* Compile-time and run-time string hashing using Murmur
+* Compile-time and run-time string hashing using xxHash
 * Asset file loading
   * OBJ models, BMP textures
   * Cooking of mesh vertex buffers into memcpy-able binary format
@@ -84,13 +88,13 @@ Raytraced | Rasterized
     * written in C99 and builds separately from rest of Tinker project
   * Simple CPU-side raytracing (WIP)
 
-### Roadmap of future features:
-* Compute shader support
-* Post processing
-* DX12 graphics backend
-* Asset streaming
+### Feature Roadmap
+* GPU-driven culling and drawing
+* Post processing effects
+* DX12 backend implementation
+* Async asset streaming
 
-### Build instructions
+### Build Instructions
 You will need to have installed:
 * Visual Studio 2019, because the project will currently check for  
 <code>C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat</code>  
@@ -103,12 +107,10 @@ To Build:
 You should now be able to run the game via <code>run_game.bat</code>.  
 You can find more detailed info on the various build projects [here](Scripts/README.md).
 
-### Dependencies
-* [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler)
-* [Murmur Hash 3, MIT license](https://github.com/aappleby/smhasher)
-  * Also referenced [this gist](https://gist.github.com/oteguro/10538695) when implementing compile-time hashing with murmur
-* [Imgui - docking branch, MIT license](https://github.com/ocornut/imgui)
+### Dependencies and Licensing
+* [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler): [LLVM Release License](https://github.com/microsoft/DirectXShaderCompiler/blob/main/LICENSE.TXT)
+* [xxHash](https://github.com/Cyan4973/xxHash): [2-Clause BSD License](ThirdParty/xxHash-0.8.2/LICENSE)
+* [Imgui - docking branch](https://github.com/ocornut/imgui): [MIT license](ThirdParty/imgui-docking/LICENSE.txt)
 
-### Assets used:  
-* [CGTrader - Fire Elemental by inalaatzu](https://www.cgtrader.com/free-3d-models/character/fantasy/fire-elemental-29c02a51-2d44-4c4b-9e73-fc5899cd690d)  
-* [CGTrader - RTX 3090 by bemtevi3d](https://www.cgtrader.com/free-3d-models/electronics/computer/rtx-3090-graphic-card-3d-model)
+### Assets used
+* 
