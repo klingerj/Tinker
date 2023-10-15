@@ -16,7 +16,7 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * [Depenencies and Licensing](#dependencies-and-licensing)
 * [Assets Used](#assets-used)
 
-### Project hierarchy description
+### Project Hierarchy Description
 * <code>Assets/</code> - art files to load
 * <code>Benchmark/</code> - simple setup for running benchmarked code
 * <code>Build/</code> - dir for exe/libs/dlls (generated)
