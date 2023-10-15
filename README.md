@@ -102,9 +102,9 @@ You should now be able to run the game via <code>run_game.bat</code>.
 You can find more detailed info on the various build projects [here](Scripts/README.md).
 
 ### Dependencies and Licensing
-* [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler): [LLVM Release License](https://github.com/microsoft/DirectXShaderCompiler/blob/main/LICENSE.TXT)
-* [xxHash](https://github.com/Cyan4973/xxHash): [2-Clause BSD License](ThirdParty/xxHash-0.8.2/LICENSE)
-* [Imgui - docking branch](https://github.com/ocornut/imgui): [MIT license](ThirdParty/imgui-docking/LICENSE.txt)
+* [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler): HLSL shader compiler [(LLVM Release License)](https://github.com/microsoft/DirectXShaderCompiler/blob/main/LICENSE.TXT)
+* [xxHash](https://github.com/Cyan4973/xxHash): Compile-time hashing [(2-Clause BSD License)](ThirdParty/xxHash-0.8.2/LICENSE)
+* [Imgui - docking branch](https://github.com/ocornut/imgui): Debug ui [(MIT license)](ThirdParty/imgui-docking/LICENSE.txt)
 
 ### Assets used
 * 
