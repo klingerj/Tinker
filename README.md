@@ -5,9 +5,6 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 Currently, the project renders a few instanced models with a Z prepass (fairly barebones graphics-wise):  
 ![](Output/TestImages/gameScreenshot.png)
 
-Output from the SPIR-V virtual machine, evaluating a very simple Lambertian shader:  
-![](Output/TestImages/spirv_output.bmp)
-
 ### Platforms supported
 | | Windows | Linux |
 |-|:-------:|:------:
