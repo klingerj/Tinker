@@ -79,11 +79,11 @@ Output from the SPIR-V virtual machine, evaluating a very simple Lambertian shad
 * Compile-time and run-time string hashing using xxHash
 * Asset file loading
   * OBJ models, BMP textures
-  * Cooking of mesh vertex buffers into memcpy-able binary format
+  * Cooking of mesh vertex buffers into binary format
 * ImGui debug UI
 * Simple unit testing and benchmarking frameworks
 * WIP features
-  * SPIR-V virtual machine
+  * [SPIR-V virtual machine](SPIR-V-VM)
     * tested to evaluate only some very simple SPIR-V shaders
     * written in C99 and builds separately from rest of Tinker project
   * Simple CPU-side raytracing (WIP)
