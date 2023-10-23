@@ -558,7 +558,7 @@ wWinMain(HINSTANCE hInstance,
 {
     using namespace Tk;
     using namespace Platform;
-    
+
     {
         TIMED_SCOPED_BLOCK("Platform init");
 
@@ -613,23 +613,24 @@ wWinMain(HINSTANCE hInstance,
         g_WindowHandles.procInstHandle = (uint64)hInstance;
         g_WindowHandles.windowInstHandle = (uint64)windowHandle;
 
-        #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
-        ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
-        #endif
-
-        g_GameCode = {};
-        bool reloaded = ReloadGameCode(&g_GameCode);
-
         // Input handling
         g_inputStateDeltas = {};
         g_cursorLocked = true;
         ShowCursor(FALSE);
 
+        g_GameCode = {};
+        bool reloaded = ReloadGameCode(&g_GameCode);
+        
+        // NOTE: we need all dll's loaded before calling SymInitialize in order for stack tracing to work in every dll/module 
         #ifdef ENABLE_MEM_TRACKING
         if (!SymInitialize(GetCurrentProcess(), NULL, TRUE))
         {
             Tk::Core::Utility::LogMsg("Platform", "Unable to initialize debug sym lib for stack tracing!", Tk::Core::Utility::LogSeverity::eWarning);
         }
+        #endif
+
+        #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
+        ThreadPool::Startup(g_SystemInfo.dwNumberOfProcessors / 2);
         #endif
     }
 

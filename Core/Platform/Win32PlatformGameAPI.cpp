@@ -30,6 +30,8 @@ WALK_STACK_TRACE(WalkStackTrace)
     return 1;
     #else
 
+    SymSetOptions(SYMOPT_LOAD_LINES);
+
     DWORD machine = IMAGE_FILE_MACHINE_AMD64; // TODO check architecture?
 
     HANDLE process = GetCurrentProcess();
@@ -37,8 +39,6 @@ WALK_STACK_TRACE(WalkStackTrace)
     CONTEXT context = {};
     context.ContextFlags = CONTEXT_FULL;
     RtlCaptureContext(&context);
-
-    SymSetOptions(SYMOPT_LOAD_LINES);
 
     STACKFRAME frame = {};
 #if _WIN32
@@ -68,6 +68,10 @@ WALK_STACK_TRACE(WalkStackTrace)
             GetModuleFileNameA((HINSTANCE)moduleBase, moduleScratchBuf, stackTraceEntry->MaxNameBufferSize);
             stackTraceEntry->moduleName.Append(&moduleScratchBuf[0]);
         }
+        else
+        {
+            stackTraceEntry->moduleName.Append("InvalidModule");
+        }
 
         char symbolBuffer[sizeof(IMAGEHLP_SYMBOL) + stackTraceEntry->MaxNameBufferSize];
         PIMAGEHLP_SYMBOL symbol = (PIMAGEHLP_SYMBOL)symbolBuffer;
@@ -79,6 +83,10 @@ WALK_STACK_TRACE(WalkStackTrace)
             stackTraceEntry->functionName.Append(symbol->Name, uint32(strlen(symbol->Name)));
             stackTraceEntry->functionName.NullTerminate();
         }
+        else
+        {
+            stackTraceEntry->functionName.Append("InvalidFunction");
+        }
 
         DWORD offset = 0;
         IMAGEHLP_LINE line;
@@ -89,6 +97,11 @@ WALK_STACK_TRACE(WalkStackTrace)
             stackTraceEntry->fileName.Append(line.FileName, uint32(strlen(line.FileName)));
             stackTraceEntry->fileName.NullTerminate();
             stackTraceEntry->lineNum = line.LineNumber;
+        }
+        else
+        {
+            stackTraceEntry->fileName.Append("InvalidFile");
+            stackTraceEntry->lineNum = 0;
         }
     };
 

@@ -161,20 +161,22 @@ void DebugOutputAllMemAllocs()
 {
     // TODO: You can't really track deallocations perfectly due to destructor order not being guaranteed, but cool test
 
-    Platform::PrintDebugString("\n***** MEMTRACKER: Dumping all alloc records *****\n\n"); //that were not deallocated
+    Platform::PrintDebugString("\n***** MEMTRACKER: Dumping all alloc records *****\n\n");
     for (uint32 i = 0; i < g_MemTracker.m_AllocRecords.Size(); ++i)
     {
         uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(i);
         if (key == g_MemTracker.m_AllocRecords.GetInvalidKey())
+        {
             continue;
+        }
 
         const MemRecord& record = g_MemTracker.m_AllocRecords.DataAtIndex(i);
         //if (!record.bWasDeallocated)
         {
-            //Platform::PrintDebugString(record.filename);
-            Platform::PrintDebugString("Allocation:");
+            Platform::PrintDebugString("Allocation: ");
 
             // Allocation size 
+            // TODO don't use an array like this?
             char buffer[256];
             memset(buffer, 0, ARRAYCOUNT(buffer));
             _itoa_s((int)record.sizeInBytes, buffer, ARRAYCOUNT(buffer), 10);
@@ -183,33 +185,30 @@ void DebugOutputAllMemAllocs()
             Platform::PrintDebugString("\n");
             
             Tk::Platform::StackTraceEntry* stackTrace = record.firstStackTraceEntry;
-            Tk::Core::StrFixedBuffer<Tk::Platform::StackTraceEntry::MaxNameBufferSize> stackTracePrintBuffer;
+            Tk::Core::StrFixedBuffer<Tk::Platform::StackTraceEntry::MaxNameBufferSize> stackPrintBuf;
             while (stackTrace)
             {
-                stackTracePrintBuffer.Clear();
+                stackPrintBuf.Clear();
                 ProcessStackTraceStrings(stackTrace);
-
 
                 // Trim path off module name
                 uint32 lastDirDelimiterIndex = LastIndexOf('/', stackTrace->moduleName.Data(), stackTrace->moduleName.Len());
                 
-                stackTracePrintBuffer.Append(stackTrace->moduleName.Data() + lastDirDelimiterIndex + 1);
-                stackTracePrintBuffer.Append("!");
-                stackTracePrintBuffer.Append(stackTrace->functionName.Data());
-                stackTracePrintBuffer.Append(" in file: ");
-                stackTracePrintBuffer.Append(stackTrace->fileName.Data() + absolutePathPrefixLen);
-                stackTracePrintBuffer.Append(":");
+                stackPrintBuf.Append(stackTrace->moduleName.Data() + lastDirDelimiterIndex + 1);
+                stackPrintBuf.Append("!");
+                stackPrintBuf.Append(stackTrace->functionName.Data());
+                stackPrintBuf.Append(" in file: ");
+                stackPrintBuf.Append(stackTrace->fileName.Data() + absolutePathPrefixLen);
+                stackPrintBuf.Append(":");
 
                 // Line number 
                 memset(buffer, 0, ARRAYCOUNT(buffer));
                 _itoa_s((int)stackTrace->lineNum, buffer, ARRAYCOUNT(buffer), 10);
-                stackTracePrintBuffer.Append(buffer);
+                stackPrintBuf.Append(buffer);
 
-
-                stackTracePrintBuffer.NullTerminate();
-
-                Platform::PrintDebugString(stackTracePrintBuffer.Data());
-                Platform::PrintDebugString("\n");
+                stackPrintBuf.Append("\n");
+                stackPrintBuf.NullTerminate();
+                Platform::PrintDebugString(stackPrintBuf.Data());
 
                 stackTrace = stackTrace->next;
             }

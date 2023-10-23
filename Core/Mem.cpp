@@ -6,14 +6,7 @@ namespace Tk
 namespace Core
 {
 
-#ifndef ENABLE_MEM_TRACKING
 void* CoreMalloc(size_t size)
-{
-    return malloc(size);
-}
-#endif
-
-void* CoreMallocDbg(size_t size)
 {
     void* ptr = malloc(size);
     #ifdef ENABLE_MEM_TRACKING
@@ -30,14 +23,7 @@ void CoreFree(void* ptr)
     #endif
 }
 
-#ifndef ENABLE_MEM_TRACKING
 void* CoreMallocAligned(size_t size, size_t alignment)
-{
-    return Tk::Platform::AllocAlignedRaw(size, alignment);
-}
-#endif
-
-void* CoreMallocAlignedDbg(size_t size, size_t alignment)
 {
     void* ptr = Tk::Platform::AllocAlignedRaw(size, alignment);
     #ifdef ENABLE_MEM_TRACKING

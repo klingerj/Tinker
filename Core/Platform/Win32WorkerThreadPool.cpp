@@ -37,11 +37,6 @@ void __cdecl WorkerThreadFunction(void* arg)
 {
     ThreadInfo* info = (ThreadInfo*)(arg);
 
-    //uint64 processorAffinityMask = 1ULL << (info->threadId * 2 + 1);
-    //SetThreadAffinityMask(GetCurrentThread(), processorAffinityMask);
-    //SetThreadIdealProcessor(GetCurrentThread(), info->threadId + 1);
-    //SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
-
 outer_loop:
     while (!info->terminate)
     {
