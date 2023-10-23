@@ -11,6 +11,8 @@
 #include <windows.h>
 #include <Windowsx.h>
 
+#include <dbghelp.h>
+
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD
 #ifndef TINKER_PLATFORM_HOTLOAD_FILENAME
@@ -622,6 +624,13 @@ wWinMain(HINSTANCE hInstance,
         g_inputStateDeltas = {};
         g_cursorLocked = true;
         ShowCursor(FALSE);
+
+        #ifdef ENABLE_MEM_TRACKING
+        if (!SymInitialize(GetCurrentProcess(), NULL, TRUE))
+        {
+            Tk::Core::Utility::LogMsg("Platform", "Unable to initialize debug sym lib for stack tracing!", Tk::Core::Utility::LogSeverity::eWarning);
+        }
+        #endif
     }
 
     // Main loop
@@ -671,6 +680,10 @@ wWinMain(HINSTANCE hInstance,
 
     #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
     ThreadPool::Shutdown();
+    #endif
+
+    #ifdef ENABLE_MEM_TRACKING
+    SymCleanup(GetCurrentProcess());
     #endif
     
     return 0;

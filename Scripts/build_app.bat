@@ -27,10 +27,15 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
+:: Features
+set "EnableMemTracking=1"
+
 echo ***** Building Tinker App *****
 
 pushd ..
 if NOT EXIST .\Build mkdir .\Build
+set AbsolutePathPrefix=%cd%/
+set "AbsolutePathPrefix=%AbsolutePathPrefix:\=/%" 
 pushd .\Build
 del TinkerApp.pdb > NUL 2> NUL
 
@@ -50,28 +55,27 @@ if "%BuildConfig%" == "Debug" (
 
 rem *********************************************************************************************************
 rem TinkerApp - primary exe
-set AbsolutePathPrefix=%cd%
 
 set SourceListApp= 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32Layer.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32WorkerThreadPool.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32PlatformGameAPI.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32Logging.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32File.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Platform/Win32Client.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Math/VectorTypes.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/AssetFileParsing.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/Vector.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/DataStructures/HashMap.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Utility/MemTracker.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Mem.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../Core/Hashing.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%/../ThirdParty/xxHash-0.8.2/xxhash.c 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32Layer.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32WorkerThreadPool.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32PlatformGameAPI.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32Logging.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32File.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32Client.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Math/VectorTypes.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/AssetFileParsing.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/DataStructures/Vector.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/DataStructures/HashMap.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Utility/MemTracker.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Mem.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Hashing.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_draw.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_tables.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_widgets.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
+set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/xxHash-0.8.2/xxhash.c 
 
 rem Create unity build file will all cpp files included
 set "SourceListApp=%SourceListApp:\=/%" rem convert backslashes to forward slashes
@@ -95,7 +99,10 @@ rem Defines
 set CompileDefines=/DTINKER_APP 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 set CompileDefines=%CompileDefines% /DTINKER_EXPORTING 
-set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
+if "%EnableMemTracking%" == "1" (
+    set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
+)
+set CompileDefines=%CompileDefines% /D_ENGINE_ROOT_PATH=%AbsolutePathPrefix% 
 set CompileDefines=%CompileDefines% /D_GAME_DLL_PATH=TinkerGame.dll 
 set CompileDefines=%CompileDefines% /D_GAME_DLL_HOTLOADCOPY_PATH=TinkerGame_hotload.dll 
 
@@ -112,6 +119,9 @@ if "%BuildConfig%" == "Debug" (
 set CompileIncludePaths=/I ../Core 
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking /I ../ThirdParty/xxHash-0.8.2 
 set LibsToLink=user32.lib ws2_32.lib Shlwapi.lib 
+if "%EnableMemTracking%" == "1" (
+    set LibsToLink=%LibsToLink% dbghelp.lib 
+)
 
 echo.
 echo Building TinkerApp.exe...

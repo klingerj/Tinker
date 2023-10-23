@@ -3,6 +3,9 @@
 #include "CoreDefines.h"
 #include "PlatformGameThreadAPI.h"
 
+#include "Allocators.h"
+#include "StringTypes.h"
+
 struct ImGuiContext;
 
 namespace Tk
@@ -67,6 +70,28 @@ FIND_FILE_NEXT(FindFileNext);
 
 #define FIND_FILE_CLOSE(name) TINKER_API void name(FileHandle handle)
 FIND_FILE_CLOSE(FindFileClose);
+
+struct StackTraceEntry
+{
+    StackTraceEntry* next;
+
+    static const uint32 MaxNameBufferSize = 2048;
+    Tk::Core::StrFixedBuffer<MaxNameBufferSize> moduleName;
+    Tk::Core::StrFixedBuffer<MaxNameBufferSize> functionName;
+    Tk::Core::StrFixedBuffer<MaxNameBufferSize> fileName;
+    uint32 lineNum;
+
+    void Init()
+    {
+        moduleName.Clear();
+        functionName.Clear();
+        fileName.Clear();
+        lineNum = 0;
+        next = nullptr;
+    }
+};
+#define WALK_STACK_TRACE(name) uint32 name(StackTraceEntry** topOfStack, Tk::Core::LinearAllocator& stackEntryAllocator)
+WALK_STACK_TRACE(WalkStackTrace);
 
 #define INIT_NETWORK_CONNECTION(name) TINKER_API int name()
 INIT_NETWORK_CONNECTION(InitNetworkConnection);

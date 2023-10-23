@@ -13,11 +13,11 @@ void* CoreMalloc(size_t size)
 }
 #endif
 
-void* CoreMallocDbg(size_t size, const char* filename, int lineNum)
+void* CoreMallocDbg(size_t size)
 {
     void* ptr = malloc(size);
     #ifdef ENABLE_MEM_TRACKING
-    Utility::RecordMemAlloc((uint64)size, ptr, filename, lineNum);
+    Utility::RecordMemAlloc((uint64)size, ptr);
     #endif
     return ptr;
 }
@@ -37,11 +37,11 @@ void* CoreMallocAligned(size_t size, size_t alignment)
 }
 #endif
 
-void* CoreMallocAlignedDbg(size_t size, size_t alignment, const char* filename, int lineNum)
+void* CoreMallocAlignedDbg(size_t size, size_t alignment)
 {
     void* ptr = Tk::Platform::AllocAlignedRaw(size, alignment);
     #ifdef ENABLE_MEM_TRACKING
-    Utility::RecordMemAlloc((uint64)size, ptr, filename, lineNum);
+    Utility::RecordMemAlloc((uint64)size, ptr);
     #endif
     return ptr;
 }

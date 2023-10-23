@@ -55,8 +55,13 @@ echo ***** Building Tinker Game *****
 
 pushd ..
 if NOT EXIST .\Build mkdir .\Build
+set AbsolutePathPrefix=%cd%/
+set "AbsolutePathPrefix=%AbsolutePathPrefix:\=/%" 
 pushd .\Build
 del TinkerGame*.pdb > NUL 2> NUL
+
+:: Features
+set "EnableMemTracking=1"
 
 rem *********************************************************************************************************
 set CommonCompileFlags=/nologo /std:c++20 /GL /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
@@ -82,27 +87,26 @@ set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking
 
 rem *********************************************************************************************************
 rem TinkerGame - shared library
-set AbsolutePathPrefix=%cd%
 
 set SourceListGame= 
 rem Glob all files in desired directories
-for /r %AbsolutePathPrefix%/../Game/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
-for /r %AbsolutePathPrefix%/../DebugUI/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
-for /r %AbsolutePathPrefix%/../Graphics/Common/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
-for /r %AbsolutePathPrefix%/../Graphics/CPURaytracing/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%Game/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%DebugUI/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%Graphics/Common/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+for /r %AbsolutePathPrefix%Graphics/CPURaytracing/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
 
 if "%GraphicsAPI%" == "VK" (
-    for /r %AbsolutePathPrefix%/../Graphics/Vulkan/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
+    for /r %AbsolutePathPrefix%Graphics/Vulkan/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
 )
 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../Tools/ShaderCompiler/ShaderCompiler.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%Tools/ShaderCompiler/ShaderCompiler.cpp 
 
 rem Don't glob third party folders right now
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_demo.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_draw.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_tables.cpp 
-set SourceListGame=%SourceListGame% %AbsolutePathPrefix%/../ThirdParty/imgui-docking/imgui_widgets.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_demo.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_draw.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_tables.cpp 
+set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_widgets.cpp 
 if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
 
 rem Create unity build file will all cpp files included
@@ -125,8 +129,10 @@ rem
 
 rem Defines 
 set CompileDefines=/DTINKER_GAME 
-set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
+if "%EnableMemTracking%" == "1" (
+    set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
+)
 set CompileDefines=%CompileDefines% /D_ASSETS_DIR=..\\Assets\\ 
 set CompileDefines=%CompileDefines% /D_COOKED_ASSETS_DIR=..\\CookedAssets\\ 
 set CompileDefines=%CompileDefines% /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ 

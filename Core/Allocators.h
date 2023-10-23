@@ -11,7 +11,7 @@ namespace Core
 struct LinearAllocator
 {
     uint8* m_ownedMemPtr = nullptr;
-    size_t m_capacity;
+    size_t m_capacity = 0;
     size_t m_nextAllocOffset = 0;
 
     LinearAllocator() {}
@@ -35,8 +35,19 @@ struct LinearAllocator
     void Init(size_t capacity, uint32 alignment)
     {
         TINKER_ASSERT(capacity > 0);
+        TINKER_ASSERT(alignment > 0);
         m_capacity = capacity;
         m_ownedMemPtr = (uint8*)Tk::Core::CoreMallocAligned(m_capacity, alignment);
+        m_nextAllocOffset = 0;
+    }
+
+    void Init(void* existingBuffer, uint32 existingBufferSize)
+    {
+        TINKER_ASSERT(existingBuffer);
+        TINKER_ASSERT(existingBufferSize > 0);
+        m_capacity = existingBufferSize;
+        m_ownedMemPtr = (uint8*)existingBuffer;
+        m_nextAllocOffset = 0;
     }
 
     uint8* Alloc(size_t size, uint32 alignment)

@@ -15,7 +15,17 @@ struct StrFixedBuffer
     uint32 m_len = 0;
     char m_data[tLen] = {};
 
-    uint32 LenRemaining()
+    const char* Data() const 
+    {
+        return &m_data[0];
+    }
+
+    uint32 Len() const
+    {
+        return m_len;
+    }
+
+    uint32 LenRemaining() const 
     {
         return tLen - m_len;
     }
@@ -25,7 +35,7 @@ struct StrFixedBuffer
         m_len = (uint32)strlen(m_data);
     }
 
-    char* EndOfStrPtr()
+    char* EndOfStrPtr() 
     {
         return &m_data[m_len];
     }
@@ -71,6 +81,16 @@ struct StrFixedBuffer
     {
         static const char nullTerm[1] = { '\0' };
         Append(&nullTerm[0], 1);
+    }
+
+    char operator[](int index) const
+    {
+        return m_data[index];
+    }
+
+    char& operator[](int index) 
+    {
+        return m_data[index];
     }
 
 private:
