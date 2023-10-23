@@ -70,6 +70,7 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * Simple linear algebra library
 * Custom memory allocators
 * Memory allocation tracking
+  * Tracks entire stack trace 
 * Compile-time and run-time string hashing using xxHash
 * Asset file loading
   * OBJ models, BMP textures
