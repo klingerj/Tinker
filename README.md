@@ -13,8 +13,7 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * [Feature List](#feature-list)
 * [Feature Roadmap](#feature-roadmap)
 * [Build Instructions](#build-instructions)
-* [Depenencies and Licensing](#dependencies-and-licensing)
-* [Assets Used](#assets-used)
+* [Dependencies and Licensing](#dependencies-and-licensing)
 
 ### Project Hierarchy Description
 * <code>Assets/</code> - art files to load
@@ -39,7 +38,8 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * <code>ThirdParty/</code> - external libraries
   * <code>dxc_2022_07_18/</code> - dxc release lib
   * <code>imgui-docking/</code> - Imgui lib, docking branch
-  * <code>xxHash-0.8.2/</code> - xxHash run-time and compile-time string hashing 
+  * <code>xxHash-0.8.2/</code> - xxHash fast string hashing
+  * <code>constexpr-xxh3/</code> - compile-time string hashing (produces values identical xxHash)
 * <code>Tools/</code> - code for separate tools
   * <code>ShaderCompiler/</code> - code that calls into DXC to compile HLSL shaders to SPIR-V (+DXIL eventually) 
 * <code>ToolsBin/</code> - built binaries of code from <code>Tools/</code>
@@ -71,7 +71,7 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * Custom memory allocators
 * Memory allocation tracking
   * Tracks entire stack trace 
-* Compile-time and run-time string hashing using xxHash
+* Uses compile-time and run-time evaluated string hashes 
 * Asset file loading
   * OBJ models, BMP textures
   * Cooking of mesh vertex buffers into binary format
@@ -104,5 +104,6 @@ You can find more detailed info on the various build scripts [here](Scripts/READ
 
 ### Dependencies and Licensing
 * [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler): HLSL shader compiler [(LLVM Release License)](https://github.com/microsoft/DirectXShaderCompiler/blob/main/LICENSE.TXT)
-* [xxHash](https://github.com/Cyan4973/xxHash): Compile-time hashing [(2-Clause BSD License)](ThirdParty/xxHash-0.8.2/LICENSE)
 * [Imgui - docking branch](https://github.com/ocornut/imgui): Debug ui [(MIT license)](ThirdParty/imgui-docking/LICENSE.txt)
+* [xxHash](https://github.com/Cyan4973/xxHash): Run-time string hashing [(2-Clause BSD License)](ThirdParty/xxHash-0.8.2/LICENSE)
+* [constexpr-xxh3](https://github.com/chys87/constexpr-xxh3): Compile-time string hashing [(2-Clause BSD License)](https://github.com/chys87/constexpr-xxh3/blob/main/LICENSE)
