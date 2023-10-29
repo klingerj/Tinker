@@ -117,7 +117,9 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set CompileIncludePaths=/I ../Core 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking /I ../ThirdParty/xxHash-0.8.2 
+set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
+set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/xxHash-0.8.2 
+set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/constexpr-xxh3 
 set LibsToLink=user32.lib ws2_32.lib Shlwapi.lib 
 if "%EnableMemTracking%" == "1" (
     set LibsToLink=%LibsToLink% dbghelp.lib 

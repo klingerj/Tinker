@@ -505,7 +505,7 @@ void UI_RenderPassStats()
                         continue;
                     }
 
-                    const Core::Hash timestampNameHash = Core::Hash64(currTimestamp.name, (uint32)strlen(currTimestamp.name));
+                    const Core::Hash timestampNameHash = HASH_64_RUNTIME(currTimestamp.name, (uint32)strlen(currTimestamp.name));
                     
                     RunningTimestampEntry* entry = NULL;
                     uint32 index = runningStatsMap.FindIndex(timestampNameHash.m_val);

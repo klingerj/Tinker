@@ -100,7 +100,7 @@ namespace AssetCooker
 
         MeshNameStr.Append(COOKED_ASSETS_PATH);
         MeshNameStr.Append("Mesh_");
-        const Tk::Core::Hash nameHash = Tk::Core::Hash64(inAssetFileName, (uint32)strlen(inAssetFileName));
+        const Tk::Core::Hash nameHash = HASH_64_RUNTIME(inAssetFileName, (uint32)strlen(inAssetFileName));
         _ui64toa_s(nameHash.m_val, MeshNameStr.EndOfStrPtr(), MeshNameStr.LenRemaining(), 10);
         MeshNameStr.UpdateLen();
         MeshNameStr.Append(".");

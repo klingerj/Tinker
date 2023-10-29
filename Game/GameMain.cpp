@@ -321,7 +321,7 @@ INPUT_CALLBACK(ToggleImGuiDisplay)
 {
     DebugUI::ToggleEnable();
 }
-
+#include "Hashing.h"
 static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
