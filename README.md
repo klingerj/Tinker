@@ -16,19 +16,18 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * [Dependencies and Licensing](#dependencies-and-licensing)
 
 ### Project Hierarchy Description
-* <code>Assets/</code> - art files to load
+* <code>Assets/</code> - art files
 * <code>Benchmark/</code> - simple setup for running benchmarked code
 * <code>Build/</code> - dir for exe/libs/dlls (generated)
-* <code>Core/</code> - core/useful engine code
+* <code>Core/</code> - core engine, builds as exe
   * <code>DataStructures/</code> - data structures, e.g. vector and hashmap
-  * <code>Math/</code> - math ops, e.g. matrix multiply (SIMD-accelerated)
+  * <code>Math/</code> - math types and ops
   * <code>Platform/</code> - platform/threading api layer as well as app main, e.g. Windows
-  * <code>Raytracing/</code> - minimal/naive raytracing and octree code (WIP)
   * <code>Utility/</code> - logging, mem alloc tracking, code block timing
-* <code>DebugUI/</code> - debug ui / imgui layer
+* <code>DebugUI/</code> - debug ui / imgui 
 * <code>Game/</code> - game code, builds as dll
 * <code>Graphics/</code> - graphics api layer as well as backends, e.g. Vulkan
-* <code>Output/</code> - dumping ground for output files, e.g. raytraced image
+* <code>Output/</code> - dumping ground for output files, e.g. test images
 * <code>Scripts/</code> - build scripts and some helpful project scripts
 * <code>Shaders/</code> - all gpu shader code
   * <code>hlsl/</code> - shader source
@@ -36,45 +35,45 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * <code>SPIR-V-VM/</code> - virtual machine for evaluating SPIR-V shaders (WIP)
 * <code>Test/</code> - simple setup for running unit tests
 * <code>ThirdParty/</code> - external libraries
-  * <code>dxc_2022_07_18/</code> - dxc release lib
+  * <code>dxc_2022_07_18/</code> - DirectXCompiler release lib
   * <code>imgui-docking/</code> - Imgui lib, docking branch
   * <code>xxHash-0.8.2/</code> - xxHash fast string hashing
   * <code>constexpr-xxh3/</code> - compile-time string hashing (produces values identical xxHash)
 * <code>Tools/</code> - code for separate tools
-  * <code>ShaderCompiler/</code> - code that calls into DXC to compile HLSL shaders to SPIR-V (+DXIL eventually) 
+  * <code>ShaderCompiler/</code> - calls into DXC to compile HLSL shaders to SPIR-V (+DXIL eventually) 
 * <code>ToolsBin/</code> - built binaries of code from <code>Tools/</code>
-* <code>Utils/</code> - random stuff, e.g. Natvis files
+* <code>Utils/</code> - random misc, e.g. Natvis files
 
 ### Feature List
 * Platform layer
-  * Builds as the exe
   * Win32 backend support 
-  * Automatically hotloads newly built game code dll
+  * Automatic hotloading of game code dll upon recompilation
   * Simple thread-job system with SPSC lockless queue
 * Graphics
-  * API-agnostic graphics layer, compiles with desired backend
+  * API-agnostic graphics layer, compiles with desired backend API (e.g. Vulkan)
     * Vulkan backend support
-      * Use of dynamic rendering API feature
-    * Bindless rendering 
+      * Dynamic rendering API feature
+    * "Bindless" texture binding
     * Render pass timing with GPU timestamps
   * Builds with game dll, meaning the graphics system is hotloadable
-  * Draw call batching
-  * Instanced rendering
+  * Draw instancing 
   * Shader hotloading on keypress
-    * Calls into DXC lib
-  * Shader pipeline state objects handled as blend/depth state permutations
-* Custom data structures
-  * Vector
-  * Hash map
-  * Ring buffer
-* Simple linear algebra library
-* Custom memory allocators
+    * Calls directly into DirectXCompiler lib
+  * Shader pipeline state objects handled as blend/depth state permutations selected at run-time 
+* Core engine features
+  * Custom data structures
+    * Vector
+    * Hash map
+    * Ring buffer
+  * Custom memory allocators
+  * Compile-time as well as run-time evaluated string hashes
 * Memory allocation tracking
   * Tracks entire stack trace 
-* Uses compile-time and run-time evaluated string hashes 
-* Asset file loading
+* Simple linear algebra library
+  * SIMD matrix multiply 
+* Game asset file loading
   * OBJ models, BMP textures
-  * Cooking of mesh vertex buffers into binary format
+  * "Cooking" of mesh vertex data into binary format
 * ImGui debug UI
 * Simple unit testing and benchmarking frameworks
 * WIP features
@@ -84,6 +83,7 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
   * Simple CPU-side raytracing (WIP)
 
 ### Feature Roadmap
+* More debug tooling and validation
 * GPU-driven culling and drawing
 * Post processing effects
 * DX12 backend implementation
