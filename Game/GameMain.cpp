@@ -4,6 +4,7 @@
 #include "Graphics/Common/ShaderManager.h"
 #include "ShaderCompiler/ShaderCompiler.h"
 #include "Allocators.h"
+#include "Hashing.h"
 #include "Math/VectorTypes.h"
 #include "AssetFileParsing.h"
 #include "Utility/ScopedTimer.h"
@@ -321,7 +322,7 @@ INPUT_CALLBACK(ToggleImGuiDisplay)
 {
     DebugUI::ToggleEnable();
 }
-#include "Hashing.h"
+
 static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 {
     TIMED_SCOPED_BLOCK("Game Init");
