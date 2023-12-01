@@ -5,8 +5,8 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 ### Platforms supported
 | | Windows | Linux |
 |-|:-------:|:------:
-|Vulkan| Y | N |
-|DX12  | N | N |
+|Vulkan| ✔️ | :x: |
+|DX12  | :x: | :x: |
 
 ### Table of Contents
 * [Project hierarchy description](#project-hierarchy-description)
