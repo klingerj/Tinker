@@ -16,7 +16,7 @@ Scripts that compile code
 <b>build_app_and_game_dll.bat</b> - builds platform app exe and game dll into <code>Build/</code>  
 <code>> build_app_and_game_dll.bat [Release | Debug] [VK | DX] </code>  
 
-<b>build_benchmarks.bat</b> - builds benchmark exe into <code>Build/</code>. Note game dll hotloads!  
+<b>build_benchmarks.bat</b> - builds benchmark exe into <code>Build/</code>.
 <code>> build_benchmarks.bat [Release | Debug] </code>  
 
 <b>build_app.bat</b> - builds platform app exe into <code>Build/</code>  
