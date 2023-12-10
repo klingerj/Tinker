@@ -11,10 +11,9 @@ namespace ShaderManager
     void Startup();
     void Shutdown();
 
-    void LoadAllShaders(uint32 windowWidth, uint32 windowHeight);
-    void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight);
-    void CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight);
-    void ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight);
+    void LoadAllShaders();
+    void LoadAllShaderResources();
+    void ReloadShaders();
 }
 }
 }

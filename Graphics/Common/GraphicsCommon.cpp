@@ -1,5 +1,6 @@
 #include "GraphicsCommon.h"
 #include "GPUTimestamps.h"
+#include "DataStructures/HashMap.h"
 #include "Utility/Logging.h"
 
 #ifdef VULKAN
@@ -25,44 +26,102 @@ static_assert(ARRAYCOUNT(MultiBufferedStatusFromBufferUsage) == BufferUsage::eMa
 
 static DefaultTexture DefaultTextures[DefaultTextureID::eMax] = {};
 
-void CreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
+static Tk::Core::HashMap<uint64, SwapChainData, MapHashFn64> SwapChainDataMap;
+void CreateSwapChain(const Tk::Platform::WindowHandles* windowHandles, uint32 width, uint32 height)
+{
+    uint32 dataIndex = SwapChainDataMap.Insert(windowHandles->hWindow, {}); // TODO: make this api better 
+    SwapChainData& newSwapChainData = SwapChainDataMap.DataAtIndex(dataIndex);
+    newSwapChainData.windowWidth = width;
+    newSwapChainData.windowHeight = height;
+    CreateSwapChainAPIObjects(&newSwapChainData, windowHandles);
+    newSwapChainData.isSwapChainValid = true;
+}
+
+void DestroySwapChain(const Tk::Platform::WindowHandles* windowHandles)
+{
+    // Acquire frame in order to ensure that fences and semaphores are reset 
+    //Tk::Graphics::AcquireFrame(windowHandles);
+
+    uint32 dataIndex = SwapChainDataMap.FindIndex(windowHandles->hWindow);
+    SwapChainData& swapChainData = SwapChainDataMap.DataAtIndex(dataIndex);
+    swapChainData.isSwapChainValid = false;
+
+    DestroySwapChainAPIObjects(&swapChainData);
+    SwapChainDataMap.Remove(windowHandles->hWindow);
+}
+
+void CreateContext(const Tk::Platform::WindowHandles* windowHandles)
 {
     int result = 0;
 
     #ifdef VULKAN
-    result = InitVulkan(windowHandles, windowWidth, windowHeight);
+    result = InitVulkan(windowHandles);
     #endif
 
     if (result)
+    {
         Core::Utility::LogMsg("Platform", "Failed to init graphics backend!", Core::Utility::LogSeverity::eCritical);
+    }
+
+    SwapChainDataMap.Reserve(NUM_SWAP_CHAINS_STARTING_ALLOC_SIZE); // TODO the hash map data structure needs resize still so...
 }
 
-void RecreateContext(const Tk::Platform::WindowHandles* windowHandles, uint32 windowWidth, uint32 windowHeight)
+void DestroyContext()
+{
+    #ifdef VULKAN
+    DestroyVulkan();
+    #endif
+}
+
+void RecreateContext(const Tk::Platform::WindowHandles* windowHandles)
 {
     DestroyContext();
 
+    //TODO: just call CreateContext()?
     #ifdef VULKAN
-    InitVulkan(windowHandles, windowWidth, windowHeight);
+    InitVulkan(windowHandles);
     #endif
 }
 
-void WindowResize()
+void WindowResize(const Tk::Platform::WindowHandles* windowHandles, uint32 newWindowWidth, uint32 newWindowHeight)
 {
-    DestroyAllPSOPerms();
-    DestroySwapChain();
-    CreateSwapChain();
+    DestroySwapChain(windowHandles);
+    CreateSwapChain(windowHandles, newWindowWidth, newWindowHeight);
 }
 
-bool AcquireFrame()
+void WindowMinimized(const Tk::Platform::WindowHandles* windowHandles)
 {
-    #ifdef VULKAN
-    return g_vulkanContextResources.isSwapChainValid && VulkanAcquireFrame();
-    #else
-    return false;
-    #endif
+    uint32 dataIndex = SwapChainDataMap.FindIndex(windowHandles->hWindow);
+    SwapChainData& swapChainData = SwapChainDataMap.DataAtIndex(dataIndex);
+    swapChainData.isSwapChainValid = false;
 }
 
-void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandStream, bool immediateSubmit)
+ResourceHandle GetCurrentSwapChainImage(const Tk::Platform::WindowHandles* windowHandles)
+{
+    uint32 dataIndex = SwapChainDataMap.FindIndex(windowHandles->hWindow);
+    SwapChainData& swapChainData = SwapChainDataMap.DataAtIndex(dataIndex);
+    return swapChainData.swapChainResourceHandles[swapChainData.currentSwapChainImage];
+}
+
+bool AcquireFrame(const Tk::Platform::WindowHandles* windowHandles)
+{
+    uint32 dataIndex = SwapChainDataMap.FindIndex(windowHandles->hWindow);
+    SwapChainData& swapChainData = SwapChainDataMap.DataAtIndex(dataIndex);
+    if (swapChainData.isSwapChainValid)
+    {
+        #ifdef VULKAN
+        return VulkanAcquireFrame(&swapChainData);
+        #else
+        return false;
+        #endif
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandStream)
 {
     TINKER_ASSERT(graphicsCommandStream->m_numCommands <= graphicsCommandStream->m_maxCommands);
 
@@ -78,16 +137,17 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
         uint32 currentBlendState = BlendState::eMax;
         uint32 currentDepthState = DepthState::eMax;
         DescriptorHandle currDescriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-        for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
         {
-            currDescriptors[i] = Graphics::DefaultDescHandle_Invalid;
+            currDescriptors[uiDesc] = Graphics::DefaultDescHandle_Invalid;
         }
+        
+        CommandBuffer currentCmdBuf = {};
 
-        for (uint32 i = 0; i < graphicsCommandStream->m_numCommands; ++i)
+        for (uint32 uiCmd = 0; uiCmd  < graphicsCommandStream->m_numCommands; ++uiCmd)
         {
-            TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[i].m_commandType < GraphicsCommand::eMax);
-
-            const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[i];
+            TINKER_ASSERT(graphicsCommandStream->m_graphicsCommands[uiCmd].m_commandType < GraphicsCommand::eMax);
+            const GraphicsCommand& currentCmd = graphicsCommandStream->m_graphicsCommands[uiCmd];
 
             switch (currentCmd.m_commandType)
             {
@@ -104,7 +164,7 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
                     if (psoChange)
                     {
-                        RecordCommandBindShader(currentShaderID, currentBlendState, currentDepthState, immediateSubmit);
+                        RecordCommandBindShader(currentCmdBuf, currentShaderID, currentBlendState, currentDepthState);
                     }
                     
                     for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
@@ -115,21 +175,21 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
 
                             if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
                             {
-                                RecordCommandBindDescriptor(currentShaderID, BindPoint::eGraphics, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                                RecordCommandBindDescriptor(currentCmdBuf, currentShaderID, BindPoint::eGraphics, currentCmd.m_descriptors[uiDesc], uiDesc);
                             }
                         }
                     }
 
-                    RecordCommandDrawCall(currentCmd.m_indexBufferHandle, currentCmd.m_numIndices,
-                        currentCmd.m_numInstances, currentCmd.m_vertOffset, currentCmd.m_indexOffset,
-                        currentCmd.debugLabel, immediateSubmit);
+                    RecordCommandDrawCall(currentCmdBuf, currentCmd.m_indexBufferHandle,
+                        currentCmd.m_numIndices, currentCmd.m_numInstances, currentCmd.m_vertexOffset,
+                        currentCmd.m_indexOffset, currentCmd.debugLabel);
                     break;
                 }
 
                 case GraphicsCommand::eDispatch:
                 {
                     // currently binds pso unconditionally, but it's probably fine 
-                    RecordCommandBindComputeShader(currentCmd.m_shader, immediateSubmit);
+                    RecordCommandBindComputeShader(currentCmdBuf, currentCmd.m_shader);
 
                     for (uint32 uiDesc = 0; uiDesc < MAX_DESCRIPTOR_SETS_PER_SHADER; ++uiDesc)
                     {
@@ -139,66 +199,83 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                             
                             if (currentCmd.m_descriptors[uiDesc] != Graphics::DefaultDescHandle_Invalid)
                             {
-                                RecordCommandBindDescriptor(currentCmd.m_shader, BindPoint::eCompute, currentCmd.m_descriptors[uiDesc], uiDesc, immediateSubmit);
+                                RecordCommandBindDescriptor(currentCmdBuf, currentCmd.m_shader, BindPoint::eCompute, currentCmd.m_descriptors[uiDesc], uiDesc);
                             }
                         }
                     }
 
-                    RecordCommandDispatch(currentCmd.m_threadGroupsX, currentCmd.m_threadGroupsY, currentCmd.m_threadGroupsZ, currentCmd.debugLabel, immediateSubmit);
+                    RecordCommandDispatch(currentCmdBuf, currentCmd.m_threadGroupsX, currentCmd.m_threadGroupsY, currentCmd.m_threadGroupsZ, currentCmd.debugLabel);
                     break;
                 }
 
-                case GraphicsCommand::eMemTransfer:
+                case GraphicsCommand::eCopy:
                 {
-                    RecordCommandMemoryTransfer(currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
-                        currentCmd.debugLabel, immediateSubmit);
-
+                    RecordCommandMemoryTransfer(currentCmdBuf, currentCmd.m_sizeInBytes, currentCmd.m_srcBufferHandle, currentCmd.m_dstBufferHandle,
+                        currentCmd.debugLabel);
                     break;
                 }
 
                 case GraphicsCommand::ePushConstant:
                 {
-                    RecordCommandPushConstant(&currentCmd.m_pushConstantData[0], ARRAYCOUNT(currentCmd.m_pushConstantData) * sizeof(uint8), currentCmd.m_shaderForLayout);
+                    RecordCommandPushConstant(currentCmdBuf, &currentCmd.m_pushConstantData[0], ARRAYCOUNT(currentCmd.m_pushConstantData) * sizeof(uint8),
+                        currentCmd.m_shaderForLayout);
+                    break;
+                }
 
+                case GraphicsCommand::eSetViewport:
+                {
+                    RecordCommandSetViewport(currentCmdBuf, currentCmd.m_viewportOffsetX, currentCmd.m_viewportOffsetY, currentCmd.m_viewportWidth,
+                        currentCmd.m_viewportHeight, currentCmd.m_viewportMinDepth, currentCmd.m_viewportMaxDepth);
                     break;
                 }
 
                 case GraphicsCommand::eSetScissor:
                 {
-                    RecordCommandSetScissor(currentCmd.m_scissorOffsetX, currentCmd.m_scissorOffsetY, currentCmd.m_scissorWidth, currentCmd.m_scissorHeight);
+                    RecordCommandSetScissor(currentCmdBuf, currentCmd.m_scissorOffsetX, currentCmd.m_scissorOffsetY, currentCmd.m_scissorWidth, currentCmd.m_scissorHeight);
+                    break;
+                }
 
+                case GraphicsCommand::eCmdBufferBegin:
+                {
+                    TINKER_ASSERT(currentCmdBuf == CommandBuffer());
+                    BeginCommandRecording(currentCmd.m_commandBuffer);
+                    currentCmdBuf = currentCmd.m_commandBuffer;
+                    break;
+                }
+
+                case GraphicsCommand::eCmdBufferEnd:
+                {
+                    TINKER_ASSERT(currentCmdBuf != CommandBuffer());
+                    TINKER_ASSERT(currentCmd.m_commandBuffer == currentCmdBuf);
+                    EndCommandRecording(currentCmd.m_commandBuffer);
+                    currentCmdBuf = {};
                     break;
                 }
 
                 case GraphicsCommand::eRenderPassBegin:
                 {
-                    RecordCommandRenderPassBegin(currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
-                        currentCmd.m_renderWidth, currentCmd.m_renderHeight, currentCmd.debugLabel, immediateSubmit);
-
+                    RecordCommandRenderPassBegin(currentCmdBuf, currentCmd.m_numColorRTs, &currentCmd.m_colorRTs[0], currentCmd.m_depthRT,
+                        currentCmd.m_renderWidth, currentCmd.m_renderHeight, currentCmd.debugLabel);
                     break;
                 }
 
                 case GraphicsCommand::eRenderPassEnd:
                 {
-                    RecordCommandRenderPassEnd(immediateSubmit);
-
+                    RecordCommandRenderPassEnd(currentCmdBuf);
                     break;
                 }
 
                 case GraphicsCommand::eLayoutTransition:
                 {
-                    RecordCommandTransitionLayout(currentCmd.m_imageHandle,
-                        currentCmd.m_startLayout, currentCmd.m_endLayout,
-                        currentCmd.debugLabel, immediateSubmit);
-
+                    RecordCommandTransitionLayout(currentCmdBuf, currentCmd.m_imageHandle,
+                        currentCmd.m_startLayout, currentCmd.m_endLayout, currentCmd.debugLabel);
                     break;
                 }
 
                 case GraphicsCommand::eClearImage:
                 {
-                    RecordCommandClearImage(currentCmd.m_imageHandle,
-                        currentCmd.m_clearValue, currentCmd.debugLabel, immediateSubmit);
-
+                    RecordCommandClearImage(currentCmdBuf, currentCmd.m_imageHandle,
+                        currentCmd.m_clearValue, currentCmd.debugLabel);
                     break;
                 }
 
@@ -209,28 +286,27 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
                     {
                         void* cpuCopyBuffer = GPUTimestamps::GetRawCPUSideTimestampBuffer();
                         const uint32 numTimestampsRecorded = GPUTimestamps::GetMostRecentRecordedTimestampCount();
-                        ResolveMostRecentAvailableTimestamps(cpuCopyBuffer, numTimestampsRecorded, immediateSubmit);
+                        ResolveMostRecentAvailableTimestamps(currentCmdBuf, cpuCopyBuffer, numTimestampsRecorded);
                         GPUTimestamps::ProcessTimestamps();
                     }
 
-                    RecordCommandGPUTimestamp(GPUTimestamps::GetMostRecentRecordedTimestampCount(), immediateSubmit);
+                    RecordCommandGPUTimestamp(currentCmdBuf, GPUTimestamps::GetMostRecentRecordedTimestampCount());
                     GPUTimestamps::RecordName(currentCmd.m_timestampNameStr);
-
                     break;
                 }
 
                 case GraphicsCommand::eDebugMarkerStart:
                 {
-                    RecordCommandDebugMarkerStart(immediateSubmit, currentCmd.debugLabel);
+                    RecordCommandDebugMarkerStart(currentCmdBuf, currentCmd.debugLabel);
                     break;
                 }
 
                 case GraphicsCommand::eDebugMarkerEnd:
                 {
-                    RecordCommandDebugMarkerEnd(immediateSubmit);
+                    RecordCommandDebugMarkerEnd(currentCmdBuf);
                     break;
                 }
-
+                
                 default:
                 {
                     // Invalid command type
@@ -242,38 +318,39 @@ void ProcessGraphicsCommandStream(const GraphicsCommandStream* graphicsCommandSt
     }
 }
 
-void BeginFrameRecording()
+void SubmitFrameToGPU(const Tk::Platform::WindowHandles* windowHandles, CommandBuffer commandBuffer)
 {
+    uint32 dataIndex = SwapChainDataMap.FindIndex(windowHandles->hWindow);
+    SwapChainData& swapChainData = SwapChainDataMap.DataAtIndex(dataIndex);
+
     #ifdef VULKAN
-    BeginVulkanCommandRecording();
+    VulkanSubmitFrame(&swapChainData, commandBuffer);
     #endif
 }
 
-void EndFrameRecording()
+void PresentToSwapChain(const Tk::Platform::WindowHandles* windowHandles)
 {
-    #ifdef VULKAN
-    EndVulkanCommandRecording();
-    #endif
-}
+    uint32 dataIndex = SwapChainDataMap.FindIndex(windowHandles->hWindow);
+    SwapChainData& swapChainData = SwapChainDataMap.DataAtIndex(dataIndex);
 
-void SubmitFrameToGPU()
-{
     #ifdef VULKAN
-    Graphics::VulkanSubmitFrame();
+    VulkanPresentToSwapChain(&swapChainData);
     #endif
 }
 
 SUBMIT_CMDS_IMMEDIATE(SubmitCmdsImmediate)
 {
+    ProcessGraphicsCommandStream(graphicsCommandStream);
+
     #ifdef VULKAN
-    BeginVulkanCommandRecordingImmediate();
-    ProcessGraphicsCommandStream(graphicsCommandStream, true);
-    EndVulkanCommandRecordingImmediate();
+    VulkanSubmitCommandBufferAndWaitImmediate(commandBuffer);
     #endif
 }
 
 void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
+    CommandBuffer cmdBuf = CreateCommandBuffer();
+
     DefaultTexture& tex = DefaultTextures[DefaultTextureID::eBlack2x2];
     ResourceDesc desc = {};
     desc.resourceType = ResourceType::eImage2D;
@@ -285,17 +362,20 @@ void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsComma
     tex.res = CreateResource(desc);
     tex.clearValue = v4f(0.0, 0.0, 0.0, 0.0);
     
+    graphicsCommandStream->CmdCommandBufferBegin(cmdBuf, "Begin default texture creation cmd buffer");
+
     for (uint32 i = 0; i < DefaultTextureID::eMax; ++i)
     {
         DefaultTexture& currTex = DefaultTextures[i];
-        
-        graphicsCommandStream->CmdTransitionLayout(currTex.res, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition default texture to clear optimal");
+        graphicsCommandStream->CmdLayoutTransition(currTex.res, Graphics::ImageLayout::eUndefined, Graphics::ImageLayout::eTransferDst, "Transition default texture to clear optimal");
         graphicsCommandStream->CmdClear(currTex.res, currTex.clearValue, "Clear default texture");
-        graphicsCommandStream->CmdTransitionLayout(currTex.res, Graphics::ImageLayout::eTransferDst, Graphics::ImageLayout::eShaderRead, "Transition default texture to shader read");
+        graphicsCommandStream->CmdLayoutTransition(currTex.res, Graphics::ImageLayout::eTransferDst, Graphics::ImageLayout::eShaderRead, "Transition default texture to shader read");
     }
 
-    Graphics::SubmitCmdsImmediate(graphicsCommandStream);
-    graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+    graphicsCommandStream->CmdCommandBufferEnd(cmdBuf);
+    Graphics::SubmitCmdsImmediate(graphicsCommandStream, cmdBuf);
+    graphicsCommandStream->Clear();
+    //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 }
 
 void DestroyDefaultTextures()

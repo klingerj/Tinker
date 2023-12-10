@@ -6,6 +6,8 @@ using namespace Tk;
 
 void CreateDefaultGeometry(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
+    Tk::Graphics::CommandBuffer commandBuffer = Tk::Graphics::CreateCommandBuffer();
+
     // Default Quad
     {
         Graphics::ResourceDesc desc;
@@ -58,41 +60,29 @@ void CreateDefaultGeometry(Tk::Graphics::GraphicsCommandStream* graphicsCommandS
         memcpy(stagingBufferMemPtr_Idx, defaultQuad.m_indices, sizeof(defaultQuad.m_indices));
 
         // Do GPU buffer copies
-        Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx Pos Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_points);
-        command->m_dstBufferHandle = defaultQuad.m_positionBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_Pos;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdCommandBufferBegin(commandBuffer, "Default geometry creation cmd buffer");
 
-        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx UV Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_uvs);
-        command->m_dstBufferHandle = defaultQuad.m_uvBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_UV;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_points),
+            stagingBufferHandle_Pos,
+            defaultQuad.m_positionBuffer.gpuBufferHandle,
+            "Update Default Quad Vtx Pos Buf");
+        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_uvs),
+            stagingBufferHandle_UV,
+            defaultQuad.m_uvBuffer.gpuBufferHandle,
+            "Update Default Quad Vtx UV Buf");
+        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_normals),
+            stagingBufferHandle_Norm,
+            defaultQuad.m_normalBuffer.gpuBufferHandle,
+            "Update Default Quad Vtx Norm Buf");
+        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_indices),
+            stagingBufferHandle_Idx,
+            defaultQuad.m_indexBuffer.gpuBufferHandle,
+            "Update Default Quad Vtx Idx Buf");
 
-        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx Norm Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_normals);
-        command->m_dstBufferHandle = defaultQuad.m_normalBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_Norm;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
-
-        command->m_commandType = Graphics::GraphicsCommand::eMemTransfer;
-        command->debugLabel = "Update Default Quad Vtx Idx Buf";
-        command->m_sizeInBytes = sizeof(defaultQuad.m_indices);
-        command->m_dstBufferHandle = defaultQuad.m_indexBuffer.gpuBufferHandle;
-        command->m_srcBufferHandle = stagingBufferHandle_Idx;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
-
-        Graphics::SubmitCmdsImmediate(graphicsCommandStream);
-        graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+        graphicsCommandStream->CmdCommandBufferEnd(commandBuffer);
+        Graphics::SubmitCmdsImmediate(graphicsCommandStream, commandBuffer);
+        graphicsCommandStream->Clear();
+        //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 
         // Unmap + destroy resources
         Graphics::UnmapResource(stagingBufferHandle_Pos);
@@ -224,24 +214,19 @@ void UpdateAnimatedPoly(TransientPrim* prim)
 
 void DrawAnimatedPoly(TransientPrim* prim, Graphics::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
-    Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-
-    command->m_commandType = Graphics::GraphicsCommand::eDrawCall;
-    command->debugLabel = "Draw animated poly";
-    command->m_numIndices = (prim->numVertices - 1) * 3;
-    command->m_numInstances = 1;
-    command->m_vertOffset = 0;
-    command->m_indexOffset = 0;
-    command->m_indexBufferHandle = prim->indexBufferHandle;
-    command->m_shader = shaderID;
-    command->m_blendState = blendState;
-    command->m_depthState = depthState;
-
+    Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
-        command->m_descriptors[i] = Graphics::DefaultDescHandle_Invalid;
+        descriptors[i] = Graphics::DefaultDescHandle_Invalid;
     }
-    command->m_descriptors[0] = globalData;
-    command->m_descriptors[1] = prim->descriptor;
-    ++graphicsCommandStream->m_numCommands;
+    descriptors[0] = globalData;
+    descriptors[1] = prim->descriptor;
+    graphicsCommandStream->CmdDraw((prim->numVertices - 1) * 3,
+        1, 0, 0,
+        shaderID,
+        blendState,
+        depthState,
+        prim->indexBufferHandle,
+        MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors,
+        "Draw animated poly");
 }

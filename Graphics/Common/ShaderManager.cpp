@@ -35,8 +35,7 @@ typedef struct gfx_pipeline_attach_fmts
 } GraphicsPipelineAttachmentFormats;
 
 static bool LoadShader(const char* vertexShaderFileName, const char* fragmentShaderFileName,
-    uint32 shaderID, uint32 viewportWidth, uint32 viewportHeight,
-    const GraphicsPipelineAttachmentFormats& pipelineFormats,
+    uint32 shaderID, const GraphicsPipelineAttachmentFormats& pipelineFormats,
     uint32* descLayouts, uint32 numDescLayouts)
 {
     uint8* vertexShaderBuffer = nullptr;
@@ -62,7 +61,7 @@ static bool LoadShader(const char* vertexShaderFileName, const char* fragmentSha
     const bool created = Tk::Graphics::CreateGraphicsPipeline(
         vertexShaderBuffer, vertexShaderFileSize,
         fragmentShaderBuffer, fragmentShaderFileSize,
-        shaderID, viewportWidth, viewportHeight,
+        shaderID,
         pipelineFormats.numColorRTs, pipelineFormats.colorRTFormats, pipelineFormats.depthFormat,
         descLayouts, numDescLayouts);
     return created;
@@ -98,19 +97,13 @@ void Shutdown()
     g_ShaderBytecodeAllocator.ExplicitFree();
 }
 
-void ReloadShaders(uint32 newWindowWidth, uint32 newWindowHeight)
+void ReloadShaders()
 {
     Graphics::DestroyAllPSOPerms();
-    LoadAllShaders(newWindowWidth, newWindowHeight);
+    LoadAllShaders();
 }
 
-void CreateWindowDependentResources(uint32 newWindowWidth, uint32 newWindowHeight)
-{
-    // TODO: don't reload the shader every time we resize, need to be able to reference existing bytecode... which we do already store
-    LoadAllShaders(newWindowWidth, newWindowHeight);
-}
-
-void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
+void LoadAllShaders()
 {
     g_ShaderBytecodeAllocator.ExplicitFree();
     g_ShaderBytecodeAllocator.Init(totalShaderBytecodeMaxSizeInBytes, 1);
@@ -118,7 +111,7 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     bool bOk = false;
 
     // Shaders
-    const uint32 numShaderFilepaths = 9;
+    const uint32 numShaderFilepaths = 11;
     const char* shaderFilePaths[numShaderFilepaths] =
     {
         SHADERS_SPV_PATH "blit_VS.spv",
@@ -130,25 +123,44 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
         SHADERS_SPV_PATH "imgui_VS.spv",
         SHADERS_SPV_PATH "imgui_PS.spv",
         SHADERS_SPV_PATH "grayscale_CS.spv",
+        SHADERS_SPV_PATH "blit_clear_VS.spv",
+        SHADERS_SPV_PATH "blit_clear_PS.spv",
     };
 
     uint32 descLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
 
     GraphicsPipelineAttachmentFormats pipelineFormats;
 
-    // Swap chain blit
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX;
-    descLayouts[1] = Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS;
+    // Quad blit
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX;
+    descLayouts[1] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
-    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_SWAP_CHAIN_BLIT, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
+    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_QUAD_BLIT, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
+
+    // Quad blit clear 
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_VBS;
+    pipelineFormats.Init();
+    pipelineFormats.numColorRTs = 1;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
+    bOk = LoadShader(shaderFilePaths[9], shaderFilePaths[10], Graphics::SHADER_ID_QUAD_BLIT_CLEAR, pipelineFormats, descLayouts, 1);
+    TINKER_ASSERT(bOk);
+
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
+        descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
 
     // Imgui debug ui pass
     descLayouts[0] = Graphics::DESCLAYOUT_ID_IMGUI_TEX;
@@ -156,11 +168,18 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
-    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
+    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI, pipelineFormats, descLayouts, 2);
+    TINKER_ASSERT(bOk);
+
+    // TODO: temporary 
+    pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
+    bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI_RGBA8, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
 
     // ZPrepass
     descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
@@ -168,11 +187,13 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
     pipelineFormats.Init();
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
-    bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, windowWidth, windowHeight, pipelineFormats, descLayouts, 3);
+    bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, pipelineFormats, descLayouts, 3);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
 
     // Main view
     descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
@@ -183,11 +204,13 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
-    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 4);
+    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, pipelineFormats, descLayouts, 4);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
 
     // Animated poly
     descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
@@ -196,11 +219,13 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
-    bOk = LoadShader(shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, windowWidth, windowHeight, pipelineFormats, descLayouts, 2);
+    bOk = LoadShader(shaderFilePaths[4], shaderFilePaths[5], Graphics::SHADER_ID_ANIMATEDPOLY_MainView, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
 
     /// Compute
     
@@ -210,7 +235,7 @@ void LoadAllShaders(uint32 windowWidth, uint32 windowHeight)
     TINKER_ASSERT(bOk);
 }
 
-void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
+void LoadAllShaderResources()
 {
     bool bOk = false;
 
@@ -232,7 +257,7 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
@@ -242,7 +267,7 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     descriptorLayout.params[1].amount = 1;
     descriptorLayout.params[2].type = Tk::Graphics::DescriptorType::eSSBO;
     descriptorLayout.params[2].amount = 1;
-    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_VBS, &descriptorLayout);
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_QUAD_BLIT_VBS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
@@ -291,7 +316,7 @@ void LoadAllShaderResources(uint32 windowWidth, uint32 windowHeight)
     bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_COMPUTE_COPY, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
-    LoadAllShaders(windowWidth, windowHeight);
+    LoadAllShaders();
 }
 
 }

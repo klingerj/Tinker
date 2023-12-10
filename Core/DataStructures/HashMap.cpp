@@ -41,13 +41,24 @@ TINKER_API void HashMapBase::Reserve(uint32 numEles, uint32 dataPairSize)
 
 TINKER_API void HashMapBase::Clear(size_t dataPairSize)
 {
-    memset(m_data, 0xFF, m_size * dataPairSize);
+    memset(m_data, eInvalidDataByte, m_size * dataPairSize);
+}
+
+TINKER_API void HashMapBase::ClearEntry(uint32 dataIndex, size_t dataPairSize, size_t dataValueOffset)
+{
+    const size_t keySize = dataValueOffset;
+    memset(KeyAtIndex(dataIndex, dataPairSize), eInvalidDataByte, keySize);
+
+    const size_t dataSize = dataPairSize - dataValueOffset;
+    memset(DataAtIndex(dataIndex, dataPairSize, dataValueOffset), eInvalidDataByte, dataSize);
 }
 
 TINKER_API uint32 HashMapBase::FindIndex(uint32 index, void* key, size_t dataPairSize, bool CompareKeysFunc(const void*, const void*), const void* m_InvalidKey) const
 {
     if (CompareKeysFunc(key, m_InvalidKey))
+    {
         return eInvalidIndex;
+    }
 
     uint32 currIndex = index;
     do
@@ -79,7 +90,9 @@ TINKER_API void* HashMapBase::KeyAtIndex(uint32 index, size_t dataPairSize) cons
 TINKER_API uint32 HashMapBase::Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey)
 {
     if (CompareKeysFunc(key, m_InvalidKey))
+    {
         return eInvalidIndex;
+    }
 
     uint32 currIndex = index;
     do
@@ -101,6 +114,21 @@ TINKER_API uint32 HashMapBase::Insert(uint32 index, void* key, void* value, bool
     } while (currIndex != index);
 
     return eInvalidIndex;
+}
+
+TINKER_API void HashMapBase::Remove(uint32 index, void* key, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey)
+{
+    uint32 dataIndex = FindIndex(index, key, dataPairSize, CompareKeysFunc, m_InvalidKey);
+    if (dataIndex == eInvalidIndex)
+    {
+        // TODO: should this code path error or not?
+        TINKER_ASSERT(0);
+    }
+    else
+    {
+        void* data = DataAtIndex(dataIndex, dataPairSize, dataValueOffset);
+        ClearEntry(dataIndex, dataPairSize, dataValueOffset);
+    }
 }
 
 }

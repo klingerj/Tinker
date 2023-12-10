@@ -40,6 +40,7 @@ namespace Core
 struct HashMapBase
 {
     enum : uint32 { eInvalidIndex = MAX_UINT32 }; // index, not key
+    enum : uint8 { eInvalidDataByte = 0xFF };
     
     TINKER_API ~HashMapBase();
 
@@ -48,6 +49,8 @@ private:
     {
         return (index + 1) % m_size;
     }
+    
+    TINKER_API void ClearEntry(uint32 dataIndex, size_t dataPairSize, size_t dataValueOffset);
 
 protected:
     uint8* m_data;
@@ -59,6 +62,7 @@ protected:
     TINKER_API void* DataAtIndex(uint32 index, size_t dataPairSize, size_t dataValueOffset) const;
     TINKER_API void* KeyAtIndex(uint32 index, size_t dataPairSize) const;
     TINKER_API uint32 Insert(uint32 index, void* key, void* value, bool CompareKeysFunc(const void*, const void*), size_t dataPairSize, size_t dataValueOffset, size_t dataValueSize, const void* m_InvalidKey);
+    TINKER_API void Remove(uint32 index, void* key, bool CompareKeysFunc(const void*, const void*), size_t ePairSize, size_t ePairValOffset, size_t ePairValSize, const void* m_InvalidKey);   
 };
 
 template <typename tKey, typename tVal, uint32 HashFunc(tKey)>
@@ -138,6 +142,12 @@ public:
     {
         uint32 index = Hash(key, m_size);
         return HashMapBase::Insert(index, &key, &value, CompareKeys<tKey>, ePairSize, ePairValOffset, ePairValSize, &m_InvalidKey);
+    }
+
+    void Remove(tKey key)
+    {
+        uint32 index = Hash(key, m_size);
+        HashMapBase::Remove(index, &key, CompareKeys<tKey>, ePairSize, ePairValOffset, ePairValSize, &m_InvalidKey);
     }
 };
 

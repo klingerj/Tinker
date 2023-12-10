@@ -1,6 +1,5 @@
 #include "DebugUIRenderPass.h"
-
-extern GameGraphicsData gameGraphicsData;
+#include "DebugUI.h"
 
 namespace DebugUIRenderPass
 {

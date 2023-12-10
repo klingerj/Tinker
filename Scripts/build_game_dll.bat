@@ -36,7 +36,7 @@ if "%BuildConfig%" NEQ "Debug" (
     )
 
 if "%GraphicsAPI%" == "VK" (
-    rem Vulkan
+    :: Vulkan
     echo Using Vulkan SDK: %VULKAN_SDK%
     echo.
     ) else (
@@ -60,10 +60,13 @@ set "AbsolutePathPrefix=%AbsolutePathPrefix:\=/%"
 pushd .\Build
 del TinkerGame*.pdb > NUL 2> NUL
 
-:: Features
-set "EnableMemTracking=1"
+:: Build settings
+set "EnableUnityBuild=0"
 
-rem *********************************************************************************************************
+:: Features
+:: set "EnableMemTracking=1"
+
+:: *********************************************************************************************************
 set CommonCompileFlags=/nologo /std:c++20 /GL /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
@@ -86,11 +89,11 @@ set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/xxHash-0.8.2
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/constexpr-xxh3 
 set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
 
-rem *********************************************************************************************************
-rem TinkerGame - shared library
+:: *********************************************************************************************************
+:: TinkerGame - shared library
 
 set SourceListGame= 
-rem Glob all files in desired directories
+:: Glob all files in desired directories
 for /r %AbsolutePathPrefix%Game/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
 for /r %AbsolutePathPrefix%DebugUI/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
 for /r %AbsolutePathPrefix%Graphics/Common/ %%i in (*.cpp) do set SourceListGame=!SourceListGame! %%i 
@@ -102,7 +105,7 @@ if "%GraphicsAPI%" == "VK" (
 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%Tools/ShaderCompiler/ShaderCompiler.cpp 
 
-rem Don't glob third party folders right now
+:: Don't glob third party folders right now
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_demo.cpp 
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_draw.cpp 
@@ -110,25 +113,25 @@ set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking
 set SourceListGame=%SourceListGame% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_widgets.cpp 
 if "%GraphicsAPI%" == "D3D12" ( echo No source files available for D3D12. )
 
-rem Create unity build file will all cpp files included
-set "SourceListGame=%SourceListGame:\=/%" rem convert backslashes to forward slashes
+:: Create unity build file will all cpp files included
+set "SourceListGame=%SourceListGame:\=/%" :: convert backslashes to forward slashes
 set UnityBuildCppFile=GameUnityBuildFile.cpp
 set INCLUDE_PREFIX=#include
-
-echo Deleting old unity build cpp source file %UnityBuildCppFile%.
-if exist %UnityBuildCppFile% del %UnityBuildCppFile%
-echo ...Done.
-echo.
-
-echo Source files included in build:
-for %%i in (%SourceListGame%) do (
-    echo %%i
-    echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+if "%EnableUnityBuild%" == "1" (
+    echo Deleting old unity build cpp source file %UnityBuildCppFile%.
+    if exist %UnityBuildCppFile% del %UnityBuildCppFile%
+    echo ...Done.
+    echo.
+    
+    echo Source files included in build:
+    for %%i in (%SourceListGame%) do (
+        echo %%i
+        echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+    )
+    echo Generated: %UnityBuildCppFile%
 )
-echo Generated: %UnityBuildCppFile%
-rem 
 
-rem Defines 
+:: Defines 
 set CompileDefines=/DTINKER_GAME 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 if "%EnableMemTracking%" == "1" (
@@ -170,18 +173,24 @@ set OBJDir=%cd%\obj_game\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
+if "%EnableUnityBuild%" == "1" (
+    set SourceFiles=%UnityBuildCppFile% 
+) else (
+    set SourceFiles=%SourceListGame% 
+)
+
 echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %UnityBuildCppFile% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceFiles% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
 
-rem Copy needed dependency DLLs to exe directory
+:: Copy needed dependency DLLs to exe directory
 echo.
 echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
 copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
 copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
 echo Done.
 
-rem Delete unnecessary files
+:: Delete unnecessary files
 echo.
 if EXIST TinkerGame.lib (
     echo Deleting unnecessary file TinkerGame.lib

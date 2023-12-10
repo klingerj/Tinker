@@ -1,17 +1,18 @@
 #include "DebugUI.h"
 
 #include "CoreDefines.h"
+#include "Hashing.h"
 #include "Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
-#include "Graphics/Common/GraphicsCommon.h"
-
-#include "imgui.h"
-
-#include "Graphics/Common/GPUTimestamps.h"
 #include "DataStructures/Vector.h"
 #include "DataStructures/HashMap.h"
 #include "Sorting.h"
 #include "StringTypes.h"
+#include "Graphics/Common/GraphicsCommon.h"
+#include "Graphics/Common/GPUTimestamps.h"
+#include "Game/GraphicsTypes.h"
+
+#include "imgui.h"
 
 static const uint32 MAX_VERTS = 1024 * 1024;
 static const uint32 MAX_IDXS = MAX_VERTS * 3;
@@ -26,6 +27,7 @@ static Tk::Graphics::ResourceHandle colorBuffer = Tk::Graphics::DefaultResHandle
 static Tk::Graphics::ResourceHandle fontTexture = Tk::Graphics::DefaultResHandle_Invalid;
 static Tk::Graphics::DescriptorHandle vbDesc = Tk::Graphics::DefaultDescHandle_Invalid;
 static Tk::Graphics::DescriptorHandle texDesc = Tk::Graphics::DefaultDescHandle_Invalid;
+static Tk::Graphics::CommandBuffer cmdBuffer[64] = {}; // TODO: dynamically allocate 
 
 static bool g_enable = false;
 
@@ -46,6 +48,44 @@ void ImGuiMemWrapper_Free(void* ptr, void* user_data)
     free(ptr);
 }
 
+static Tk::Platform::WindowHandles GetWindowHandlesFromImguiViewport(ImGuiViewport* viewport)
+{
+    Tk::Platform::WindowHandles windowHandles = {};
+    windowHandles.hInstance = Tk::Platform::GetPlatformWindowHandles()->hInstance;
+    windowHandles.hWindow = (uint64)viewport->PlatformHandleRaw;
+    return windowHandles;
+}
+
+static v2ui GetFramebufferDimsFromImguiDrawData(ImDrawData* drawData)
+{
+    uint32 fbWidth = (uint32)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+    uint32 fbHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+    return v2ui(fbWidth, fbHeight);
+}
+
+static void ImguiCreateSwapChainForViewport(ImGuiViewport* viewport)
+{
+    Tk::Platform::WindowHandles windowHandles = GetWindowHandlesFromImguiViewport(viewport);
+    Tk::Graphics::CreateSwapChain(&windowHandles, (uint32)viewport->Size.x, (uint32)viewport->Size.y);
+}
+
+static void ImguiDestroySwapChainForViewport(ImGuiViewport* viewport)
+{
+    // Only call for viewports that aren't the main viewport 
+    if (viewport->ParentViewportId != 0)
+    {
+        Tk::Platform::WindowHandles windowHandles = GetWindowHandlesFromImguiViewport(viewport);
+        Tk::Graphics::DestroySwapChain(&windowHandles);
+    }
+}
+
+static void ImguiResizeSwapChainForViewport(ImGuiViewport* viewport, ImVec2 size)
+{
+    Tk::Platform::WindowHandles windowHandles = GetWindowHandlesFromImguiViewport(viewport);
+    Tk::Graphics::DestroySwapChain(&windowHandles);
+    Tk::Graphics::CreateSwapChain(&windowHandles, (uint32)viewport->Size.x, (uint32)viewport->Size.y);
+}
+
 void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     // ImGui startup
@@ -54,12 +94,22 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigDockingWithShift = true;
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // TODO: support this
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     io.BackendRendererName = "Tinker Graphics";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
     
     Tk::Platform::ImguiCreate(ImGui::GetCurrentContext(), ImGuiMemWrapper_Malloc, ImGuiMemWrapper_Free);
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        // Manually hook up renderer interface for imgui multi viewport 
+        platform_io.Renderer_CreateWindow = ImguiCreateSwapChainForViewport;
+        platform_io.Renderer_DestroyWindow = ImguiDestroySwapChainForViewport;
+        platform_io.Renderer_SetWindowSize = ImguiResizeSwapChainForViewport;
+    }
 
     // Vertex buffers
     {
@@ -89,6 +139,11 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         descDataHandles.handles[1] = uvBuffer;
         descDataHandles.handles[2] = colorBuffer;
         Tk::Graphics::WriteDescriptorSimple(vbDesc, &descDataHandles);
+    }
+
+    for (uint32 i = 0; i < 64; ++i)
+    {
+        cmdBuffer[i] = Tk::Graphics::CreateCommandBuffer();
     }
 
     // Font texture
@@ -121,39 +176,16 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         void* stagingBufferMemPtr = Tk::Graphics::MapResource(imageStagingBufferHandle);
         memcpy(stagingBufferMemPtr, pixels, textureSizeInBytes);
 
-        // Command recording and submission
-        Tk::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-
-        // Transition to transfer dst optimal layout
-        command->m_commandType = Tk::Graphics::GraphicsCommand::eLayoutTransition;
-        command->debugLabel = "Transition imgui font image layout to transfer dst optimal";
-        command->m_imageHandle = fontTexture;
-        command->m_startLayout = Tk::Graphics::ImageLayout::eUndefined;
-        command->m_endLayout = Tk::Graphics::ImageLayout::eTransferDst;
-        ++command;
-        ++graphicsCommandStream->m_numCommands;
-
-        // Texture buffer copy
-        command->m_commandType = Tk::Graphics::GraphicsCommand::eMemTransfer;
-        command->debugLabel = "Update imgui font texture data";
-        command->m_sizeInBytes = textureSizeInBytes;
-        command->m_srcBufferHandle = imageStagingBufferHandle;
-        command->m_dstBufferHandle = fontTexture;
-        ++command;
-        ++graphicsCommandStream->m_numCommands;
-
-        // Transition to shader read optimal layout
-        command->m_commandType = Tk::Graphics::GraphicsCommand::eLayoutTransition;
-        command->debugLabel = "Transition imgui font image layout to shader read optimal";
-        command->m_imageHandle = fontTexture;
-        command->m_startLayout = Tk::Graphics::ImageLayout::eTransferDst;
-        command->m_endLayout = Tk::Graphics::ImageLayout::eShaderRead;
-        ++command;
-        ++graphicsCommandStream->m_numCommands;
-
-        // Perform the copy from staging buffer to device local buffer
-        Tk::Graphics::SubmitCmdsImmediate(graphicsCommandStream);
-        graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
+        // Command recording 
+        graphicsCommandStream->CmdCommandBufferBegin(cmdBuffer[0], "Begin debug ui cmd buffer");
+        graphicsCommandStream->CmdLayoutTransition(fontTexture, Tk::Graphics::ImageLayout::eUndefined, Tk::Graphics::ImageLayout::eTransferDst, "Transition imgui font image layout to transfer dst optimal");
+        graphicsCommandStream->CmdCopy(textureSizeInBytes, imageStagingBufferHandle, fontTexture, "Update imgui font texture data");
+        graphicsCommandStream->CmdLayoutTransition(fontTexture, Tk::Graphics::ImageLayout::eTransferDst, Tk::Graphics::ImageLayout::eShaderRead, "Transition imgui font image layout to shader read optimal");
+        // TODO: make one time submit function create the command buffer for me rather than passing it here?
+        graphicsCommandStream->CmdCommandBufferEnd(cmdBuffer[0]);
+        Tk::Graphics::SubmitCmdsImmediate(graphicsCommandStream, cmdBuffer[0]);
+        graphicsCommandStream->Clear();
+        //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 
         Tk::Graphics::UnmapResource(imageStagingBufferHandle);
         Tk::Graphics::DestroyResource(imageStagingBufferHandle);
@@ -198,22 +230,8 @@ void NewFrame()
     ImGui::NewFrame();
 }
 
-void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Graphics::ResourceHandle renderTarget)
+static void RenderSingleImguiViewport(ImDrawData* drawData, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Graphics::ResourceHandle renderTarget, uint32 shaderID)
 {
-    ImGui::Render();
-
-    ImGuiIO& io = ImGui::GetIO();
-    
-    // TODO: support this
-    /*if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-    }*/
-
-    Tk::Graphics::GraphicsCommand* command = &graphicsCommandStream->m_graphicsCommands[graphicsCommandStream->m_numCommands];
-
-    ImDrawData* drawData = ImGui::GetDrawData();
     if (!drawData->Valid)
     {
         // Well, this should never happen
@@ -226,24 +244,18 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
         TINKER_ASSERT(drawData->TotalIdxCount <= MAX_IDXS);
         TINKER_ASSERT(drawData->TotalVtxCount <= MAX_VERTS);
 
-        const uint32 fbWidth = (uint32)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-        const uint32 fbHeight = (uint32)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+        const v2ui fbDims = GetFramebufferDimsFromImguiDrawData(drawData);
+        const uint32 fbWidth = fbDims.x;
+        const uint32 fbHeight = fbDims.y;
 
-        command->m_commandType = Tk::Graphics::GraphicsCommand::eRenderPassBegin;
-        command->debugLabel = "Imgui render pass";
-        command->m_numColorRTs = 1;
-        command->m_colorRTs[0] = renderTarget;
-        command->m_depthRT = Tk::Graphics::DefaultResHandle_Invalid;
-        command->m_renderWidth  = fbWidth;
-        command->m_renderHeight = fbHeight;
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        Tk::Graphics::ResourceHandle colorRTs[] = { renderTarget };
+        graphicsCommandStream->CmdRenderPassBegin(fbWidth, fbHeight, 1u, colorRTs, Tk::Graphics::DefaultResHandle_Invalid, "Imgui render pass");
 
-        const v2f scissorWindowMin = v2f(drawData->DisplayPos.x, drawData->DisplayPos.y);
+        const v2f scissorWindowMin = v2f(drawData->DisplayPos.x - drawData->OwnerViewport->Pos.x, drawData->DisplayPos.y - drawData->OwnerViewport->Pos.y);
         const v2f scissorScale = v2f(drawData->FramebufferScale.x, drawData->FramebufferScale.y);
 
-        const v2f scale = v2f(2.0f / drawData->DisplaySize.x, 2.0f / drawData->DisplaySize.y);
-        const v2f translate = v2f(-1.0f - drawData->DisplayPos.x * scale.x, -1.0f - drawData->DisplayPos.y * scale.y);
+        const v2f scale = v2f(1.0f / drawData->DisplaySize.x, 1.0f / drawData->DisplaySize.y);
+        const v2f translate = v2f( - (drawData->DisplayPos.x /*- drawData->OwnerViewport->Pos.x*/) * scale.x, -(drawData->DisplayPos.y /*- drawData->OwnerViewport->Pos.y*/) * scale.y);
 
         uint32* idxBufPtr = (uint32*)Tk::Graphics::MapResource(indexBuffer);
         v2f* posBufPtr = (v2f*)Tk::Graphics::MapResource(positionBuffer);
@@ -265,8 +277,8 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
             for (uint32 uiVtx = 0; uiVtx < numVtxs; ++uiVtx)
             {
                 const ImDrawVert& vert = currDrawList->VtxBuffer[uiVtx];
-                posBufPtr[vtxCtr + uiVtx]   = v2f(vert.pos.x, vert.pos.y);
-                uvBufPtr[vtxCtr + uiVtx]    = v2f(vert.uv.x, vert.uv.y);
+                posBufPtr[vtxCtr + uiVtx] = v2f(vert.pos.x, vert.pos.y);
+                uvBufPtr[vtxCtr + uiVtx] = v2f(vert.uv.x, vert.uv.y);
                 colorBufPtr[vtxCtr + uiVtx] = vert.col;
             }
 
@@ -275,24 +287,18 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
             {
                 const ImDrawCmd& cmd = currDrawList->CmdBuffer[uiCmd];
 
-                command->m_commandType = Tk::Graphics::GraphicsCommand::ePushConstant;
-                command->debugLabel = "Imgui push constant";
-                command->m_shaderForLayout = Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI;
-                {
-                    float* data = (float*)command->m_pushConstantData;
-                    data[0] = scale.x;
-                    data[1] = scale.y;
-                    data[2] = translate.x;
-                    data[3] = translate.y;
-                }
-                ++graphicsCommandStream->m_numCommands;
-                ++command;
+                float data[4];
+                data[0] = scale.x;
+                data[1] = scale.y;
+                data[2] = translate.x;
+                data[3] = translate.y;
+                graphicsCommandStream->CmdPushConstant(Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI, (uint8*)data, ARRAYCOUNT(data) * sizeof(float), "Imgui push constant");
 
                 // Calc tight scissor
                 v2f scissorMin = {};
                 v2f scissorMax = {};
-                scissorMin = v2f((cmd.ClipRect.x - scissorWindowMin.x), (cmd.ClipRect.y - scissorWindowMin.y)) * scissorScale;
-                scissorMax = v2f((cmd.ClipRect.z - scissorWindowMin.x), (cmd.ClipRect.w - scissorWindowMin.y)) * scissorScale;
+                scissorMin = v2f((cmd.ClipRect.x - drawData->DisplayPos.x), (cmd.ClipRect.y - drawData->DisplayPos.y)) * scissorScale;
+                scissorMax = v2f((cmd.ClipRect.z - drawData->DisplayPos.x), (cmd.ClipRect.w - drawData->DisplayPos.y)) * scissorScale;
                 scissorMin.x = Max(scissorMin.x, 0.0f);
                 scissorMin.y = Max(scissorMin.y, 0.0f);
                 scissorMax.x = Min(scissorMax.x, (float)fbWidth);
@@ -300,36 +306,23 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
                 if (scissorMax.x <= scissorMin.x ||
                     scissorMax.y <= scissorMin.y)
                 {
+                    // TODO: log a warning or something 
                     continue;
                 }
-                
-                command->m_commandType = Tk::Graphics::GraphicsCommand::eSetScissor;
-                command->debugLabel = "Set render pass scissor state";
-                command->m_scissorOffsetX = (int32)scissorMin.x;
-                command->m_scissorOffsetY = (int32)scissorMin.y;
-                command->m_scissorWidth = uint32(scissorMax.x - scissorMin.x);
-                command->m_scissorHeight = uint32(scissorMax.y - scissorMin.y);
-                ++graphicsCommandStream->m_numCommands;
-                ++command;
 
-                command->m_commandType = Tk::Graphics::GraphicsCommand::eDrawCall;
-                command->debugLabel = "Draw imgui element";
-                command->m_numIndices = cmd.ElemCount;
-                command->m_numInstances = 1;
-                command->m_vertOffset = cmd.VtxOffset + vtxCtr;
-                command->m_indexOffset = cmd.IdxOffset + idxCtr;
-                command->m_indexBufferHandle = indexBuffer;
-                command->m_shader = Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI;
-                command->m_blendState = Tk::Graphics::BlendState::eAlphaBlend;
-                command->m_depthState = Tk::Graphics::DepthState::eOff_NoCull;
+                graphicsCommandStream->CmdSetViewport(0.0f, 0.0f, (float)fbWidth, (float)fbHeight, DEPTH_MIN, DEPTH_MAX, "Set debug ui render pass viewport state");
+                graphicsCommandStream->CmdSetScissor((int32)scissorMin.x, (int32)scissorMin.y, uint32(scissorMax.x - scissorMin.x), uint32(scissorMax.y - scissorMin.y), "Set debug ui render pass scissor state");
+
+                Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
                 for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
                 {
-                    command->m_descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
+                    descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
                 }
-                command->m_descriptors[0] = texDesc;
-                command->m_descriptors[1] = vbDesc;
-                ++graphicsCommandStream->m_numCommands;
-                ++command;
+                descriptors[0] = texDesc;
+                descriptors[1] = vbDesc;
+                graphicsCommandStream->CmdDraw(cmd.ElemCount, 1u, cmd.VtxOffset + vtxCtr, cmd.IdxOffset + idxCtr,
+                    shaderID, Tk::Graphics::BlendState::eAlphaBlend, Tk::Graphics::DepthState::eOff_NoCull,
+                    indexBuffer, MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors, "Imgui draw call");
             }
 
             idxCtr += numIdxs;
@@ -341,10 +334,80 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
         Tk::Graphics::UnmapResource(uvBuffer);
         Tk::Graphics::UnmapResource(colorBuffer);
 
-        command->m_commandType = Tk::Graphics::GraphicsCommand::eRenderPassEnd;
-        command->debugLabel = "End Imgui render pass";
-        ++graphicsCommandStream->m_numCommands;
-        ++command;
+        graphicsCommandStream->CmdRenderPassEnd("End Imgui render pass");
+    }
+}
+
+void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Graphics::ResourceHandle renderTarget)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::Render();
+
+    ImDrawData* drawData = ImGui::GetDrawData();
+    RenderSingleImguiViewport(drawData, graphicsCommandStream, renderTarget, Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI);
+}
+
+void RenderAndSubmitMultiViewports(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+
+        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+        for (int iViewport = 1; iViewport < platform_io.Viewports.Size; iViewport++)
+        {
+            Tk::Platform::WindowHandles windowHandles = GetWindowHandlesFromImguiViewport(platform_io.Viewports[iViewport]);
+            bool shouldRenderFrame = Tk::Graphics::AcquireFrame(&windowHandles);
+            if (!shouldRenderFrame)
+            {
+                // TODO: skip this viewport or something 
+            }
+        }
+
+        for (int iViewport = 1; iViewport < platform_io.Viewports.Size; iViewport++)
+        {
+            if ((platform_io.Viewports[iViewport]->Flags & ImGuiViewportFlags_Minimized) == 0)
+            {
+                Tk::Platform::WindowHandles windowHandles = GetWindowHandlesFromImguiViewport(platform_io.Viewports[iViewport]);
+                ImDrawData* drawData = platform_io.Viewports[iViewport]->DrawData;
+                const v2ui fbDims = GetFramebufferDimsFromImguiDrawData(drawData);
+                Tk::Graphics::ResourceHandle swapChainImage = Tk::Graphics::GetCurrentSwapChainImage(&windowHandles);
+
+                graphicsCommandStream->CmdCommandBufferBegin(cmdBuffer[iViewport], "Imgui begin multi viewport");
+
+                // Clear swap chain
+                graphicsCommandStream->CmdLayoutTransition(swapChainImage, Tk::Graphics::ImageLayout::eUndefined, Tk::Graphics::ImageLayout::eRenderOptimal, "Transition swap chain to render optimal");
+
+                graphicsCommandStream->CmdRenderPassBegin(fbDims.x, fbDims.y, 1, &swapChainImage, Tk::Graphics::DefaultResHandle_Invalid, "Imgui begin swap chain blit render pass");
+                graphicsCommandStream->CmdSetViewport(0.0f, 0.0f, (float)fbDims.x, (float)fbDims.y, DEPTH_MIN, DEPTH_MAX, "Set imgui swap chain blit viewport state");
+                graphicsCommandStream->CmdSetScissor(0, 0, fbDims.x, fbDims.y, "Set imgui swap chain blit scissor state");
+
+                Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+                for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+                {
+                    descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
+                }
+                descriptors[0] = defaultQuad.m_descriptor;
+
+                graphicsCommandStream->CmdDraw(DEFAULT_QUAD_NUM_INDICES, 1, 0, 0, Tk::Graphics::SHADER_ID_QUAD_BLIT_CLEAR,
+                    Tk::Graphics::BlendState::eReplace, Tk::Graphics::DepthState::eOff_NoCull, defaultQuad.m_indexBuffer.gpuBufferHandle,
+                    MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors, "Draw asset");
+                graphicsCommandStream->CmdRenderPassEnd("Imgui end swap chain blit render pass");
+                
+                // Draw all imgui elements into swap chain 
+                RenderSingleImguiViewport(drawData, graphicsCommandStream, swapChainImage, Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI_RGBA8);
+
+                graphicsCommandStream->CmdLayoutTransition(swapChainImage, Tk::Graphics::ImageLayout::eRenderOptimal, Tk::Graphics::ImageLayout::ePresent, "Transition swap chain to present");
+                graphicsCommandStream->CmdCommandBufferEnd(cmdBuffer[iViewport]);
+                
+                Tk::Graphics::ProcessGraphicsCommandStream(graphicsCommandStream);
+                Tk::Graphics::SubmitFrameToGPU(&windowHandles, cmdBuffer[iViewport]);
+                Tk::Graphics::PresentToSwapChain(&windowHandles);
+                graphicsCommandStream->Clear();
+                //graphicsCommandStream->m_numCommands = 0;
+            }
+        }
     }
 }
 
@@ -505,12 +568,12 @@ void UI_RenderPassStats()
                         continue;
                     }
 
-                    const Core::Hash timestampNameHash = HASH_64_RUNTIME(currTimestamp.name, (uint32)strlen(currTimestamp.name));
+                    const Tk::Core::Hash timestampNameHash = HASH_64_RUNTIME(currTimestamp.name, (uint32)strlen(currTimestamp.name));
                     
                     RunningTimestampEntry* entry = NULL;
                     uint32 index = runningStatsMap.FindIndex(timestampNameHash.m_val);
                     
-                    if (index == HashMapBase::eInvalidIndex)
+                    if (index == Tk::Core::HashMapBase::eInvalidIndex)
                     {
                         // First time add to map
                         index = runningStatsMap.Insert(timestampNameHash.m_val, {});

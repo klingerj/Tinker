@@ -39,6 +39,7 @@ static Tk::Platform::WindowHandles* g_windowHandles = nullptr;
 
 #define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
 Tk::Graphics::GraphicsCommandStream g_graphicsCommandStream;
+Tk::Graphics::CommandBuffer g_FrameCommandBuffer;
 
 // For now, this owns all RTs
 GameGraphicsData gameGraphicsData = {};
@@ -85,7 +86,7 @@ INPUT_CALLBACK(HotloadAllShaders)
     
     if (result == Tk::ShaderCompiler::ErrCode::Success)
     {
-        Tk::Graphics::ShaderManager::ReloadShaders(currentWindowWidth, currentWindowHeight);
+        Tk::Graphics::ShaderManager::ReloadShaders();
         Tk::Core::Utility::LogMsg("Game", "...Done.\n", Tk::Core::Utility::LogSeverity::eInfo);
     }
     else
@@ -217,7 +218,7 @@ static void CreateAllDescriptors()
     BindlessSystem::Create();
 
     // Tone mapping
-    gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_SWAP_CHAIN_BLIT_TEX);
+    gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
     WriteToneMappingResources();
 
     // Compute copy
@@ -310,12 +311,13 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
 
     gameRenderPassList[eRenderPass_ToneMapping].Init();
     gameRenderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] = Graphics::IMAGE_HANDLE_SWAP_CHAIN;
     gameRenderPassList[eRenderPass_ToneMapping].depthRT = Graphics::DefaultResHandle_Invalid;
     gameRenderPassList[eRenderPass_ToneMapping].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_ToneMapping].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_ToneMapping].debugLabel = "Tone Mapping";
     gameRenderPassList[eRenderPass_ToneMapping].ExecuteFn = ToneMappingRenderPass::Execute;
+
+    g_FrameCommandBuffer = Tk::Graphics::CreateCommandBuffer();
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
@@ -333,7 +335,8 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     g_windowHandles = Tk::Platform::GetPlatformWindowHandles();
 
     // Graphics init
-    Tk::Graphics::CreateContext(g_windowHandles, windowWidth, windowHeight);
+    Tk::Graphics::CreateContext(g_windowHandles);
+    Tk::Graphics::CreateSwapChain(g_windowHandles, windowWidth, windowHeight);
     g_graphicsCommandStream = {};
     g_graphicsCommandStream.m_numCommands = 0;
     g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
@@ -345,7 +348,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
         Tk::Core::Utility::LogMsg("Game", "Failed to init shader compiler!", Tk::Core::Utility::LogSeverity::eCritical);
     }
     Tk::Graphics::ShaderManager::Startup();
-    Tk::Graphics::ShaderManager::LoadAllShaderResources(windowWidth, windowHeight);
+    Tk::Graphics::ShaderManager::LoadAllShaderResources();
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF11, HotloadAllShaders); // Bind shader hotloading hotkey
 
     // Debug UI
@@ -407,7 +410,8 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 extern "C"
 GAME_UPDATE(GameUpdate)
 {
-    g_graphicsCommandStream.m_numCommands = 0;
+    g_graphicsCommandStream.Clear();
+    //g_graphicsCommandStream.m_numCommands = 0;
 
     if (!isGameInitted)
     {
@@ -420,7 +424,7 @@ GAME_UPDATE(GameUpdate)
     }
 
     // Start frame
-    bool shouldRenderFrame = Tk::Graphics::AcquireFrame();
+    bool shouldRenderFrame = Tk::Graphics::AcquireFrame(g_windowHandles);
 
     if (!shouldRenderFrame)
     {
@@ -475,6 +479,10 @@ GAME_UPDATE(GameUpdate)
     RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
     BindlessSystem::Flush();
 
+    {
+        g_graphicsCommandStream.CmdCommandBufferBegin(g_FrameCommandBuffer, "Begin game frame cmd buffer");
+    }
+    
     // Timestamp start of frame
     {
         g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
@@ -483,6 +491,9 @@ GAME_UPDATE(GameUpdate)
     // Run the "render graph"
     {
         //TIMED_SCOPED_BLOCK("Graphics command stream recording");
+        
+        // Have to set the swap chain handle manually
+        gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] = Tk::Graphics::GetCurrentSwapChainImage(g_windowHandles);
 
         for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
         {
@@ -498,13 +509,22 @@ GAME_UPDATE(GameUpdate)
         }
     }
 
+    g_graphicsCommandStream.CmdCommandBufferEnd(g_FrameCommandBuffer);
+
     // Process recorded graphics command stream
     {
         //TIMED_SCOPED_BLOCK("Graphics command stream processing");
-        Tk::Graphics::BeginFrameRecording();
-        Tk::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream, false);
-        Tk::Graphics::EndFrameRecording();
-        Tk::Graphics::SubmitFrameToGPU();
+
+        Tk::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream);
+        Tk::Graphics::SubmitFrameToGPU(g_windowHandles, g_FrameCommandBuffer);
+        Tk::Graphics::PresentToSwapChain(g_windowHandles);
+        g_graphicsCommandStream.Clear();
+        //g_graphicsCommandStream.m_numCommands = 0;
+
+        // Debug UI - extra submissions
+        DebugUI::RenderAndSubmitMultiViewports(&g_graphicsCommandStream);
+
+        Tk::Graphics::EndFrame();
     }
 
     if (isGameInitted && isMultiplayer && connectedToServer)
@@ -535,14 +555,13 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 {
     if (newWindowWidth == 0 && newWindowHeight == 0)
     {
-        Tk::Graphics::WindowMinimized();
+        Tk::Graphics::WindowMinimized(windowHandles);
         isWindowMinimized = true;
     }
     else
     {
         isWindowMinimized = false;
-        Tk::Graphics::WindowResize();
-        Tk::Graphics::ShaderManager::CreateWindowDependentResources(newWindowWidth, newWindowHeight);
+        Tk::Graphics::WindowResize(windowHandles, newWindowWidth, newWindowHeight);
 
         currentWindowWidth = newWindowWidth;
         currentWindowHeight = newWindowHeight;
@@ -586,6 +605,7 @@ GAME_DESTROY(GameDestroy)
 
         // Shutdown graphics
         Tk::Graphics::ShaderManager::Shutdown();
+        Tk::Graphics::DestroySwapChain(g_windowHandles);
         Tk::Graphics::DestroyContext();
         Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
     }

@@ -19,11 +19,11 @@ struct GraphicsCommandStream;
 namespace Platform
 {
 
-// TODO: tighten this up for other platforms, probably roll it into a window creation function
 struct WindowHandles
 {
-    uint64 procInstHandle;
-    uint64 windowInstHandle;
+    // TODO: tighten this up for other platforms, probably roll it into a window creation function
+    uint64 hInstance;
+    uint64 hWindow;
 };
 
 struct FileHandle
@@ -103,7 +103,7 @@ END_NETWORK_CONNECTION(EndNetworkConnection);
 SEND_MESSAGE_TO_SERVER(SendMessageToServer);
 
 // ImGui to platform (Win32, etc) functions
-// TODO This is just going to be "technical debt" for now, we need a better defined platform layer for the game dll probably
+// TODO This probably could be cleaner but maybe leave it?
 
 // These must match imgui.h
 typedef void*   (*ImGuiMemAllocFuncWrapper)(size_t sz, void* user_data);
@@ -219,7 +219,7 @@ typedef GAME_UPDATE(game_update);
 #define GAME_DESTROY(name) void name()
 typedef GAME_DESTROY(game_destroy);
 
-#define GAME_WINDOW_RESIZE(name) void name(uint32 newWindowWidth, uint32 newWindowHeight)
+#define GAME_WINDOW_RESIZE(name) void name(const Tk::Platform::WindowHandles* windowHandles, uint32 newWindowWidth, uint32 newWindowHeight)
 typedef GAME_WINDOW_RESIZE(game_window_resize);
 
 }

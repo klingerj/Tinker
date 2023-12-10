@@ -7,6 +7,10 @@
 // TODO: move this to be a compile define or ini config entry
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 
+#define DEVICE_LOCAL_BUFFER_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
+#define HOST_VISIBLE_HEAP_SIZE 256 * 1024 * 1024 // 120 MiB
+#define DEVICE_LOCAL_IMAGE_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -14,10 +18,6 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan_win32.h>
 #endif
-
-#define DEVICE_LOCAL_BUFFER_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
-#define HOST_VISIBLE_HEAP_SIZE 256 * 1024 * 1024 // 120 MiB
-#define DEVICE_LOCAL_IMAGE_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
 
 namespace Tk
 {
@@ -35,8 +35,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 {
     if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) | (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
     {
-        OutputDebugString(pCallbackData->pMessage);
-        OutputDebugString("\n");
+        //TODO: log differently 
+        Core::Utility::LogMsg("Platform", pCallbackData->pMessage, Core::Utility::LogSeverity::eWarning);
+        //OutputDebugString(pCallbackData->pMessage);
+        //OutputDebugString("\n");
     }
 
     return VK_FALSE;
@@ -116,15 +118,13 @@ static void InitGPUMemAllocators()
     }
 }
 
-int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 width, uint32 height)
+int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles)
 {
     g_vulkanContextResources.DataAllocator.Init(VULKAN_SCRATCH_MEM_SIZE, 1);
 
     g_vulkanContextResources.vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     g_vulkanContextResources.vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
-
-    g_vulkanContextResources.windowWidth = width;
-    g_vulkanContextResources.windowHeight = height;
+    g_vulkanContextResources.vulkanSwapChainDataPool.Init(NUM_SWAP_CHAINS_STARTING_ALLOC_SIZE, 16);
 
     // Init shader pso permutations
     for (uint32 sid = 0; sid < VulkanContextResources::eMaxShaders; ++sid)
@@ -294,25 +294,7 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     #endif
 
     // Surface
-    #if defined(_WIN32)
-    VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo = {};
-    win32SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    win32SurfaceCreateInfo.hinstance = (HINSTANCE)platformWindowHandles->procInstHandle;
-    win32SurfaceCreateInfo.hwnd = (HWND)platformWindowHandles->windowInstHandle;
-
-    result = vkCreateWin32SurfaceKHR(g_vulkanContextResources.instance,
-        &win32SurfaceCreateInfo,
-        NULL,
-        &g_vulkanContextResources.surface);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to create Win32SurfaceKHR!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-    #else
-    // TODO: implement other platform surface types
-    TINKER_ASSERT(0);
-    #endif
+    
 
     // Physical device
     uint32 numPhysicalDevices = 0;
@@ -592,9 +574,6 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
         0,
         &g_vulkanContextResources.graphicsQueue);
 
-    // Swap chain
-    CreateSwapChain();
-
     // Command pool
     VkCommandPoolCreateInfo commandPoolCreateInfo = {};
     commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -610,76 +589,6 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     {
         Core::Utility::LogMsg("Platform", "Failed to create Vulkan command pool!", Core::Utility::LogSeverity::eCritical);
         TINKER_ASSERT(0);
-    }
-
-    // Command buffers for per-frame submission
-    g_vulkanContextResources.commandBuffers = (VkCommandBuffer*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkCommandBuffer) * MAX_FRAMES_IN_FLIGHT, 1);
-
-    VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
-    commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    commandBufferAllocInfo.commandPool = g_vulkanContextResources.commandPool;
-    commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
-
-    result = vkAllocateCommandBuffers(g_vulkanContextResources.device,
-        &commandBufferAllocInfo,
-        g_vulkanContextResources.commandBuffers);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan primary frame command buffers!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-
-    // Command buffer for immediate submission
-    commandBufferAllocInfo = {};
-    commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocInfo.commandPool = g_vulkanContextResources.commandPool;
-    commandBufferAllocInfo.commandBufferCount = 1;
-    result = vkAllocateCommandBuffers(g_vulkanContextResources.device, &commandBufferAllocInfo, &g_vulkanContextResources.commandBuffer_Immediate);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan command buffers (immediate)!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-
-    // Virtual frame synchronization data initialization - 2 semaphores and fence
-    VkSemaphoreCreateInfo semaphoreCreateInfo = {};
-    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
-    {
-        result = vkCreateSemaphore(g_vulkanContextResources.device,
-            &semaphoreCreateInfo,
-            nullptr,
-            &g_vulkanContextResources.virtualFrameSyncData[uiFrame].GPUWorkCompleteSema);
-
-        if (result != VK_SUCCESS)
-        {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan gpu work complete semaphore!", Core::Utility::LogSeverity::eCritical);
-        }
-
-        result = vkCreateSemaphore(g_vulkanContextResources.device,
-            &semaphoreCreateInfo,
-            nullptr,
-            &g_vulkanContextResources.virtualFrameSyncData[uiFrame].ImageAvailableSema);
-
-        if (result != VK_SUCCESS)
-        {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan present semaphore!", Core::Utility::LogSeverity::eCritical);
-        }
-    }
-
-    VkFenceCreateInfo fenceCreateInfo = {};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
-    {
-        result = vkCreateFence(g_vulkanContextResources.device, &fenceCreateInfo, nullptr, &g_vulkanContextResources.virtualFrameSyncData[uiFrame].Fence);
-        if (result != VK_SUCCESS)
-        {
-            Core::Utility::LogMsg("Platform", "Failed to create Vulkan fence!", Core::Utility::LogSeverity::eCritical);
-        }
     }
 
     // Timestamp query pool
@@ -712,29 +621,21 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 
     return 0;
 }
 
-void DestroyContext()
+void DestroyVulkan()
 {
     if (!g_vulkanContextResources.isInitted)
+    {
         return;
+    }
 
     vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
 
     vkDestroyQueryPool(g_vulkanContextResources.device, g_vulkanContextResources.queryPoolTimestamp, nullptr);
 
-    DestroySwapChain();
-
     vkDestroyCommandPool(g_vulkanContextResources.device, g_vulkanContextResources.commandPool, nullptr);
-    g_vulkanContextResources.commandBuffers = nullptr;
 
     DestroyAllPSOPerms();
     DestroyAllDescLayouts();
-
-    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
-    {
-        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].GPUWorkCompleteSema, nullptr);
-        vkDestroySemaphore(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].ImageAvailableSema, nullptr);
-        vkDestroyFence(g_vulkanContextResources.device, g_vulkanContextResources.virtualFrameSyncData[uiFrame].Fence, nullptr);
-    }
 
     vkDestroySampler(g_vulkanContextResources.device, g_vulkanContextResources.linearSampler, nullptr);
 
@@ -760,16 +661,13 @@ void DestroyContext()
     #endif
 
     vkDestroyDevice(g_vulkanContextResources.device, nullptr);
-    vkDestroySurfaceKHR(g_vulkanContextResources.instance, g_vulkanContextResources.surface, nullptr);
     vkDestroyInstance(g_vulkanContextResources.instance, nullptr);
 
     g_vulkanContextResources.vulkanMemResourcePool.ExplicitFree();
     g_vulkanContextResources.vulkanDescriptorResourcePool.ExplicitFree();
-}
+    g_vulkanContextResources.vulkanSwapChainDataPool.ExplicitFree();
 
-void WindowMinimized()
-{
-    g_vulkanContextResources.isSwapChainValid = false;
+    g_vulkanContextResources.isInitted = false;
 }
 
 float GetGPUTimestampPeriod()

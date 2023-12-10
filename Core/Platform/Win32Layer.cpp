@@ -226,13 +226,13 @@ SEND_MESSAGE_TO_SERVER(SendMessageToServer)
 
 IMGUI_CREATE(ImguiCreate)
 {
-    TINKER_ASSERT(g_WindowHandles.windowInstHandle);
+    TINKER_ASSERT(g_WindowHandles.hWindow);
     TINKER_ASSERT(context);
 
     ImGui::SetCurrentContext(context);
     ImGui::SetAllocatorFunctions(mallocWrapper, freeWrapper);
 
-    ImGui_ImplWin32_Init((HWND)g_WindowHandles.windowInstHandle);
+    ImGui_ImplWin32_Init((HWND)g_WindowHandles.hWindow);
 }
 
 IMGUI_NEW_FRAME(ImguiNewFrame)
@@ -260,7 +260,7 @@ static void ToggleCursorLocked()
     g_cursorLocked = !g_cursorLocked;
     if (g_cursorLocked)
     {
-        LockCursor((HWND)g_WindowHandles.windowInstHandle);
+        LockCursor((HWND)g_WindowHandles.hWindow);
     }
     ShowCursor(!g_cursorLocked);
 }
@@ -465,7 +465,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
 
             if (g_cursorLocked)
             {
-                LockCursor((HWND)g_WindowHandles.windowInstHandle);
+                LockCursor((HWND)g_WindowHandles.hWindow);
                 SetCursorPos((int)g_GlobalAppParams.m_windowWidth / 2, (int)g_GlobalAppParams.m_windowHeight / 2);
             }
 
@@ -486,7 +486,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd,
                 int yPos = GET_Y_LPARAM(lParam);
                 HandleMouseInput(Mousecode::eMouseMoveVertical, yPos);
                 HandleMouseInput(Mousecode::eMouseMoveHorizontal, xPos);
-                LockCursor((HWND)g_WindowHandles.windowInstHandle);
+                LockCursor((HWND)g_WindowHandles.hWindow);
             }
             break;
         }
@@ -564,8 +564,8 @@ wWinMain(HINSTANCE hInstance,
 
         // TODO: load from settings file
         g_GlobalAppParams = {};
-        g_GlobalAppParams.m_windowWidth = 800;
-        g_GlobalAppParams.m_windowHeight = 600;
+        g_GlobalAppParams.m_windowWidth = 1280;
+        g_GlobalAppParams.m_windowHeight = 720;
 
         // Get system info
         g_SystemInfo = {};
@@ -610,8 +610,8 @@ wWinMain(HINSTANCE hInstance,
             return 1;
         }
 
-        g_WindowHandles.procInstHandle = (uint64)hInstance;
-        g_WindowHandles.windowInstHandle = (uint64)windowHandle;
+        g_WindowHandles.hInstance = (uint64)hInstance;
+        g_WindowHandles.hWindow = (uint64)windowHandle;
 
         // Input handling
         g_inputStateDeltas = {};
@@ -649,7 +649,7 @@ wWinMain(HINSTANCE hInstance,
                 //TIMED_SCOPED_BLOCK("Window resize check");
                 if (g_windowResized)
                 {
-                    g_GameCode.GameWindowResize(g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
+                    g_GameCode.GameWindowResize(&g_WindowHandles, g_GlobalAppParams.m_windowWidth, g_GlobalAppParams.m_windowHeight);
                     g_windowResized = false;
                 }
             }

@@ -15,6 +15,7 @@ namespace DebugUI
     void Shutdown();
     void NewFrame();
     void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Graphics::ResourceHandle renderTarget);
+    void RenderAndSubmitMultiViewports(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
     void ToggleEnable();
 
     void UI_MainMenu();

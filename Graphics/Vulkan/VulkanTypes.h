@@ -99,10 +99,20 @@ typedef struct
     VkSemaphore ImageAvailableSema;
 } VulkanVirtualFrameSyncData;
 
+typedef struct vulkan_swap_chain_data
+{
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    VkSwapchainKHR swapChain = VK_NULL_HANDLE;
+    VkExtent2D swapChainExtent = { 0, 0 };
+    VkImage* swapChainImages = nullptr;
+    VkImageView* swapChainImageViews = nullptr;
+
+    VulkanVirtualFrameSyncData virtualFrameSyncData[MAX_FRAMES_IN_FLIGHT];
+} VulkanSwapChainData;
+
 struct VulkanContextResources
 {
     bool isInitted = false;
-    bool isSwapChainValid = false;
     uint32 frameCounter = 0;
     
     VkInstance instance = VK_NULL_HANDLE;
@@ -118,28 +128,15 @@ struct VulkanContextResources
     VkQueue graphicsQueue = VK_NULL_HANDLE;
     VkQueue presentationQueue = VK_NULL_HANDLE;
 
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    VkSwapchainKHR swapChain = VK_NULL_HANDLE;
-    VkExtent2D swapChainExtent = { 0, 0 };
+    Tk::Core::PoolAllocator<VulkanSwapChainData> vulkanSwapChainDataPool;
     VkFormat swapChainFormat = VK_FORMAT_UNDEFINED;
-    VkImage* swapChainImages = nullptr;
-    VkImageView* swapChainImageViews = nullptr;
-    VkFramebuffer* swapChainFramebuffers = nullptr;
-    uint32 numSwapChainImages = 0;
-
-    uint32 currentSwapChainImage = TINKER_INVALID_HANDLE;
     uint32 currentVirtualFrame = 0;
-    uint32 windowWidth = 0;
-    uint32 windowHeight = 0;
 
     VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     VkSampler linearSampler = VK_NULL_HANDLE;
     Tk::Core::PoolAllocator<VulkanMemResourceChain> vulkanMemResourcePool;
     Tk::Core::PoolAllocator<VulkanDescriptorChain> vulkanDescriptorResourcePool;
-    VulkanVirtualFrameSyncData virtualFrameSyncData[MAX_FRAMES_IN_FLIGHT];
-    VkCommandBuffer* commandBuffers = nullptr;
     VkCommandPool commandPool = VK_NULL_HANDLE;
-    VkCommandBuffer commandBuffer_Immediate = VK_NULL_HANDLE;
 
     enum
     {

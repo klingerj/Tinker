@@ -42,10 +42,11 @@ float3 srgbToLinear(float3 srgb)
 VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID)
 {
     float2 ModelPos = PositionData.Load(VertexIndex).xy;
-    float2 FinalPos = ModelPos * PushConstants.Scale * 0.5;
-    FinalPos.y = 1 - FinalPos.y; // For Vulkan - TODO don't do this in shader, or just ifdef it and move on
-    FinalPos *= 2.0;
+    float2 FinalPos = ModelPos * PushConstants.Scale;
     FinalPos += PushConstants.Translate;
+    FinalPos *= 2.0;
+    FinalPos += float2(-1,0.0);
+    FinalPos.y = 1 - FinalPos.y; // For Vulkan - TODO don't do this in shader, or just ifdef it and move on
 
     float2 UV = UVData.Load(VertexIndex);
 

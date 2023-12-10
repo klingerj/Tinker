@@ -157,6 +157,33 @@ void DbgEndMarker(VkCommandBuffer commandBuffer)
 #endif
 }
 
+CommandBuffer CreateCommandBuffer()
+{
+    VkCommandBuffer cmdBuffers[MAX_FRAMES_IN_FLIGHT] = {};
+
+    VkCommandBufferAllocateInfo commandBufferAllocInfo = {};
+    commandBufferAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    commandBufferAllocInfo.commandPool = g_vulkanContextResources.commandPool;
+    commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferAllocInfo.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
+
+    VkResult result = vkAllocateCommandBuffers(g_vulkanContextResources.device,
+        &commandBufferAllocInfo,
+        &cmdBuffers[0]);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to allocate Vulkan primary frame command buffers!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+
+    CommandBuffer commandBuffer = {};
+    for (uint32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+    {
+        commandBuffer.apiObjectHandles[i] = (uint64)cmdBuffers[i];
+    }
+    return commandBuffer;
+}
+
 // NOTE: Must correspond the enums in PlatformGameAPI.h
 static VkPipelineColorBlendAttachmentState   VulkanBlendStates     [BlendState::eMax]     = {};
 static DepthCullState                        VulkanDepthStates     [DepthState::eMax]     = {};
@@ -228,7 +255,7 @@ void InitVulkanDataTypesPerEnum()
     VulkanImageFormats[ImageFormat::BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
     VulkanImageFormats[ImageFormat::RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
     VulkanImageFormats[ImageFormat::Depth_32F] = VK_FORMAT_D32_SFLOAT;
-    VulkanImageFormats[ImageFormat::TheSwapChainFormat] = g_vulkanContextResources.swapChainFormat;
+    VulkanImageFormats[ImageFormat::TheSwapChainFormat] = VK_FORMAT_UNDEFINED;
 
     VulkanDescriptorTypes[DescriptorType::eBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eDynamicBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -276,7 +303,14 @@ const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout)
 const VkFormat& GetVkImageFormat(uint32 gameImageFormat)
 {
     TINKER_ASSERT(gameImageFormat < ImageFormat::eMax);
-    return VulkanImageFormats[gameImageFormat];
+    if (gameImageFormat == ImageFormat::TheSwapChainFormat)
+    {
+        return g_vulkanContextResources.swapChainFormat;
+    }
+    else
+    {
+        return VulkanImageFormats[gameImageFormat];
+    }
 }
 
 const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType)

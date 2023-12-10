@@ -27,8 +27,11 @@ if "%BuildConfig%" NEQ "Debug" (
         )
     )
 
+:: Build settings
+set "EnableUnityBuild=0"
+
 :: Features
-set "EnableMemTracking=1"
+:: set "EnableMemTracking=1"
 
 echo ***** Building Tinker App *****
 
@@ -39,8 +42,8 @@ set "AbsolutePathPrefix=%AbsolutePathPrefix:\=/%"
 pushd .\Build
 del TinkerApp.pdb > NUL 2> NUL
 
-rem *********************************************************************************************************
-rem /FAs for .asm file output
+:: *********************************************************************************************************
+:: /FAs for .asm file output
 set CommonCompileFlags=/nologo /std:c++20 /GL /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
@@ -53,8 +56,8 @@ if "%BuildConfig%" == "Debug" (
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
-rem *********************************************************************************************************
-rem TinkerApp - primary exe
+:: *********************************************************************************************************
+:: TinkerApp - primary exe
 
 set SourceListApp= 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32Layer.cpp 
@@ -77,25 +80,25 @@ set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/i
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/backends/imgui_impl_win32.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/xxHash-0.8.2/xxhash.c 
 
-rem Create unity build file will all cpp files included
-set "SourceListApp=%SourceListApp:\=/%" rem convert backslashes to forward slashes
+:: Create unity build file will all cpp files included
+set "SourceListApp=%SourceListApp:\=/%" :: convert backslashes to forward slashes
 set UnityBuildCppFile=AppUnityBuildFile.cpp
 set INCLUDE_PREFIX=#include
-
-echo Deleting old unity build cpp source file %UnityBuildCppFile%.
-if exist %UnityBuildCppFile% del %UnityBuildCppFile%
-echo ...Done.
-echo.
-
-echo Source files included in build:
-for %%i in (%SourceListApp%) do (
-    echo %%i
-    echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+if "%EnableUnityBuild%" == "1" (
+    echo Deleting old unity build cpp source file %UnityBuildCppFile%.
+    if exist %UnityBuildCppFile% del %UnityBuildCppFile%
+    echo ...Done.
+    echo.
+     
+     echo Source files included in build:
+     for %%i in (%SourceListApp%) do (
+         echo %%i
+         echo %INCLUDE_PREFIX% "%%i" >> %UnityBuildCppFile%
+     )
+    echo Generated: %UnityBuildCppFile%
 )
-echo Generated: %UnityBuildCppFile%
-rem 
 
-rem Defines 
+:: Defines 
 set CompileDefines=/DTINKER_APP 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
 set CompileDefines=%CompileDefines% /DTINKER_EXPORTING 
@@ -132,7 +135,12 @@ set OBJDir=%cd%\obj_app\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
 set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %UnityBuildCppFile% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
+if "%EnableUnityBuild%" == "1" (
+    set SourceFiles=%UnityBuildCppFile% 
+) else (
+    set SourceFiles=%SourceListApp% 
+)
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %SourceFiles% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
 
 echo.
 if EXIST TinkerApp.exp (

@@ -11,16 +11,17 @@ namespace Graphics
 {
 
 // Init/destroy - called one time
-int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles, uint32 width, uint32 height);
+int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles);
+void DestroyVulkan();
 
 // Frame command recording
-bool VulkanAcquireFrame();
-void VulkanSubmitFrame();
+bool VulkanAcquireFrame(SwapChainData* swapChainData);
+void VulkanSubmitFrame(SwapChainData* swapChainData, CommandBuffer commandBuffer);
+void VulkanSubmitCommandBufferAndWaitImmediate(CommandBuffer commandBuffer);
+void VulkanPresentToSwapChain(SwapChainData* swapChainData);
 
 void BeginVulkanCommandRecording();
 void EndVulkanCommandRecording();
-void BeginVulkanCommandRecordingImmediate();
-void EndVulkanCommandRecordingImmediate();
 
 void DestroyAllDescLayouts();
 

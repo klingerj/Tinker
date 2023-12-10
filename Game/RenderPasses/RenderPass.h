@@ -38,10 +38,6 @@ struct GameRenderPass
 
 void StartRenderPass(GameRenderPass* renderPass, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
 void EndRenderPass(GameRenderPass* renderPass, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
-void DrawMeshDataCommand(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, uint32 numIndices,
-    uint32 numInstances, Tk::Graphics::ResourceHandle indexBufferHandle,
-    uint32 shaderID, uint32 blendState, uint32 depthState,
-    Tk::Graphics::DescriptorHandle* descriptors, const char* debugLabel);
 
 struct View;
 struct Scene;

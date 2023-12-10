@@ -2,6 +2,14 @@
 #include "Graphics/Vulkan/VulkanTypes.h"
 #include "Utility/Logging.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan_win32.h>
+#endif
+
 namespace Tk
 {
 namespace Graphics
@@ -81,11 +89,37 @@ static VkShaderModule CreateShaderModule(const char* shaderCode, uint32 numShade
     return shaderModule;
 }
 
-void CreateSwapChain()
+void CreateSwapChainAPIObjects(SwapChainData* swapChainData, const Tk::Platform::WindowHandles* windowHandles)
 {
+    uint32 newSwapChainAPIObjectsHandle = g_vulkanContextResources.vulkanSwapChainDataPool.Alloc();
+    swapChainData->swapChainAPIObjectsHandle = newSwapChainAPIObjectsHandle;
+    VulkanSwapChainData* vulkanSwapChainData = g_vulkanContextResources.vulkanSwapChainDataPool.PtrFromHandle(newSwapChainAPIObjectsHandle);
+
+    // Surface
+    #if defined(_WIN32)
+    VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo = {};
+    win32SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    win32SurfaceCreateInfo.hinstance = (HINSTANCE)windowHandles->hInstance;
+    win32SurfaceCreateInfo.hwnd = (HWND)windowHandles->hWindow;
+
+    VkResult result = vkCreateWin32SurfaceKHR(g_vulkanContextResources.instance,
+        &win32SurfaceCreateInfo,
+        NULL,
+        &vulkanSwapChainData->surface);
+    if (result != VK_SUCCESS)
+    {
+        Core::Utility::LogMsg("Platform", "Failed to create Win32SurfaceKHR!", Core::Utility::LogSeverity::eCritical);
+        TINKER_ASSERT(0);
+    }
+    #else
+    // TODO: implement other platform surface types
+    TINKER_ASSERT(0);
+    #endif
+
+    // Swap chain
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(g_vulkanContextResources.physicalDevice,
-        g_vulkanContextResources.surface,
+        vulkanSwapChainData->surface,
         &capabilities);
 
     VkExtent2D optimalExtent = {};
@@ -96,20 +130,26 @@ void CreateSwapChain()
     else
     {
         optimalExtent.width =
-            CLAMP(g_vulkanContextResources.windowWidth, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+            CLAMP(swapChainData->windowWidth, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
         optimalExtent.height =
-            CLAMP(g_vulkanContextResources.windowHeight, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+            CLAMP(swapChainData->windowHeight, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
     }
 
-    uint32 numSwapChainImages = capabilities.minImageCount + 1;
+    uint32 numSwapChainImages = DESIRED_NUM_SWAP_CHAIN_IMAGES;
+    // TODO: find out about minImageCount having driver overhead 
+    //TINKER_ASSERT(numSwapChainImages >= capabilities.minImageCount + 1);
     if (capabilities.maxImageCount > 0) // 0 can indicate no maximum
     {
         numSwapChainImages = Min(numSwapChainImages, capabilities.maxImageCount);
     }
+    if (numSwapChainImages != DESIRED_NUM_SWAP_CHAIN_IMAGES)
+    {
+        Core::Utility::LogMsg("Platform", "Swap chain unable to support number of requested images!", Core::Utility::LogSeverity::eCritical);
+    }
 
     uint32 numAvailableSurfaceFormats;
     vkGetPhysicalDeviceSurfaceFormatsKHR(g_vulkanContextResources.physicalDevice,
-        g_vulkanContextResources.surface,
+        vulkanSwapChainData->surface,
         &numAvailableSurfaceFormats,
         nullptr);
 
@@ -121,7 +161,7 @@ void CreateSwapChain()
 
     VkSurfaceFormatKHR* availableSurfaceFormats = (VkSurfaceFormatKHR*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkSurfaceFormatKHR) * numAvailableSurfaceFormats, 1);
     vkGetPhysicalDeviceSurfaceFormatsKHR(g_vulkanContextResources.physicalDevice,
-        g_vulkanContextResources.surface,
+        vulkanSwapChainData->surface,
         &numAvailableSurfaceFormats,
         availableSurfaceFormats);
 
@@ -139,7 +179,7 @@ void CreateSwapChain()
 
     uint32 numAvailablePresentModes = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(g_vulkanContextResources.physicalDevice,
-        g_vulkanContextResources.surface,
+        vulkanSwapChainData->surface,
         &numAvailablePresentModes,
         nullptr);
 
@@ -151,7 +191,7 @@ void CreateSwapChain()
 
     VkPresentModeKHR* availablePresentModes = (VkPresentModeKHR*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkPresentModeKHR) * numAvailablePresentModes, 1);
     vkGetPhysicalDeviceSurfacePresentModesKHR(g_vulkanContextResources.physicalDevice,
-        g_vulkanContextResources.surface,
+        vulkanSwapChainData->surface,
         &numAvailablePresentModes,
         availablePresentModes);
 
@@ -165,12 +205,12 @@ void CreateSwapChain()
         }*/
     }
 
-    g_vulkanContextResources.swapChainExtent = optimalExtent;
-    g_vulkanContextResources.swapChainFormat = chosenFormat.format;
+    vulkanSwapChainData->swapChainExtent = optimalExtent;
+    g_vulkanContextResources.swapChainFormat = chosenFormat.format; // not stored per allocated swap chain data, all swap chains should have the same format 
 
     VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
     swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapChainCreateInfo.surface = g_vulkanContextResources.surface;
+    swapChainCreateInfo.surface = vulkanSwapChainData->surface;
     swapChainCreateInfo.minImageCount = numSwapChainImages;
     swapChainCreateInfo.imageFormat = chosenFormat.format;
     swapChainCreateInfo.imageColorSpace = chosenFormat.colorSpace;
@@ -191,10 +231,10 @@ void CreateSwapChain()
     swapChainCreateInfo.queueFamilyIndexCount = 0;
     swapChainCreateInfo.pQueueFamilyIndices = nullptr;
 
-    VkResult result = vkCreateSwapchainKHR(g_vulkanContextResources.device,
+    result = vkCreateSwapchainKHR(g_vulkanContextResources.device,
         &swapChainCreateInfo,
         nullptr,
-        &g_vulkanContextResources.swapChain);
+        &vulkanSwapChainData->swapChain);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to create Vulkan swap chain!", Core::Utility::LogSeverity::eCritical);
@@ -202,51 +242,129 @@ void CreateSwapChain()
     }
 
     vkGetSwapchainImagesKHR(g_vulkanContextResources.device,
-        g_vulkanContextResources.swapChain,
+        vulkanSwapChainData->swapChain,
         &numSwapChainImages,
         nullptr);
     TINKER_ASSERT(numSwapChainImages != 0);
 
-    g_vulkanContextResources.swapChainImages = (VkImage*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkImage) * numSwapChainImages, 1);
-    g_vulkanContextResources.swapChainImageViews = (VkImageView*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkImageView) * numSwapChainImages, 1);
-    g_vulkanContextResources.numSwapChainImages = numSwapChainImages;
+    vulkanSwapChainData->swapChainImages = (VkImage*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkImage) * numSwapChainImages, 1);
+    vulkanSwapChainData->swapChainImageViews = (VkImageView*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkImageView) * numSwapChainImages, 1);
+    swapChainData->numSwapChainImages = numSwapChainImages;
 
     for (uint32 i = 0; i < numSwapChainImages; ++i)
     {
-        g_vulkanContextResources.swapChainImages[i] = VK_NULL_HANDLE;
-        g_vulkanContextResources.swapChainImageViews[i] = VK_NULL_HANDLE;
+        vulkanSwapChainData->swapChainImages[i] = VK_NULL_HANDLE;
+        vulkanSwapChainData->swapChainImageViews[i] = VK_NULL_HANDLE;
     }
     
     vkGetSwapchainImagesKHR(g_vulkanContextResources.device,
-        g_vulkanContextResources.swapChain,
+        vulkanSwapChainData->swapChain,
         &numSwapChainImages,
-        g_vulkanContextResources.swapChainImages);
+        vulkanSwapChainData->swapChainImages);
 
     for (uint32 uiImageView = 0; uiImageView < numSwapChainImages; ++uiImageView)
     {
         CreateImageView(g_vulkanContextResources.device,
             g_vulkanContextResources.swapChainFormat,
             VK_IMAGE_ASPECT_COLOR_BIT,
-            g_vulkanContextResources.swapChainImages[uiImageView],
-            &g_vulkanContextResources.swapChainImageViews[uiImageView],
+            vulkanSwapChainData->swapChainImages[uiImageView],
+            &vulkanSwapChainData->swapChainImageViews[uiImageView],
             1);
     }
 
-    g_vulkanContextResources.isSwapChainValid = true;
-}
-
-void DestroySwapChain()
-{
-    g_vulkanContextResources.isSwapChainValid = false;
-    vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
-
-    // Don't have to destroy swap chain VkImages
-    for (uint32 uiImg = 0; uiImg < g_vulkanContextResources.numSwapChainImages; ++uiImg)
+    // Register swap chain images in the resource pool manually 
+    for (uint32 i = 0; i < DESIRED_NUM_SWAP_CHAIN_IMAGES; ++i)
     {
-        vkDestroyImageView(g_vulkanContextResources.device, g_vulkanContextResources.swapChainImageViews[uiImg], nullptr);
+        uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
+        TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
+        VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
+        *newResourceChain = {};
+        
+        // Only one image stored, not per frame in flight 
+        newResourceChain->resourceChain[0].image = vulkanSwapChainData->swapChainImages[i];
+        newResourceChain->resourceChain[0].imageView = vulkanSwapChainData->swapChainImageViews[i];
+        newResourceChain->resDesc.debugLabel = "Swap chain image resource";
+        newResourceChain->resDesc.dims = v3ui((uint32)vulkanSwapChainData->swapChainExtent.width, (uint32)vulkanSwapChainData->swapChainExtent.height, 1);
+        newResourceChain->resDesc.imageFormat = ImageFormat::TheSwapChainFormat;
+        newResourceChain->resDesc.arrayEles = 1;
+        newResourceChain->resDesc.imageUsageFlags = ImageUsageFlags::RenderTarget;
+        swapChainData->swapChainResourceHandles[i] = ResourceHandle(newResourceHandle);
     }
 
-    vkDestroySwapchainKHR(g_vulkanContextResources.device, g_vulkanContextResources.swapChain, nullptr);
+    // Virtual frame synchronization data initialization - 2 semaphores and fence
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    {
+        result = vkCreateSemaphore(g_vulkanContextResources.device,
+            &semaphoreCreateInfo,
+            nullptr,
+            &vulkanSwapChainData->virtualFrameSyncData[uiFrame].GPUWorkCompleteSema);
+
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan gpu work complete semaphore!", Core::Utility::LogSeverity::eCritical);
+        }
+
+        result = vkCreateSemaphore(g_vulkanContextResources.device,
+            &semaphoreCreateInfo,
+            nullptr,
+            &vulkanSwapChainData->virtualFrameSyncData[uiFrame].ImageAvailableSema);
+
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan present semaphore!", Core::Utility::LogSeverity::eCritical);
+        }
+    }
+
+    VkFenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    {
+        result = vkCreateFence(g_vulkanContextResources.device, &fenceCreateInfo, nullptr, &vulkanSwapChainData->virtualFrameSyncData[uiFrame].Fence);
+        if (result != VK_SUCCESS)
+        {
+            Core::Utility::LogMsg("Platform", "Failed to create Vulkan fence!", Core::Utility::LogSeverity::eCritical);
+        }
+    }
+}
+
+void DestroySwapChainAPIObjects(SwapChainData* swapChainData)
+{
+    uint32 swapChainAPIObjectsHandle = swapChainData->swapChainAPIObjectsHandle;
+    swapChainData->isSwapChainValid = false;
+    VulkanSwapChainData* vulkanSwapChainData = g_vulkanContextResources.vulkanSwapChainDataPool.PtrFromHandle(swapChainAPIObjectsHandle);
+
+    vkDeviceWaitIdle(g_vulkanContextResources.device); // TODO: move this?
+
+    for (uint32 i = 0; i < DESIRED_NUM_SWAP_CHAIN_IMAGES; ++i)
+    {
+        g_vulkanContextResources.vulkanMemResourcePool.Dealloc(swapChainData->swapChainResourceHandles[i].m_hRes);
+    }
+
+    // Don't have to destroy swap chain VkImages
+    for (uint32 uiImg = 0; uiImg < swapChainData->numSwapChainImages; ++uiImg)
+    {
+        vkDestroyImageView(g_vulkanContextResources.device, vulkanSwapChainData->swapChainImageViews[uiImg], nullptr);
+    }
+
+    vkDestroySwapchainKHR(g_vulkanContextResources.device, vulkanSwapChainData->swapChain, nullptr);
+    vkDestroySurfaceKHR(g_vulkanContextResources.instance, vulkanSwapChainData->surface, nullptr);
+
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
+    {
+        vkDestroySemaphore(g_vulkanContextResources.device, vulkanSwapChainData->virtualFrameSyncData[uiFrame].GPUWorkCompleteSema, nullptr);
+        vulkanSwapChainData->virtualFrameSyncData[uiFrame].GPUWorkCompleteSema = VK_NULL_HANDLE;
+        vkDestroySemaphore(g_vulkanContextResources.device, vulkanSwapChainData->virtualFrameSyncData[uiFrame].ImageAvailableSema, nullptr);
+        vulkanSwapChainData->virtualFrameSyncData[uiFrame].ImageAvailableSema = VK_NULL_HANDLE;
+        vkDestroyFence(g_vulkanContextResources.device, vulkanSwapChainData->virtualFrameSyncData[uiFrame].Fence, nullptr);
+        vulkanSwapChainData->virtualFrameSyncData[uiFrame].Fence = VK_NULL_HANDLE;
+    }
+
+    g_vulkanContextResources.vulkanSwapChainDataPool.Dealloc(swapChainAPIObjectsHandle);
+    swapChainData->swapChainAPIObjectsHandle = TINKER_INVALID_HANDLE;
 }
 
 CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
@@ -294,25 +412,13 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
-    VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = (float)viewportHeight;
-    viewport.width = (float)viewportWidth;
-    viewport.height = -(float)viewportHeight;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    //VkRect2D scissor = {};
-    //scissor.offset = { 0, 0 };
-    //scissor.extent = { viewportWidth, viewportHeight };
-
+    // Viewport and scissor must be set dynamically 
     VkPipelineViewportStateCreateInfo viewportState = {};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportState.viewportCount = 1;
-    viewportState.pViewports = &viewport;
-    viewportState.scissorCount = 1; // Must be set dynamically
+    viewportState.pViewports = nullptr;
+    viewportState.scissorCount = 1;
     viewportState.pScissors = nullptr;
-    //viewportState.pScissors = &scissor;
 
     VkPipelineMultisampleStateCreateInfo multisampling = {};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -332,9 +438,10 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
     colorBlending.blendConstants[2] = 0.0f;
     colorBlending.blendConstants[3] = 0.0f;
 
-    const uint32 numDynamicStates = 1;
+    const uint32 numDynamicStates = 2;
     VkDynamicState dynamicStates[numDynamicStates] =
     {
+        VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR,
     };
 

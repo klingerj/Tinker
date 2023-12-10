@@ -2,15 +2,22 @@
 #include "Graphics/Vulkan/Vulkan.h"
 #include "Graphics/Vulkan/VulkanTypes.h"
 #include "Utility/Logging.h"
+#include "DataStructures/Vector.h"
 
 namespace Tk
 {
 namespace Graphics
 {
 
-bool VulkanAcquireFrame()
+static VkCommandBuffer ExtractVkCommandBuffer(CommandBuffer commandBuffer)
 {
-    const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
+    return (VkCommandBuffer)commandBuffer.apiObjectHandles[g_vulkanContextResources.currentVirtualFrame];
+}
+
+bool VulkanAcquireFrame(SwapChainData* swapChainData)
+{
+    VulkanSwapChainData* vulkanSwapChainData = g_vulkanContextResources.vulkanSwapChainDataPool.PtrFromHandle(swapChainData->swapChainAPIObjectsHandle);
+    const VulkanVirtualFrameSyncData& virtualFrameSyncData = vulkanSwapChainData->virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
 
     VkResult result = vkWaitForFences(g_vulkanContextResources.device, 1, &virtualFrameSyncData.Fence, VK_FALSE, (uint64)-1);
     if (result != VK_SUCCESS)
@@ -23,7 +30,7 @@ bool VulkanAcquireFrame()
     uint32 currentSwapChainImageIndex = TINKER_INVALID_HANDLE;
 
     result = vkAcquireNextImageKHR(g_vulkanContextResources.device,
-        g_vulkanContextResources.swapChain,
+        vulkanSwapChainData->swapChain,
         (uint64)-1,
         virtualFrameSyncData.ImageAvailableSema,
         VK_NULL_HANDLE,
@@ -45,17 +52,20 @@ bool VulkanAcquireFrame()
         return false; // Don't present on this frame
     }
 
-    g_vulkanContextResources.currentSwapChainImage = currentSwapChainImageIndex;
+    swapChainData->currentSwapChainImage = currentSwapChainImageIndex;
     return true;
 }
 
-void VulkanSubmitFrame()
+void VulkanSubmitFrame(SwapChainData* swapChainData, CommandBuffer commandBuffer)
 {
-    const VulkanVirtualFrameSyncData& virtualFrameSyncData = g_vulkanContextResources.virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
+    VulkanSwapChainData* vulkanSwapChainData = g_vulkanContextResources.vulkanSwapChainDataPool.PtrFromHandle(swapChainData->swapChainAPIObjectsHandle);
+    const VulkanVirtualFrameSyncData& virtualFrameSyncData = vulkanSwapChainData->virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
 
     // Submit
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    VkCommandBuffer vkCommandBuffer = ExtractVkCommandBuffer(commandBuffer);
 
     VkSemaphore waitSemaphores[1] = { virtualFrameSyncData.ImageAvailableSema };
     VkPipelineStageFlags waitStages[1] = { VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT };
@@ -63,7 +73,7 @@ void VulkanSubmitFrame()
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame];
+    submitInfo.pCommandBuffers = &vkCommandBuffer;
 
     VkSemaphore signalSemaphores[1] = { virtualFrameSyncData.GPUWorkCompleteSema };
     submitInfo.signalSemaphoreCount = 1;
@@ -74,17 +84,24 @@ void VulkanSubmitFrame()
     {
         Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::LogSeverity::eCritical);
     }
+}
 
-    // Present
+void VulkanPresentToSwapChain(SwapChainData* swapChainData)
+{
+    VulkanSwapChainData* vulkanSwapChainData = g_vulkanContextResources.vulkanSwapChainDataPool.PtrFromHandle(swapChainData->swapChainAPIObjectsHandle);
+    const VulkanVirtualFrameSyncData& virtualFrameSyncData = vulkanSwapChainData->virtualFrameSyncData[g_vulkanContextResources.currentVirtualFrame];
+
+    VkSemaphore signalSemaphores[1] = { virtualFrameSyncData.GPUWorkCompleteSema };
+
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &g_vulkanContextResources.swapChain;
-    presentInfo.pImageIndices = &g_vulkanContextResources.currentSwapChainImage;
+    presentInfo.pSwapchains = &vulkanSwapChainData->swapChain;
+    presentInfo.pImageIndices = &swapChainData->currentSwapChainImage;
 
-    result = vkQueuePresentKHR(g_vulkanContextResources.graphicsQueue, &presentInfo);
+    VkResult result = vkQueuePresentKHR(g_vulkanContextResources.graphicsQueue, &presentInfo);
 
     if (result != VK_SUCCESS)
     {
@@ -92,7 +109,7 @@ void VulkanSubmitFrame()
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
         {
             Core::Utility::LogMsg("Platform", "Out of date / suboptimal swap chain (probably minimized window)!", Core::Utility::LogSeverity::eInfo);
-            
+
         }
         else
         {
@@ -101,7 +118,10 @@ void VulkanSubmitFrame()
         }
         return; // don't present on this frame
     }
+}
 
+void EndFrame()
+{
     g_vulkanContextResources.currentVirtualFrame = (g_vulkanContextResources.currentVirtualFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     ++g_vulkanContextResources.frameCounter;
 }
@@ -360,14 +380,14 @@ WRITE_DESCRIPTOR_SIMPLE(WriteDescriptorSimple)
     }
 }
 
-void BeginVulkanCommandRecording()
+void BeginCommandRecording(CommandBuffer commandBuffer)
 {
     VkCommandBufferBeginInfo commandBufferBeginInfo = {};
     commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     commandBufferBeginInfo.flags = 0;
     commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
-    VkResult result = vkBeginCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame], &commandBufferBeginInfo);
+    VkResult result = vkBeginCommandBuffer(ExtractVkCommandBuffer(commandBuffer), &commandBufferBeginInfo);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
@@ -375,14 +395,9 @@ void BeginVulkanCommandRecording()
     }
 }
 
-void EndVulkanCommandRecording()
+void EndCommandRecording(CommandBuffer commandBuffer)
 {
-    if (g_vulkanContextResources.currentSwapChainImage == TINKER_INVALID_HANDLE || g_vulkanContextResources.currentVirtualFrame == TINKER_INVALID_HANDLE)
-    {
-        TINKER_ASSERT(0);
-    }
-
-    VkResult result = vkEndCommandBuffer(g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame]);
+    VkResult result = vkEndCommandBuffer(ExtractVkCommandBuffer(commandBuffer));
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer!", Core::Utility::LogSeverity::eCritical);
@@ -390,35 +405,16 @@ void EndVulkanCommandRecording()
     }
 }
 
-void BeginVulkanCommandRecordingImmediate()
+void VulkanSubmitCommandBufferAndWaitImmediate(CommandBuffer commandBuffer)
 {
-    VkCommandBufferBeginInfo commandBufferBeginInfo = {};
-    commandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    commandBufferBeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    VkResult result = vkBeginCommandBuffer(g_vulkanContextResources.commandBuffer_Immediate, &commandBufferBeginInfo);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to begin Vulkan command buffer (immediate)!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
-}
-
-void EndVulkanCommandRecordingImmediate()
-{
-    VkResult result = vkEndCommandBuffer(g_vulkanContextResources.commandBuffer_Immediate);
-    if (result != VK_SUCCESS)
-    {
-        Core::Utility::LogMsg("Platform", "Failed to end Vulkan command buffer (immediate)!", Core::Utility::LogSeverity::eCritical);
-        TINKER_ASSERT(0);
-    }
+    VkCommandBuffer vkCommandBuffer = ExtractVkCommandBuffer(commandBuffer);
 
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &g_vulkanContextResources.commandBuffer_Immediate;
+    submitInfo.pCommandBuffers = &vkCommandBuffer;
 
-    result = vkQueueSubmit(g_vulkanContextResources.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    VkResult result = vkQueueSubmit(g_vulkanContextResources.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
     if (result != VK_SUCCESS)
     {
         Core::Utility::LogMsg("Platform", "Failed to submit command buffer to queue!", Core::Utility::LogSeverity::eCritical);
@@ -426,89 +422,80 @@ void EndVulkanCommandRecordingImmediate()
     vkQueueWaitIdle(g_vulkanContextResources.graphicsQueue);
 }
 
-// TODO: remove mystery bool param
-VkCommandBuffer ChooseAppropriateCommandBuffer(bool immediateSubmit)
-{
-    VkCommandBuffer commandBuffer = g_vulkanContextResources.commandBuffer_Immediate;
-
-    if (!immediateSubmit)
-    {
-        TINKER_ASSERT(g_vulkanContextResources.currentSwapChainImage != TINKER_INVALID_HANDLE && g_vulkanContextResources.currentVirtualFrame != TINKER_INVALID_HANDLE);
-        commandBuffer = g_vulkanContextResources.commandBuffers[g_vulkanContextResources.currentVirtualFrame];
-    }
-
-    return commandBuffer;
-}
-
-void RecordCommandPushConstant(const uint8* data, uint32 sizeInBytes, uint32 shaderID)
+void RecordCommandPushConstant(CommandBuffer commandBuffer, const uint8* data, uint32 sizeInBytes, uint32 shaderID)
 {
     TINKER_ASSERT(data && sizeInBytes);
 
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(false);
     const VkPipelineLayout& pipelineLayout = g_vulkanContextResources.psoPermutations.pipelineLayout[shaderID];
     TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
-    vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
+    vkCmdPushConstants(ExtractVkCommandBuffer(commandBuffer), pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeInBytes, data);
 }
 
-void RecordCommandSetScissor(int32 offsetX, int32 offsetY, uint32 width, uint32 height)
+void RecordCommandSetViewport(CommandBuffer commandBuffer, float x, float y, float width, float height, float minDepth, float maxDepth)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(false);
+    // The way this is written does not just pass the parameters thru, it automatically implements flipping of the y-coordinate 
+    VkViewport viewport = {};
+    viewport.x = x;
+    viewport.y = height - y;
+    viewport.width = width;
+    viewport.height = -height;
+    viewport.minDepth = minDepth;
+    viewport.maxDepth = maxDepth;
+    vkCmdSetViewport(ExtractVkCommandBuffer(commandBuffer), 0, 1, &viewport);
+}
+
+void RecordCommandSetScissor(CommandBuffer commandBuffer, int32 offsetX, int32 offsetY, uint32 width, uint32 height)
+{
     VkRect2D scissor = {};
     scissor.offset = { offsetX, offsetY };
     scissor.extent = { width, height };
-    vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    vkCmdSetScissor(ExtractVkCommandBuffer(commandBuffer), 0, 1, &scissor);
 }
 
-void RecordCommandDrawCall(ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
-    uint32 vertOffset, uint32 indexOffset, const char* debugLabel, bool immediateSubmit)
+void RecordCommandDrawCall(CommandBuffer commandBuffer, ResourceHandle indexBufferHandle, uint32 numIndices, uint32 numInstances,
+    uint32 vertOffset, uint32 indexOffset, const char* debugLabel)
 {
     TINKER_ASSERT(indexBufferHandle != DefaultResHandle_Invalid);
-
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
     // Index buffer
     VulkanMemResourceChain* indexBufferResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(indexBufferHandle.m_hRes);
     const ResourceDesc& desc = indexBufferResourceChain->resDesc;
     VkBuffer& indexBuffer = indexBufferResourceChain->resourceChain[IsBufferUsageMultiBuffered(desc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0].buffer;
-    vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-    vkCmdDrawIndexed(commandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
+
+    VkCommandBuffer vkCommandBuffer = ExtractVkCommandBuffer(commandBuffer);
+    vkCmdBindIndexBuffer(vkCommandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdDrawIndexed(vkCommandBuffer, numIndices, numInstances, indexOffset, vertOffset, 0);
 }
 
-void RecordCommandDispatch(uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, const char* debugLabel, bool immediateSubmit)
+void RecordCommandDispatch(CommandBuffer commandBuffer, uint32 threadGroupX, uint32 threadGroupY, uint32 threadGroupZ, const char* debugLabel)
 {
     TINKER_ASSERT(threadGroupX > 0);
     TINKER_ASSERT(threadGroupY > 0);
     TINKER_ASSERT(threadGroupZ > 0);
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-    vkCmdDispatch(commandBuffer, threadGroupX, threadGroupY, threadGroupZ);
+    vkCmdDispatch(ExtractVkCommandBuffer(commandBuffer), threadGroupX, threadGroupY, threadGroupZ);
 }
 
-void RecordCommandBindShader(uint32 shaderID, uint32 blendState, uint32 depthState, bool immediateSubmit)
+void RecordCommandBindShader(CommandBuffer commandBuffer, uint32 shaderID, uint32 blendState, uint32 depthState)
 {
     TINKER_ASSERT(shaderID < SHADER_ID_MAX);
 
     const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.graphicsPipeline[shaderID][blendState][depthState];
     TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
-
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(ExtractVkCommandBuffer(commandBuffer), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
 
-void RecordCommandBindComputeShader(uint32 shaderID, bool immediateSubmit)
+void RecordCommandBindComputeShader(CommandBuffer commandBuffer, uint32 shaderID)
 {
     TINKER_ASSERT(shaderID < SHADER_ID_COMPUTE_MAX);
 
     const VkPipeline& pipeline = g_vulkanContextResources.psoPermutations.computePipeline[shaderID];
     TINKER_ASSERT(pipeline != VK_NULL_HANDLE);
 
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+    vkCmdBindPipeline(ExtractVkCommandBuffer(commandBuffer), VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 }
 
-void RecordCommandBindDescriptor(uint32 shaderID, uint32 bindPoint, const DescriptorHandle descSetHandle, uint32 descSetIndex, bool immediateSubmit)
+void RecordCommandBindDescriptor(CommandBuffer commandBuffer, uint32 shaderID, uint32 bindPoint, const DescriptorHandle descSetHandle, uint32 descSetIndex)
 {
     TINKER_ASSERT((shaderID < SHADER_ID_MAX && bindPoint == BindPoint::eGraphics) || (shaderID < SHADER_ID_COMPUTE_MAX && bindPoint == BindPoint::eCompute));
     TINKER_ASSERT(bindPoint < BindPoint::eMax);
@@ -517,21 +504,19 @@ void RecordCommandBindDescriptor(uint32 shaderID, uint32 bindPoint, const Descri
         bindPoint == BindPoint::eCompute ? g_vulkanContextResources.psoPermutations.computePipelineLayout[shaderID] : VK_NULL_HANDLE;
     TINKER_ASSERT(pipelineLayout != VK_NULL_HANDLE);
 
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
     VkDescriptorSet* descSet =
         &g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(descSetHandle.m_hDesc)->resourceChain[g_vulkanContextResources.currentVirtualFrame].descriptorSet;
 
-    vkCmdBindDescriptorSets(commandBuffer, GetVkBindPoint(bindPoint), pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
+    vkCmdBindDescriptorSets(ExtractVkCommandBuffer(commandBuffer), GetVkBindPoint(bindPoint), pipelineLayout, descSetIndex, 1, descSet, 0, nullptr);
 }
 
-void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle,
-    const char* debugLabel, bool immediateSubmit)
+void RecordCommandMemoryTransfer(CommandBuffer commandBuffer, uint32 sizeInBytes, ResourceHandle srcBufferHandle,
+    ResourceHandle dstBufferHandle, const char* debugLabel)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
     VulkanMemResourceChain* dstResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(dstBufferHandle.m_hRes);
     VulkanMemResourceChain* srcResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(srcBufferHandle.m_hRes);
+
+    VkCommandBuffer vkCommandBuffer = ExtractVkCommandBuffer(commandBuffer);
 
     switch (dstResourceChain->resDesc.resourceType)
     {
@@ -546,7 +531,7 @@ void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHan
             uint32 dstIndex = IsBufferUsageMultiBuffered(dstResourceChain->resDesc.bufferUsage) ? g_vulkanContextResources.currentVirtualFrame : 0u;
             VkBuffer srcBuffer = srcResourceChain->resourceChain[srcIndex].buffer;
             VkBuffer dstBuffer = dstResourceChain->resourceChain[dstIndex].buffer;
-            vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
+            vkCmdCopyBuffer(vkCommandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
 
             break;
         }
@@ -588,25 +573,27 @@ void RecordCommandMemoryTransfer(uint32 sizeInBytes, ResourceHandle srcBufferHan
                 region.imageOffset = { 0, 0, 0 };
                 region.imageExtent = { dstResourceChain->resDesc.dims.x, dstResourceChain->resDesc.dims.y, dstResourceChain->resDesc.dims.z };
 
-                vkCmdCopyBufferToImage(commandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+                vkCmdCopyBufferToImage(vkCommandBuffer, srcBuffer, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
             }
             break;
         }
     }
 }
 
-void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT, uint32 renderWidth, uint32 renderHeight,
-    const char* debugLabel, bool immediateSubmit)
+void RecordCommandRenderPassBegin(CommandBuffer commandBuffer, uint32 numColorRTs, const ResourceHandle* colorRTs, ResourceHandle depthRT,
+    uint32 renderWidth, uint32 renderHeight, const char* debugLabel)
 {
     const bool HasDepth = depthRT.m_hRes != TINKER_INVALID_HANDLE;
     const uint32 numAttachments = numColorRTs + (HasDepth ? 1u : 0u);
 
     if (HasDepth)
+    {
         TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS_WITH_DEPTH);
+    }
     else
+    {
         TINKER_ASSERT(numAttachments <= VULKAN_MAX_RENDERTARGETS);
-
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
+    }
     
     VkRenderingAttachmentInfo colorAttachments[VULKAN_MAX_RENDERTARGETS] = {};
     for (uint32 i = 0; i < Min(numColorRTs, VULKAN_MAX_RENDERTARGETS); ++i)
@@ -618,15 +605,9 @@ void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colo
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.clearValue.color = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-        if (colorRTs[i] == IMAGE_HANDLE_SWAP_CHAIN)
-        {
-            colorAttachment.imageView = g_vulkanContextResources.swapChainImageViews[g_vulkanContextResources.currentSwapChainImage];
-        }
-        else
-        {
-            VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
-            colorAttachment.imageView = resource->imageView;
-        }
+        TINKER_ASSERT(colorRTs[i].m_hRes != TINKER_INVALID_HANDLE);
+        VulkanMemResource* resource = &g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(colorRTs[i].m_hRes)->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
+        colorAttachment.imageView = resource->imageView;
     }
 
     VkRenderingAttachmentInfo depthAttachment = {};
@@ -650,17 +631,16 @@ void RecordCommandRenderPassBegin(uint32 numColorRTs, const ResourceHandle* colo
     renderingInfo.pDepthAttachment = HasDepth ? &depthAttachment : nullptr;
     renderingInfo.pStencilAttachment = nullptr;
 
-    vkCmdBeginRendering(commandBuffer, &renderingInfo);
+    vkCmdBeginRendering(ExtractVkCommandBuffer(commandBuffer), &renderingInfo);
 }
 
-void RecordCommandRenderPassEnd(bool immediateSubmit)
+void RecordCommandRenderPassEnd(CommandBuffer commandBuffer)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-    vkCmdEndRendering(commandBuffer);
+    vkCmdEndRendering(ExtractVkCommandBuffer(commandBuffer));
 }
 
-void RecordCommandTransitionLayout(ResourceHandle imageHandle,
-    uint32 startLayout, uint32 endLayout, const char* debugLabel, bool immediateSubmit)
+void RecordCommandTransitionLayout(CommandBuffer commandBuffer, ResourceHandle imageHandle,
+    uint32 startLayout, uint32 endLayout, const char* debugLabel)
 {
     if (startLayout == endLayout)
     {
@@ -668,8 +648,6 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
         TINKER_ASSERT(0);
         return;
     }
-
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
 
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -800,41 +778,33 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
 
     VkImage image = VK_NULL_HANDLE;
     uint32 numArrayEles = 0;
-    if (imageHandle == IMAGE_HANDLE_SWAP_CHAIN)
-    {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        image = g_vulkanContextResources.swapChainImages[g_vulkanContextResources.currentSwapChainImage];
-        numArrayEles = 1;
-    }
-    else
-    {
-        VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-        VulkanMemResource* memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
-        image = memResource->image;
-        numArrayEles = memResourceChain->resDesc.arrayEles;
+    VulkanMemResourceChain* memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
+    VulkanMemResource* memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
+    image = memResource->image;
+    numArrayEles = memResourceChain->resDesc.arrayEles;
 
-        switch (memResourceChain->resDesc.imageFormat)
+    VkFormat imageFormat = GetVkImageFormat(memResourceChain->resDesc.imageFormat);
+    switch (imageFormat)
+    {
+        case VK_FORMAT_R16G16B16A16_SFLOAT:
+        case VK_FORMAT_R8G8B8A8_SRGB:
+        case VK_FORMAT_B8G8R8A8_SRGB:
         {
-            case ImageFormat::RGBA16_Float:
-            case ImageFormat::BGRA8_SRGB:
-            case ImageFormat::RGBA8_SRGB:
-            {
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-                break;
-            }
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            break;
+        }
 
-            case ImageFormat::Depth_32F:
-            {
-                barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                break;
-            }
+        case VK_FORMAT_D32_SFLOAT:
+        {
+            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            break;
+        }
 
-            default:
-            {
-                Core::Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Core::Utility::LogSeverity::eCritical);
-                TINKER_ASSERT(0);
-                return;
-            }
+        default:
+        {
+            Core::Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Core::Utility::LogSeverity::eCritical);
+            TINKER_ASSERT(0);
+            return;
         }
     }
 
@@ -843,30 +813,19 @@ void RecordCommandTransitionLayout(ResourceHandle imageHandle,
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = numArrayEles;
-
-    vkCmdPipelineBarrier(commandBuffer, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(ExtractVkCommandBuffer(commandBuffer), srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void RecordCommandClearImage(ResourceHandle imageHandle,
-    const v4f& clearValue, const char* debugLabel, bool immediateSubmit)
+void RecordCommandClearImage(CommandBuffer commandBuffer, ResourceHandle imageHandle,
+    const v4f& clearValue, const char* debugLabel)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
     VulkanMemResourceChain* memResourceChain = nullptr;
     VulkanMemResource* memResource = nullptr;
     uint32 imageFormat = ImageFormat::Invalid;
 
-    if (imageHandle == IMAGE_HANDLE_SWAP_CHAIN)
-    {
-        //imageFormat = ImageFormat::TheSwapChainFormat;
-        TINKER_ASSERT(0); // don't clear the swap chain for now
-    }
-    else
-    {
-        memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
-        memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
-        imageFormat = memResourceChain->resDesc.imageFormat;
-    }
+    memResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(imageHandle.m_hRes);
+    memResource = &memResourceChain->resourceChain[0]; // Currently, all image resources are not duplicated per frame in flight
+    imageFormat = memResourceChain->resDesc.imageFormat;
 
     VkClearColorValue clearColor = {};
     VkClearDepthStencilValue clearDepth = {};
@@ -889,7 +848,7 @@ void RecordCommandClearImage(ResourceHandle imageHandle,
                 clearColor.uint32[i] = *(uint32*)&clearValue[i];
             }
 
-            vkCmdClearColorImage(commandBuffer,
+            vkCmdClearColorImage(ExtractVkCommandBuffer(commandBuffer),
                 memResource->image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &range);
 
@@ -902,7 +861,7 @@ void RecordCommandClearImage(ResourceHandle imageHandle,
             clearDepth.depth = clearValue.x;
             clearDepth.stencil = *(uint32*)&clearValue.y;
 
-            vkCmdClearDepthStencilImage(commandBuffer,
+            vkCmdClearDepthStencilImage(ExtractVkCommandBuffer(commandBuffer),
                 memResource->image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearDepth, 1, &range);
 
@@ -911,7 +870,8 @@ void RecordCommandClearImage(ResourceHandle imageHandle,
 
         case ImageFormat::TheSwapChainFormat:
         {
-            // TODO: similar to regular color, but need to grab swap chain image handle from vulkan resources rather than following mem resource ptr
+            // Swap chain probably can't be used for transfer cmds. Use a quad blit instead to draw 0,0,0 to the swap chain
+            TINKER_ASSERT(0);
         }
         
         default:
@@ -923,15 +883,13 @@ void RecordCommandClearImage(ResourceHandle imageHandle,
     }
 }
 
-void RecordCommandGPUTimestamp(uint32 gpuTimestampID, bool immediateSubmit)
+void RecordCommandGPUTimestamp(CommandBuffer commandBuffer, uint32 gpuTimestampID)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-
     uint32 currQueryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX + gpuTimestampID;
-    vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_vulkanContextResources.queryPoolTimestamp, currQueryOffset);
+    vkCmdWriteTimestamp(ExtractVkCommandBuffer(commandBuffer), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, g_vulkanContextResources.queryPoolTimestamp, currQueryOffset);
 }
 
-void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint32 numTimestampsInQuery, bool immediateSubmit)
+void ResolveMostRecentAvailableTimestamps(CommandBuffer commandBuffer, void* gpuTimestampCPUSideBuffer, uint32 numTimestampsInQuery)
 {
     uint32 currQueryOffset = g_vulkanContextResources.currentVirtualFrame * GPU_TIMESTAMP_NUM_MAX;
 
@@ -945,20 +903,17 @@ void ResolveMostRecentAvailableTimestamps(void* gpuTimestampCPUSideBuffer, uint3
         }
     }
 
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-    vkCmdResetQueryPool(commandBuffer, g_vulkanContextResources.queryPoolTimestamp, currQueryOffset, GPU_TIMESTAMP_NUM_MAX);
+    vkCmdResetQueryPool(ExtractVkCommandBuffer(commandBuffer), g_vulkanContextResources.queryPoolTimestamp, currQueryOffset, GPU_TIMESTAMP_NUM_MAX);
 }
 
-void RecordCommandDebugMarkerStart(bool immediateSubmit, const char* debugLabel)
+void RecordCommandDebugMarkerStart(CommandBuffer commandBuffer, const char* debugLabel)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-    DbgStartMarker(commandBuffer, debugLabel);
+    DbgStartMarker(ExtractVkCommandBuffer(commandBuffer), debugLabel);
 }
 
-void RecordCommandDebugMarkerEnd(bool immediateSubmit)
+void RecordCommandDebugMarkerEnd(CommandBuffer commandBuffer)
 {
-    VkCommandBuffer commandBuffer = ChooseAppropriateCommandBuffer(immediateSubmit);
-    DbgEndMarker(commandBuffer);
+    DbgEndMarker(ExtractVkCommandBuffer(commandBuffer));
 }
 
 }
