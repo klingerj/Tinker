@@ -14,86 +14,90 @@ void CreateDefaultGeometry(Tk::Graphics::GraphicsCommandStream* graphicsCommandS
         desc.resourceType = Graphics::ResourceType::eBuffer1D;
         desc.debugLabel = "Default Quad Vtx Attr Buffer";
 
+        const uint32 numBytesPos = sizeof(defaultQuad.m_points);
+        const uint32 numBytesUV = sizeof(defaultQuad.m_uvs);
+        const uint32 numBytesNorm = sizeof(defaultQuad.m_normals);
+        const uint32 numBytesIdx = sizeof(defaultQuad.m_indices);
+
         // Positions
-        desc.dims = v3ui(sizeof(defaultQuad.m_points), 0, 0);
+        desc.dims = v3ui(numBytesPos, 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
         defaultQuad.m_positionBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        Graphics::ResourceHandle stagingBufferHandle_Pos = Graphics::CreateResource(desc);
-        void* stagingBufferMemPtr_Pos = Graphics::MapResource(stagingBufferHandle_Pos);
+        Graphics::ResourceHandle stagingBufferPos = Graphics::CreateResource(desc);
+        Graphics::MemoryMappedBufferPtr stagingBufferPtrPos = Graphics::MapResource(stagingBufferPos);
 
         // UVs
-        desc.dims = v3ui(sizeof(defaultQuad.m_uvs), 0, 0);
+        desc.dims = v3ui(numBytesUV, 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
         defaultQuad.m_uvBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        Graphics::ResourceHandle stagingBufferHandle_UV = Graphics::CreateResource(desc);
-        void* stagingBufferMemPtr_UV = Graphics::MapResource(stagingBufferHandle_UV);
+        Graphics::ResourceHandle stagingBufferUV = Graphics::CreateResource(desc);
+        Graphics::MemoryMappedBufferPtr stagingBufferPtrUV = Graphics::MapResource(stagingBufferUV);
 
         // Normals
-        desc.dims = v3ui(sizeof(defaultQuad.m_normals), 0, 0);
+        desc.dims = v3ui(numBytesNorm, 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eVertex;
         defaultQuad.m_normalBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        Graphics::ResourceHandle stagingBufferHandle_Norm = Graphics::CreateResource(desc);
-        void* stagingBufferMemPtr_Norm = Graphics::MapResource(stagingBufferHandle_Norm);
+        Graphics::ResourceHandle stagingBufferNorm = Graphics::CreateResource(desc);
+        Graphics::MemoryMappedBufferPtr stagingBufferPtrNorm = Graphics::MapResource(stagingBufferNorm);
 
         // Indices
-        desc.dims = v3ui(sizeof(defaultQuad.m_indices), 0, 0);
+        desc.dims = v3ui(numBytesIdx, 0, 0);
         desc.bufferUsage = Graphics::BufferUsage::eIndex;
         defaultQuad.m_indexBuffer.gpuBufferHandle = Graphics::CreateResource(desc);
 
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
-        Graphics::ResourceHandle stagingBufferHandle_Idx = Graphics::CreateResource(desc);
-        void* stagingBufferMemPtr_Idx = Graphics::MapResource(stagingBufferHandle_Idx);
+        Graphics::ResourceHandle stagingBufferIdx = Graphics::CreateResource(desc);
+        Graphics::MemoryMappedBufferPtr stagingBufferPtrIdx = Graphics::MapResource(stagingBufferIdx);
 
         // Descriptor
         CreateDefaultGeometryVertexBufferDescriptor(defaultQuad);
-
+        
         // Memcpy into staging buffers
-        memcpy(stagingBufferMemPtr_Pos, defaultQuad.m_points, sizeof(defaultQuad.m_points));
-        memcpy(stagingBufferMemPtr_UV, defaultQuad.m_uvs, sizeof(defaultQuad.m_uvs));
-        memcpy(stagingBufferMemPtr_Norm, defaultQuad.m_normals, sizeof(defaultQuad.m_normals));
-        memcpy(stagingBufferMemPtr_Idx, defaultQuad.m_indices, sizeof(defaultQuad.m_indices));
-
+        stagingBufferPtrPos.MemcpyInto(defaultQuad.m_points, numBytesPos);
+        stagingBufferPtrUV.MemcpyInto(defaultQuad.m_uvs, numBytesUV);
+        stagingBufferPtrNorm.MemcpyInto(defaultQuad.m_normals, numBytesNorm);
+        stagingBufferPtrIdx.MemcpyInto(defaultQuad.m_indices, numBytesIdx);
+        
         // Do GPU buffer copies
         graphicsCommandStream->CmdCommandBufferBegin(commandBuffer, "Default geometry creation cmd buffer");
 
-        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_points),
-            stagingBufferHandle_Pos,
+        graphicsCommandStream->CmdCopy(stagingBufferPos,
             defaultQuad.m_positionBuffer.gpuBufferHandle,
+            numBytesPos,
             "Update Default Quad Vtx Pos Buf");
-        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_uvs),
-            stagingBufferHandle_UV,
+        graphicsCommandStream->CmdCopy(stagingBufferUV,
             defaultQuad.m_uvBuffer.gpuBufferHandle,
+            numBytesUV,
             "Update Default Quad Vtx UV Buf");
-        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_normals),
-            stagingBufferHandle_Norm,
+        graphicsCommandStream->CmdCopy(stagingBufferNorm,
             defaultQuad.m_normalBuffer.gpuBufferHandle,
+            numBytesNorm,
             "Update Default Quad Vtx Norm Buf");
-        graphicsCommandStream->CmdCopy(sizeof(defaultQuad.m_indices),
-            stagingBufferHandle_Idx,
+        graphicsCommandStream->CmdCopy(stagingBufferIdx,
             defaultQuad.m_indexBuffer.gpuBufferHandle,
+            numBytesIdx,
             "Update Default Quad Vtx Idx Buf");
 
         graphicsCommandStream->CmdCommandBufferEnd(commandBuffer);
         Graphics::SubmitCmdsImmediate(graphicsCommandStream, commandBuffer);
         graphicsCommandStream->Clear();
-        //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 
         // Unmap + destroy resources
-        Graphics::UnmapResource(stagingBufferHandle_Pos);
-        Graphics::UnmapResource(stagingBufferHandle_UV);
-        Graphics::UnmapResource(stagingBufferHandle_Norm);
-        Graphics::UnmapResource(stagingBufferHandle_Idx);
+        Graphics::UnmapResource(stagingBufferPos);
+        Graphics::UnmapResource(stagingBufferUV);
+        Graphics::UnmapResource(stagingBufferNorm);
+        Graphics::UnmapResource(stagingBufferIdx);
 
-        Graphics::DestroyResource(stagingBufferHandle_Pos);
-        Graphics::DestroyResource(stagingBufferHandle_UV);
-        Graphics::DestroyResource(stagingBufferHandle_Norm);
-        Graphics::DestroyResource(stagingBufferHandle_Idx);
+        Graphics::DestroyResource(stagingBufferPos);
+        Graphics::DestroyResource(stagingBufferUV);
+        Graphics::DestroyResource(stagingBufferNorm);
+        Graphics::DestroyResource(stagingBufferIdx);
     }
 }
 
@@ -178,16 +182,16 @@ void DestroyAnimatedPoly(TransientPrim* prim)
 void UpdateAnimatedPoly(TransientPrim* prim)
 {
     // Map
-    void* indexBuf = Graphics::MapResource(prim->indexBufferHandle);
-    void* vertexBuf = Graphics::MapResource(prim->vertexBufferHandle);
+    Graphics::MemoryMappedBufferPtr indexBuf = Graphics::MapResource(prim->indexBufferHandle);
+    Graphics::MemoryMappedBufferPtr vertexBuf = Graphics::MapResource(prim->vertexBufferHandle);
 
     // Update
     const uint32 numIndices = ((prim->numVertices - 1) * 3);
     for (uint32 idx = 0; idx < numIndices; idx += 3)
     {
-        ((uint32*)indexBuf)[idx + 0] = 0;
-        ((uint32*)indexBuf)[idx + 1] = idx / 3 + 1;
-        ((uint32*)indexBuf)[idx + 2] = idx < numIndices - 3 ? idx / 3 + 2 : 1;
+        ((uint32*)indexBuf.m_ptr)[idx + 0] = 0;
+        ((uint32*)indexBuf.m_ptr)[idx + 1] = idx / 3 + 1;
+        ((uint32*)indexBuf.m_ptr)[idx + 2] = idx < numIndices - 3 ? idx / 3 + 2 : 1;
     }
 
     static uint32 frameCtr = 0;
@@ -196,14 +200,14 @@ void UpdateAnimatedPoly(TransientPrim* prim)
     {
         if (vtx == 0)
         {
-            ((v4f*)vertexBuf)[vtx] = v4f(0.0f, 0.0f, 0.0f, 1.0f);
+            ((v4f*)vertexBuf.m_ptr)[vtx] = v4f(0.0f, 0.0f, 0.0f, 1.0f);
         }
         else
         {
             const float f = ((float)(vtx - 1) / (prim->numVertices - 1));
             const float amt = f * (3.14159f * 2.0f);
             const float scale = 2.0f * (cosf((float)frameCtr * 0.2f * f) * 0.5f + 0.5f);
-            ((v4f*)vertexBuf)[vtx] = v4f(cosf(amt) * scale, sinf(amt) * scale, 0.0f, 1.0f);
+            ((v4f*)vertexBuf.m_ptr)[vtx] = v4f(cosf(amt) * scale, sinf(amt) * scale, 0.0f, 1.0f);
         }
     }
 

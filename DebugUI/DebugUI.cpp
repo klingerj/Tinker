@@ -29,6 +29,13 @@ static Tk::Graphics::DescriptorHandle vbDesc = Tk::Graphics::DefaultDescHandle_I
 static Tk::Graphics::DescriptorHandle texDesc = Tk::Graphics::DefaultDescHandle_Invalid;
 static Tk::Graphics::CommandBuffer cmdBuffer[64] = {}; // TODO: dynamically allocate 
 
+static Tk::Graphics::MemoryMappedBufferPtr idxBufPtr = {};
+static Tk::Graphics::MemoryMappedBufferPtr posBufPtr = {};
+static Tk::Graphics::MemoryMappedBufferPtr uvBufPtr = {};
+static Tk::Graphics::MemoryMappedBufferPtr colorBufPtr = {};
+static uint32 accumVtxOffset = 0;
+static uint32 accumIdxOffset = 0;
+
 static bool g_enable = false;
 
 void ToggleEnable()
@@ -173,19 +180,18 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         imageStagingBufferHandle = Tk::Graphics::CreateResource(desc);
         
         // Copy to GPU
-        void* stagingBufferMemPtr = Tk::Graphics::MapResource(imageStagingBufferHandle);
-        memcpy(stagingBufferMemPtr, pixels, textureSizeInBytes);
+        Tk::Graphics::MemoryMappedBufferPtr stagingBufferMemPtr = Tk::Graphics::MapResource(imageStagingBufferHandle);
+        stagingBufferMemPtr.MemcpyInto(pixels, textureSizeInBytes);
 
         // Command recording 
         graphicsCommandStream->CmdCommandBufferBegin(cmdBuffer[0], "Begin debug ui cmd buffer");
         graphicsCommandStream->CmdLayoutTransition(fontTexture, Tk::Graphics::ImageLayout::eUndefined, Tk::Graphics::ImageLayout::eTransferDst, "Transition imgui font image layout to transfer dst optimal");
-        graphicsCommandStream->CmdCopy(textureSizeInBytes, imageStagingBufferHandle, fontTexture, "Update imgui font texture data");
+        graphicsCommandStream->CmdCopy(imageStagingBufferHandle, fontTexture, textureSizeInBytes, "Update imgui font texture data");
         graphicsCommandStream->CmdLayoutTransition(fontTexture, Tk::Graphics::ImageLayout::eTransferDst, Tk::Graphics::ImageLayout::eShaderRead, "Transition imgui font image layout to shader read optimal");
         // TODO: make one time submit function create the command buffer for me rather than passing it here?
         graphicsCommandStream->CmdCommandBufferEnd(cmdBuffer[0]);
         Tk::Graphics::SubmitCmdsImmediate(graphicsCommandStream, cmdBuffer[0]);
         graphicsCommandStream->Clear();
-        //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 
         Tk::Graphics::UnmapResource(imageStagingBufferHandle);
         Tk::Graphics::DestroyResource(imageStagingBufferHandle);
@@ -201,8 +207,10 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
 
 void Shutdown()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.BackendRendererName = "";
+    Tk::Graphics::UnmapResource(indexBuffer);
+    Tk::Graphics::UnmapResource(positionBuffer);
+    Tk::Graphics::UnmapResource(uvBuffer);
+    Tk::Graphics::UnmapResource(colorBuffer);
 
     Tk::Graphics::DestroyResource(indexBuffer);
     indexBuffer = Tk::Graphics::DefaultResHandle_Invalid;
@@ -257,32 +265,35 @@ static void RenderSingleImguiViewport(ImDrawData* drawData, Tk::Graphics::Graphi
         const v2f scale = v2f(1.0f / drawData->DisplaySize.x, 1.0f / drawData->DisplaySize.y);
         const v2f translate = v2f( - (drawData->DisplayPos.x /*- drawData->OwnerViewport->Pos.x*/) * scale.x, -(drawData->DisplayPos.y /*- drawData->OwnerViewport->Pos.y*/) * scale.y);
 
-        uint32* idxBufPtr = (uint32*)Tk::Graphics::MapResource(indexBuffer);
-        v2f* posBufPtr = (v2f*)Tk::Graphics::MapResource(positionBuffer);
-        v2f* uvBufPtr = (v2f*)Tk::Graphics::MapResource(uvBuffer);
-        uint32* colorBufPtr = (uint32*)Tk::Graphics::MapResource(colorBuffer);
-
-        uint32 vtxCtr = 0, idxCtr = 0;
         for (int32 uiCmdList = 0; uiCmdList < drawData->CmdListsCount; ++uiCmdList)
         {
             ImDrawList* currDrawList = drawData->CmdLists[uiCmdList];
 
+            TINKER_ASSERT(accumIdxOffset == idxBufPtr.m_offset / sizeof(uint32));
+            TINKER_ASSERT(accumVtxOffset == posBufPtr.m_offset / sizeof(v2f));
+
             uint32 numIdxs = currDrawList->IdxBuffer.size();
-            for (uint32 uiIdx = 0; uiIdx < numIdxs; ++uiIdx)
-            {
-                idxBufPtr[uiIdx + idxCtr] = (uint32)(currDrawList->IdxBuffer[uiIdx]);
-            }
+            idxBufPtr.MemcpyInto(currDrawList->IdxBuffer.Data, sizeof(uint32) * numIdxs);
 
             uint32 numVtxs = currDrawList->VtxBuffer.size();
             for (uint32 uiVtx = 0; uiVtx < numVtxs; ++uiVtx)
             {
                 const ImDrawVert& vert = currDrawList->VtxBuffer[uiVtx];
-                posBufPtr[vtxCtr + uiVtx] = v2f(vert.pos.x, vert.pos.y);
-                uvBufPtr[vtxCtr + uiVtx] = v2f(vert.uv.x, vert.uv.y);
-                colorBufPtr[vtxCtr + uiVtx] = vert.col;
+                posBufPtr.MemcpyInto(&vert.pos, sizeof(v2f));
+                uvBufPtr.MemcpyInto(&vert.uv, sizeof(v2f));
+                colorBufPtr.MemcpyInto(&vert.col, sizeof(uint32));
             }
 
             // Record draw calls
+
+            Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+            for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+            {
+                descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
+            }
+            descriptors[0] = texDesc;
+            descriptors[1] = vbDesc;
+
             for (int32 uiCmd = 0; uiCmd < currDrawList->CmdBuffer.size(); ++uiCmd)
             {
                 const ImDrawCmd& cmd = currDrawList->CmdBuffer[uiCmd];
@@ -312,27 +323,16 @@ static void RenderSingleImguiViewport(ImDrawData* drawData, Tk::Graphics::Graphi
 
                 graphicsCommandStream->CmdSetViewport(0.0f, 0.0f, (float)fbWidth, (float)fbHeight, DEPTH_MIN, DEPTH_MAX, "Set debug ui render pass viewport state");
                 graphicsCommandStream->CmdSetScissor((int32)scissorMin.x, (int32)scissorMin.y, uint32(scissorMax.x - scissorMin.x), uint32(scissorMax.y - scissorMin.y), "Set debug ui render pass scissor state");
-
-                Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
-                for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
-                {
-                    descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
-                }
-                descriptors[0] = texDesc;
-                descriptors[1] = vbDesc;
-                graphicsCommandStream->CmdDraw(cmd.ElemCount, 1u, cmd.VtxOffset + vtxCtr, cmd.IdxOffset + idxCtr,
+                graphicsCommandStream->CmdDraw(cmd.ElemCount, 1u, cmd.VtxOffset + accumVtxOffset, cmd.IdxOffset + accumIdxOffset,
                     shaderID, Tk::Graphics::BlendState::eAlphaBlend, Tk::Graphics::DepthState::eOff_NoCull,
                     indexBuffer, MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors, "Imgui draw call");
             }
 
-            idxCtr += numIdxs;
-            vtxCtr += numVtxs;
+            accumIdxOffset += numIdxs;
+            accumVtxOffset += numVtxs;
+            TINKER_ASSERT(accumIdxOffset == idxBufPtr.m_offset / sizeof(uint32));
+            TINKER_ASSERT(accumVtxOffset == posBufPtr.m_offset / sizeof(v2f));
         }
-
-        Tk::Graphics::UnmapResource(indexBuffer);
-        Tk::Graphics::UnmapResource(positionBuffer);
-        Tk::Graphics::UnmapResource(uvBuffer);
-        Tk::Graphics::UnmapResource(colorBuffer);
 
         graphicsCommandStream->CmdRenderPassEnd("End Imgui render pass");
     }
@@ -342,6 +342,13 @@ void Render(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream, Tk::Grap
 {
     ImGuiIO& io = ImGui::GetIO();
     ImGui::Render();
+
+    idxBufPtr = Tk::Graphics::MapResource(indexBuffer);
+    posBufPtr = Tk::Graphics::MapResource(positionBuffer);
+    uvBufPtr = Tk::Graphics::MapResource(uvBuffer);
+    colorBufPtr = Tk::Graphics::MapResource(colorBuffer);
+    accumVtxOffset = 0;
+    accumIdxOffset = 0;
 
     ImDrawData* drawData = ImGui::GetDrawData();
     RenderSingleImguiViewport(drawData, graphicsCommandStream, renderTarget, Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI);
@@ -405,7 +412,6 @@ void RenderAndSubmitMultiViewports(Tk::Graphics::GraphicsCommandStream* graphics
                 Tk::Graphics::SubmitFrameToGPU(&windowHandles, cmdBuffer[iViewport]);
                 Tk::Graphics::PresentToSwapChain(&windowHandles);
                 graphicsCommandStream->Clear();
-                //graphicsCommandStream->m_numCommands = 0;
             }
         }
     }

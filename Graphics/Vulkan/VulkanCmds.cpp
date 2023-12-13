@@ -126,16 +126,17 @@ void EndFrame()
     ++g_vulkanContextResources.frameCounter;
 }
 
-void* MapResource(ResourceHandle handle)
+MemoryMappedBufferPtr MapResource(ResourceHandle handle)
 {
     VulkanMemResourceChain* resourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(handle.m_hRes);
     const ResourceDesc& desc = resourceChain->resDesc;
     VulkanMemResource* resource = &resourceChain->resourceChain[IsBufferUsageMultiBuffered(desc.bufferUsage) ?  g_vulkanContextResources.currentVirtualFrame : 0];
 
     // Note: Right now, all host visible memory is allocated into the same single device memory block, which I just leave persistently mapped. So this just has to return the mapped ptr + offset.
+    MemoryMappedBufferPtr bufferPtr = {};
     if (1)
     {
-        return (void*)((uint8*)resource->GpuMemAlloc.mappedMemPtr + resource->GpuMemAlloc.allocOffset);
+        bufferPtr.m_ptr = (void*)((uint8*)resource->GpuMemAlloc.mappedMemPtr + resource->GpuMemAlloc.allocOffset);
     }
     else
     {
@@ -146,11 +147,13 @@ void* MapResource(ResourceHandle handle)
         {
             Core::Utility::LogMsg("Platform", "Failed to map gpu memory!", Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
-            return nullptr;
         }
-
-        return newMappedMem;
+        else
+        {
+            bufferPtr.m_ptr = newMappedMem;
+        }
     }
+    return bufferPtr;
 }
 
 void UnmapResource(ResourceHandle handle)

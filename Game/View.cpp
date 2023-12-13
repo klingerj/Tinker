@@ -15,7 +15,7 @@ void Update(View* view, Tk::Graphics::DescriptorSetDataHandles* descDataHandles)
 
     // Globals
     Tk::Graphics::ResourceHandle bufferHandle = descDataHandles[0].handles[0];
-    void* descDataBufferMemPtr_Global = Tk::Graphics::MapResource(bufferHandle);
-    memcpy(descDataBufferMemPtr_Global, &globalData, sizeof(DescriptorData_Global));
+    Tk::Graphics::MemoryMappedBufferPtr descDataBufferPtr_Global = Tk::Graphics::MapResource(bufferHandle);
+    descDataBufferPtr_Global.MemcpyInto(&globalData, sizeof(DescriptorData_Global));
     Tk::Graphics::UnmapResource(bufferHandle);
 }

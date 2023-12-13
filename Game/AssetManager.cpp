@@ -536,7 +536,7 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
         desc.resourceType = Graphics::ResourceType::eBuffer1D;
 
         Graphics::ResourceHandle stagingBufferHandle_Pos, stagingBufferHandle_UV, stagingBufferHandle_Norm, stagingBufferHandle_Idx;
-        void* stagingBufferMemPtr_Pos, *stagingBufferMemPtr_UV, *stagingBufferMemPtr_Norm, *stagingBufferMemPtr_Idx;
+        Tk::Graphics::MemoryMappedBufferPtr stagingBufferMemPtr_Pos, stagingBufferMemPtr_UV, stagingBufferMemPtr_Norm, stagingBufferMemPtr_Idx;
 
         // Positions
         desc.dims = v3ui(m_allMeshData[uiAsset].m_numVertices * sizeof(v4f), 0, 0);
@@ -597,11 +597,10 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
         v2f* uvBuffer       = (v2f*)m_allMeshData[uiAsset].m_vertexBufferData_UV;
         v4f* normalBuffer   = (v4f*)m_allMeshData[uiAsset].m_vertexBufferData_Normal;
         uint32* indexBuffer = (uint32*)m_allMeshData[uiAsset].m_vertexBufferData_Index;
-        memcpy(stagingBufferMemPtr_Pos, positionBuffer, numPositionBytes);
-        memcpy(stagingBufferMemPtr_UV, uvBuffer, numUVBytes);
-        memcpy(stagingBufferMemPtr_Norm, normalBuffer, numNormalBytes);
-        memcpy(stagingBufferMemPtr_Idx, indexBuffer, numIndexBytes);
-        //-----
+        stagingBufferMemPtr_Pos.MemcpyInto(positionBuffer, numPositionBytes);
+        stagingBufferMemPtr_UV.MemcpyInto(uvBuffer, numUVBytes);
+        stagingBufferMemPtr_Norm.MemcpyInto(normalBuffer, numNormalBytes);
+        stagingBufferMemPtr_Idx.MemcpyInto(indexBuffer, numIndexBytes);
 
         // Create, submit, and execute the buffer copy commands
         {
@@ -609,34 +608,33 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
 
             const uint32 numVerts = m_allMeshData[uiAsset].m_numVertices;
             // Position buffer copy
-            graphicsCommandStream->CmdCopy(numVerts * sizeof(v4f),
-                stagingBufferHandle_Pos,
+            graphicsCommandStream->CmdCopy(stagingBufferHandle_Pos,
                 m_allStaticMeshGraphicsHandles[uiAsset].m_positionBuffer.gpuBufferHandle,
+                numVerts * sizeof(v4f),
                 "Update Asset Vtx Pos Buf");
 
             // UV buffer copy
-            graphicsCommandStream->CmdCopy(numVerts * sizeof(v2f),
-                stagingBufferHandle_UV,
+            graphicsCommandStream->CmdCopy(stagingBufferHandle_UV,
                 m_allStaticMeshGraphicsHandles[uiAsset].m_uvBuffer.gpuBufferHandle,
+                numVerts * sizeof(v2f),
                 "Update Asset Vtx UV Buf");
 
             // Normal buffer copy
-            graphicsCommandStream->CmdCopy(numVerts * sizeof(v4f),
-                stagingBufferHandle_Norm,
+            graphicsCommandStream->CmdCopy(stagingBufferHandle_Norm,
                 m_allStaticMeshGraphicsHandles[uiAsset].m_normalBuffer.gpuBufferHandle,
+                numVerts * sizeof(v4f),
                 "Update Asset Vtx Normal Buf");
 
             // Index buffer copy
-            graphicsCommandStream->CmdCopy(numVerts * sizeof(uint32),
-                stagingBufferHandle_Idx,
+            graphicsCommandStream->CmdCopy(stagingBufferHandle_Idx,
                 m_allStaticMeshGraphicsHandles[uiAsset].m_indexBuffer.gpuBufferHandle,
+                numVerts * sizeof(uint32),
                 "Update Asset Vtx Idx Buf");
 
             // Perform the copies
             graphicsCommandStream->CmdCommandBufferEnd(commandBuffer);
             Graphics::SubmitCmdsImmediate(graphicsCommandStream, commandBuffer);
             graphicsCommandStream->Clear();
-            //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
         }
 
         // Unmap the buffer resource
@@ -673,12 +671,12 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
         desc.resourceType = Graphics::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
         imageStagingBufferHandles[uiAsset] = Graphics::CreateResource(desc);
-        void* stagingBufferMemPtr = Graphics::MapResource(imageStagingBufferHandles[uiAsset]);
+        Graphics::MemoryMappedBufferPtr stagingBuffer = Graphics::MapResource(imageStagingBufferHandles[uiAsset]);
 
         // Copy texture data into the staging buffer
         uint8* currentTextureFile = m_textureBufferAllocator.m_ownedMemPtr + accumTextureOffset;
         accumTextureOffset += textureSizeInBytes;
-        memcpy(stagingBufferMemPtr, currentTextureFile, textureSizeInBytes);
+        stagingBuffer.MemcpyInto(currentTextureFile, textureSizeInBytes);
     }
 
     graphicsCommandStream->CmdCommandBufferBegin(commandBuffer, "Asset manager create textures cmdbuffer");
@@ -693,9 +691,9 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
             Graphics::ImageLayout::eTransferDst,
             "Transition image layout to transfer dst optimal");
 
-        graphicsCommandStream->CmdCopy(textureSizeInBytes,
-            imageStagingBufferHandles[uiAsset],
+        graphicsCommandStream->CmdCopy(imageStagingBufferHandles[uiAsset],
             m_allTextureGraphicsHandles[uiAsset],
+            textureSizeInBytes,
             "Update asset texture data");
 
         graphicsCommandStream->CmdLayoutTransition(m_allTextureGraphicsHandles[uiAsset],
@@ -708,7 +706,6 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
     graphicsCommandStream->CmdCommandBufferEnd(commandBuffer);
     Graphics::SubmitCmdsImmediate(graphicsCommandStream, commandBuffer);
     graphicsCommandStream->Clear();
-    //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 
     // Destroy the staging buffers
     for (uint32 uiAsset = 0; uiAsset < m_numTextureAssets; ++uiAsset)

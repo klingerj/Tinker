@@ -7,9 +7,9 @@
 // TODO: move this to be a compile define or ini config entry
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
 
-#define DEVICE_LOCAL_BUFFER_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
-#define HOST_VISIBLE_HEAP_SIZE 256 * 1024 * 1024 // 120 MiB
-#define DEVICE_LOCAL_IMAGE_HEAP_SIZE 512 * 1024 * 1024 // 512 MiB
+#define DEVICE_LOCAL_BUFFER_HEAP_SIZE 512 * 1024 * 1024 
+#define HOST_VISIBLE_HEAP_SIZE 256 * 1024 * 1024 
+#define DEVICE_LOCAL_IMAGE_HEAP_SIZE 512 * 1024 * 1024 
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN

@@ -382,6 +382,25 @@ CommandBuffer CreateCommandBuffer();
 void BeginCommandRecording(CommandBuffer commandBuffer);
 void EndCommandRecording(CommandBuffer commandBuffer);
 
+typedef struct mem_mapped_buf_ptr
+{
+    void* m_ptr = nullptr;
+    uint32 m_offset = 0;
+
+    void* GetCurrPtr() 
+    {
+        return (uint8*)m_ptr + m_offset;
+    }
+
+    void MemcpyInto(const void* srcData, uint32 numBytes)
+    {
+        void* currPtr = GetCurrPtr();
+        memcpy(currPtr, srcData, numBytes);
+        m_offset += numBytes;
+    }
+
+} MemoryMappedBufferPtr;
+
 typedef struct graphics_command
 {
     enum : uint32
@@ -527,7 +546,7 @@ struct GraphicsCommandStream
     void Clear()
     {
         m_numCommands = 0;
-        memset(m_graphicsCommands, 0, sizeof(GraphicsCommand) * m_maxCommands);
+        //memset(m_graphicsCommands, 0, sizeof(GraphicsCommand) * m_maxCommands); // shouldnt' be needed for correctness but could be helpful for debug
     }
 
     GraphicsCommand* GetNextCommand()
@@ -660,14 +679,14 @@ struct GraphicsCommandStream
         command->m_clearValue = clearValue;
     }
 
-    void CmdCopy(uint32 sizeInBytes, ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle, const char* dbgLabel = "Copy")
+    void CmdCopy(ResourceHandle srcBufferHandle, ResourceHandle dstBufferHandle, uint32 sizeInBytes, const char* dbgLabel = "Copy")
     {
         GraphicsCommand* command = GetNextCommand();
         command->m_commandType = GraphicsCommand::eCopy;
         command->debugLabel = dbgLabel;
-        command->m_sizeInBytes = sizeInBytes;
         command->m_srcBufferHandle = srcBufferHandle;
         command->m_dstBufferHandle = dstBufferHandle;
+        command->m_sizeInBytes = sizeInBytes;
     }
 
     void CmdTimestamp(const char* nameStr, const char* dbgLabel = "Timestamp", bool startFrame = false)
@@ -709,7 +728,6 @@ namespace DefaultTextureID
         eMax
     };
 }
-//
 
 namespace DescUpdateConfigFlags
 {
@@ -726,7 +744,7 @@ CREATE_RESOURCE(CreateResource);
 #define DESTROY_RESOURCE(name) void name(ResourceHandle handle)
 DESTROY_RESOURCE(DestroyResource);
 
-#define MAP_RESOURCE(name) void* name(ResourceHandle handle)
+#define MAP_RESOURCE(name) MemoryMappedBufferPtr name(ResourceHandle handle)
 MAP_RESOURCE(MapResource);
 
 #define UNMAP_RESOURCE(name) void name(ResourceHandle handle)

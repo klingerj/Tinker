@@ -53,8 +53,8 @@ void Update(Scene* scene, Tk::Graphics::DescriptorSetDataHandles* descDataHandle
     const DescriptorData_Instance* instanceData = (const DescriptorData_Instance*)scene->m_instanceData_sorted.Data();
     Tk::Graphics::ResourceHandle bufferHandle = descDataHandles[1].handles[0];
 
-    void* descDataBufferMemPtr_Instance = Tk::Graphics::MapResource(bufferHandle);
-    memcpy(descDataBufferMemPtr_Instance, instanceData, sizeof(DescriptorData_Instance) * scene->m_numInstances);
+    Tk::Graphics::MemoryMappedBufferPtr descDataBufferPtr_Instance = Tk::Graphics::MapResource(bufferHandle);
+    descDataBufferPtr_Instance.MemcpyInto(instanceData, sizeof(DescriptorData_Instance) * scene->m_numInstances);
     Tk::Graphics::UnmapResource(bufferHandle);
 }
 

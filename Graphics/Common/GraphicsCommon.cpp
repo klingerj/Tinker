@@ -375,7 +375,6 @@ void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsComma
     graphicsCommandStream->CmdCommandBufferEnd(cmdBuf);
     Graphics::SubmitCmdsImmediate(graphicsCommandStream, cmdBuf);
     graphicsCommandStream->Clear();
-    //graphicsCommandStream->m_numCommands = 0; // reset the cmd counter for the stream
 }
 
 void DestroyDefaultTextures()

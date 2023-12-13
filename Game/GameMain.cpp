@@ -411,7 +411,6 @@ extern "C"
 GAME_UPDATE(GameUpdate)
 {
     g_graphicsCommandStream.Clear();
-    //g_graphicsCommandStream.m_numCommands = 0;
 
     if (!isGameInitted)
     {
@@ -519,7 +518,6 @@ GAME_UPDATE(GameUpdate)
         Tk::Graphics::SubmitFrameToGPU(g_windowHandles, g_FrameCommandBuffer);
         Tk::Graphics::PresentToSwapChain(g_windowHandles);
         g_graphicsCommandStream.Clear();
-        //g_graphicsCommandStream.m_numCommands = 0;
 
         // Debug UI - extra submissions
         DebugUI::RenderAndSubmitMultiViewports(&g_graphicsCommandStream);
