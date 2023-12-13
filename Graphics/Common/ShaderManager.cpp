@@ -111,7 +111,7 @@ void LoadAllShaders()
     bool bOk = false;
 
     // Shaders
-    const uint32 numShaderFilepaths = 11;
+    const uint32 numShaderFilepaths = 12;
     const char* shaderFilePaths[numShaderFilepaths] =
     {
         SHADERS_SPV_PATH "blit_VS.spv",
@@ -125,6 +125,7 @@ void LoadAllShaders()
         SHADERS_SPV_PATH "grayscale_CS.spv",
         SHADERS_SPV_PATH "blit_clear_VS.spv",
         SHADERS_SPV_PATH "blit_clear_PS.spv",
+        SHADERS_SPV_PATH "blit_PS.spv",
     };
 
     uint32 descLayouts[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
@@ -135,13 +136,13 @@ void LoadAllShaders()
 
     GraphicsPipelineAttachmentFormats pipelineFormats;
 
-    // Quad blit
+    // Quad blit tonemap
     descLayouts[0] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
-    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_QUAD_BLIT, pipelineFormats, descLayouts, 2);
+    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[11], Graphics::SHADER_ID_QUAD_BLIT_TONEMAP, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -149,12 +150,13 @@ void LoadAllShaders()
         descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
     }
 
+    // Quad blit copy
     descLayouts[0] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
-    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_QUAD_BLIT_RGBA8, pipelineFormats, descLayouts, 2);
+    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[11], Graphics::SHADER_ID_QUAD_BLIT_RGBA8, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
