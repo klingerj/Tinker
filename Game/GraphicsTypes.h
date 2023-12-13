@@ -43,9 +43,10 @@ enum
 {
     eRenderPass_ZPrePass = 0,
     eRenderPass_MainView,
-    eRenderPass_DebugUI,
-    eRenderPass_ComputeCopy,
     eRenderPass_ToneMapping,
+    eRenderPass_ComputeCopy,
+    eRenderPass_DebugUI,
+    eRenderPass_SwapChainCopy,
     eRenderPass_Max
 };
 
@@ -67,6 +68,8 @@ typedef struct game_graphics_data
     Tk::Graphics::ResourceHandle m_rtColorHandle;
     Tk::Graphics::ResourceHandle m_rtDepthHandle;
 
+    Tk::Graphics::ResourceHandle m_rtColorToneMappedHandle;
+    
     Tk::Graphics::ResourceHandle m_computeColorHandle;
 
     Tk::Graphics::DescriptorHandle m_DescData_Instance;
@@ -78,6 +81,7 @@ typedef struct game_graphics_data
     void* m_DescDataBufferMemPtr_Global;
 
     Tk::Graphics::DescriptorHandle m_toneMappingDescHandle;
+    Tk::Graphics::DescriptorHandle m_swapChainCopyDescHandle;
     Tk::Graphics::DescriptorHandle m_computeCopyDescHandle;
 
     TransientPrim m_animatedPolygon;

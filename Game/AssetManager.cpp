@@ -664,12 +664,14 @@ void AssetManager::InitAssetGraphicsResources(Tk::Graphics::GraphicsCommandStrea
         desc.imageFormat = Graphics::ImageFormat::RGBA8_SRGB; // TODO: don't hard code this
         desc.imageUsageFlags = Tk::Graphics::ImageUsageFlags::Sampled | Tk::Graphics::ImageUsageFlags::TransferDst;
         desc.dims = m_allTextureMetadata[uiAsset].m_dims;
+        desc.debugLabel = "Asset Texture Buffer";
         m_allTextureGraphicsHandles[uiAsset] = Graphics::CreateResource(desc);
 
         uint32 textureSizeInBytes = m_allTextureMetadata[uiAsset].m_dims.x * m_allTextureMetadata[uiAsset].m_dims.y * 4; // 4 bytes per pixel since RGBA8
         desc.dims = v3ui(textureSizeInBytes, 0, 0);
         desc.resourceType = Graphics::ResourceType::eBuffer1D; // staging buffer is just a 1D buffer
         desc.bufferUsage = Graphics::BufferUsage::eStaging;
+        desc.debugLabel = "Asset Texture Staging Buffer";
         imageStagingBufferHandles[uiAsset] = Graphics::CreateResource(desc);
         Graphics::MemoryMappedBufferPtr stagingBuffer = Graphics::MapResource(imageStagingBufferHandles[uiAsset]);
 

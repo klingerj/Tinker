@@ -113,7 +113,7 @@ void DestroyDefaultGeometry()
     Graphics::DestroyResource(defaultQuad.m_indexBuffer.gpuBufferHandle);
     defaultQuad.m_indexBuffer.gpuBufferHandle = Graphics::DefaultResHandle_Invalid;
 
-    //DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
+    DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
 }
 
 DefaultGeometry<DEFAULT_QUAD_NUM_VERTICES, DEFAULT_QUAD_NUM_INDICES> defaultQuad = {
@@ -152,9 +152,12 @@ void CreateAnimatedPoly(TransientPrim* prim)
 
     desc.dims = v3ui(prim->numVertices * sizeof(v4f), 0, 0);
     desc.bufferUsage = Graphics::BufferUsage::eTransientVertex;
+    desc.debugLabel = "AnimatedPoly Transient Vtx Buf";
     prim->vertexBufferHandle = Graphics::CreateResource(desc);
     desc.bufferUsage = Graphics::BufferUsage::eTransientIndex;
     desc.dims = v3ui((prim->numVertices - 1) * 3 * sizeof(uint32), 0, 0);
+    desc.debugLabel = "AnimatedPoly Transient Idx Buf";
+    
     prim->indexBufferHandle = Graphics::CreateResource(desc);
 
     // Descriptor - vertex buffer

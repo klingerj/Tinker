@@ -2,6 +2,7 @@
 #include "Graphics/Vulkan/VulkanTypes.h"
 #include "Graphics/Vulkan/VulkanCreation.h"
 #include "Utility/Logging.h"
+#include "DataStructures/Vector.h"
 
 #include <iostream>
 // TODO: move this to be a compile define or ini config entry
@@ -35,10 +36,8 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallbackFunc(
 {
     if ((messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) | (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT))
     {
-        //TODO: log differently 
-        Core::Utility::LogMsg("Platform", pCallbackData->pMessage, Core::Utility::LogSeverity::eWarning);
-        //OutputDebugString(pCallbackData->pMessage);
-        //OutputDebugString("\n");
+        OutputDebugString(pCallbackData->pMessage);
+        OutputDebugString("\n");
     }
 
     return VK_FALSE;
@@ -194,25 +193,21 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles)
     //}
 
     // Instance layers
-    const char* requestedLayersStr[] =
-    {
-        "VK_LAYER_LUNARG_monitor",
-
-        #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
-        "VK_LAYER_KHRONOS_validation",
-        #endif
-    };
-    const uint32 numRequestedLayers = ARRAYCOUNT(requestedLayersStr);
+    Tk::Core::Vector<const char*> requestedLayers;
+    requestedLayers.Reserve(4);
+#if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
+    requestedLayers.PushBackRaw({ "VK_LAYER_KHRONOS_validation" });
+#endif
+    const uint32 numRequestedLayers = requestedLayers.Size();
 
     Core::Utility::LogMsg("Platform", "******** Requested Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
     for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
     {
-        Core::Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Core::Utility::LogSeverity::eInfo);
+        Core::Utility::LogMsg("Platform", requestedLayers[uiReqLayer], Core::Utility::LogSeverity::eInfo);
     }
 
     uint32 numAvailableLayers = 0;
     vkEnumerateInstanceLayerProperties(&numAvailableLayers, nullptr);
-
     if (numAvailableLayers == 0)
     {
         Core::Utility::LogMsg("Platform", "Zero available instance layers!", Core::Utility::LogSeverity::eCritical);
@@ -221,21 +216,27 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles)
 
     VkLayerProperties* availableLayers = (VkLayerProperties*)g_vulkanContextResources.DataAllocator.Alloc(sizeof(VkLayerProperties) * numAvailableLayers, 1);
     vkEnumerateInstanceLayerProperties(&numAvailableLayers, availableLayers);
-
-    //Core::Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
-    //for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
-    //{
-        //Core::Utility::LogMsg("Platform", availableLayers[uiAvailLayer].layerName, Core::Utility::LogSeverity::eInfo);
-    //}
-
-    uint32 layersSupported[numRequestedLayers] = {};
-    for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
+    
+    if (0)
     {
+        Core::Utility::LogMsg("Platform", "******** Available Instance Layers: ********", Core::Utility::LogSeverity::eInfo);
         for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
         {
-            if (!strcmp(availableLayers[uiAvailLayer].layerName, requestedLayersStr[uiReqLayer]))
+            Core::Utility::LogMsg("Platform", availableLayers[uiAvailLayer].layerName, Core::Utility::LogSeverity::eInfo);
+        }
+    }
+    
+    Tk::Core::Vector<bool> isRequestedLayerSupported;
+    isRequestedLayerSupported.Reserve(4);
+    for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
+    {
+        isRequestedLayerSupported.PushBackRaw(false); // starts not supported, then check all available layers 
+
+        for (uint32 uiAvailLayer = 0; uiAvailLayer < numAvailableLayers; ++uiAvailLayer)
+        {
+            if (!strcmp(availableLayers[uiAvailLayer].layerName, requestedLayers[uiReqLayer]))
             {
-                layersSupported[uiReqLayer] = 1u;
+                isRequestedLayerSupported[uiReqLayer] = true;
                 break;
             }
         }
@@ -243,16 +244,16 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles)
 
     for (uint32 uiReqLayer = 0; uiReqLayer < numRequestedLayers; ++uiReqLayer)
     {
-        if (!layersSupported[uiReqLayer])
+        if (!isRequestedLayerSupported[uiReqLayer])
         {
             Core::Utility::LogMsg("Platform", "Requested instance layer not supported!", Core::Utility::LogSeverity::eCritical);
-            Core::Utility::LogMsg("Platform", requestedLayersStr[uiReqLayer], Core::Utility::LogSeverity::eCritical);
+            Core::Utility::LogMsg("Platform", requestedLayers[uiReqLayer], Core::Utility::LogSeverity::eCritical);
             TINKER_ASSERT(0);
         }
     }
 
     instanceCreateInfo.enabledLayerCount = numRequestedLayers;
-    instanceCreateInfo.ppEnabledLayerNames = requestedLayersStr;
+    instanceCreateInfo.ppEnabledLayerNames = (const char**)requestedLayers.Data();
 
     VkResult result = vkCreateInstance(&instanceCreateInfo,
         nullptr,

@@ -30,7 +30,7 @@ static void CreateDescriptorPool()
     uint32 maxSets = 0;
     for (uint32 i = 0; i < VULKAN_NUM_SUPPORTED_DESCRIPTOR_TYPES; ++i)
     {
-        maxSets += descPoolSizes[i].descriptorCount = VULKAN_DESCRIPTOR_POOL_MAX_STORAGE_IMAGES;
+        maxSets += descPoolSizes[i].descriptorCount;
     }
 
     VkDescriptorPoolCreateInfo descPoolCreateInfo = {};
@@ -724,9 +724,13 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
     // TODO: this will change once the user can create allocators via the graphics layer
     uint32 AllocatorIndex = 0xFFFFFFFF;
     if (propertyFlags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    {
         AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorDeviceLocalBuffers;
+    }
     else
+    {
         AllocatorIndex = g_vulkanContextResources.eVulkanMemoryAllocatorHostVisibleBuffers;
+    }
 
     for (uint32 uiBuf = 0; uiBuf < NumCopies; ++uiBuf)
     {
@@ -758,6 +762,7 @@ static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsag
         newResource->GpuMemAlloc = newAlloc;
 
         DbgSetBufferObjectName((uint64)newResource->buffer, debugLabel);
+        //TINKER_ASSERT(strlen(debugLabel) != 0);
     }
 
     return ResourceHandle(newResourceHandle);
@@ -983,7 +988,7 @@ DescriptorHandle CreateDescriptor(uint32 descriptorLayoutID)
 
     uint32 newDescriptorHandle = g_vulkanContextResources.vulkanDescriptorResourcePool.Alloc();
 
-    for (uint32 uiImage = 0; uiImage < MAX_FRAMES_IN_FLIGHT; ++uiImage)
+    for (uint32 uiFrame = 0; uiFrame < MAX_FRAMES_IN_FLIGHT; ++uiFrame)
     {
         if (descriptorSetLayout != VK_NULL_HANDLE)
         {
@@ -993,7 +998,7 @@ DescriptorHandle CreateDescriptor(uint32 descriptorLayoutID)
             descSetAllocInfo.descriptorSetCount = 1;
             descSetAllocInfo.pSetLayouts = &descriptorSetLayout;
 
-            VulkanDescriptor& vulkanDescriptor = g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiImage];
+            VulkanDescriptor& vulkanDescriptor = g_vulkanContextResources.vulkanDescriptorResourcePool.PtrFromHandle(newDescriptorHandle)->resourceChain[uiFrame];
 
             VkResult result = vkAllocateDescriptorSets(g_vulkanContextResources.device, &descSetAllocInfo, &vulkanDescriptor.descriptorSet);
             if (result != VK_SUCCESS)

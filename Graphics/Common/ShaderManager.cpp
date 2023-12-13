@@ -140,8 +140,21 @@ void LoadAllShaders()
     descLayouts[1] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
-    pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_QUAD_BLIT, pipelineFormats, descLayouts, 2);
+    TINKER_ASSERT(bOk);
+
+    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+    {
+        descLayouts[i] = Graphics::DESCLAYOUT_ID_MAX;
+    }
+
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX;
+    descLayouts[1] = Graphics::DESCLAYOUT_ID_QUAD_BLIT_VBS;
+    pipelineFormats.Init();
+    pipelineFormats.numColorRTs = 1;
+    pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
+    bOk = LoadShader(shaderFilePaths[0], shaderFilePaths[1], Graphics::SHADER_ID_QUAD_BLIT_RGBA8, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -171,7 +184,7 @@ void LoadAllShaders()
     bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
-    // TODO: temporary 
+    // TODO: temporary, need to resolve how to handle RT formats 
     pipelineFormats.colorRTFormats[0] = ImageFormat::TheSwapChainFormat;
     bOk = LoadShader(shaderFilePaths[6], shaderFilePaths[7], Graphics::SHADER_ID_IMGUI_DEBUGUI_RGBA8, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);

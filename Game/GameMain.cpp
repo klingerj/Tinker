@@ -16,6 +16,7 @@
 #include "RenderPasses/ComputeCopyRenderPass.h"
 #include "RenderPasses/DebugUIRenderPass.h"
 #include "RenderPasses/ToneMappingRenderPass.h"
+#include "RenderPasses/SwapChainCopyRenderPass.h"
 #include "AssetManager.h"
 #include "Camera.h"
 #include "Raytracing.h"
@@ -164,6 +165,9 @@ static void DestroyDescriptors()
 
     Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
     gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
+    
+    Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainCopyDescHandle);
+    gameGraphicsData.m_swapChainCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
 
     Graphics::DestroyDescriptor(gameGraphicsData.m_computeCopyDescHandle);
     gameGraphicsData.m_computeCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
@@ -185,8 +189,23 @@ static void WriteToneMappingResources()
 {
     Graphics::DescriptorSetDataHandles toneMapHandles = {};
     toneMapHandles.InitInvalid();
-    toneMapHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
+    toneMapHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
     Graphics::WriteDescriptorSimple(gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
+
+    Graphics::DescriptorSetDataHandles vbHandles = {};
+    vbHandles.InitInvalid();
+    vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
+    vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
+    vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
+    Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
+}
+
+static void WriteSwapChainCopyResources()
+{
+    Graphics::DescriptorSetDataHandles swapChainCopyHandles = {};
+    swapChainCopyHandles.InitInvalid();
+    swapChainCopyHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
+    Graphics::WriteDescriptorSimple(gameGraphicsData.m_swapChainCopyDescHandle, &swapChainCopyHandles);
 
     Graphics::DescriptorSetDataHandles vbHandles = {};
     vbHandles.InitInvalid();
@@ -200,7 +219,7 @@ static void WriteComputeCopyResources()
 {
     Graphics::DescriptorSetDataHandles computeHandles = {};
     computeHandles.InitInvalid();
-    computeHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
+    computeHandles.handles[0] = gameGraphicsData.m_rtColorToneMappedHandle;
     computeHandles.handles[1] = gameGraphicsData.m_computeColorHandle;
     Graphics::WriteDescriptorSimple(gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
 }
@@ -224,6 +243,10 @@ static void CreateAllDescriptors()
     // Compute copy
     gameGraphicsData.m_computeCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_COMPUTE_COPY);
     WriteComputeCopyResources();
+
+    // Swap chain copy
+    gameGraphicsData.m_swapChainCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
+    WriteSwapChainCopyResources();
 
     // Descriptor data
     Graphics::ResourceDesc desc;
@@ -259,9 +282,12 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     desc.arrayEles = 1;
     desc.dims = v3ui(windowWidth, windowHeight, 1);
     desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
-    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::TransferDst | Graphics::ImageUsageFlags::Sampled | Graphics::ImageUsageFlags::UAV;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::Sampled | Graphics::ImageUsageFlags::TransferDst | Graphics::ImageUsageFlags::UAV;
     desc.debugLabel = "MainViewColor";
     gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
+
+    desc.debugLabel = "MainViewColorTonemapped";
+    gameGraphicsData.m_rtColorToneMappedHandle = Graphics::CreateResource(desc);
 
     desc.imageFormat = Graphics::ImageFormat::Depth_32F;
     desc.imageUsageFlags = Graphics::ImageUsageFlags::DepthStencil | Graphics::ImageUsageFlags::TransferDst;
@@ -269,7 +295,7 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
     desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
-    desc.imageUsageFlags = Graphics::ImageUsageFlags::UAV | Graphics::ImageUsageFlags::Sampled;
+    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::UAV | Graphics::ImageUsageFlags::Sampled;
     desc.debugLabel = "MainViewColor_ComputeCopy";
     gameGraphicsData.m_computeColorHandle = Graphics::CreateResource(desc);
 
@@ -290,9 +316,18 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
     gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
     gameRenderPassList[eRenderPass_MainView].ExecuteFn = ForwardRenderPass::Execute;
 
+    gameRenderPassList[eRenderPass_ToneMapping].Init();
+    gameRenderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] = gameGraphicsData.m_rtColorToneMappedHandle;
+    gameRenderPassList[eRenderPass_ToneMapping].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_ToneMapping].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_ToneMapping].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_ToneMapping].debugLabel = "Tone Mapping";
+    gameRenderPassList[eRenderPass_ToneMapping].ExecuteFn = ToneMappingRenderPass::Execute;
+
     gameRenderPassList[eRenderPass_ComputeCopy].Init();
     gameRenderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] = gameGraphicsData.m_rtColorToneMappedHandle;
     gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] = gameGraphicsData.m_computeColorHandle;
     gameRenderPassList[eRenderPass_ComputeCopy].depthRT = Graphics::DefaultResHandle_Invalid;
     gameRenderPassList[eRenderPass_ComputeCopy].renderWidth = windowWidth;
@@ -302,20 +337,20 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
 
     gameRenderPassList[eRenderPass_DebugUI].Init();
     gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_DebugUI].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+    gameRenderPassList[eRenderPass_DebugUI].colorRTs[0] = gameGraphicsData.m_computeColorHandle;
     gameRenderPassList[eRenderPass_DebugUI].depthRT = Graphics::DefaultResHandle_Invalid;
     gameRenderPassList[eRenderPass_DebugUI].renderWidth = windowWidth;
     gameRenderPassList[eRenderPass_DebugUI].renderHeight = windowHeight;
     gameRenderPassList[eRenderPass_DebugUI].debugLabel = "Debug UI";
     gameRenderPassList[eRenderPass_DebugUI].ExecuteFn = DebugUIRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_ToneMapping].Init();
-    gameRenderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_ToneMapping].depthRT = Graphics::DefaultResHandle_Invalid;
-    gameRenderPassList[eRenderPass_ToneMapping].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_ToneMapping].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_ToneMapping].debugLabel = "Tone Mapping";
-    gameRenderPassList[eRenderPass_ToneMapping].ExecuteFn = ToneMappingRenderPass::Execute;
+    gameRenderPassList[eRenderPass_SwapChainCopy].Init();
+    gameRenderPassList[eRenderPass_SwapChainCopy].numColorRTs = 1;
+    gameRenderPassList[eRenderPass_SwapChainCopy].depthRT = Graphics::DefaultResHandle_Invalid;
+    gameRenderPassList[eRenderPass_SwapChainCopy].renderWidth = windowWidth;
+    gameRenderPassList[eRenderPass_SwapChainCopy].renderHeight = windowHeight;
+    gameRenderPassList[eRenderPass_SwapChainCopy].debugLabel = "Swap Chain Copy";
+    gameRenderPassList[eRenderPass_SwapChainCopy].ExecuteFn = SwapChainCopyRenderPass::Execute;
 
     g_FrameCommandBuffer = Tk::Graphics::CreateCommandBuffer();
 }
@@ -492,7 +527,7 @@ GAME_UPDATE(GameUpdate)
         //TIMED_SCOPED_BLOCK("Graphics command stream recording");
         
         // Have to set the swap chain handle manually
-        gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] = Tk::Graphics::GetCurrentSwapChainImage(g_windowHandles);
+        gameRenderPassList[eRenderPass_SwapChainCopy].colorRTs[0] = Tk::Graphics::GetCurrentSwapChainImage(g_windowHandles);
 
         for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
         {
@@ -545,6 +580,7 @@ static void DestroyWindowResizeDependentResources()
 {
     Graphics::DestroyResource(gameGraphicsData.m_rtColorHandle);
     Graphics::DestroyResource(gameGraphicsData.m_rtDepthHandle);
+    Graphics::DestroyResource(gameGraphicsData.m_rtColorToneMappedHandle);
     Graphics::DestroyResource(gameGraphicsData.m_computeColorHandle);
 }
 
@@ -585,7 +621,6 @@ GAME_DESTROY(GameDestroy)
         DestroyDescriptors();
 
         DestroyDefaultGeometry();
-        DestroyDefaultGeometryVertexBufferDescriptor(defaultQuad);
         Graphics::DestroyDefaultTextures();
         
         DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);

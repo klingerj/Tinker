@@ -135,7 +135,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
         colorBuffer = Tk::Graphics::CreateResource(desc);
 
         desc.bufferUsage = Tk::Graphics::BufferUsage::eTransientIndex;
-        desc.dims = v3ui((MAX_VERTS - 2) * 3 * sizeof(uint32), 0, 0);
+        desc.dims = v3ui(MAX_VERTS * 3 * sizeof(uint32), 0, 0);
         desc.debugLabel = "Imgui idx buf";
         indexBuffer = Tk::Graphics::CreateResource(desc);
 

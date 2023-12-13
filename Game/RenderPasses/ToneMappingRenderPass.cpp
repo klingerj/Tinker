@@ -9,8 +9,8 @@ namespace ToneMappingRenderPass
 
     RENDER_PASS_EXEC_FUNC(Execute)
     {
-        graphicsCommandStream->CmdLayoutTransition(gameGraphicsData.m_computeColorHandle, Tk::Graphics::ImageLayout::eGeneral, Tk::Graphics::ImageLayout::eShaderRead, "Transition hdr compute to shader read");
-        graphicsCommandStream->CmdLayoutTransition(Tk::Graphics::GetCurrentSwapChainImage(Tk::Platform::GetPlatformWindowHandles()), Tk::Graphics::ImageLayout::eUndefined, Tk::Graphics::ImageLayout::eRenderOptimal, "Transition swap chain to render_optimal");
+        graphicsCommandStream->CmdLayoutTransition(gameGraphicsData.m_rtColorHandle, Tk::Graphics::ImageLayout::eRenderOptimal, Tk::Graphics::ImageLayout::eShaderRead, "Transition hdr compute to shader read");
+        graphicsCommandStream->CmdLayoutTransition(renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eUndefined, Tk::Graphics::ImageLayout::eRenderOptimal, "Transition tonemapped target to render_optimal");
 
         StartRenderPass(renderPass, graphicsCommandStream);
         Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
@@ -25,8 +25,6 @@ namespace ToneMappingRenderPass
             Tk::Graphics::BlendState::eReplace, Tk::Graphics::DepthState::eOff_NoCull, defaultQuad.m_indexBuffer.gpuBufferHandle,
             MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors, "Draw asset");
         EndRenderPass(renderPass, graphicsCommandStream);
-
-        graphicsCommandStream->CmdLayoutTransition(Tk::Graphics::GetCurrentSwapChainImage(Tk::Platform::GetPlatformWindowHandles()), Tk::Graphics::ImageLayout::eRenderOptimal, Tk::Graphics::ImageLayout::ePresent, "Transition swap chain to present");
     }
 
 }
