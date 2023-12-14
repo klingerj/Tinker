@@ -75,6 +75,7 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
   * OBJ models, BMP textures
   * "Cooking" of mesh vertex data into binary format
 * ImGui debug UI
+  * Supports multi-viewport, creates and destroys windows/swap chains on demand
 * Simple unit testing and benchmarking frameworks
 * WIP features
   * [SPIR-V virtual machine](SPIR-V-VM)
