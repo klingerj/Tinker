@@ -58,6 +58,8 @@ static const wchar_t* CompileFlags_Common[] =
     L"DXC_ARG_PACK_MATRIX_COLUMN_MAJOR",
     L"-E ",
     ENTRY_POINT_NAME_WCHAR,
+    L"-I",
+    L"" SHADERS_SRC_DIR,
 };
 
 static const wchar_t* CompileFlags_VkSpecific[] =
@@ -217,14 +219,14 @@ uint32 CompileAllShadersVK()
         {
             printf("\nCompiling: %ls...\n", shaderFilenameStart);
 
-            uint32 compileError = CompileFile(g_pCompiler, g_pUtils, g_pIncludeHandler, (const wchar_t*)g_args.Data(), g_args.Size(), currShaderFilepath, shaderFilenameStart);
-            if (compileError == ErrCode::Success || compileError == ErrCode::HasWarnings)
+            errorCode = CompileFile(g_pCompiler, g_pUtils, g_pIncludeHandler, (const wchar_t*)g_args.Data(), g_args.Size(), currShaderFilepath, shaderFilenameStart);
+            if (errorCode == ErrCode::Success || errorCode == ErrCode::HasWarnings)
             {
                 // TODO: add entry to hashmap for material library, get the bytecode from the compile call
             }
             else
             {
-                errorCode = compileError;
+                // TODO: error reporting
             }
 
             // Reset shader name but keep base path

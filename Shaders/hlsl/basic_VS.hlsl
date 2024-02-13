@@ -1,3 +1,5 @@
+#include "ShaderDescriptors.h"
+
 struct PushConstantData
 {
     uint InstanceOffsets[4];
@@ -7,11 +9,6 @@ struct PushConstantData
 
 [[vk::push_constant]]
 PushConstantData PushConstants;
-
-struct DescGlobal
-{
-    float4x4 ViewProjMatrix;
-};
 
 #define MAX_INSTANCES 128 // TODO: use an unbounded array
 struct Instance_Data

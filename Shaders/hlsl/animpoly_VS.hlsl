@@ -1,7 +1,4 @@
-struct DescGlobal
-{
-    float4x4 ViewProjMatrix;
-};
+#include "ShaderDescriptors.h"
 
 #define PositionDataType float4
 #define UVDataType float2
