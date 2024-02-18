@@ -26,6 +26,9 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
     // Track number of instances for proper indexing into uniform buffer of instance data
     uint32 instanceCount = 0;
 
+    // Push constants, e.g. important offsets for bindless resources
+    uint32 pushConstantData[4] = {};
+
     if (scene->m_numInstances > 0)
     {
         uint32 currentAssetID = scene->m_instances_sorted[0].m_assetID;
@@ -43,8 +46,9 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
                 
                 descriptors[2] = meshData->m_descriptor;
 
-                const uint32 data = instanceCount;
-                graphicsCommandStream->CmdPushConstant(shaderID, (uint8*)&data, sizeof(uint32), "Mesh push constant");
+                pushConstantData[0] = instanceCount;
+                pushConstantData[1] = 0; // global descriptor offset 
+                graphicsCommandStream->CmdPushConstant(shaderID, (uint8*)&pushConstantData, sizeof(uint32) * ARRAYCOUNT(pushConstantData), "Mesh push constant");
 
                 graphicsCommandStream->CmdDraw(meshData->m_numIndices, currentNumInstances, 0, 0, shaderID,
                     blendState, depthState, meshData->m_indexBuffer.gpuBufferHandle, MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors, "Draw asset");

@@ -266,14 +266,14 @@ void InitVulkanDataTypesPerEnum()
 
     VulkanBufferUsageFlags[BufferUsage::eVertex] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vertex buffers are actually SSBOs for now
     VulkanBufferUsageFlags[BufferUsage::eIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    VulkanBufferUsageFlags[BufferUsage::eTransientVertex] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    VulkanBufferUsageFlags[BufferUsage::eTransient] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
     VulkanBufferUsageFlags[BufferUsage::eTransientIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     VulkanBufferUsageFlags[BufferUsage::eStaging] = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     VulkanBufferUsageFlags[BufferUsage::eUniform] = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
     VulkanMemPropertyFlags[BufferUsage::eVertex] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     VulkanMemPropertyFlags[BufferUsage::eIndex] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    VulkanMemPropertyFlags[BufferUsage::eTransientVertex] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    VulkanMemPropertyFlags[BufferUsage::eTransient] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VulkanMemPropertyFlags[BufferUsage::eTransientIndex] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VulkanMemPropertyFlags[BufferUsage::eStaging] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     VulkanMemPropertyFlags[BufferUsage::eUniform] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;

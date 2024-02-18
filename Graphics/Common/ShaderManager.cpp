@@ -197,7 +197,7 @@ void LoadAllShaders()
     }
 
     // ZPrepass
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
     pipelineFormats.Init();
@@ -211,7 +211,7 @@ void LoadAllShaders()
     }
 
     // Main view
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
     descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
     descLayouts[3] = Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES;
@@ -228,7 +228,7 @@ void LoadAllShaders()
     }
 
     // Animated poly
-    descLayouts[0] = Graphics::DESCLAYOUT_ID_CB_GLOBAL;
+    descLayouts[0] = Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS;
     descLayouts[1] = Graphics::DESCLAYOUT_ID_POSONLY_VBS;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
@@ -261,6 +261,12 @@ void LoadAllShaderResources()
     descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eBuffer;
     descriptorLayout.params[0].amount = 1;
     bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_CB_GLOBAL, &descriptorLayout);
+    TINKER_ASSERT(bOk);
+
+    descriptorLayout.InitInvalid();
+    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
+    descriptorLayout.params[0].amount = 1;
+    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();

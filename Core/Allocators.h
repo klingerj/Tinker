@@ -67,7 +67,9 @@ struct LinearAllocator
         // Check that there is room for this size allocation
         size_t allocSize = size + (alignedPtrAsNum - memPtrAsNum);
         if (allocSize > m_capacity - m_nextAllocOffset)
+        {
             return nullptr; // fail, no assert
+        }
 
         // Return new pointer
         uint8* newAllocPtr = (uint8*)alignedPtrAsNum;
@@ -78,6 +80,21 @@ struct LinearAllocator
     void ResetState()
     {
         m_nextAllocOffset = 0;
+    }
+
+    void* Data() const
+    {
+        return m_ownedMemPtr;
+    }
+
+    size_t Capacity() const
+    {
+        return m_capacity;
+    }
+
+    size_t Size() const
+    {
+        return m_nextAllocOffset;
     }
 };
 
