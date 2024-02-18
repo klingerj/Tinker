@@ -119,7 +119,7 @@ static void InitGPUMemAllocators()
 
 int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles)
 {
-    g_vulkanContextResources.DataAllocator.Init(VULKAN_SCRATCH_MEM_SIZE, 1);
+    g_vulkanContextResources.DataAllocator.Init(VULKAN_SCRATCH_MEM_SIZE, 16);
 
     g_vulkanContextResources.vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     g_vulkanContextResources.vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);

@@ -61,7 +61,7 @@ struct TransientPrim
 void CreateAnimatedPoly(TransientPrim* prim);
 void DestroyAnimatedPoly(TransientPrim* prim);
 void UpdateAnimatedPoly(TransientPrim* prim);
-void DrawAnimatedPoly(TransientPrim* prim, Tk::Graphics::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void DrawAnimatedPoly(TransientPrim* prim, uint32 shaderID, uint32 blendState, uint32 depthState, Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
 
 typedef struct game_graphics_data
 {

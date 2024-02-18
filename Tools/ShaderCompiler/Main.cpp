@@ -32,9 +32,13 @@ int main(int argc, char* argv[])
 
     uint32 result = Tk::ShaderCompiler::ErrCode::NonShaderError;
     if (bVulkan)
+    {
         result = Tk::ShaderCompiler::CompileAllShadersVK();
+    }
     else
+    {
         result = Tk::ShaderCompiler::CompileAllShadersDX();
+    }
 
     switch (result)
     {

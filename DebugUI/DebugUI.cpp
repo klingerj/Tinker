@@ -122,7 +122,7 @@ void Init(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
     {
         Tk::Graphics::ResourceDesc desc;
         desc.resourceType = Tk::Graphics::ResourceType::eBuffer1D;
-        desc.bufferUsage = Tk::Graphics::BufferUsage::eTransientVertex;
+        desc.bufferUsage = Tk::Graphics::BufferUsage::eTransient;
 
         desc.dims = v3ui(MAX_VERTS * sizeof(v2f), 0, 0);
         desc.debugLabel = "Imgui pos vtx buf";

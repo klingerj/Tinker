@@ -431,7 +431,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     }
 
     CreateDefaultGeometry(&g_graphicsCommandStream);
-    Graphics::CreateAllDefaultTextures(&g_graphicsCommandStream);
+    Graphics::CreateAllDefaultResources(&g_graphicsCommandStream);
 
     CreateGameRenderingResources(windowWidth, windowHeight);
 
@@ -511,6 +511,12 @@ GAME_UPDATE(GameUpdate)
 
     // Update bindless resource descriptors 
     RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
+    {
+        alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
+        uint32 offset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
+        (void)offset;
+    }
+
     BindlessSystem::Flush();
 
     {
@@ -621,7 +627,7 @@ GAME_DESTROY(GameDestroy)
         DestroyDescriptors();
 
         DestroyDefaultGeometry();
-        Graphics::DestroyDefaultTextures();
+        Graphics::DestroyDefaultResources();
         
         DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
 

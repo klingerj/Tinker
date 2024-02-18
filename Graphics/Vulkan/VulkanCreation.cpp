@@ -708,8 +708,7 @@ void DestroyAllPSOPerms()
 
 static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsage, const char* debugLabel)
 {
-    uint32 newResourceHandle =
-        g_vulkanContextResources.vulkanMemResourcePool.Alloc();
+    uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
     TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
     VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
@@ -1031,7 +1030,9 @@ bool CreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* d
             ++numBindings;
         }
         else
+        {
             break;
+        }
     }
 
     uint32 newDescriptorHandle = TINKER_INVALID_HANDLE;
