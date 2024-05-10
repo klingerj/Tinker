@@ -198,11 +198,10 @@ void LoadAllShaders()
 
     // ZPrepass
     descLayouts[0] = Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS;
-    descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
-    descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
+    descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
     pipelineFormats.Init();
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
-    bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, pipelineFormats, descLayouts, 3);
+    bOk = LoadShader(shaderFilePaths[2], nullptr, Graphics::SHADER_ID_BASIC_ZPrepass, pipelineFormats, descLayouts, 2);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -212,14 +211,13 @@ void LoadAllShaders()
 
     // Main view
     descLayouts[0] = Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS;
-    descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_INSTANCE;
-    descLayouts[2] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
-    descLayouts[3] = Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES;
+    descLayouts[1] = Graphics::DESCLAYOUT_ID_ASSET_VBS;
+    descLayouts[2] = Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES;
     pipelineFormats.Init();
     pipelineFormats.numColorRTs = 1;
     pipelineFormats.colorRTFormats[0] = ImageFormat::RGBA16_Float;
     pipelineFormats.depthFormat = ImageFormat::Depth_32F;
-    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, pipelineFormats, descLayouts, 4);
+    bOk = LoadShader(shaderFilePaths[2], shaderFilePaths[3], Graphics::SHADER_ID_BASIC_MainView, pipelineFormats, descLayouts, 3);
     TINKER_ASSERT(bOk);
 
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
@@ -256,12 +254,6 @@ void LoadAllShaderResources()
 
     // Descriptor layouts
     Tk::Graphics::DescriptorLayout descriptorLayout = {};
-
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eBuffer;
-    descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_CB_GLOBAL, &descriptorLayout);
-    TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();
     descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSSBO;
@@ -305,12 +297,6 @@ void LoadAllShaderResources()
     descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eSampledImage;
     descriptorLayout.params[0].amount = 1;
     bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_IMGUI_TEX, &descriptorLayout);
-    TINKER_ASSERT(bOk);
-
-    descriptorLayout.InitInvalid();
-    descriptorLayout.params[0].type = Tk::Graphics::DescriptorType::eBuffer;
-    descriptorLayout.params[0].amount = 1;
-    bOk = Tk::Graphics::CreateDescriptorLayout(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE, &descriptorLayout);
     TINKER_ASSERT(bOk);
 
     descriptorLayout.InitInvalid();

@@ -3,6 +3,7 @@
 #include "Graphics/Common/GPUTimestamps.h"
 #include "Graphics/Common/ShaderManager.h"
 #include "ShaderCompiler/ShaderCompiler.h"
+#include "Generated/ShaderDescriptors_Reflection.h"
 #include "Allocators.h"
 #include "Hashing.h"
 #include "Math/VectorTypes.h"
@@ -117,42 +118,42 @@ static void InitDemo()
     Init(&MainScene, MAX_INSTANCES_PER_SCENE, &g_InputManager);
     
     // Init view
-    DescriptorData_Instance data;
-    data.modelMatrix = m4f(1.0f);
+    ShaderDescriptors::InstanceData_Basic data;
+    data.ModelMatrix = m4f(1.0f);
 
-    Init(&MainView);
+    MainView.Init();
     uint32 instanceID;
     instanceID = CreateInstance(&MainScene, 0);
-    data.modelMatrix[3][0] = -8.0f;
+    data.ModelMatrix[3][0] = -8.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 1);
-    data.modelMatrix[3][0] = -2.5f;
+    data.ModelMatrix[3][0] = -2.5f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 2);
-    data.modelMatrix = m4f(0.5f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][0] = 8.0f;
+    data.ModelMatrix = m4f(0.5f);
+    data.ModelMatrix[3][3] = 1.0f;
+    data.ModelMatrix[3][0] = 8.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 2);
-    data.modelMatrix = m4f(0.25f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][0] = 8.0f;
-    data.modelMatrix[3][2] = 6.0f;
+    data.ModelMatrix = m4f(0.25f);
+    data.ModelMatrix[3][3] = 1.0f;
+    data.ModelMatrix[3][0] = 8.0f;
+    data.ModelMatrix[3][2] = 6.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 3);
-    data.modelMatrix = m4f(7.0f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][1] = 8.0f;
+    data.ModelMatrix = m4f(7.0f);
+    data.ModelMatrix[3][3] = 1.0f;
+    data.ModelMatrix[3][1] = 8.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 3);
-    data.modelMatrix = m4f(7.0f);
-    data.modelMatrix[3][3] = 1.0f;
-    data.modelMatrix[3][1] = 10.0f;
+    data.ModelMatrix = m4f(7.0f);
+    data.ModelMatrix[3][3] = 1.0f;
+    data.ModelMatrix[3][1] = 10.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     // Procedural geometry
@@ -171,16 +172,6 @@ static void DestroyDescriptors()
 
     Graphics::DestroyDescriptor(gameGraphicsData.m_computeCopyDescHandle);
     gameGraphicsData.m_computeCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
-
-    Graphics::DestroyDescriptor(gameGraphicsData.m_DescData_Instance);
-    gameGraphicsData.m_DescData_Instance = Graphics::DefaultDescHandle_Invalid;
-    Graphics::DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Instance);
-    gameGraphicsData.m_DescDataBufferHandle_Instance = Graphics::DefaultResHandle_Invalid;
-
-    Graphics::DestroyDescriptor(gameGraphicsData.m_DescData_Global);
-    gameGraphicsData.m_DescData_Global = Graphics::DefaultDescHandle_Invalid;
-    Graphics::DestroyResource(gameGraphicsData.m_DescDataBufferHandle_Global);
-    gameGraphicsData.m_DescDataBufferHandle_Global = Graphics::DefaultResHandle_Invalid;
 
     Graphics::DestroyAllDescriptors(); // destroys descriptor pool
 }
@@ -247,32 +238,6 @@ static void CreateAllDescriptors()
     // Swap chain copy
     gameGraphicsData.m_swapChainCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
     WriteSwapChainCopyResources();
-
-    // Descriptor data
-    Graphics::ResourceDesc desc;
-    desc.resourceType = Graphics::ResourceType::eBuffer1D;
-    desc.dims = v3ui(sizeof(DescriptorData_Instance) * MAX_INSTANCES_PER_SCENE, 0, 0);
-    desc.bufferUsage = Graphics::BufferUsage::eUniform;
-    desc.debugLabel = "Descriptor Buffer Instance Constant Data";
-    gameGraphicsData.m_DescDataBufferHandle_Instance = Graphics::CreateResource(desc);
-    desc.dims = v3ui(sizeof(DescriptorData_Global), 0, 0);
-    desc.debugLabel = "Descriptor Buffer Global Constant Data";
-    gameGraphicsData.m_DescDataBufferHandle_Global = Graphics::CreateResource(desc);
-
-    gameGraphicsData.m_DescData_Global = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_CB_GLOBAL);
-
-    Graphics::DescriptorSetDataHandles descDataHandles[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
-    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
-        descDataHandles[i].InitInvalid();
-    descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
-    Graphics::WriteDescriptorSimple(gameGraphicsData.m_DescData_Global, &descDataHandles[0]);
-
-    gameGraphicsData.m_DescData_Instance = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_ASSET_INSTANCE);
-
-    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
-        descDataHandles[i].InitInvalid();
-    descDataHandles[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
-    Graphics::WriteDescriptorSimple(gameGraphicsData.m_DescData_Instance, &descDataHandles[0]);
 }
 
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
@@ -487,23 +452,6 @@ GAME_UPDATE(GameUpdate)
 
     BindlessSystem::ResetFrame();
 
-    // Update scene and view
-    // TODO: these update calls shouldnt take descriptors directly 
-    {
-        Graphics::DescriptorSetDataHandles descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-        descriptors[0].InitInvalid();
-        descriptors[0].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Global;
-        descriptors[1].InitInvalid();
-        descriptors[1].handles[0] = gameGraphicsData.m_DescDataBufferHandle_Instance;
-
-        Update(&MainScene, descriptors);
-
-        MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
-        MainView.m_projMatrix = g_projMat;
-        
-        Update(&MainView, descriptors);
-    }
-
     // Update Imgui menus
     DebugUI::UI_MainMenu();
     DebugUI::UI_PerformanceOverview();
@@ -512,9 +460,19 @@ GAME_UPDATE(GameUpdate)
     // Update bindless resource descriptors 
     RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
     {
+        // TODO: put this in View::Update() and write to the data repository from there 
         alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
-        uint32 offset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
-        (void)offset;
+        uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
+        (void)firstGlobalDataByteOffset;
+    }
+
+    // Update scene and view
+    {
+        Update(&MainScene);
+
+        MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
+        MainView.m_projMatrix = g_projMat;
+        MainView.Update();
     }
 
     BindlessSystem::Flush();

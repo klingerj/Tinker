@@ -458,7 +458,9 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
     {
         uint32 descLayoutID = descriptorLayoutHandles[uiDesc];
         if (descLayoutID != DESCLAYOUT_ID_MAX)
+        {
             descriptorSetLayouts[uiDesc] = g_vulkanContextResources.descLayouts[descLayoutID].layout;
+        }
     }
 
     // Push constants

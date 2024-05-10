@@ -18,8 +18,7 @@ namespace ForwardRenderPass
 
         Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
         descriptors[0] = BindlessSystem::GetBindlessConstantBufferDescriptor();
-        descriptors[1] = gameGraphicsData.m_DescData_Instance;
-        descriptors[3] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eTexturesSampled);
+        descriptors[2] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eTexturesSampled);
 
         StartRenderPass(renderPass, graphicsCommandStream);
 

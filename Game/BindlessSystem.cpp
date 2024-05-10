@@ -6,6 +6,8 @@ using namespace Tk;
 
 namespace BindlessSystem
 {
+    static const uint32 BindlessConstantDataMaxBytes = 1024 * 32;
+
     // Bindless texture/buffer arrays
     static Graphics::DescriptorHandle BindlessDescriptors[BindlessArrayID::eMax]; // API bindless descriptor array objects
     static Tk::Core::Vector<Graphics::ResourceHandle> BindlessDescriptorDataLists[BindlessArrayID::eMax]; // per-frame populated data for each bindless descriptor 
@@ -109,26 +111,29 @@ namespace BindlessSystem
         }
 
         // Write constant buffer from cpu to gpu buffer
+        const uint32 memcpySizeInBytes = (uint32)BindlessConstantBufferAllocator.Size();
+        TINKER_ASSERT(memcpySizeInBytes <= BindlessConstantDataMaxBytes);
         Tk::Graphics::MemoryMappedBufferPtr bufferPtr = Tk::Graphics::MapResource(BindlessConstantBuffer);
-        bufferPtr.MemcpyInto(BindlessConstantBufferAllocator.Data(), (uint32)BindlessConstantBufferAllocator.Size());
+        bufferPtr.MemcpyInto(BindlessConstantBufferAllocator.Data(), memcpySizeInBytes);
         // TODO: debug functionality where we write the entire capacity, or memset the remaining to zero or something 
         Tk::Graphics::UnmapResource(BindlessConstantBuffer);
     }
 
     uint32 BindResourceForFrame(Tk::Graphics::ResourceHandle resource, uint32 bindlessArrayID)
     {
-        Tk::Core::Vector<Graphics::ResourceHandle>& BindlessDescriptorData = BindlessDescriptorDataLists[bindlessArrayID];
+        Tk::Core::Vector<Tk::Graphics::ResourceHandle>& BindlessDescriptorData = BindlessDescriptorDataLists[bindlessArrayID];
         const uint32 currentSize = BindlessDescriptorData.Size();
         TINKER_ASSERT(currentSize < DESCRIPTOR_BINDLESS_ARRAY_LIMIT);
         BindlessDescriptorData.PushBackRaw(resource);
         return currentSize;
     }
 
-    uint32 PushStructIntoConstantBuffer(void* data, size_t sizeInBytes, size_t alignment)
+    uint32 PushStructIntoConstantBuffer(const void* srcData, size_t sizeInBytes, size_t alignment)
     {
-        void* constantDataPtr = BindlessConstantBufferAllocator.Alloc(sizeInBytes, (uint32)alignment);
-        memcpy(constantDataPtr, data, sizeInBytes);
-        return (uint32)((uint8*)constantDataPtr - (uint8*)BindlessConstantBufferAllocator.Data());
+        TINKER_ASSERT(sizeInBytes <= BindlessConstantDataMaxBytes);
+        void* constantsDataPtr = BindlessConstantBufferAllocator.Alloc(sizeInBytes, (uint32)alignment);
+        memcpy(constantsDataPtr, srcData, sizeInBytes);
+        return (uint32)((uint8*)constantsDataPtr - (uint8*)BindlessConstantBufferAllocator.Data());
     }
 
 }

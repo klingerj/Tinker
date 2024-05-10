@@ -67,18 +67,8 @@ typedef struct game_graphics_data
 {
     Tk::Graphics::ResourceHandle m_rtColorHandle;
     Tk::Graphics::ResourceHandle m_rtDepthHandle;
-
-    Tk::Graphics::ResourceHandle m_rtColorToneMappedHandle;
-    
+    Tk::Graphics::ResourceHandle m_rtColorToneMappedHandle;    
     Tk::Graphics::ResourceHandle m_computeColorHandle;
-
-    Tk::Graphics::DescriptorHandle m_DescData_Instance;
-    Tk::Graphics::ResourceHandle m_DescDataBufferHandle_Instance;
-    void* m_DescDataBufferMemPtr_Instance;
-
-    Tk::Graphics::DescriptorHandle m_DescData_Global;
-    Tk::Graphics::ResourceHandle m_DescDataBufferHandle_Global;
-    void* m_DescDataBufferMemPtr_Global;
 
     Tk::Graphics::DescriptorHandle m_toneMappingDescHandle;
     Tk::Graphics::DescriptorHandle m_swapChainCopyDescHandle;
@@ -87,16 +77,6 @@ typedef struct game_graphics_data
     TransientPrim m_animatedPolygon;
 } GameGraphicsData;
 extern GameGraphicsData gameGraphicsData;
-
-typedef struct descriptor_instance_data
-{
-    alignas(16) m4f modelMatrix;
-} DescriptorData_Instance;
-
-typedef struct descriptor_global_data
-{
-    alignas(16) m4f viewProj;
-} DescriptorData_Global;
 
 template <uint32 numPoints, uint32 numIndices>
 struct default_geometry

@@ -16,7 +16,6 @@ namespace BindlessSystem
     enum : uint32
     {
         BindlessIndexMax = DESCRIPTOR_BINDLESS_ARRAY_LIMIT,
-        BindlessConstantDataMaxBytes = 1024 * 32,
     };
 
     void Create();
@@ -28,7 +27,7 @@ namespace BindlessSystem
     uint32 BindResourceForFrame(Tk::Graphics::ResourceHandle resource, uint32 bindlessArrayID);
     
     // Returns the offset into the constant buffer where the first byte of the data provided was written 
-    uint32 PushStructIntoConstantBuffer(void* data, size_t sizeInBytes, size_t alignment);
+    uint32 PushStructIntoConstantBuffer(const void* data, size_t sizeInBytes, size_t alignment);
 
     Tk::Graphics::DescriptorHandle GetBindlessDescriptorFromID(uint32 bindlessID);
     Tk::Graphics::DescriptorHandle GetBindlessConstantBufferDescriptor();

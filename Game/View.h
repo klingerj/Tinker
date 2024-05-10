@@ -9,6 +9,8 @@ struct View
     alignas(CACHE_LINE) m4f m_viewMatrix;
     alignas(CACHE_LINE) m4f m_projMatrix;
     alignas(CACHE_LINE) m4f m_viewProjMatrix;
+
+    void Init() {}
+    void Update();
 };
-void Init(View* view);
-void Update(View* view, Tk::Graphics::DescriptorSetDataHandles* descDataHandles);
+

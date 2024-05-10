@@ -149,16 +149,13 @@ inline uint32 IsBufferUsageMultiBuffered(uint32 bufferUsage)
 // IDs must be uniquely named and have their id ascend monotonically from 0
 enum
 {
-    DESCLAYOUT_ID_CB_GLOBAL = 0,
-
-    DESCLAYOUT_ID_BINDLESS_CONSTANTS,
+    DESCLAYOUT_ID_BINDLESS_CONSTANTS = 0,
     DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
     //DESCLAYOUT_ID_TEXTURES_UINT,
 
     // TODO: All of these should be able to get deleted after going bindless 
     DESCLAYOUT_ID_QUAD_BLIT_TEX,
     DESCLAYOUT_ID_QUAD_BLIT_VBS,
-    DESCLAYOUT_ID_ASSET_INSTANCE,
     DESCLAYOUT_ID_ASSET_VBS,
     DESCLAYOUT_ID_POSONLY_VBS,
     DESCLAYOUT_ID_IMGUI_VBS,

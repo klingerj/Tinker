@@ -2,6 +2,7 @@
 #include "Game/View.h"
 #include "Game/Scene.h"
 #include "Game/AssetManager.h"
+#include "Generated/ShaderDescriptors_Reflection.h"
 
 #include <string.h>
 
@@ -44,10 +45,10 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
             {
                 StaticMeshData* meshData = g_AssetManager.GetMeshGraphicsDataByID(currentAssetID);
                 
-                descriptors[2] = meshData->m_descriptor;
+                descriptors[1] = meshData->m_descriptor;
 
-                pushConstantData[0] = instanceCount;
-                pushConstantData[1] = 0; // global descriptor offset 
+                pushConstantData[0] = 0; // global descriptor offset 
+                pushConstantData[1] = instanceCount * sizeof(ShaderDescriptors::InstanceData_Basic) + scene->m_firstInstanceDataByteOffset;
                 graphicsCommandStream->CmdPushConstant(shaderID, (uint8*)&pushConstantData, sizeof(uint32) * ARRAYCOUNT(pushConstantData), "Mesh push constant");
 
                 graphicsCommandStream->CmdDraw(meshData->m_numIndices, currentNumInstances, 0, 0, shaderID,
