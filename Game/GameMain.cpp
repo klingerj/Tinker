@@ -170,9 +170,6 @@ static void DestroyDescriptors()
     Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainCopyDescHandle);
     gameGraphicsData.m_swapChainCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
 
-    Graphics::DestroyDescriptor(gameGraphicsData.m_computeCopyDescHandle);
-    gameGraphicsData.m_computeCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
-
     Graphics::DestroyAllDescriptors(); // destroys descriptor pool
 }
 
@@ -206,21 +203,20 @@ static void WriteSwapChainCopyResources()
     Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
 }
 
-static void WriteComputeCopyResources()
-{
-    Graphics::DescriptorSetDataHandles computeHandles = {};
-    computeHandles.InitInvalid();
-    computeHandles.handles[0] = gameGraphicsData.m_rtColorToneMappedHandle;
-    computeHandles.handles[1] = gameGraphicsData.m_computeColorHandle;
-    Graphics::WriteDescriptorSimple(gameGraphicsData.m_computeCopyDescHandle, &computeHandles);
-}
-
 static void RegisterActiveTextures()
 {
     uint32 index = BindlessSystem::BindlessIndexMax;
-    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(0), BindlessSystem::BindlessArrayID::eTexturesSampled);
-    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(1), BindlessSystem::BindlessArrayID::eTexturesSampled);
+    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(0), BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
+    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(1), BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
     // TODO: eventually these indices will be hooked up to a material system so that at draw time we can pass these indices as a constant to the gpu for bindless descriptor indexing
+
+    // WIP: Push some render targets into the bindless array for compute copy test pass 
+    // TODO: move this struct building to elsewhere
+    alignas(16) ShaderDescriptors::Material_ComputeCopyImage2D copyConstants = {};
+    copyConstants.dims = v2ui(currentWindowWidth, currentWindowHeight);
+    copyConstants.srcIndexBindless = BindlessSystem::BindResourceForFrame(gameGraphicsData.m_rtColorToneMappedHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
+    copyConstants.dstIndexBindless = BindlessSystem::BindResourceForFrame(gameGraphicsData.m_computeColorHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
+    uint32 materialDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&copyConstants, sizeof(copyConstants), alignof(ShaderDescriptors::Material_ComputeCopyImage2D));
 }
 
 static void CreateAllDescriptors()
@@ -230,10 +226,6 @@ static void CreateAllDescriptors()
     // Tone mapping
     gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
     WriteToneMappingResources();
-
-    // Compute copy
-    gameGraphicsData.m_computeCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_COMPUTE_COPY);
-    WriteComputeCopyResources();
 
     // Swap chain copy
     gameGraphicsData.m_swapChainCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
@@ -456,15 +448,16 @@ GAME_UPDATE(GameUpdate)
     DebugUI::UI_MainMenu();
     DebugUI::UI_PerformanceOverview();
     DebugUI::UI_RenderPassStats();
-
-    // Update bindless resource descriptors 
-    RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
     {
         // TODO: put this in View::Update() and write to the data repository from there 
         alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
         uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
+        TINKER_ASSERT(firstGlobalDataByteOffset == 0);
         (void)firstGlobalDataByteOffset;
     }
+
+    // Update bindless resource descriptors 
+    RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
 
     // Update scene and view
     {
@@ -570,7 +563,6 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 
         CreateGameRenderingResources(newWindowWidth, newWindowHeight);
         WriteToneMappingResources();
-        WriteComputeCopyResources();
     }
 }
 

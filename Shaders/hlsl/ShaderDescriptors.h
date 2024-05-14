@@ -31,7 +31,8 @@ struct Material_ComputeCopyImage2D
 //[[vk::binding(0, 1)]] ByteAddressBuffer BindlessBuffers[];
 //[[vk::binding(1, 1)]] ByteAddressBuffer BindlessBuffers[];
 
-[[vk::binding(0, 2)]] Texture2D BindlessTextures[];
+[[vk::binding(0, 2)]] Texture2D<float4> BindlessTextures[];
 [[vk::binding(0, 2)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different desc set entirely eventually 
+[[vk::binding(0, 3)]] RWTexture2D<float4> BindlessTexturesRW[];
 //[[vk::binding(1, 2)]] Texture2D BindlessTexturesUint[];
 //TODO: 3D textures and storage images 

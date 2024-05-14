@@ -11,7 +11,8 @@ struct PushConstantData
     uint32 InstanceOffsets[4];
     // [0] is offset into instance data uniform array
     // [1] is offset into bindless constant buffer for globals
-    // [2], [3] unused
+    // [2] is offset into bindless constant buffer for material data
+    // [3] unused
 };
 
 struct AllGlobals

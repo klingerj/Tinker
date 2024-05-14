@@ -8,12 +8,13 @@ namespace BindlessSystem
     {
         enum : uint32
         {
-            eTexturesSampled, // TODO get a better name 
+            eTexturesRGBA8Sampled,
+            eTexturesRGBA8RW,
             // ... TODO: more IDs for different texture types, buffers, etc 
-            eTexturesEnumEnd = eTexturesSampled, // MUST equal the final texture/buffer enum in this enum
-            eConstants, // KEEP this one last, before eMax
+            eConstants,
+            eTexturesEnumEnd = eConstants,
             eMax,
-            eNumBindlessTextureTypes = eTexturesEnumEnd + 1,
+            eNumBindlessTextureTypes = eTexturesEnumEnd,
         };
     }
 

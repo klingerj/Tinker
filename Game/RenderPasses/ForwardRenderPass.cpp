@@ -17,8 +17,12 @@ namespace ForwardRenderPass
         graphicsCommandStream->CmdLayoutTransition(renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eTransferDst, Tk::Graphics::ImageLayout::eRenderOptimal, "Transition main view color to render_optimal");
 
         Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+        for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        {
+            descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
+        }
         descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eConstants);
-        descriptors[2] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eTexturesSampled);
+        descriptors[2] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
 
         StartRenderPass(renderPass, graphicsCommandStream);
 

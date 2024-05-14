@@ -26,6 +26,7 @@ namespace DescriptorType
         eSSBO,
         eStorageImage,
         eArrayOfTextures,
+        eArrayOfTexturesRW,
         eMax
     };
 }
@@ -96,6 +97,7 @@ namespace ImageFormat
         Invalid = 0,
         BGRA8_SRGB,
         RGBA8_SRGB,
+        RGBA8,
         RGBA16_Float,
         Depth_32F,
         TheSwapChainFormat,
@@ -150,8 +152,8 @@ inline uint32 IsBufferUsageMultiBuffered(uint32 bufferUsage)
 enum
 {
     DESCLAYOUT_ID_BINDLESS_CONSTANTS = 0,
-    DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
-    //DESCLAYOUT_ID_TEXTURES_UINT,
+    DESCLAYOUT_ID_BINDLESS_TEXTURES_RGBA8_SAMPLED,
+    DESCLAYOUT_ID_BINDLESS_TEXTURES_RGBA8_RW,
 
     // TODO: All of these should be able to get deleted after going bindless 
     DESCLAYOUT_ID_QUAD_BLIT_TEX,
@@ -160,7 +162,6 @@ enum
     DESCLAYOUT_ID_POSONLY_VBS,
     DESCLAYOUT_ID_IMGUI_VBS,
     DESCLAYOUT_ID_IMGUI_TEX,
-    DESCLAYOUT_ID_COMPUTE_COPY,
     DESCLAYOUT_ID_MAX
 };
 
@@ -713,6 +714,7 @@ typedef struct default_res
 {
     ResourceHandle res;
     v4f clearValue;
+    uint32 defaultState;
 } DefaultResource;
 
 namespace DefaultResourceID
@@ -722,6 +724,7 @@ namespace DefaultResourceID
         eZeroedBuffer,
         eTextureIndexStart, // all texture resources in this enum should go below this 
         eBlack2x2 = eTextureIndexStart,
+        eBlack2x2RW,
         eMax
     };
 }

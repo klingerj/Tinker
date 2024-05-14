@@ -191,6 +191,7 @@ static VkImageLayout                         VulkanImageLayouts    [ImageLayout:
 static VkFormat                              VulkanImageFormats    [ImageFormat::eMax]    = {};
 static VkDescriptorType                      VulkanDescriptorTypes [DescriptorType::eMax] = {};
 static VkBufferUsageFlags                    VulkanBufferUsageFlags[BufferUsage::eMax]    = {};
+static VkImageAspectFlags                    VulkanImageAspectFlags[ImageFormat::eMax]    = {};
 static VkMemoryPropertyFlagBits              VulkanMemPropertyFlags[BufferUsage::eMax]    = {};
 static VkPipelineBindPoint                   VulkanBindPoints      [BindPoint::eMax]      = {};
 
@@ -251,9 +252,10 @@ void InitVulkanDataTypesPerEnum()
     VulkanImageLayouts[ImageLayout::ePresent] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     VulkanImageFormats[ImageFormat::Invalid] = VK_FORMAT_UNDEFINED;
-    VulkanImageFormats[ImageFormat::RGBA16_Float] = VK_FORMAT_R16G16B16A16_SFLOAT;
     VulkanImageFormats[ImageFormat::BGRA8_SRGB] = VK_FORMAT_B8G8R8A8_SRGB;
     VulkanImageFormats[ImageFormat::RGBA8_SRGB] = VK_FORMAT_R8G8B8A8_SRGB;
+    VulkanImageFormats[ImageFormat::RGBA8] = VK_FORMAT_R8G8B8A8_UNORM;
+    VulkanImageFormats[ImageFormat::RGBA16_Float] = VK_FORMAT_R16G16B16A16_SFLOAT;
     VulkanImageFormats[ImageFormat::Depth_32F] = VK_FORMAT_D32_SFLOAT;
     VulkanImageFormats[ImageFormat::TheSwapChainFormat] = VK_FORMAT_UNDEFINED;
 
@@ -263,6 +265,7 @@ void InitVulkanDataTypesPerEnum()
     VulkanDescriptorTypes[DescriptorType::eSSBO] = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     VulkanDescriptorTypes[DescriptorType::eStorageImage] = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     VulkanDescriptorTypes[DescriptorType::eArrayOfTextures] = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    VulkanDescriptorTypes[DescriptorType::eArrayOfTexturesRW] = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
 
     VulkanBufferUsageFlags[BufferUsage::eVertex] = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vertex buffers are actually SSBOs for now
     VulkanBufferUsageFlags[BufferUsage::eIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -270,6 +273,14 @@ void InitVulkanDataTypesPerEnum()
     VulkanBufferUsageFlags[BufferUsage::eTransientIndex] = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     VulkanBufferUsageFlags[BufferUsage::eStaging] = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     VulkanBufferUsageFlags[BufferUsage::eUniform] = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+    VulkanImageAspectFlags[ImageFormat::Invalid] = VK_IMAGE_ASPECT_NONE;
+    VulkanImageAspectFlags[ImageFormat::RGBA16_Float] = VK_IMAGE_ASPECT_COLOR_BIT;
+    VulkanImageAspectFlags[ImageFormat::BGRA8_SRGB] = VK_IMAGE_ASPECT_COLOR_BIT;
+    VulkanImageAspectFlags[ImageFormat::RGBA8_SRGB] = VK_IMAGE_ASPECT_COLOR_BIT;
+    VulkanImageAspectFlags[ImageFormat::RGBA8] = VK_IMAGE_ASPECT_COLOR_BIT;
+    VulkanImageAspectFlags[ImageFormat::Depth_32F] = VK_IMAGE_ASPECT_DEPTH_BIT;
+    VulkanImageAspectFlags[ImageFormat::TheSwapChainFormat] = VK_IMAGE_ASPECT_COLOR_BIT;
 
     VulkanMemPropertyFlags[BufferUsage::eVertex] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     VulkanMemPropertyFlags[BufferUsage::eIndex] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -294,13 +305,13 @@ const DepthCullState& GetVkDepthCullState(uint32 gameDepthCullState)
     return VulkanDepthStates[gameDepthCullState];
 }
 
-const VkImageLayout& GetVkImageLayout(uint32 gameImageLayout)
+VkImageLayout GetVkImageLayout(uint32 gameImageLayout)
 {
     TINKER_ASSERT(gameImageLayout < ImageLayout::eMax);
     return VulkanImageLayouts[gameImageLayout];
 }
 
-const VkFormat& GetVkImageFormat(uint32 gameImageFormat)
+VkFormat GetVkImageFormat(uint32 gameImageFormat)
 {
     TINKER_ASSERT(gameImageFormat < ImageFormat::eMax);
     if (gameImageFormat == ImageFormat::TheSwapChainFormat)
@@ -313,7 +324,7 @@ const VkFormat& GetVkImageFormat(uint32 gameImageFormat)
     }
 }
 
-const VkDescriptorType& GetVkDescriptorType(uint32 gameDescriptorType)
+VkDescriptorType GetVkDescriptorType(uint32 gameDescriptorType)
 {
     TINKER_ASSERT(gameDescriptorType < DescriptorType::eMax);
     return VulkanDescriptorTypes[gameDescriptorType];
@@ -335,6 +346,12 @@ VkPipelineBindPoint GetVkBindPoint(uint32 bindPoint)
 {
     TINKER_ASSERT(bindPoint < BindPoint::eMax);
     return VulkanBindPoints[bindPoint];
+}
+
+VkImageAspectFlags GetVkImageAspectFlags(uint32 format)
+{
+    TINKER_ASSERT(format < ImageFormat::eMax);
+    return VulkanImageAspectFlags[format];
 }
 
 }

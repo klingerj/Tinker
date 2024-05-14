@@ -13,15 +13,17 @@ namespace BindlessSystem
     static Tk::Core::Vector<Graphics::ResourceHandle> BindlessDescriptorDataLists[BindlessArrayID::eNumBindlessTextureTypes]; // per-frame populated data for each bindless descriptor 
     static uint32 BindlessDescriptorIDs[BindlessArrayID::eMax] = // descriptor ID per bindless descriptor 
     {
-        Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
+        Graphics::DESCLAYOUT_ID_BINDLESS_TEXTURES_RGBA8_SAMPLED,
+        Graphics::DESCLAYOUT_ID_BINDLESS_TEXTURES_RGBA8_RW,
         // TODO: other texture/buffer entries in here 
         Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS
     };
     static uint32 BindlessDescriptorFallbackIDs[BindlessArrayID::eNumBindlessTextureTypes] =
     {
-        Graphics::DefaultResourceID::eBlack2x2
+        Graphics::DefaultResourceID::eBlack2x2,
+        Graphics::DefaultResourceID::eBlack2x2RW
     };
-    // TODO static assert 
+    // TODO static assert
 
     // Constant buffer
     static Tk::Core::LinearAllocator BindlessConstantBufferAllocator;

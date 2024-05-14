@@ -226,7 +226,7 @@ WRITE_DESCRIPTOR_ARRAY(WriteDescriptorArray)
 
             for (uint32 uiEntry = 0; uiEntry < numEntries; ++uiEntry)
             {
-                uint32 type = descLayout->params[uiDesc].type;
+                const uint32 type = descLayout->params[uiDesc].type;
                 if (type != DescriptorType::eMax)
                 {
                     VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(entries[uiEntry].m_hRes);
@@ -247,7 +247,24 @@ WRITE_DESCRIPTOR_ARRAY(WriteDescriptorArray)
                             descSetWrite.dstSet = *descriptorSet;
                             descSetWrite.dstBinding = uiDesc;
                             descSetWrite.dstArrayElement = uiEntry;
-                            descSetWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                            descSetWrite.descriptorType = GetVkDescriptorType(type);
+                            descSetWrite.descriptorCount = 1;
+                            descSetWrite.pImageInfo = &descImageInfo[uiDesc][uiEntry];
+                            break;
+                        }
+
+                        case DescriptorType::eArrayOfTexturesRW:
+                        {
+                            VkImageView* imageView = &resChain->resourceChain[resIndex].imageView; // Should be index 0 for images
+
+                            descImageInfo[uiDesc][uiEntry].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+                            descImageInfo[uiDesc][uiEntry].imageView = *imageView;
+                            descImageInfo[uiDesc][uiEntry].sampler = VK_NULL_HANDLE;
+
+                            descSetWrite.dstSet = *descriptorSet;
+                            descSetWrite.dstBinding = uiDesc;
+                            descSetWrite.dstArrayElement = uiEntry;
+                            descSetWrite.descriptorType = GetVkDescriptorType(type);
                             descSetWrite.descriptorCount = 1;
                             descSetWrite.pImageInfo = &descImageInfo[uiDesc][uiEntry];
                             break;
@@ -293,7 +310,7 @@ WRITE_DESCRIPTOR_SIMPLE(WriteDescriptorSimple)
         {
             descSetWrites[uiDesc].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 
-            uint32 type = descLayout->params[uiDesc].type;
+            const uint32 type = descLayout->params[uiDesc].type;
             if (type != DescriptorType::eMax)
             {
                 VulkanMemResourceChain* resChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(descSetDataHandles->handles[uiDesc].m_hRes);
@@ -786,31 +803,8 @@ void RecordCommandTransitionLayout(CommandBuffer commandBuffer, ResourceHandle i
     image = memResource->image;
     numArrayEles = memResourceChain->resDesc.arrayEles;
 
-    VkFormat imageFormat = GetVkImageFormat(memResourceChain->resDesc.imageFormat);
-    switch (imageFormat)
-    {
-        case VK_FORMAT_R16G16B16A16_SFLOAT:
-        case VK_FORMAT_R8G8B8A8_SRGB:
-        case VK_FORMAT_B8G8R8A8_SRGB:
-        {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            break;
-        }
-
-        case VK_FORMAT_D32_SFLOAT:
-        {
-            barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            break;
-        }
-
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid image format for layout transition command!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            return;
-        }
-    }
-
+    const uint32 imageFormat = memResourceChain->resDesc.imageFormat;
+    barrier.subresourceRange.aspectMask = GetVkImageAspectFlags(imageFormat);
     barrier.image = image;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
@@ -839,49 +833,33 @@ void RecordCommandClearImage(CommandBuffer commandBuffer, ResourceHandle imageHa
     range.baseArrayLayer = 0;
     range.layerCount = 1;
 
-    switch (imageFormat)
+    if (imageFormat == ImageFormat::TheSwapChainFormat || imageFormat == ImageFormat::Invalid)
     {
-        case ImageFormat::RGBA16_Float:
-        case ImageFormat::BGRA8_SRGB:
-        case ImageFormat::RGBA8_SRGB:
-        {
-            range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            for (uint32 i = 0; i < 4; ++i)
-            {
-                clearColor.uint32[i] = *(uint32*)&clearValue[i];
-            }
+        // Swap chain can't be used for transfer cmds. Use a quad blit instead to draw 0,0,0 to the swap chain
+        TINKER_ASSERT(0);
+    }
+    else
+    {
+        range.aspectMask = GetVkImageAspectFlags(imageFormat);
+        TINKER_ASSERT(range.aspectMask != VK_IMAGE_ASPECT_NONE);
 
-            vkCmdClearColorImage(ExtractVkCommandBuffer(commandBuffer),
-                memResource->image,
+        // Set up both color and depth clear values for simplicity
+        for (uint32 i = 0; i < 4; ++i)
+        {
+            clearColor.uint32[i] = *(uint32*)&clearValue[i];
+        }
+        clearDepth.depth = clearValue.x;
+        clearDepth.stencil = *(uint32*)&clearValue.y;
+
+        if (range.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT)
+        {
+            vkCmdClearColorImage(ExtractVkCommandBuffer(commandBuffer), memResource->image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearColor, 1, &range);
-
-            break;
         }
-
-        case ImageFormat::Depth_32F:
+        else if (range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)
         {
-            range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            clearDepth.depth = clearValue.x;
-            clearDepth.stencil = *(uint32*)&clearValue.y;
-
-            vkCmdClearDepthStencilImage(ExtractVkCommandBuffer(commandBuffer),
-                memResource->image,
+            vkCmdClearDepthStencilImage(ExtractVkCommandBuffer(commandBuffer), memResource->image,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clearDepth, 1, &range);
-
-            break;
-        }
-
-        case ImageFormat::TheSwapChainFormat:
-        {
-            // Swap chain probably can't be used for transfer cmds. Use a quad blit instead to draw 0,0,0 to the swap chain
-            TINKER_ASSERT(0);
-        }
-        
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid image format for clear command!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            return;
         }
     }
 }

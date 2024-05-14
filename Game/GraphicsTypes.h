@@ -72,7 +72,6 @@ typedef struct game_graphics_data
 
     Tk::Graphics::DescriptorHandle m_toneMappingDescHandle;
     Tk::Graphics::DescriptorHandle m_swapChainCopyDescHandle;
-    Tk::Graphics::DescriptorHandle m_computeCopyDescHandle;
 
     TransientPrim m_animatedPolygon;
 } GameGraphicsData;
