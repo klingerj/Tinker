@@ -227,7 +227,7 @@ void DrawAnimatedPoly(TransientPrim* prim, uint32 shaderID, uint32 blendState, u
     {
         descriptors[i] = Graphics::DefaultDescHandle_Invalid;
     }
-    descriptors[0] = BindlessSystem::GetBindlessConstantBufferDescriptor();
+    descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eConstants);
     descriptors[1] = prim->descriptor;
     graphicsCommandStream->CmdDraw((prim->numVertices - 1) * 3,
         1, 0, 0,

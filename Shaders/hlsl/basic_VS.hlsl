@@ -4,12 +4,6 @@
 #define UVDataType float2
 #define NormalDataType float4
 
-//[[vk::binding(0, 1)]] ByteAddressBuffer BindlessBuffers[];
-//[[vk::binding(1, 1)]] ByteAddressBuffer BindlessBuffers[];
-
-//[[vk::binding(1, 1)]] Texture2D BindlessTexturesUint[];
-//TODO: 3D textures and storage images 
-
 [[vk::binding(0, 1)]] StructuredBuffer<PositionDataType> PositionData;
 [[vk::binding(1, 1)]] StructuredBuffer<UVDataType>       UVData;
 [[vk::binding(2, 1)]] StructuredBuffer<NormalDataType>   NormalData;

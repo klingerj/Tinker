@@ -1,12 +1,11 @@
+#include "ShaderDescriptors.h"
+
 struct PSInput
 {
     [[vk::location(0)]] float4 Position : SV_POSITION;
     [[vk::location(1)]] float2 UV       : TEXCOORD0;
     [[vk::location(2)]] float3 Normal   : NORMAL;
 };
-
-[[vk::binding(0, 2)]] Texture2D BindlessTextures[];
-[[vk::binding(0, 2)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different desc set entirely eventually 
 
 #define LIGHT_DIR normalize(float3(-1, -1, 1))
 #define AMBIENT 0.05f

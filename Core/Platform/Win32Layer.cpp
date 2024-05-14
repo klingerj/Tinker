@@ -615,8 +615,6 @@ wWinMain(HINSTANCE hInstance,
 
         // Input handling
         g_inputStateDeltas = {};
-        g_cursorLocked = true;
-        ShowCursor(FALSE);
 
         g_GameCode = {};
         bool reloaded = ReloadGameCode(&g_GameCode);

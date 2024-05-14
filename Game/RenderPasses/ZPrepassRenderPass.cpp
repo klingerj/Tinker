@@ -20,7 +20,7 @@ namespace ZPrepassRenderPass
         {
             descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
         }
-        descriptors[0] = BindlessSystem::GetBindlessConstantBufferDescriptor();
+        descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eConstants);
 
         StartRenderPass(renderPass, graphicsCommandStream);
         RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream, Tk::Graphics::SHADER_ID_BASIC_ZPrepass, Tk::Graphics::BlendState::eNoColorAttachment, Tk::Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);

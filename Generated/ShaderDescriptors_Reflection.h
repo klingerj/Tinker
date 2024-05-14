@@ -24,4 +24,11 @@ struct InstanceData_Basic
     alignas(16) m4f ModelMatrix;
 };
 
+struct Material_ComputeCopyImage2D
+{
+    uint32 srcIndexBindless;
+    uint32 dstIndexBindless;
+    v2ui dims;
+};
+
 }

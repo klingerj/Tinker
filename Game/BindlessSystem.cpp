@@ -10,12 +10,14 @@ namespace BindlessSystem
 
     // Bindless texture/buffer arrays
     static Graphics::DescriptorHandle BindlessDescriptors[BindlessArrayID::eMax]; // API bindless descriptor array objects
-    static Tk::Core::Vector<Graphics::ResourceHandle> BindlessDescriptorDataLists[BindlessArrayID::eMax]; // per-frame populated data for each bindless descriptor 
+    static Tk::Core::Vector<Graphics::ResourceHandle> BindlessDescriptorDataLists[BindlessArrayID::eNumBindlessTextureTypes]; // per-frame populated data for each bindless descriptor 
     static uint32 BindlessDescriptorIDs[BindlessArrayID::eMax] = // descriptor ID per bindless descriptor 
     {
-        Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES
+        Graphics::DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
+        // TODO: other texture/buffer entries in here 
+        Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS
     };
-    static uint32 BindlessDescriptorFallbackIDs[BindlessArrayID::eMax] = // fallback resource ID per bindless descriptor 
+    static uint32 BindlessDescriptorFallbackIDs[BindlessArrayID::eNumBindlessTextureTypes] =
     {
         Graphics::DefaultResourceID::eBlack2x2
     };
@@ -23,13 +25,7 @@ namespace BindlessSystem
 
     // Constant buffer
     static Tk::Core::LinearAllocator BindlessConstantBufferAllocator;
-    static Graphics::DescriptorHandle BindlessConstantBufferDescriptor = Graphics::DefaultDescHandle_Invalid;
     static Graphics::ResourceHandle BindlessConstantBuffer = Graphics::DefaultResHandle_Invalid;
-
-    Tk::Graphics::DescriptorHandle GetBindlessConstantBufferDescriptor()
-    {
-        return BindlessConstantBufferDescriptor;
-    }
 
     Tk::Graphics::DescriptorHandle GetBindlessDescriptorFromID(uint32 bindlessID)
     {
@@ -39,7 +35,7 @@ namespace BindlessSystem
 
     void ResetFrame()
     {
-        for (uint32 i = 0; i < BindlessArrayID::eMax; ++i)
+        for (uint32 i = 0; i < ARRAYCOUNT(BindlessDescriptorDataLists); ++i)
         {
             BindlessDescriptorDataLists[i].Clear();
             BindlessDescriptorDataLists[i].Reserve(DESCRIPTOR_BINDLESS_ARRAY_LIMIT);
@@ -49,7 +45,7 @@ namespace BindlessSystem
 
     void Create()
     {
-        for (uint32 i = 0; i < BindlessArrayID::eMax; ++i)
+        for (uint32 i = 0; i < ARRAYCOUNT(BindlessDescriptors); ++i)
         {
             TINKER_ASSERT(BindlessDescriptors[i] == Graphics::DefaultDescHandle_Invalid); // no resources should be created yet 
             BindlessDescriptors[i] = Graphics::CreateDescriptor(BindlessDescriptorIDs[i]);
@@ -66,17 +62,15 @@ namespace BindlessSystem
         TINKER_ASSERT(BindlessConstantBuffer == Graphics::DefaultResHandle_Invalid);
         BindlessConstantBuffer = Graphics::CreateResource(desc);
 
-        TINKER_ASSERT(BindlessConstantBufferDescriptor == Graphics::DefaultDescHandle_Invalid);
-        BindlessConstantBufferDescriptor = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_BINDLESS_CONSTANTS);
         Graphics::DescriptorSetDataHandles descHandles = {};
         descHandles.InitInvalid();
         descHandles.handles[0] = BindlessConstantBuffer;
-        Graphics::WriteDescriptorSimple(BindlessConstantBufferDescriptor, &descHandles);
+        Graphics::WriteDescriptorSimple(BindlessDescriptors[BindlessArrayID::eConstants], &descHandles);
     }
 
     void Destroy()
     {
-        for (uint32 i = 0; i < BindlessArrayID::eMax; ++i)
+        for (uint32 i = 0; i < ARRAYCOUNT(BindlessDescriptors); ++i)
         {
             if (BindlessDescriptors[i] != Graphics::DefaultDescHandle_Invalid)
             {
@@ -89,15 +83,12 @@ namespace BindlessSystem
 
         Graphics::DestroyResource(BindlessConstantBuffer);
         BindlessConstantBuffer = Graphics::DefaultResHandle_Invalid;
-
-        Graphics::DestroyDescriptor(BindlessConstantBufferDescriptor);
-        BindlessConstantBufferDescriptor = Graphics::DefaultDescHandle_Invalid;
     }
 
     void Flush()
     {
         // Pad each list with default/fallback resources, then write to each descriptor object 
-        for (uint32 i = 0; i < BindlessArrayID::eMax; ++i)
+        for (uint32 i = 0; i < BindlessArrayID::eNumBindlessTextureTypes; ++i)
         {
             Tk::Core::Vector<Graphics::ResourceHandle>& BindlessDescriptorData = BindlessDescriptorDataLists[i];
             const Graphics::ResourceHandle fallbackResource = Graphics::GetDefaultResource(BindlessDescriptorFallbackIDs[i]).res;
@@ -115,7 +106,7 @@ namespace BindlessSystem
         TINKER_ASSERT(memcpySizeInBytes <= BindlessConstantDataMaxBytes);
         Tk::Graphics::MemoryMappedBufferPtr bufferPtr = Tk::Graphics::MapResource(BindlessConstantBuffer);
         bufferPtr.MemcpyInto(BindlessConstantBufferAllocator.Data(), memcpySizeInBytes);
-        // TODO: debug functionality where we write the entire capacity, or memset the remaining to zero or something 
+        // TODO: debug functionality where we memset the remaining to zero or something 
         Tk::Graphics::UnmapResource(BindlessConstantBuffer);
     }
 

@@ -59,7 +59,7 @@ void Update(Scene* scene)
 
 uint32 CreateInstance(Scene* scene, uint32 assetID)
 {
-    TINKER_ASSERT(scene->m_numInstances < scene->m_maxInstances);
+    TINKER_ASSERT(scene->m_numInstances <= scene->m_maxInstances);
 
     scene->m_instanceListDirty = 1;
 

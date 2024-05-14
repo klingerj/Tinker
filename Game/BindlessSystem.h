@@ -9,7 +9,11 @@ namespace BindlessSystem
         enum : uint32
         {
             eTexturesSampled, // TODO get a better name 
-            eMax
+            // ... TODO: more IDs for different texture types, buffers, etc 
+            eTexturesEnumEnd = eTexturesSampled, // MUST equal the final texture/buffer enum in this enum
+            eConstants, // KEEP this one last, before eMax
+            eMax,
+            eNumBindlessTextureTypes = eTexturesEnumEnd + 1,
         };
     }
 
@@ -30,5 +34,4 @@ namespace BindlessSystem
     uint32 PushStructIntoConstantBuffer(const void* data, size_t sizeInBytes, size_t alignment);
 
     Tk::Graphics::DescriptorHandle GetBindlessDescriptorFromID(uint32 bindlessID);
-    Tk::Graphics::DescriptorHandle GetBindlessConstantBufferDescriptor();
 }
