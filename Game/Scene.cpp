@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "InputManager.h"
+#include "BindlessSystem.h"
 
 #include "Sorting.h"
 
@@ -7,7 +8,6 @@ void Init(Scene* scene, uint32 maxInstances, InputManager* inputManager)
 {
     *scene = {};
     scene->m_maxInstances = maxInstances;
-    scene->m_numInstances = 0;
     scene->m_instances.Resize(maxInstances);
     scene->m_instanceData.Resize(maxInstances);
 
@@ -20,7 +20,7 @@ CMP_LT_FUNC(CompareLessThan_InstanceByAssetID)
     return ((Instance*)A)->m_assetID < ((Instance*)B)->m_assetID;
 }
 
-void Update(Scene* scene, Tk::Graphics::DescriptorSetDataHandles* descDataHandles)
+void Update(Scene* scene)
 {
     // Sort instances for batching of draw calls
     uint32 activeInstanceCounter = 0;
@@ -50,17 +50,16 @@ void Update(Scene* scene, Tk::Graphics::DescriptorSetDataHandles* descDataHandle
         TINKER_ASSERT(instanceOrigHandle <= scene->m_maxInstances - 1);
         scene->m_instanceData_sorted[activeInstanceCounter++] = scene->m_instanceData[instanceOrigHandle];
     }
-    const DescriptorData_Instance* instanceData = (const DescriptorData_Instance*)scene->m_instanceData_sorted.Data();
-    Tk::Graphics::ResourceHandle bufferHandle = descDataHandles[1].handles[0];
-
-    Tk::Graphics::MemoryMappedBufferPtr descDataBufferPtr_Instance = Tk::Graphics::MapResource(bufferHandle);
-    descDataBufferPtr_Instance.MemcpyInto(instanceData, sizeof(DescriptorData_Instance) * scene->m_numInstances);
-    Tk::Graphics::UnmapResource(bufferHandle);
+    const ShaderDescriptors::InstanceData_Basic* instanceData = (const ShaderDescriptors::InstanceData_Basic*)scene->m_instanceData_sorted.Data();
+    const uint32 instanceDataSizeInBytes = sizeof(ShaderDescriptors::InstanceData_Basic) * scene->m_instanceData_sorted.Size();
+    const uint32 instanceDataAlignInBytes = alignof(ShaderDescriptors::InstanceData_Basic);
+    // Push every model matrix into the constant buffer 
+    scene->m_firstInstanceDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(instanceData, instanceDataSizeInBytes, instanceDataAlignInBytes);
 }
 
 uint32 CreateInstance(Scene* scene, uint32 assetID)
 {
-    TINKER_ASSERT(scene->m_numInstances < scene->m_maxInstances);
+    TINKER_ASSERT(scene->m_numInstances <= scene->m_maxInstances);
 
     scene->m_instanceListDirty = 1;
 
@@ -101,8 +100,8 @@ void DestroyInstance(Scene* scene, uint32 instanceID)
     --scene->m_numInstances;
 }
 
-void SetInstanceData(Scene* scene, uint32 instanceID, const DescriptorData_Instance* data)
+void SetInstanceData(Scene* scene, uint32 instanceID, const ShaderDescriptors::InstanceData_Basic* data)
 {
     TINKER_ASSERT(instanceID <= scene->m_numInstances - 1);
-    memcpy(&scene->m_instanceData[instanceID], data, sizeof(DescriptorData_Instance));
+    memcpy(&scene->m_instanceData[instanceID], data, sizeof(ShaderDescriptors::InstanceData_Basic));
 }

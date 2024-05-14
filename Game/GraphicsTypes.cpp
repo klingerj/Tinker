@@ -1,4 +1,5 @@
 #include "GraphicsTypes.h"
+#include "BindlessSystem.h"
 
 #include <string.h>
 
@@ -151,7 +152,7 @@ void CreateAnimatedPoly(TransientPrim* prim)
     prim->numVertices = 150;
 
     desc.dims = v3ui(prim->numVertices * sizeof(v4f), 0, 0);
-    desc.bufferUsage = Graphics::BufferUsage::eTransientVertex;
+    desc.bufferUsage = Graphics::BufferUsage::eTransient;
     desc.debugLabel = "AnimatedPoly Transient Vtx Buf";
     prim->vertexBufferHandle = Graphics::CreateResource(desc);
     desc.bufferUsage = Graphics::BufferUsage::eTransientIndex;
@@ -219,14 +220,14 @@ void UpdateAnimatedPoly(TransientPrim* prim)
     Graphics::UnmapResource(prim->vertexBufferHandle);
 }
 
-void DrawAnimatedPoly(TransientPrim* prim, Graphics::DescriptorHandle globalData, uint32 shaderID, uint32 blendState, uint32 depthState, Graphics::GraphicsCommandStream* graphicsCommandStream)
+void DrawAnimatedPoly(TransientPrim* prim, uint32 shaderID, uint32 blendState, uint32 depthState, Graphics::GraphicsCommandStream* graphicsCommandStream)
 {
     Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
         descriptors[i] = Graphics::DefaultDescHandle_Invalid;
     }
-    descriptors[0] = globalData;
+    descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eConstants);
     descriptors[1] = prim->descriptor;
     graphicsCommandStream->CmdDraw((prim->numVertices - 1) * 3,
         1, 0, 0,

@@ -1,13 +1,9 @@
-struct DescGlobal
-{
-    float4x4 ViewProjMatrix;
-};
+#include "ShaderDescriptors.h"
 
 #define PositionDataType float4
 #define UVDataType float2
 #define NormalDataType float4
 
-[[vk::binding(0, 0)]] cbuffer Global { DescGlobal GlobalData; };
 [[vk::binding(0, 1)]] StructuredBuffer<PositionDataType> PositionData;
 
 struct VSOutput
@@ -18,7 +14,7 @@ struct VSOutput
 
 VSOutput main(uint VertexIndex : SV_VertexID)
 {
-    float4x4 ViewProjMat = GlobalData.ViewProjMatrix;
+    float4x4 ViewProjMat = BindlessConstantBuffer.Load<AllGlobals>(PushConstants.InstanceOffsets[0]).ViewProjMatrix;
     float4 ModelPos = float4(PositionData.Load(VertexIndex).xyz, 1.0f);
 
     VSOutput Out;

@@ -4,9 +4,9 @@
 #include "Utility/Logging.h"
 #include "DataStructures/Vector.h"
 
-#include <iostream>
 // TODO: move this to be a compile define or ini config entry
 #define ENABLE_VULKAN_VALIDATION_LAYERS // enables validation layers
+//#define ENABLE_LUNARG_MONITOR
 
 #define DEVICE_LOCAL_BUFFER_HEAP_SIZE 512 * 1024 * 1024 
 #define HOST_VISIBLE_HEAP_SIZE 256 * 1024 * 1024 
@@ -119,7 +119,7 @@ static void InitGPUMemAllocators()
 
 int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles)
 {
-    g_vulkanContextResources.DataAllocator.Init(VULKAN_SCRATCH_MEM_SIZE, 1);
+    g_vulkanContextResources.DataAllocator.Init(VULKAN_SCRATCH_MEM_SIZE, 16);
 
     g_vulkanContextResources.vulkanMemResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
     g_vulkanContextResources.vulkanDescriptorResourcePool.Init(VULKAN_RESOURCE_POOL_MAX, 16);
@@ -198,6 +198,10 @@ int InitVulkan(const Tk::Platform::WindowHandles* platformWindowHandles)
 #if defined(ENABLE_VULKAN_VALIDATION_LAYERS)
     requestedLayers.PushBackRaw({ "VK_LAYER_KHRONOS_validation" });
 #endif
+#if defined(ENABLE_LUNARG_MONITOR)
+    requestedLayers.PushBackRaw({ "VK_LAYER_LUNARG_monitor" });
+#endif
+
     const uint32 numRequestedLayers = requestedLayers.Size();
 
     Core::Utility::LogMsg("Platform", "******** Requested Instance Layers: ********", Core::Utility::LogSeverity::eInfo);

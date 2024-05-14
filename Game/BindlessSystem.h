@@ -8,8 +8,13 @@ namespace BindlessSystem
     {
         enum : uint32
         {
-            eTexturesSampled, // TODO get a better name 
-            eMax
+            eTexturesRGBA8Sampled,
+            eTexturesRGBA8RW,
+            // ... TODO: more IDs for different texture types, buffers, etc 
+            eConstants,
+            eTexturesEnumEnd = eConstants,
+            eMax,
+            eNumBindlessTextureTypes = eTexturesEnumEnd,
         };
     }
 
@@ -25,6 +30,9 @@ namespace BindlessSystem
 
     // Returns the index that this resource will be populated at in the bindless descriptor for this frame
     uint32 BindResourceForFrame(Tk::Graphics::ResourceHandle resource, uint32 bindlessArrayID);
+    
+    // Returns the offset into the constant buffer where the first byte of the data provided was written 
+    uint32 PushStructIntoConstantBuffer(const void* data, size_t sizeInBytes, size_t alignment);
 
     Tk::Graphics::DescriptorHandle GetBindlessDescriptorFromID(uint32 bindlessID);
 }

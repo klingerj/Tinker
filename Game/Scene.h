@@ -3,6 +3,7 @@
 #include "DataStructures/Vector.h"
 #include "GraphicsTypes.h"
 #include "Graphics/Common/GraphicsCommon.h"
+#include "Generated/ShaderDescriptors_Reflection.h"
 
 struct InputManager;
 
@@ -20,11 +21,12 @@ struct Instance
 struct Scene
 {
     Tk::Core::Vector<Instance> m_instances;
-    Tk::Core::Vector<DescriptorData_Instance> m_instanceData;
+    Tk::Core::Vector<ShaderDescriptors::InstanceData_Basic> m_instanceData;
 
     // Sorted copies of instance data
     Tk::Core::Vector<Instance> m_instances_sorted;
-    Tk::Core::Vector<DescriptorData_Instance> m_instanceData_sorted;
+    Tk::Core::Vector<ShaderDescriptors::InstanceData_Basic> m_instanceData_sorted;
+    uint32 m_firstInstanceDataByteOffset = 0;
 
     uint32 m_maxInstances;
     uint32 m_numInstances;
@@ -32,8 +34,8 @@ struct Scene
 };
 
 void Init(Scene* scene, uint32 maxInstances, InputManager* inputManager);
-void Update(Scene* scene, Tk::Graphics::DescriptorSetDataHandles* descDataHandles);
+void Update(Scene* scene);
 
 uint32 CreateInstance(Scene* scene, uint32 assetID);
 void DestroyInstance(Scene* scene, uint32 instanceID);
-void SetInstanceData(Scene* scene, uint32 instanceID, const DescriptorData_Instance* data);
+void SetInstanceData(Scene* scene, uint32 instanceID, const ShaderDescriptors::InstanceData_Basic* data);

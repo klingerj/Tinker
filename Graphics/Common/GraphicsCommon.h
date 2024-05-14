@@ -26,6 +26,7 @@ namespace DescriptorType
         eSSBO,
         eStorageImage,
         eArrayOfTextures,
+        eArrayOfTexturesRW,
         eMax
     };
 }
@@ -36,7 +37,7 @@ namespace BufferUsage
     {
         eVertex = 0,
         eIndex,
-        eTransientVertex,
+        eTransient,
         eTransientIndex,
         eStaging,
         eUniform,
@@ -96,6 +97,7 @@ namespace ImageFormat
         Invalid = 0,
         BGRA8_SRGB,
         RGBA8_SRGB,
+        RGBA8,
         RGBA16_Float,
         Depth_32F,
         TheSwapChainFormat,
@@ -149,23 +151,17 @@ inline uint32 IsBufferUsageMultiBuffered(uint32 bufferUsage)
 // IDs must be uniquely named and have their id ascend monotonically from 0
 enum
 {
-    DESCLAYOUT_ID_CB_GLOBAL = 0,
-    //DESCLAYOUT_ID_CB_PER_VIEW,
-    //DESCLAYOUT_ID_CB_PER_MATERIAL,
-    DESCLAYOUT_ID_CB_PER_INSTANCE,
-
-    DESCLAYOUT_ID_BINDLESS_SAMPLED_TEXTURES,
-    //DESCLAYOUT_ID_TEXTURES_UINT,
+    DESCLAYOUT_ID_BINDLESS_CONSTANTS = 0,
+    DESCLAYOUT_ID_BINDLESS_TEXTURES_RGBA8_SAMPLED,
+    DESCLAYOUT_ID_BINDLESS_TEXTURES_RGBA8_RW,
 
     // TODO: All of these should be able to get deleted after going bindless 
     DESCLAYOUT_ID_QUAD_BLIT_TEX,
     DESCLAYOUT_ID_QUAD_BLIT_VBS,
-    DESCLAYOUT_ID_ASSET_INSTANCE,
     DESCLAYOUT_ID_ASSET_VBS,
     DESCLAYOUT_ID_POSONLY_VBS,
     DESCLAYOUT_ID_IMGUI_VBS,
     DESCLAYOUT_ID_IMGUI_TEX,
-    DESCLAYOUT_ID_COMPUTE_COPY,
     DESCLAYOUT_ID_MAX
 };
 
@@ -713,18 +709,22 @@ struct GraphicsCommandStream
     }
 };
 
-// Default/fallback texture resources
-typedef struct default_tex
+// Default/fallback resources
+typedef struct default_res
 {
     ResourceHandle res;
     v4f clearValue;
-} DefaultTexture;
+    uint32 defaultState;
+} DefaultResource;
 
-namespace DefaultTextureID
+namespace DefaultResourceID
 {
     enum : uint32
     {
-        eBlack2x2,
+        eZeroedBuffer,
+        eTextureIndexStart, // all texture resources in this enum should go below this 
+        eBlack2x2 = eTextureIndexStart,
+        eBlack2x2RW,
         eMax
     };
 }
@@ -844,9 +844,9 @@ float GetGPUTimestampPeriod();
 uint32 GetCurrentFrameInFlightIndex();
 void ResolveMostRecentAvailableTimestamps(CommandBuffer commandBuffer, void* gpuTimestampCPUSideBuffer, uint32 numTimestampsInQuery);
 
-void CreateAllDefaultTextures(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
-void DestroyDefaultTextures();
-DefaultTexture GetDefaultTexture(uint32 defaultTexID);
+void CreateAllDefaultResources(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
+void DestroyDefaultResources();
+DefaultResource GetDefaultResource(uint32 defaultResID);
 
 }
 }

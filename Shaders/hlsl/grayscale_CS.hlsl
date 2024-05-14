@@ -1,17 +1,21 @@
-[[vk::binding(0, 0)]] RWTexture2D<float4> SrcColorImage;
-[[vk::binding(1, 0)]] RWTexture2D<float4> DstImage;
+#include "ShaderDescriptors.h"
+
+// TODO: this is temp until all buffers are moved over to bindless! just delete later
+[[vk::binding(0, 1)]] ByteAddressBuffer BindlessConstantBuffer2;
+// ---------------
 
 [numthreads(16, 16, 1)]
 void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
     uint2 Coord = DispatchThreadID.xy;
+    Material_ComputeCopyImage2D Constants = BindlessConstantBuffer.Load<Material_ComputeCopyImage2D>(64 /*PushConstants.InstanceOffsets[2]*/);
 
-    if (Coord.x >= 800 || Coord.y >= 600)
+    if (Coord.x >= Constants.dims.x || Coord.y >= Constants.dims.y)
     {
         return;
     }
 
-    float3 Color = SrcColorImage[Coord].rgb;
+    float3 Color = BindlessTexturesRW[Constants.srcIndexBindless][Coord].rgb;
     float Grayscale = Color.r; // todo do the dot product
-    DstImage[Coord].rgb = Color.rgb;// Grayscale.rrr;
+    BindlessTexturesRW[Constants.dstIndexBindless][Coord].rgb = Color.rgb;// Grayscale.rrr;
 }

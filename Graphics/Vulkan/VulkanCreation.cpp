@@ -458,7 +458,9 @@ CREATE_GRAPHICS_PIPELINE(CreateGraphicsPipeline)
     {
         uint32 descLayoutID = descriptorLayoutHandles[uiDesc];
         if (descLayoutID != DESCLAYOUT_ID_MAX)
+        {
             descriptorSetLayouts[uiDesc] = g_vulkanContextResources.descLayouts[descLayoutID].layout;
+        }
     }
 
     // Push constants
@@ -708,8 +710,7 @@ void DestroyAllPSOPerms()
 
 static ResourceHandle CreateBufferResource(uint32 sizeInBytes, uint32 bufferUsage, const char* debugLabel)
 {
-    uint32 newResourceHandle =
-        g_vulkanContextResources.vulkanMemResourcePool.Alloc();
+    uint32 newResourceHandle = g_vulkanContextResources.vulkanMemResourcePool.Alloc();
     TINKER_ASSERT(newResourceHandle != TINKER_INVALID_HANDLE);
     VulkanMemResourceChain* newResourceChain = g_vulkanContextResources.vulkanMemResourcePool.PtrFromHandle(newResourceHandle);
     *newResourceChain = {};
@@ -841,36 +842,9 @@ static ResourceHandle CreateImageResource(uint32 imageFormat, uint32 imageUsageF
     DbgSetImageObjectName((uint64)newResource->image, debugLabel);
 
     // Create image view
-    VkImageAspectFlags aspectMask = {};
-    // TODO: collapse this switch into an array of data
-    switch (imageFormat)
-    {
-        case ImageFormat::RGBA16_Float:
-        case ImageFormat::BGRA8_SRGB:
-        case ImageFormat::RGBA8_SRGB:
-        {
-            aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
-            break;
-        }
-
-        case ImageFormat::Depth_32F:
-        {
-            aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-            break;
-        }
-
-        case ImageFormat::Invalid:
-        default:
-        {
-            Core::Utility::LogMsg("Platform", "Invalid image resource format specified!", Core::Utility::LogSeverity::eCritical);
-            TINKER_ASSERT(0);
-            break;
-        }
-    }
-
     CreateImageView(g_vulkanContextResources.device,
         GetVkImageFormat(imageFormat),
-        aspectMask,
+        GetVkImageAspectFlags(imageFormat),
         newResource->image,
         &newResource->imageView,
         numArrayEles);
@@ -1031,7 +1005,9 @@ bool CreateDescriptorLayout(uint32 descriptorLayoutID, const DescriptorLayout* d
             ++numBindings;
         }
         else
+        {
             break;
+        }
     }
 
     uint32 newDescriptorHandle = TINKER_INVALID_HANDLE;

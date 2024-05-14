@@ -1,5 +1,6 @@
 #include "ZPrepassRenderPass.h"
 #include "Game/GraphicsTypes.h"
+#include "Game/BindlessSystem.h"
 
 extern GameGraphicsData gameGraphicsData;
 extern Scene MainScene;
@@ -19,8 +20,7 @@ namespace ZPrepassRenderPass
         {
             descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
         }
-        descriptors[0] = gameGraphicsData.m_DescData_Global;
-        descriptors[1] = gameGraphicsData.m_DescData_Instance;
+        descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eConstants);
 
         StartRenderPass(renderPass, graphicsCommandStream);
         RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream, Tk::Graphics::SHADER_ID_BASIC_ZPrepass, Tk::Graphics::BlendState::eNoColorAttachment, Tk::Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);

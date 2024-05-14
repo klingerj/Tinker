@@ -1,7 +1,7 @@
 #include "ForwardRenderPass.h"
 #include "Game/GraphicsTypes.h"
 
-#include "../BindlessSystem.h"
+#include "Game/BindlessSystem.h"
 
 extern GameGraphicsData gameGraphicsData;
 extern Scene MainScene;
@@ -17,9 +17,12 @@ namespace ForwardRenderPass
         graphicsCommandStream->CmdLayoutTransition(renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eTransferDst, Tk::Graphics::ImageLayout::eRenderOptimal, "Transition main view color to render_optimal");
 
         Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-        descriptors[0] = gameGraphicsData.m_DescData_Global;
-        descriptors[1] = gameGraphicsData.m_DescData_Instance;
-        descriptors[3] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eTexturesSampled);
+        for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
+        {
+            descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
+        }
+        descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eConstants);
+        descriptors[2] = BindlessSystem::GetBindlessDescriptorFromID(BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
 
         StartRenderPass(renderPass, graphicsCommandStream);
 
@@ -27,7 +30,7 @@ namespace ForwardRenderPass
 
         // TODO: handle this more elegantly
         UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, gameGraphicsData.m_DescData_Global, Tk::Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Tk::Graphics::BlendState::eAlphaBlend, Tk::Graphics::DepthState::eTestOnWriteOn_CCW, graphicsCommandStream);
+        DrawAnimatedPoly(&gameGraphicsData.m_animatedPolygon, Tk::Graphics::SHADER_ID_ANIMATEDPOLY_MainView, Tk::Graphics::BlendState::eAlphaBlend, Tk::Graphics::DepthState::eTestOnWriteOn_CCW, graphicsCommandStream);
 
         EndRenderPass(renderPass, graphicsCommandStream);
     }
