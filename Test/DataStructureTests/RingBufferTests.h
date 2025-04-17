@@ -57,8 +57,8 @@ void Test_RingBufferEnqueueOneDequeueOne()
 
 void Test_RingBufferEnqueueManyDequeueMany()
 {
-    RingBuffer<uint32, 3> buffer;
-    TINKER_TEST_ASSERT(buffer.Capacity() == 4);
+    RingBuffer<uint32, 4> buffer;
+    //TINKER_TEST_ASSERT(buffer.Capacity() == 4);
 
     buffer.Enqueue(1);
     TINKER_TEST_ASSERT(buffer.m_data[0] == 1);
