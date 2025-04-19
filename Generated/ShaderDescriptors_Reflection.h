@@ -18,6 +18,7 @@ struct PushConstantData
 struct AllGlobals
 {
     alignas(16) m4f ViewProjMatrix;
+    v4f CamPosition;
 };
 
 struct InstanceData_Basic

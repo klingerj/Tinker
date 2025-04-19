@@ -112,8 +112,8 @@ INPUT_CALLBACK(RaytraceTestCallback)
     Platform::PrintDebugString("...Done.\n");
 }
 
-const int32 width = 4;
-const int32 height = 4;
+const int32 width = 8;
+const int32 height = 8;
 uint32 instanceIDs[width][height];
 static void InitDemo()
 {
@@ -128,7 +128,7 @@ static void InitDemo()
         for (int32 j = 0; j < height; j++)
         {
             uint32 index1D = i + width * j;
-            uint32 rotatingAssetID = (index1D % 3) + 2;
+            uint32 rotatingAssetID = 0;
             instanceIDs[i][j] = CreateInstance(&MainScene, rotatingAssetID);
         }
     }
@@ -339,7 +339,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     // Hotkeys
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);
 
-    g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
+    g_gameCamera.m_ref = v3f(0.0f, 0.0f, 2.0f);
     g_gameCamera.m_eye = v3f(-1.0f, -1.0f, 1.0f) * 7.0f;
     g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
@@ -428,7 +428,9 @@ GAME_UPDATE(GameUpdate)
     {
         // TODO: put this in View::Update() and write to the data repository from there 
         alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
+        v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
         uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
+        BindlessSystem::PushStructIntoConstantBuffer(&camPosition, sizeof(camPosition), alignof(v4f));
         TINKER_ASSERT(firstGlobalDataByteOffset == 0);
         (void)firstGlobalDataByteOffset;
     }
@@ -449,8 +451,8 @@ GAME_UPDATE(GameUpdate)
                 m4f transMat = m4f(1.0f);
                 transMat[3][0] = i * 3.0f;
                 transMat[3][1] = j * 3.0f;
-                transMat[3][2] = cosf( (frameCtr + (i + width * j) * 928) * 0.015f);
-                data.ModelMatrix = transMat * rotMat;
+                transMat[3][2] = 0.0f;// cosf((frameCtr + (i + width * j) * 928) * 0.015f);
+                data.ModelMatrix = transMat;// *rotMat;
                 SetInstanceData(&MainScene, instanceIDs[i][j], &data);
             }
         }

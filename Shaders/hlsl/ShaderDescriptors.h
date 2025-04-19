@@ -12,6 +12,7 @@ PushConstantData PushConstants;
 struct AllGlobals
 {
     float4x4 ViewProjMatrix;
+    float4 CamPosition;
 };
 
 struct InstanceData_Basic
