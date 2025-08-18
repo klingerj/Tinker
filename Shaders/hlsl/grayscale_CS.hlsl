@@ -8,7 +8,7 @@
 void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
     uint2 Coord = DispatchThreadID.xy;
-    Material_ComputeCopyImage2D Constants = BindlessConstantBuffer.Load<Material_ComputeCopyImage2D>(64 /*PushConstants.InstanceOffsets[2]*/);
+    Material_ComputeCopyImage2D Constants = BindlessConstantBuffer.Load<Material_ComputeCopyImage2D>(64 + 16 /*PushConstants.InstanceOffsets[2]*/);
 
     if (Coord.x >= Constants.dims.x || Coord.y >= Constants.dims.y)
     {

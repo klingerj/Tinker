@@ -42,7 +42,7 @@ set SourceListBenchmark=%SourceListBenchmark% ../Core/Utility/MemTracker.cpp
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/MathBenchmarks/VectorTypeBenchmarks.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Benchmark/DataStructureBenchmarks/HashMapBenchmarks.cpp 
 set SourceListBenchmark=%SourceListBenchmark% ../Core/DataStructures/HashMap.cpp 
-set CompileDefines=/DENABLE_MEM_TRACKING 
+rem set CompileDefines=/DENABLE_MEM_TRACKING 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsBenchmark=/FdTinkerBenchmark.pdb
@@ -62,7 +62,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerBenchmark.exe...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% Winmm.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsBenchmark% %SourceListBenchmark% /link %CommonLinkFlags% Winmm.lib dbghelp.lib %DebugLinkFlagsBenchmark% /out:TinkerBenchmark.exe
 
 :DoneBuild
 popd

@@ -41,7 +41,7 @@ set SourceListTest=%SourceListTest% ../Core/Utility/MemTracker.cpp
 set SourceListTest=%SourceListTest% ../Core/DataStructures/Vector.cpp 
 set SourceListTest=%SourceListTest% ../Core/DataStructures/HashMap.cpp 
 set SourceListTest=%SourceListTest% ../Core/Mem.cpp 
-set CompileDefines=/DENABLE_MEM_TRACKING 
+rem set CompileDefines=/DENABLE_MEM_TRACKING 
 
 if "%BuildConfig%" == "Debug" (
     set DebugCompileFlagsTest=/FdTinkerTest.pdb
@@ -61,7 +61,7 @@ set CommonCompileFlags=%CommonCompileFlags% /Fo:%OBJDir%
 
 echo.
 echo Building TinkerTest.exe...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsTest% %SourceListTest% /link %CommonLinkFlags% %DebugLinkFlagsTest% /out:TinkerTest.exe
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsTest% %SourceListTest% /link dbghelp.lib %CommonLinkFlags% %DebugLinkFlagsTest% /out:TinkerTest.exe
 
 :DoneBuild
 popd

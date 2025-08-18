@@ -112,49 +112,26 @@ INPUT_CALLBACK(RaytraceTestCallback)
     Platform::PrintDebugString("...Done.\n");
 }
 
+const int32 width = 8;
+const int32 height = 8;
+uint32 instanceIDs[width][height];
 static void InitDemo()
 {
     // Init scene
     Init(&MainScene, MAX_INSTANCES_PER_SCENE, &g_InputManager);
     
     // Init view
-    ShaderDescriptors::InstanceData_Basic data;
-    data.ModelMatrix = m4f(1.0f);
-
     MainView.Init();
-    uint32 instanceID;
-    instanceID = CreateInstance(&MainScene, 0);
-    data.ModelMatrix[3][0] = -8.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainScene, 1);
-    data.ModelMatrix[3][0] = -2.5f;
-    SetInstanceData(&MainScene, instanceID, &data);
-
-    instanceID = CreateInstance(&MainScene, 2);
-    data.ModelMatrix = m4f(0.5f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = 8.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
-
-    instanceID = CreateInstance(&MainScene, 2);
-    data.ModelMatrix = m4f(0.25f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = 8.0f;
-    data.ModelMatrix[3][2] = 6.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
-
-    instanceID = CreateInstance(&MainScene, 3);
-    data.ModelMatrix = m4f(7.0f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][1] = 8.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
-
-    instanceID = CreateInstance(&MainScene, 3);
-    data.ModelMatrix = m4f(7.0f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][1] = 10.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
+    for (int32 i = 0; i < width; i++)
+    {
+        for (int32 j = 0; j < height; j++)
+        {
+            uint32 index1D = i + width * j;
+            uint32 rotatingAssetID = 0;
+            instanceIDs[i][j] = CreateInstance(&MainScene, rotatingAssetID);
+        }
+    }
 
     // Procedural geometry
     CreateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
@@ -362,8 +339,8 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     // Hotkeys
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);
 
-    g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
-    g_gameCamera.m_eye = v3f(27.0f, 27.0f, 27.0f);
+    g_gameCamera.m_ref = v3f(0.0f, 0.0f, 2.0f);
+    g_gameCamera.m_eye = v3f(-1.0f, -1.0f, 1.0f) * 7.0f;
     g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
     // Init network connection if multiplayer
@@ -451,9 +428,34 @@ GAME_UPDATE(GameUpdate)
     {
         // TODO: put this in View::Update() and write to the data repository from there 
         alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
+        v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
         uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
+        BindlessSystem::PushStructIntoConstantBuffer(&camPosition, sizeof(camPosition), alignof(v4f));
         TINKER_ASSERT(firstGlobalDataByteOffset == 0);
         (void)firstGlobalDataByteOffset;
+    }
+
+    // Update asset matrices here for now
+    {
+        ShaderDescriptors::InstanceData_Basic data;
+        data.ModelMatrix = m4f(1.0f);
+
+        static uint32 frameCtr = 0;
+        ++frameCtr;
+        for (int32 i = 0; i < width; i++)
+        {
+            for (int32 j = 0; j < height; j++)
+            {
+                m4f rotMat = Core::RotationMatrix_AxisAngle(v3f(0, 0, 1), ( frameCtr + (i + width * j)) * 0.015f);
+
+                m4f transMat = m4f(1.0f);
+                transMat[3][0] = i * 3.0f;
+                transMat[3][1] = j * 3.0f;
+                transMat[3][2] = 0.0f;// cosf((frameCtr + (i + width * j) * 928) * 0.015f);
+                data.ModelMatrix = transMat;// *rotMat;
+                SetInstanceData(&MainScene, instanceIDs[i][j], &data);
+            }
+        }
     }
 
     // Update bindless resource descriptors 
@@ -563,6 +565,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 
         CreateGameRenderingResources(newWindowWidth, newWindowHeight);
         WriteToneMappingResources();
+        WriteSwapChainCopyResources();
     }
 }
 
