@@ -243,6 +243,7 @@ IMGUI_NEW_FRAME(ImguiNewFrame)
 IMGUI_DESTROY(ImguiDestroy)
 {
     ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext(ImGui::GetCurrentContext());
 }
 
 }
@@ -617,7 +618,7 @@ wWinMain(HINSTANCE hInstance,
         g_inputStateDeltas = {};
 
         g_GameCode = {};
-        bool reloaded = ReloadGameCode(&g_GameCode);
+        const bool reloaded = ReloadGameCode(&g_GameCode);
         
         // NOTE: we need all dll's loaded before calling SymInitialize in order for stack tracing to work in every dll/module 
         #ifdef ENABLE_MEM_TRACKING

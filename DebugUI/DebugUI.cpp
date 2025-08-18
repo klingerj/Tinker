@@ -229,7 +229,6 @@ void Shutdown()
     texDesc = Tk::Graphics::DefaultDescHandle_Invalid;
 
     Tk::Platform::ImguiDestroy();
-    ImGui::DestroyContext(ImGui::GetCurrentContext());
 }
 
 void NewFrame()
@@ -263,7 +262,7 @@ static void RenderSingleImguiViewport(ImDrawData* drawData, Tk::Graphics::Graphi
         const v2f scissorScale = v2f(drawData->FramebufferScale.x, drawData->FramebufferScale.y);
 
         const v2f scale = v2f(1.0f / drawData->DisplaySize.x, 1.0f / drawData->DisplaySize.y);
-        const v2f translate = v2f( - (drawData->DisplayPos.x /*- drawData->OwnerViewport->Pos.x*/) * scale.x, -(drawData->DisplayPos.y /*- drawData->OwnerViewport->Pos.y*/) * scale.y);
+        const v2f translate = v2f( -drawData->DisplayPos.x * scale.x, -drawData->DisplayPos.y * scale.y);
 
         for (int32 uiCmdList = 0; uiCmdList < drawData->CmdListsCount; ++uiCmdList)
         {
@@ -317,7 +316,6 @@ static void RenderSingleImguiViewport(ImDrawData* drawData, Tk::Graphics::Graphi
                 if (scissorMax.x <= scissorMin.x ||
                     scissorMax.y <= scissorMin.y)
                 {
-                    // TODO: log a warning or something 
                     continue;
                 }
 

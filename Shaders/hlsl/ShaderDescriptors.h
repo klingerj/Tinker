@@ -4,6 +4,8 @@ struct PushConstantData
     // [0] is offset into bindless constant buffer for globals
     // [1] is offset into instance data uniform array
     // [2], [3] unused
+    // TODO: pack first offset of materials into [2].
+    // Also should pack the size of the instance struct into the globals.
 };
 
 [[vk::push_constant]]
@@ -12,6 +14,7 @@ PushConstantData PushConstants;
 struct AllGlobals
 {
     float4x4 ViewProjMatrix;
+    float4 CamPosition;
 };
 
 struct InstanceData_Basic

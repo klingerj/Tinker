@@ -124,36 +124,38 @@ static void InitDemo()
     MainView.Init();
     uint32 instanceID;
     instanceID = CreateInstance(&MainScene, 0);
-    data.ModelMatrix[3][0] = -8.0f;
+    data.ModelMatrix[3][0] = -3.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 1);
-    data.ModelMatrix[3][0] = -2.5f;
+    data.ModelMatrix[3][0] = -2.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 2);
     data.ModelMatrix = m4f(0.5f);
     data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = 8.0f;
+    data.ModelMatrix[3][0] = 4.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 2);
     data.ModelMatrix = m4f(0.25f);
     data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = 8.0f;
-    data.ModelMatrix[3][2] = 6.0f;
+    data.ModelMatrix[3][0] = 5.0f;
+    data.ModelMatrix[3][2] = 2.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 3);
-    data.ModelMatrix = m4f(7.0f);
+    data.ModelMatrix = m4f(0.5f);
     data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][1] = 8.0f;
+    data.ModelMatrix[3][0] = -1.0f;
+    data.ModelMatrix[3][1] = 2.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     instanceID = CreateInstance(&MainScene, 3);
-    data.ModelMatrix = m4f(7.0f);
+    data.ModelMatrix = m4f(1.0f);
     data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][1] = 10.0f;
+    data.ModelMatrix[3][0] = 1.0f;
+    data.ModelMatrix[3][1] = 4.0f;
     SetInstanceData(&MainScene, instanceID, &data);
 
     // Procedural geometry
@@ -363,7 +365,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
     g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);
 
     g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
-    g_gameCamera.m_eye = v3f(27.0f, 27.0f, 27.0f);
+    g_gameCamera.m_eye = v3f(7.0f, -7.0f, 7.0f);
     g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
     // Init network connection if multiplayer
@@ -451,7 +453,9 @@ GAME_UPDATE(GameUpdate)
     {
         // TODO: put this in View::Update() and write to the data repository from there 
         alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
+        v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
         uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
+        BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(camPosition), alignof(v4f));
         TINKER_ASSERT(firstGlobalDataByteOffset == 0);
         (void)firstGlobalDataByteOffset;
     }
@@ -563,6 +567,7 @@ GAME_WINDOW_RESIZE(GameWindowResize)
 
         CreateGameRenderingResources(newWindowWidth, newWindowHeight);
         WriteToneMappingResources();
+        WriteSwapChainCopyResources();
     }
 }
 
