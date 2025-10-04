@@ -1,52 +1,49 @@
 #include "Utility/Logging.h"
-
 #include <windows.h>
 
 namespace Tk
 {
-namespace Core
-{
-namespace Utility
-{
-
-void LogMsg(const char* prefix, const char* msg, uint32 severity)
-{
-    OutputDebugString("[");
-    OutputDebugString(prefix);
-    OutputDebugString("]");
-
-    const char* severityMsg;
-    switch (severity)
+  namespace Core
+  {
+    namespace Utility
     {
-        case LogSeverity::eInfo:
+      void LogMsg(const char* prefix, const char* msg, uint32 severity)
+      {
+        OutputDebugString("[");
+        OutputDebugString(prefix);
+        OutputDebugString("]");
+
+        const char* severityMsg;
+        switch (severity)
         {
+          case LogSeverity::eInfo:
+          {
             severityMsg = "Info";
             break;
-        }
-        case LogSeverity::eWarning:
-        {
+          }
+          case LogSeverity::eWarning:
+          {
             severityMsg = "Warning";
             break;
-        }
-        case LogSeverity::eCritical:
-        {
+          }
+          case LogSeverity::eCritical:
+          {
             severityMsg = "Critical";
             break;
-        }
-        default:
-        {
+          }
+          default:
+          {
             severityMsg = "Unknown Severity";
             break;
+          }
         }
-    }
-    OutputDebugString("[");
-    OutputDebugString(severityMsg);
-    OutputDebugString("] ");
+        OutputDebugString("[");
+        OutputDebugString(severityMsg);
+        OutputDebugString("] ");
 
-    OutputDebugString(msg);
-    OutputDebugString("\n");
-}
-
-}
-}
-}
+        OutputDebugString(msg);
+        OutputDebugString("\n");
+      }
+    } //namespace Utility
+  } //namespace Core
+} //namespace Tk

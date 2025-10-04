@@ -8,17 +8,19 @@
 
 struct VSOutput
 {
-    [[vk::location(0)]] float4 Position : SV_POSITION;
-    [[vk::location(1)]] float4 Color    : COLOR;
+  [[vk::location(0)]] float4 Position : SV_POSITION;
+  [[vk::location(1)]] float4 Color    : COLOR;
 };
 
 VSOutput main(uint VertexIndex : SV_VertexID)
 {
-    float4x4 ViewProjMat = BindlessConstantBuffer.Load<AllGlobals>(PushConstants.InstanceOffsets[0]).ViewProjMatrix;
-    float4 ModelPos = float4(PositionData.Load(VertexIndex).xyz, 1.0f);
+  float4x4 ViewProjMat =
+    BindlessConstantBuffer.Load<AllGlobals>(PushConstants.InstanceOffsets[0])
+      .ViewProjMatrix;
+  float4 ModelPos = float4(PositionData.Load(VertexIndex).xyz, 1.0f);
 
-    VSOutput Out;
-    Out.Position = mul(ViewProjMat, ModelPos);
-    Out.Color = float4(abs(ModelPos.xyz), 1);
-    return Out;
+  VSOutput Out;
+  Out.Position = mul(ViewProjMat, ModelPos);
+  Out.Color = float4(abs(ModelPos.xyz), 1);
+  return Out;
 }

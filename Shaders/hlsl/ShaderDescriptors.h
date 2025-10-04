@@ -1,11 +1,11 @@
 struct PushConstantData
 {
-    uint InstanceOffsets[4];
-    // [0] is offset into bindless constant buffer for globals
-    // [1] is offset into instance data uniform array
-    // [2], [3] unused
-    // TODO: pack first offset of materials into [2].
-    // Also should pack the size of the instance struct into the globals.
+  uint InstanceOffsets[4];
+  // [0] is offset into bindless constant buffer for globals
+  // [1] is offset into instance data uniform array
+  // [2], [3] unused
+  // TODO: pack first offset of materials into [2].
+  // Also should pack the size of the instance struct into the globals.
 };
 
 [[vk::push_constant]]
@@ -13,20 +13,20 @@ PushConstantData PushConstants;
 
 struct AllGlobals
 {
-    float4x4 ViewProjMatrix;
-    float4 CamPosition;
+  float4x4 ViewProjMatrix;
+  float4 CamPosition;
 };
 
 struct InstanceData_Basic
 {
-    float4x4 ModelMatrix;
+  float4x4 ModelMatrix;
 };
 
 struct Material_ComputeCopyImage2D
 {
-    uint srcIndexBindless;
-    uint dstIndexBindless;
-    uint2 dims;
+  uint srcIndexBindless;
+  uint dstIndexBindless;
+  uint2 dims;
 };
 
 [[vk::binding(0, 0)]] ByteAddressBuffer BindlessConstantBuffer;
@@ -35,7 +35,8 @@ struct Material_ComputeCopyImage2D
 //[[vk::binding(1, 1)]] ByteAddressBuffer BindlessBuffers[];
 
 [[vk::binding(0, 2)]] Texture2D<float4> BindlessTextures[];
-[[vk::binding(0, 2)]] SamplerState SamplerLinearWrap; //TODO: move samplers to a different desc set entirely eventually 
+[[vk::binding(0, 2)]] SamplerState
+  SamplerLinearWrap; //TODO: move samplers to a different desc set entirely eventually
 [[vk::binding(0, 3)]] RWTexture2D<float4> BindlessTexturesRW[];
 //[[vk::binding(1, 2)]] Texture2D BindlessTexturesUint[];
-//TODO: 3D textures and storage images 
+//TODO: 3D textures and storage images

@@ -1,0 +1,10 @@
+.git/**
+Build/**
+CookedAssets/**
+Generated/**
+Output/**
+Scripts/**
+SPIR-V-VM/**
+ThirdParty/**
+ToolsBin/**
+Utils/**

@@ -5,35 +5,33 @@
 
 namespace Tk
 {
-namespace Core
-{
-namespace Raytracing
-{
-
-struct Ray
-{
-    v3f origin;
-    v3f dir;
-};
-
-struct Intersection
-{
-    float bary[3];
-    float t;
-    uint32 hitTri;
-
-    void InitInvalid()
+  namespace Core
+  {
+    namespace Raytracing
     {
-        bary[0] = 0.0f;
-        bary[1] = 0.0f;
-        bary[2] = 0.0f;
-        t = -1.0f;
-        hitTri = MAX_UINT32;
-    }
-};
+      struct Ray
+      {
+        v3f origin;
+        v3f dir;
+      };
 
-void IntersectRayTriangle(const Ray& ray, const v3f* triangle, Intersection& isx);
+      struct Intersection
+      {
+        float bary[3];
+        float t;
+        uint32 hitTri;
 
-}
-}
-}
+        void InitInvalid()
+        {
+          bary[0] = 0.0f;
+          bary[1] = 0.0f;
+          bary[2] = 0.0f;
+          t = -1.0f;
+          hitTri = MAX_UINT32;
+        }
+      };
+
+      void IntersectRayTriangle(const Ray& ray, const v3f* triangle, Intersection& isx);
+    } //namespace Raytracing
+  } //namespace Core
+} //namespace Tk

@@ -4,11 +4,11 @@
 
 typedef struct camera_data
 {
-    v3f m_eye;
-    v3f m_ref;
-    v3f m_forward;
-    v3f m_right;
-    v3f m_up;
+  v3f m_eye;
+  v3f m_ref;
+  v3f m_forward;
+  v3f m_right;
+  v3f m_up;
 } Camera;
 
 static m4f g_projMat = m4f(1.0f);

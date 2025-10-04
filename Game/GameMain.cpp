@@ -1,31 +1,30 @@
-#include "Platform/PlatformGameAPI.h"
-#include "Graphics/Common/GraphicsCommon.h"
-#include "Graphics/Common/GPUTimestamps.h"
-#include "Graphics/Common/ShaderManager.h"
-#include "ShaderCompiler/ShaderCompiler.h"
-#include "Generated/ShaderDescriptors_Reflection.h"
 #include "Allocators.h"
-#include "Hashing.h"
-#include "Math/VectorTypes.h"
 #include "AssetFileParsing.h"
-#include "Utility/ScopedTimer.h"
-#include "GraphicsTypes.h"
+#include "AssetManager.h"
 #include "BindlessSystem.h"
-#include "RenderPasses/RenderPass.h"
-#include "RenderPasses/ZPrepassRenderPass.h"
-#include "RenderPasses/ForwardRenderPass.h"
+#include "Camera.h"
+#include "DebugUI.h"
+#include "Generated/ShaderDescriptors_Reflection.h"
+#include "Graphics/Common/GPUTimestamps.h"
+#include "Graphics/Common/GraphicsCommon.h"
+#include "Graphics/Common/ShaderManager.h"
+#include "GraphicsTypes.h"
+#include "Hashing.h"
+#include "InputManager.h"
+#include "Math/VectorTypes.h"
+#include "Platform/PlatformGameAPI.h"
+#include "Raytracing.h"
 #include "RenderPasses/ComputeCopyRenderPass.h"
 #include "RenderPasses/DebugUIRenderPass.h"
-#include "RenderPasses/ToneMappingRenderPass.h"
+#include "RenderPasses/ForwardRenderPass.h"
+#include "RenderPasses/RenderPass.h"
 #include "RenderPasses/SwapChainCopyRenderPass.h"
-#include "AssetManager.h"
-#include "Camera.h"
-#include "Raytracing.h"
-#include "View.h"
+#include "RenderPasses/ToneMappingRenderPass.h"
+#include "RenderPasses/ZPrepassRenderPass.h"
 #include "Scene.h"
-#include "InputManager.h"
-#include "DebugUI.h"
-
+#include "ShaderCompiler/ShaderCompiler.h"
+#include "Utility/ScopedTimer.h"
+#include "View.h"
 #include <string.h>
 
 using namespace Tk;
@@ -51,51 +50,60 @@ static Camera g_gameCamera = {};
 static const float cameraPanSensitivity = 0.1f;
 static const float cameraRotSensitivityHorz = 0.001f;
 static const float cameraRotSensitivityVert = 0.002f;
+
 INPUT_CALLBACK(GameCameraPanForwardCallback)
 {
-    PanCameraAlongForward(&g_gameCamera, cameraPanSensitivity * param);
+  PanCameraAlongForward(&g_gameCamera, cameraPanSensitivity * param);
 }
+
 INPUT_CALLBACK(GameCameraPanBackwardCallback)
 {
-    PanCameraAlongForward(&g_gameCamera, -cameraPanSensitivity * param);
+  PanCameraAlongForward(&g_gameCamera, -cameraPanSensitivity * param);
 }
+
 INPUT_CALLBACK(GameCameraPanRightCallback)
 {
-    PanCameraAlongRight(&g_gameCamera, cameraPanSensitivity * param);
+  PanCameraAlongRight(&g_gameCamera, cameraPanSensitivity * param);
 }
+
 INPUT_CALLBACK(GameCameraPanLeftCallback)
 {
-    PanCameraAlongRight(&g_gameCamera, -cameraPanSensitivity * param);
+  PanCameraAlongRight(&g_gameCamera, -cameraPanSensitivity * param);
 }
+
 INPUT_CALLBACK(GameCameraRotateHorizontalCallback)
 {
-    RotateCameraAboutUp(&g_gameCamera, cameraRotSensitivityHorz * -(int32)param);
+  RotateCameraAboutUp(&g_gameCamera, cameraRotSensitivityHorz * -(int32)param);
 }
+
 INPUT_CALLBACK(GameCameraRotateVerticalCallback)
 {
-    RotateCameraAboutRight(&g_gameCamera, cameraRotSensitivityVert * -(int32)param);
+  RotateCameraAboutRight(&g_gameCamera, cameraRotSensitivityVert * -(int32)param);
 }
 
 INPUT_CALLBACK(HotloadAllShaders)
 {
-    Tk::Core::Utility::LogMsg("Game", "Attempting to hotload shaders...\n", Tk::Core::Utility::LogSeverity::eInfo);
+  Tk::Core::Utility::LogMsg("Game", "Attempting to hotload shaders...\n",
+                            Tk::Core::Utility::LogSeverity::eInfo);
 
-    uint32 result = Tk::ShaderCompiler::ErrCode::NonShaderError;
-    #ifdef VULKAN
-    result = Tk::ShaderCompiler::CompileAllShadersVK();
-    #else
-    #endif
-    
-    if (result == Tk::ShaderCompiler::ErrCode::Success)
-    {
-        Tk::Graphics::ShaderManager::ReloadShaders();
-        Tk::Core::Utility::LogMsg("Game", "...Done.\n", Tk::Core::Utility::LogSeverity::eInfo);
-    }
-    else
-    {
-        // TODO: grab error message from shader compiler
-        Tk::Core::Utility::LogMsg("Game", "Shader compilation failed.\n", Tk::Core::Utility::LogSeverity::eWarning);
-    }
+  uint32 result = Tk::ShaderCompiler::ErrCode::NonShaderError;
+#ifdef VULKAN
+  result = Tk::ShaderCompiler::CompileAllShadersVK();
+#else
+#endif
+
+  if (result == Tk::ShaderCompiler::ErrCode::Success)
+  {
+    Tk::Graphics::ShaderManager::ReloadShaders();
+    Tk::Core::Utility::LogMsg("Game", "...Done.\n",
+                              Tk::Core::Utility::LogSeverity::eInfo);
+  }
+  else
+  {
+    // TODO: grab error message from shader compiler
+    Tk::Core::Utility::LogMsg("Game", "Shader compilation failed.\n",
+                              Tk::Core::Utility::LogSeverity::eWarning);
+  }
 }
 
 #define MAX_INSTANCES_PER_SCENE 128
@@ -107,500 +115,553 @@ View MainView = {};
 
 INPUT_CALLBACK(RaytraceTestCallback)
 {
-    Platform::PrintDebugString("Running raytrace test...\n");
-    RaytraceTest();
-    Platform::PrintDebugString("...Done.\n");
+  Platform::PrintDebugString("Running raytrace test...\n");
+  RaytraceTest();
+  Platform::PrintDebugString("...Done.\n");
 }
 
 static void InitDemo()
 {
-    // Init scene
-    Init(&MainScene, MAX_INSTANCES_PER_SCENE, &g_InputManager);
-    
-    // Init view
-    ShaderDescriptors::InstanceData_Basic data;
-    data.ModelMatrix = m4f(1.0f);
+  // Init scene
+  Init(&MainScene, MAX_INSTANCES_PER_SCENE, &g_InputManager);
 
-    MainView.Init();
-    uint32 instanceID;
-    instanceID = CreateInstance(&MainScene, 0);
-    data.ModelMatrix[3][0] = -3.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
+  // Init view
+  ShaderDescriptors::InstanceData_Basic data;
+  data.ModelMatrix = m4f(1.0f);
 
-    instanceID = CreateInstance(&MainScene, 1);
-    data.ModelMatrix[3][0] = -2.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
+  MainView.Init();
+  uint32 instanceID;
+  instanceID = CreateInstance(&MainScene, 0);
+  data.ModelMatrix[3][0] = -3.0f;
+  SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainScene, 2);
-    data.ModelMatrix = m4f(0.5f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = 4.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
+  instanceID = CreateInstance(&MainScene, 1);
+  data.ModelMatrix[3][0] = -2.0f;
+  SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainScene, 2);
-    data.ModelMatrix = m4f(0.25f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = 5.0f;
-    data.ModelMatrix[3][2] = 2.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
+  instanceID = CreateInstance(&MainScene, 2);
+  data.ModelMatrix = m4f(0.5f);
+  data.ModelMatrix[3][3] = 1.0f;
+  data.ModelMatrix[3][0] = 4.0f;
+  SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainScene, 3);
-    data.ModelMatrix = m4f(0.5f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = -1.0f;
-    data.ModelMatrix[3][1] = 2.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
+  instanceID = CreateInstance(&MainScene, 2);
+  data.ModelMatrix = m4f(0.25f);
+  data.ModelMatrix[3][3] = 1.0f;
+  data.ModelMatrix[3][0] = 5.0f;
+  data.ModelMatrix[3][2] = 2.0f;
+  SetInstanceData(&MainScene, instanceID, &data);
 
-    instanceID = CreateInstance(&MainScene, 3);
-    data.ModelMatrix = m4f(1.0f);
-    data.ModelMatrix[3][3] = 1.0f;
-    data.ModelMatrix[3][0] = 1.0f;
-    data.ModelMatrix[3][1] = 4.0f;
-    SetInstanceData(&MainScene, instanceID, &data);
+  instanceID = CreateInstance(&MainScene, 3);
+  data.ModelMatrix = m4f(0.5f);
+  data.ModelMatrix[3][3] = 1.0f;
+  data.ModelMatrix[3][0] = -1.0f;
+  data.ModelMatrix[3][1] = 2.0f;
+  SetInstanceData(&MainScene, instanceID, &data);
 
-    // Procedural geometry
-    CreateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
+  instanceID = CreateInstance(&MainScene, 3);
+  data.ModelMatrix = m4f(1.0f);
+  data.ModelMatrix[3][3] = 1.0f;
+  data.ModelMatrix[3][0] = 1.0f;
+  data.ModelMatrix[3][1] = 4.0f;
+  SetInstanceData(&MainScene, instanceID, &data);
+
+  // Procedural geometry
+  CreateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
 }
 
 static void DestroyDescriptors()
 {
-    BindlessSystem::Destroy();
+  BindlessSystem::Destroy();
 
-    Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
-    gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
-    
-    Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainCopyDescHandle);
-    gameGraphicsData.m_swapChainCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
+  Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
+  gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
 
-    Graphics::DestroyAllDescriptors(); // destroys descriptor pool
+  Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainCopyDescHandle);
+  gameGraphicsData.m_swapChainCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
+
+  Graphics::DestroyAllDescriptors(); // destroys descriptor pool
 }
 
 static void WriteToneMappingResources()
 {
-    Graphics::DescriptorSetDataHandles toneMapHandles = {};
-    toneMapHandles.InitInvalid();
-    toneMapHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
-    Graphics::WriteDescriptorSimple(gameGraphicsData.m_toneMappingDescHandle, &toneMapHandles);
+  Graphics::DescriptorSetDataHandles toneMapHandles = {};
+  toneMapHandles.InitInvalid();
+  toneMapHandles.handles[0] = gameGraphicsData.m_rtColorHandle;
+  Graphics::WriteDescriptorSimple(gameGraphicsData.m_toneMappingDescHandle,
+                                  &toneMapHandles);
 
-    Graphics::DescriptorSetDataHandles vbHandles = {};
-    vbHandles.InitInvalid();
-    vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
-    vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
-    vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
-    Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
+  Graphics::DescriptorSetDataHandles vbHandles = {};
+  vbHandles.InitInvalid();
+  vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
+  vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
+  vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
+  Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
 }
 
 static void WriteSwapChainCopyResources()
 {
-    Graphics::DescriptorSetDataHandles swapChainCopyHandles = {};
-    swapChainCopyHandles.InitInvalid();
-    swapChainCopyHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
-    Graphics::WriteDescriptorSimple(gameGraphicsData.m_swapChainCopyDescHandle, &swapChainCopyHandles);
+  Graphics::DescriptorSetDataHandles swapChainCopyHandles = {};
+  swapChainCopyHandles.InitInvalid();
+  swapChainCopyHandles.handles[0] = gameGraphicsData.m_computeColorHandle;
+  Graphics::WriteDescriptorSimple(gameGraphicsData.m_swapChainCopyDescHandle,
+                                  &swapChainCopyHandles);
 
-    Graphics::DescriptorSetDataHandles vbHandles = {};
-    vbHandles.InitInvalid();
-    vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
-    vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
-    vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
-    Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
+  Graphics::DescriptorSetDataHandles vbHandles = {};
+  vbHandles.InitInvalid();
+  vbHandles.handles[0] = defaultQuad.m_positionBuffer.gpuBufferHandle;
+  vbHandles.handles[1] = defaultQuad.m_uvBuffer.gpuBufferHandle;
+  vbHandles.handles[2] = defaultQuad.m_normalBuffer.gpuBufferHandle;
+  Graphics::WriteDescriptorSimple(defaultQuad.m_descriptor, &vbHandles);
 }
 
 static void RegisterActiveTextures()
 {
-    uint32 index = BindlessSystem::BindlessIndexMax;
-    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(0), BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
-    index = BindlessSystem::BindResourceForFrame(g_AssetManager.GetTextureGraphicsDataByID(1), BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
-    // TODO: eventually these indices will be hooked up to a material system so that at draw time we can pass these indices as a constant to the gpu for bindless descriptor indexing
+  uint32 index = BindlessSystem::BindlessIndexMax;
+  index = BindlessSystem::BindResourceForFrame(
+    g_AssetManager.GetTextureGraphicsDataByID(0),
+    BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
+  index = BindlessSystem::BindResourceForFrame(
+    g_AssetManager.GetTextureGraphicsDataByID(1),
+    BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
+  // TODO: eventually these indices will be hooked up to a material system so that at draw
+  // time we can pass these indices as a constant to the gpu for bindless descriptor
+  // indexing
 
-    // WIP: Push some render targets into the bindless array for compute copy test pass 
-    // TODO: move this struct building to elsewhere
-    alignas(16) ShaderDescriptors::Material_ComputeCopyImage2D copyConstants = {};
-    copyConstants.dims = v2ui(currentWindowWidth, currentWindowHeight);
-    copyConstants.srcIndexBindless = BindlessSystem::BindResourceForFrame(gameGraphicsData.m_rtColorToneMappedHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
-    copyConstants.dstIndexBindless = BindlessSystem::BindResourceForFrame(gameGraphicsData.m_computeColorHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
-    uint32 materialDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&copyConstants, sizeof(copyConstants), alignof(ShaderDescriptors::Material_ComputeCopyImage2D));
+  // WIP: Push some render targets into the bindless array for compute copy test pass
+  // TODO: move this struct building to elsewhere
+  alignas(16) ShaderDescriptors::Material_ComputeCopyImage2D copyConstants = {};
+  copyConstants.dims = v2ui(currentWindowWidth, currentWindowHeight);
+  copyConstants.srcIndexBindless = BindlessSystem::BindResourceForFrame(
+    gameGraphicsData.m_rtColorToneMappedHandle,
+    BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
+  copyConstants.dstIndexBindless = BindlessSystem::BindResourceForFrame(
+    gameGraphicsData.m_computeColorHandle,
+    BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
+  uint32 materialDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
+    &copyConstants, sizeof(copyConstants),
+    alignof(ShaderDescriptors::Material_ComputeCopyImage2D));
 }
 
 static void CreateAllDescriptors()
 {
-    BindlessSystem::Create();
+  BindlessSystem::Create();
 
-    // Tone mapping
-    gameGraphicsData.m_toneMappingDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
-    WriteToneMappingResources();
+  // Tone mapping
+  gameGraphicsData.m_toneMappingDescHandle =
+    Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
+  WriteToneMappingResources();
 
-    // Swap chain copy
-    gameGraphicsData.m_swapChainCopyDescHandle = Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
-    WriteSwapChainCopyResources();
+  // Swap chain copy
+  gameGraphicsData.m_swapChainCopyDescHandle =
+    Graphics::CreateDescriptor(Graphics::DESCLAYOUT_ID_QUAD_BLIT_TEX);
+  WriteSwapChainCopyResources();
 }
 
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
 {
-    Graphics::ResourceDesc desc;
-    desc.resourceType = Graphics::ResourceType::eImage2D;
-    desc.arrayEles = 1;
-    desc.dims = v3ui(windowWidth, windowHeight, 1);
-    desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
-    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::Sampled | Graphics::ImageUsageFlags::TransferDst | Graphics::ImageUsageFlags::UAV;
-    desc.debugLabel = "MainViewColor";
-    gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
+  Graphics::ResourceDesc desc;
+  desc.resourceType = Graphics::ResourceType::eImage2D;
+  desc.arrayEles = 1;
+  desc.dims = v3ui(windowWidth, windowHeight, 1);
+  desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
+  desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget
+                         | Graphics::ImageUsageFlags::Sampled
+                         | Graphics::ImageUsageFlags::TransferDst
+                         | Graphics::ImageUsageFlags::UAV;
+  desc.debugLabel = "MainViewColor";
+  gameGraphicsData.m_rtColorHandle = Graphics::CreateResource(desc);
 
-    desc.debugLabel = "MainViewColorTonemapped";
-    gameGraphicsData.m_rtColorToneMappedHandle = Graphics::CreateResource(desc);
+  desc.debugLabel = "MainViewColorTonemapped";
+  gameGraphicsData.m_rtColorToneMappedHandle = Graphics::CreateResource(desc);
 
-    desc.imageFormat = Graphics::ImageFormat::Depth_32F;
-    desc.imageUsageFlags = Graphics::ImageUsageFlags::DepthStencil | Graphics::ImageUsageFlags::TransferDst;
-    desc.debugLabel = "MainViewDepth";
-    gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
+  desc.imageFormat = Graphics::ImageFormat::Depth_32F;
+  desc.imageUsageFlags =
+    Graphics::ImageUsageFlags::DepthStencil | Graphics::ImageUsageFlags::TransferDst;
+  desc.debugLabel = "MainViewDepth";
+  gameGraphicsData.m_rtDepthHandle = Graphics::CreateResource(desc);
 
-    desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
-    desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget | Graphics::ImageUsageFlags::UAV | Graphics::ImageUsageFlags::Sampled;
-    desc.debugLabel = "MainViewColor_ComputeCopy";
-    gameGraphicsData.m_computeColorHandle = Graphics::CreateResource(desc);
+  desc.imageFormat = Graphics::ImageFormat::RGBA16_Float;
+  desc.imageUsageFlags = Graphics::ImageUsageFlags::RenderTarget
+                         | Graphics::ImageUsageFlags::UAV
+                         | Graphics::ImageUsageFlags::Sampled;
+  desc.debugLabel = "MainViewColor_ComputeCopy";
+  gameGraphicsData.m_computeColorHandle = Graphics::CreateResource(desc);
 
-    gameRenderPassList[eRenderPass_ZPrePass].Init();
-    gameRenderPassList[eRenderPass_ZPrePass].numColorRTs = 0;
-    gameRenderPassList[eRenderPass_ZPrePass].depthRT = gameGraphicsData.m_rtDepthHandle;
-    gameRenderPassList[eRenderPass_ZPrePass].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_ZPrePass].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
-    gameRenderPassList[eRenderPass_ZPrePass].ExecuteFn = ZPrepassRenderPass::Execute;
+  gameRenderPassList[eRenderPass_ZPrePass].Init();
+  gameRenderPassList[eRenderPass_ZPrePass].numColorRTs = 0;
+  gameRenderPassList[eRenderPass_ZPrePass].depthRT = gameGraphicsData.m_rtDepthHandle;
+  gameRenderPassList[eRenderPass_ZPrePass].renderWidth = windowWidth;
+  gameRenderPassList[eRenderPass_ZPrePass].renderHeight = windowHeight;
+  gameRenderPassList[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
+  gameRenderPassList[eRenderPass_ZPrePass].ExecuteFn = ZPrepassRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_MainView].Init();
-    gameRenderPassList[eRenderPass_MainView].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_MainView].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
-    gameRenderPassList[eRenderPass_MainView].depthRT = gameGraphicsData.m_rtDepthHandle;
-    gameRenderPassList[eRenderPass_MainView].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_MainView].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
-    gameRenderPassList[eRenderPass_MainView].ExecuteFn = ForwardRenderPass::Execute;
+  gameRenderPassList[eRenderPass_MainView].Init();
+  gameRenderPassList[eRenderPass_MainView].numColorRTs = 1;
+  gameRenderPassList[eRenderPass_MainView].colorRTs[0] = gameGraphicsData.m_rtColorHandle;
+  gameRenderPassList[eRenderPass_MainView].depthRT = gameGraphicsData.m_rtDepthHandle;
+  gameRenderPassList[eRenderPass_MainView].renderWidth = windowWidth;
+  gameRenderPassList[eRenderPass_MainView].renderHeight = windowHeight;
+  gameRenderPassList[eRenderPass_MainView].debugLabel = "Main Forward Render View";
+  gameRenderPassList[eRenderPass_MainView].ExecuteFn = ForwardRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_ToneMapping].Init();
-    gameRenderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] = gameGraphicsData.m_rtColorToneMappedHandle;
-    gameRenderPassList[eRenderPass_ToneMapping].depthRT = Graphics::DefaultResHandle_Invalid;
-    gameRenderPassList[eRenderPass_ToneMapping].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_ToneMapping].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_ToneMapping].debugLabel = "Tone Mapping";
-    gameRenderPassList[eRenderPass_ToneMapping].ExecuteFn = ToneMappingRenderPass::Execute;
+  gameRenderPassList[eRenderPass_ToneMapping].Init();
+  gameRenderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
+  gameRenderPassList[eRenderPass_ToneMapping].colorRTs[0] =
+    gameGraphicsData.m_rtColorToneMappedHandle;
+  gameRenderPassList[eRenderPass_ToneMapping].depthRT =
+    Graphics::DefaultResHandle_Invalid;
+  gameRenderPassList[eRenderPass_ToneMapping].renderWidth = windowWidth;
+  gameRenderPassList[eRenderPass_ToneMapping].renderHeight = windowHeight;
+  gameRenderPassList[eRenderPass_ToneMapping].debugLabel = "Tone Mapping";
+  gameRenderPassList[eRenderPass_ToneMapping].ExecuteFn = ToneMappingRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_ComputeCopy].Init();
-    gameRenderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] = gameGraphicsData.m_rtColorToneMappedHandle;
-    gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] = gameGraphicsData.m_computeColorHandle;
-    gameRenderPassList[eRenderPass_ComputeCopy].depthRT = Graphics::DefaultResHandle_Invalid;
-    gameRenderPassList[eRenderPass_ComputeCopy].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_ComputeCopy].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_ComputeCopy].debugLabel = "Compute Copy";
-    gameRenderPassList[eRenderPass_ComputeCopy].ExecuteFn = ComputeCopyRenderPass::Execute;
+  gameRenderPassList[eRenderPass_ComputeCopy].Init();
+  gameRenderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
+  gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[0] =
+    gameGraphicsData.m_rtColorToneMappedHandle;
+  gameRenderPassList[eRenderPass_ComputeCopy].colorRTs[1] =
+    gameGraphicsData.m_computeColorHandle;
+  gameRenderPassList[eRenderPass_ComputeCopy].depthRT =
+    Graphics::DefaultResHandle_Invalid;
+  gameRenderPassList[eRenderPass_ComputeCopy].renderWidth = windowWidth;
+  gameRenderPassList[eRenderPass_ComputeCopy].renderHeight = windowHeight;
+  gameRenderPassList[eRenderPass_ComputeCopy].debugLabel = "Compute Copy";
+  gameRenderPassList[eRenderPass_ComputeCopy].ExecuteFn = ComputeCopyRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_DebugUI].Init();
-    gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_DebugUI].colorRTs[0] = gameGraphicsData.m_computeColorHandle;
-    gameRenderPassList[eRenderPass_DebugUI].depthRT = Graphics::DefaultResHandle_Invalid;
-    gameRenderPassList[eRenderPass_DebugUI].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_DebugUI].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_DebugUI].debugLabel = "Debug UI";
-    gameRenderPassList[eRenderPass_DebugUI].ExecuteFn = DebugUIRenderPass::Execute;
+  gameRenderPassList[eRenderPass_DebugUI].Init();
+  gameRenderPassList[eRenderPass_DebugUI].numColorRTs = 1;
+  gameRenderPassList[eRenderPass_DebugUI].colorRTs[0] =
+    gameGraphicsData.m_computeColorHandle;
+  gameRenderPassList[eRenderPass_DebugUI].depthRT = Graphics::DefaultResHandle_Invalid;
+  gameRenderPassList[eRenderPass_DebugUI].renderWidth = windowWidth;
+  gameRenderPassList[eRenderPass_DebugUI].renderHeight = windowHeight;
+  gameRenderPassList[eRenderPass_DebugUI].debugLabel = "Debug UI";
+  gameRenderPassList[eRenderPass_DebugUI].ExecuteFn = DebugUIRenderPass::Execute;
 
-    gameRenderPassList[eRenderPass_SwapChainCopy].Init();
-    gameRenderPassList[eRenderPass_SwapChainCopy].numColorRTs = 1;
-    gameRenderPassList[eRenderPass_SwapChainCopy].depthRT = Graphics::DefaultResHandle_Invalid;
-    gameRenderPassList[eRenderPass_SwapChainCopy].renderWidth = windowWidth;
-    gameRenderPassList[eRenderPass_SwapChainCopy].renderHeight = windowHeight;
-    gameRenderPassList[eRenderPass_SwapChainCopy].debugLabel = "Swap Chain Copy";
-    gameRenderPassList[eRenderPass_SwapChainCopy].ExecuteFn = SwapChainCopyRenderPass::Execute;
+  gameRenderPassList[eRenderPass_SwapChainCopy].Init();
+  gameRenderPassList[eRenderPass_SwapChainCopy].numColorRTs = 1;
+  gameRenderPassList[eRenderPass_SwapChainCopy].depthRT =
+    Graphics::DefaultResHandle_Invalid;
+  gameRenderPassList[eRenderPass_SwapChainCopy].renderWidth = windowWidth;
+  gameRenderPassList[eRenderPass_SwapChainCopy].renderHeight = windowHeight;
+  gameRenderPassList[eRenderPass_SwapChainCopy].debugLabel = "Swap Chain Copy";
+  gameRenderPassList[eRenderPass_SwapChainCopy].ExecuteFn =
+    SwapChainCopyRenderPass::Execute;
 
-    g_FrameCommandBuffer = Tk::Graphics::CreateCommandBuffer();
+  g_FrameCommandBuffer = Tk::Graphics::CreateCommandBuffer();
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
 {
-    DebugUI::ToggleEnable();
+  DebugUI::ToggleEnable();
 }
 
 static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 {
-    TIMED_SCOPED_BLOCK("Game Init");
+  TIMED_SCOPED_BLOCK("Game Init");
 
-    currentWindowWidth = windowWidth;
-    currentWindowHeight = windowHeight;
+  currentWindowWidth = windowWidth;
+  currentWindowHeight = windowHeight;
 
-    g_windowHandles = Tk::Platform::GetPlatformWindowHandles();
+  g_windowHandles = Tk::Platform::GetPlatformWindowHandles();
 
-    // Graphics init
-    Tk::Graphics::CreateContext(g_windowHandles);
-    Tk::Graphics::CreateSwapChain(g_windowHandles, windowWidth, windowHeight);
-    g_graphicsCommandStream = {};
-    g_graphicsCommandStream.m_numCommands = 0;
-    g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-    g_graphicsCommandStream.m_graphicsCommands = (Tk::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Graphics::GraphicsCommand), CACHE_LINE);
+  // Graphics init
+  Tk::Graphics::CreateContext(g_windowHandles);
+  Tk::Graphics::CreateSwapChain(g_windowHandles, windowWidth, windowHeight);
+  g_graphicsCommandStream = {};
+  g_graphicsCommandStream.m_numCommands = 0;
+  g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
+  g_graphicsCommandStream.m_graphicsCommands =
+    (Tk::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(
+      g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Graphics::GraphicsCommand),
+      CACHE_LINE);
 
-    if (Tk::ShaderCompiler::Init() != Tk::ShaderCompiler::ErrCode::Success)
+  if (Tk::ShaderCompiler::Init() != Tk::ShaderCompiler::ErrCode::Success)
+  {
+    TINKER_ASSERT(0);
+    Tk::Core::Utility::LogMsg("Game", "Failed to init shader compiler!",
+                              Tk::Core::Utility::LogSeverity::eCritical);
+  }
+  Tk::Graphics::ShaderManager::Startup();
+  Tk::Graphics::ShaderManager::LoadAllShaderResources();
+  g_InputManager.BindKeycodeCallback_KeyDown(
+    Platform::Keycode::eF11, HotloadAllShaders); // Bind shader hotloading hotkey
+
+  // Debug UI
+  DebugUI::Init(&g_graphicsCommandStream);
+  g_InputManager.BindKeycodeCallback_KeyDown(
+    Platform::Keycode::eF1,
+    ToggleImGuiDisplay); // Toggle with hotkey - TODO: move to tilde with ctrl?
+
+  // Camera controls
+  g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eW,
+                                             GameCameraPanForwardCallback);
+  g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eA,
+                                             GameCameraPanLeftCallback);
+  g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eS,
+                                             GameCameraPanBackwardCallback);
+  g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eD,
+                                             GameCameraPanRightCallback);
+  g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eW,
+                                                   GameCameraPanForwardCallback);
+  g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eA,
+                                                   GameCameraPanLeftCallback);
+  g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eS,
+                                                   GameCameraPanBackwardCallback);
+  g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eD,
+                                                   GameCameraPanRightCallback);
+  g_InputManager.BindMousecodeCallback(Platform::Mousecode::eMouseMoveHorizontal,
+                                       GameCameraRotateHorizontalCallback);
+  g_InputManager.BindMousecodeCallback(Platform::Mousecode::eMouseMoveVertical,
+                                       GameCameraRotateVerticalCallback);
+
+  // Hotkeys
+  g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9,
+                                             RaytraceTestCallback);
+
+  g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
+  g_gameCamera.m_eye = v3f(7.0f, -7.0f, 7.0f);
+  g_projMat =
+    PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
+
+  // Init network connection if multiplayer
+  if (isMultiplayer)
+  {
+    int result = InitNetworkConnection();
+    if (result != 0)
     {
-        TINKER_ASSERT(0);
-        Tk::Core::Utility::LogMsg("Game", "Failed to init shader compiler!", Tk::Core::Utility::LogSeverity::eCritical);
+      connectedToServer = false;
+      return 1;
     }
-    Tk::Graphics::ShaderManager::Startup();
-    Tk::Graphics::ShaderManager::LoadAllShaderResources();
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF11, HotloadAllShaders); // Bind shader hotloading hotkey
-
-    // Debug UI
-    DebugUI::Init(&g_graphicsCommandStream);
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF1, ToggleImGuiDisplay); // Toggle with hotkey - TODO: move to tilde with ctrl?
-
-    // Camera controls
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eW, GameCameraPanForwardCallback);
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eA, GameCameraPanLeftCallback);
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eS, GameCameraPanBackwardCallback);
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eD, GameCameraPanRightCallback);
-    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eW, GameCameraPanForwardCallback);
-    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eA, GameCameraPanLeftCallback);
-    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eS, GameCameraPanBackwardCallback);
-    g_InputManager.BindKeycodeCallback_KeyDownRepeat(Platform::Keycode::eD, GameCameraPanRightCallback);
-    g_InputManager.BindMousecodeCallback(Platform::Mousecode::eMouseMoveHorizontal, GameCameraRotateHorizontalCallback);
-    g_InputManager.BindMousecodeCallback(Platform::Mousecode::eMouseMoveVertical, GameCameraRotateVerticalCallback);
-
-    // Hotkeys
-    g_InputManager.BindKeycodeCallback_KeyDown(Platform::Keycode::eF9, RaytraceTestCallback);
-
-    g_gameCamera.m_ref = v3f(0.0f, 0.0f, 0.0f);
-    g_gameCamera.m_eye = v3f(7.0f, -7.0f, 7.0f);
-    g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
-
-    // Init network connection if multiplayer
-    if (isMultiplayer)
+    else
     {
-        int result = InitNetworkConnection();
-        if (result != 0)
-        {
-            connectedToServer = false;
-            return 1;
-        }
-        else
-        {
-            connectedToServer = true;
-        }
+      connectedToServer = true;
     }
+  }
 
-    {
-        TIMED_SCOPED_BLOCK("Load game assets");
-        g_AssetManager.LoadAllAssets();
-        g_AssetManager.InitAssetGraphicsResources(&g_graphicsCommandStream);
-    }
+  {
+    TIMED_SCOPED_BLOCK("Load game assets");
+    g_AssetManager.LoadAllAssets();
+    g_AssetManager.InitAssetGraphicsResources(&g_graphicsCommandStream);
+  }
 
-    CreateDefaultGeometry(&g_graphicsCommandStream);
-    Graphics::CreateAllDefaultResources(&g_graphicsCommandStream);
+  CreateDefaultGeometry(&g_graphicsCommandStream);
+  Graphics::CreateAllDefaultResources(&g_graphicsCommandStream);
 
-    CreateGameRenderingResources(windowWidth, windowHeight);
+  CreateGameRenderingResources(windowWidth, windowHeight);
 
-    InitDemo();
+  InitDemo();
 
-    CreateAllDescriptors();
+  CreateAllDescriptors();
 
-    return 0;
+  return 0;
 }
 
-extern "C"
-GAME_UPDATE(GameUpdate)
+extern "C" GAME_UPDATE(GameUpdate)
 {
+  g_graphicsCommandStream.Clear();
+
+  if (!isGameInitted)
+  {
+    uint32 initResult = GameInit(windowWidth, windowHeight);
+    if (initResult != 0)
+    {
+      return initResult;
+    }
+    isGameInitted = true;
+  }
+
+  // Start frame
+  bool shouldRenderFrame = Tk::Graphics::AcquireFrame(g_windowHandles);
+
+  if (!shouldRenderFrame)
+  {
+    if (isWindowMinimized)
+    {
+      return 0; // gracefully skip this frame
+    }
+    else
+    {
+      return 1; // acquire actually failed for some reason
+                // TODO real error codes
+    }
+  }
+
+  DebugUI::NewFrame();
+
+  UpdateAxisVectors(&g_gameCamera);
+
+  currentWindowWidth = windowWidth;
+  currentWindowHeight = windowHeight;
+
+  {
+    //TIMED_SCOPED_BLOCK("Input manager update - kb/mouse callbacks");
+    g_InputManager.UpdateAndDoCallbacks(inputStateDeltas);
+  }
+
+  BindlessSystem::ResetFrame();
+
+  // Update Imgui menus
+  DebugUI::UI_MainMenu();
+  DebugUI::UI_PerformanceOverview();
+  DebugUI::UI_RenderPassStats();
+  {
+    // TODO: put this in View::Update() and write to the data repository from there
+    alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
+    v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
+    uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
+      &viewProj, sizeof(viewProj), alignof(m4f));
+    BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(camPosition),
+                                                 alignof(v4f));
+    TINKER_ASSERT(firstGlobalDataByteOffset == 0);
+    (void)firstGlobalDataByteOffset;
+  }
+
+  // Update bindless resource descriptors
+  RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some
+                            // material system (maybe even tracks what's currently in the
+                            // scene)
+
+  // Update scene and view
+  {
+    Update(&MainScene);
+
+    MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
+    MainView.m_projMatrix = g_projMat;
+    MainView.Update();
+  }
+
+  BindlessSystem::Flush();
+
+  {
+    g_graphicsCommandStream.CmdCommandBufferBegin(g_FrameCommandBuffer,
+                                                  "Begin game frame cmd buffer");
+  }
+
+  // Timestamp start of frame
+  {
+    g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
+  }
+
+  // Run the "render graph"
+  {
+    //TIMED_SCOPED_BLOCK("Graphics command stream recording");
+
+    // Have to set the swap chain handle manually
+    gameRenderPassList[eRenderPass_SwapChainCopy].colorRTs[0] =
+      Tk::Graphics::GetCurrentSwapChainImage(g_windowHandles);
+
+    for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
+    {
+      GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
+
+      g_graphicsCommandStream.CmdDebugMarkerStart(currRP.debugLabel);
+
+      currRP.ExecuteFn(&currRP, &g_graphicsCommandStream);
+
+      g_graphicsCommandStream.CmdTimestamp(currRP.debugLabel);
+
+      g_graphicsCommandStream.CmdDebugMarkerEnd();
+    }
+  }
+
+  g_graphicsCommandStream.CmdCommandBufferEnd(g_FrameCommandBuffer);
+
+  // Process recorded graphics command stream
+  {
+    //TIMED_SCOPED_BLOCK("Graphics command stream processing");
+
+    Tk::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream);
+    Tk::Graphics::SubmitFrameToGPU(g_windowHandles, g_FrameCommandBuffer);
+    Tk::Graphics::PresentToSwapChain(g_windowHandles);
     g_graphicsCommandStream.Clear();
 
-    if (!isGameInitted)
+    // Debug UI - extra submissions
+    DebugUI::RenderAndSubmitMultiViewports(&g_graphicsCommandStream);
+
+    Tk::Graphics::EndFrame();
+  }
+
+  if (isGameInitted && isMultiplayer && connectedToServer)
+  {
+    int result = SendMessageToServer();
+    if (result != 0)
     {
-        uint32 initResult = GameInit(windowWidth, windowHeight);
-        if (initResult != 0)
-        {
-            return initResult;
-        }
-        isGameInitted = true;
+      return 1;
     }
-
-    // Start frame
-    bool shouldRenderFrame = Tk::Graphics::AcquireFrame(g_windowHandles);
-
-    if (!shouldRenderFrame)
+    else
     {
-        if (isWindowMinimized)
-        {
-            return 0; // gracefully skip this frame 
-        }
-        else
-        {
-            return 1; // acquire actually failed for some reason
-            // TODO real error codes
-        }
+      // Sent message successfully
     }
+  }
 
-    DebugUI::NewFrame();
-
-    UpdateAxisVectors(&g_gameCamera);
-
-    currentWindowWidth = windowWidth;
-    currentWindowHeight = windowHeight;
-
-    {
-        //TIMED_SCOPED_BLOCK("Input manager update - kb/mouse callbacks");
-        g_InputManager.UpdateAndDoCallbacks(inputStateDeltas);
-    }
-
-    BindlessSystem::ResetFrame();
-
-    // Update Imgui menus
-    DebugUI::UI_MainMenu();
-    DebugUI::UI_PerformanceOverview();
-    DebugUI::UI_RenderPassStats();
-    {
-        // TODO: put this in View::Update() and write to the data repository from there 
-        alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
-        v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
-        uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(viewProj), alignof(m4f));
-        BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(camPosition), alignof(v4f));
-        TINKER_ASSERT(firstGlobalDataByteOffset == 0);
-        (void)firstGlobalDataByteOffset;
-    }
-
-    // Update bindless resource descriptors 
-    RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some material system (maybe even tracks what's currently in the scene)
-
-    // Update scene and view
-    {
-        Update(&MainScene);
-
-        MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
-        MainView.m_projMatrix = g_projMat;
-        MainView.Update();
-    }
-
-    BindlessSystem::Flush();
-
-    {
-        g_graphicsCommandStream.CmdCommandBufferBegin(g_FrameCommandBuffer, "Begin game frame cmd buffer");
-    }
-    
-    // Timestamp start of frame
-    {
-        g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
-    }
-    
-    // Run the "render graph"
-    {
-        //TIMED_SCOPED_BLOCK("Graphics command stream recording");
-        
-        // Have to set the swap chain handle manually
-        gameRenderPassList[eRenderPass_SwapChainCopy].colorRTs[0] = Tk::Graphics::GetCurrentSwapChainImage(g_windowHandles);
-
-        for (uint32 uiRenderPass = 0; uiRenderPass < eRenderPass_Max; ++uiRenderPass)
-        {
-            GameRenderPass& currRP = gameRenderPassList[uiRenderPass];
-
-            g_graphicsCommandStream.CmdDebugMarkerStart(currRP.debugLabel);
-
-            currRP.ExecuteFn(&currRP, &g_graphicsCommandStream);
-
-            g_graphicsCommandStream.CmdTimestamp(currRP.debugLabel);
-
-            g_graphicsCommandStream.CmdDebugMarkerEnd();
-        }
-    }
-
-    g_graphicsCommandStream.CmdCommandBufferEnd(g_FrameCommandBuffer);
-
-    // Process recorded graphics command stream
-    {
-        //TIMED_SCOPED_BLOCK("Graphics command stream processing");
-
-        Tk::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream);
-        Tk::Graphics::SubmitFrameToGPU(g_windowHandles, g_FrameCommandBuffer);
-        Tk::Graphics::PresentToSwapChain(g_windowHandles);
-        g_graphicsCommandStream.Clear();
-
-        // Debug UI - extra submissions
-        DebugUI::RenderAndSubmitMultiViewports(&g_graphicsCommandStream);
-
-        Tk::Graphics::EndFrame();
-    }
-
-    if (isGameInitted && isMultiplayer && connectedToServer)
-    {
-        int result = SendMessageToServer();
-        if (result != 0)
-        {
-            return 1;
-        }
-        else
-        {
-            // Sent message successfully
-        }
-    }
-
-    return 0;
+  return 0;
 }
 
 static void DestroyWindowResizeDependentResources()
 {
-    Graphics::DestroyResource(gameGraphicsData.m_rtColorHandle);
-    Graphics::DestroyResource(gameGraphicsData.m_rtDepthHandle);
-    Graphics::DestroyResource(gameGraphicsData.m_rtColorToneMappedHandle);
-    Graphics::DestroyResource(gameGraphicsData.m_computeColorHandle);
+  Graphics::DestroyResource(gameGraphicsData.m_rtColorHandle);
+  Graphics::DestroyResource(gameGraphicsData.m_rtDepthHandle);
+  Graphics::DestroyResource(gameGraphicsData.m_rtColorToneMappedHandle);
+  Graphics::DestroyResource(gameGraphicsData.m_computeColorHandle);
 }
 
-extern "C"
-GAME_WINDOW_RESIZE(GameWindowResize)
+extern "C" GAME_WINDOW_RESIZE(GameWindowResize)
 {
-    if (newWindowWidth == 0 && newWindowHeight == 0)
-    {
-        Tk::Graphics::WindowMinimized(windowHandles);
-        isWindowMinimized = true;
-    }
-    else
-    {
-        isWindowMinimized = false;
-        Tk::Graphics::WindowResize(windowHandles, newWindowWidth, newWindowHeight);
+  if (newWindowWidth == 0 && newWindowHeight == 0)
+  {
+    Tk::Graphics::WindowMinimized(windowHandles);
+    isWindowMinimized = true;
+  }
+  else
+  {
+    isWindowMinimized = false;
+    Tk::Graphics::WindowResize(windowHandles, newWindowWidth, newWindowHeight);
 
-        currentWindowWidth = newWindowWidth;
-        currentWindowHeight = newWindowHeight;
-        DestroyWindowResizeDependentResources();
+    currentWindowWidth = newWindowWidth;
+    currentWindowHeight = newWindowHeight;
+    DestroyWindowResizeDependentResources();
 
-        // Gameplay stuff
-        g_projMat = PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
+    // Gameplay stuff
+    g_projMat =
+      PerspectiveProjectionMatrix((float)currentWindowWidth / currentWindowHeight);
 
-        CreateGameRenderingResources(newWindowWidth, newWindowHeight);
-        WriteToneMappingResources();
-        WriteSwapChainCopyResources();
-    }
+    CreateGameRenderingResources(newWindowWidth, newWindowHeight);
+    WriteToneMappingResources();
+    WriteSwapChainCopyResources();
+  }
 }
 
-extern "C"
-GAME_DESTROY(GameDestroy)
+extern "C" GAME_DESTROY(GameDestroy)
 {
-    if (isGameInitted)
+  if (isGameInitted)
+  {
+    DebugUI::Shutdown();
+
+    DestroyWindowResizeDependentResources();
+    DestroyDescriptors();
+
+    DestroyDefaultGeometry();
+    Graphics::DestroyDefaultResources();
+
+    DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
+
+    // Destroy assets
+    g_AssetManager.DestroyAllMeshData();
+    g_AssetManager.DestroyAllTextureData();
+
+    if (isMultiplayer && connectedToServer)
     {
-        DebugUI::Shutdown();
-
-        DestroyWindowResizeDependentResources();
-        DestroyDescriptors();
-
-        DestroyDefaultGeometry();
-        Graphics::DestroyDefaultResources();
-        
-        DestroyAnimatedPoly(&gameGraphicsData.m_animatedPolygon);
-
-        // Destroy assets
-        g_AssetManager.DestroyAllMeshData();
-        g_AssetManager.DestroyAllTextureData();
-
-        if (isMultiplayer && connectedToServer)
-        {
-            EndNetworkConnection();
-        }
-
-        g_AssetManager.FreeMemory();
-
-        // Shutdown graphics
-        Tk::Graphics::ShaderManager::Shutdown();
-        Tk::Graphics::DestroySwapChain(g_windowHandles);
-        Tk::Graphics::DestroyContext();
-        Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
+      EndNetworkConnection();
     }
+
+    g_AssetManager.FreeMemory();
+
+    // Shutdown graphics
+    Tk::Graphics::ShaderManager::Shutdown();
+    Tk::Graphics::DestroySwapChain(g_windowHandles);
+    Tk::Graphics::DestroyContext();
+    Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
+  }
 }

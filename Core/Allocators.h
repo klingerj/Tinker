@@ -5,53 +5,52 @@
 
 namespace Tk
 {
-namespace Core
-{
-
-struct LinearAllocator
-{
-    uint8* m_ownedMemPtr = nullptr;
-    size_t m_capacity = 0;
-    size_t m_nextAllocOffset = 0;
-
-    LinearAllocator() {}
-
-    ~LinearAllocator()
+  namespace Core
+  {
+    struct LinearAllocator
     {
+      uint8* m_ownedMemPtr = nullptr;
+      size_t m_capacity = 0;
+      size_t m_nextAllocOffset = 0;
+
+      LinearAllocator() {}
+
+      ~LinearAllocator()
+      {
         ExplicitFree();
-    }
+      }
 
-    void ExplicitFree()
-    {
+      void ExplicitFree()
+      {
         if (m_ownedMemPtr)
         {
-            Tk::Core::CoreFreeAligned(m_ownedMemPtr);
-            m_ownedMemPtr = nullptr;
+          Tk::Core::CoreFreeAligned(m_ownedMemPtr);
+          m_ownedMemPtr = nullptr;
         }
         m_nextAllocOffset = 0;
         m_capacity = 0;
-    }
+      }
 
-    void Init(size_t capacity, uint32 alignment)
-    {
+      void Init(size_t capacity, uint32 alignment)
+      {
         TINKER_ASSERT(capacity > 0);
         TINKER_ASSERT(alignment > 0);
         m_capacity = capacity;
         m_ownedMemPtr = (uint8*)Tk::Core::CoreMallocAligned(m_capacity, alignment);
         m_nextAllocOffset = 0;
-    }
+      }
 
-    void Init(void* existingBuffer, uint32 existingBufferSize)
-    {
+      void Init(void* existingBuffer, uint32 existingBufferSize)
+      {
         TINKER_ASSERT(existingBuffer);
         TINKER_ASSERT(existingBufferSize > 0);
         m_capacity = existingBufferSize;
         m_ownedMemPtr = (uint8*)existingBuffer;
         m_nextAllocOffset = 0;
-    }
+      }
 
-    uint8* Alloc(size_t size, uint32 alignment)
-    {
+      uint8* Alloc(size_t size, uint32 alignment)
+      {
         TINKER_ASSERT(ISPOW2(alignment));
 
         size_t memPtrAsNum = (size_t)((uint8*)m_ownedMemPtr + m_nextAllocOffset);
@@ -61,155 +60,157 @@ struct LinearAllocator
         size_t alignedPtrAsNum = (memPtrAsNum >> alignmentBits) << alignmentBits;
         if (alignedPtrAsNum != memPtrAsNum)
         {
-            alignedPtrAsNum += alignment;
+          alignedPtrAsNum += alignment;
         }
-        
+
         // Check that there is room for this size allocation
         size_t allocSize = size + (alignedPtrAsNum - memPtrAsNum);
         if (allocSize > m_capacity - m_nextAllocOffset)
         {
-            return nullptr; // fail, no assert
+          return nullptr; // fail, no assert
         }
 
         // Return new pointer
         uint8* newAllocPtr = (uint8*)alignedPtrAsNum;
         m_nextAllocOffset += allocSize;
         return newAllocPtr;
-    }
+      }
 
-    void ResetState()
-    {
+      void ResetState()
+      {
         m_nextAllocOffset = 0;
-    }
+      }
 
-    void* Data() const
-    {
+      void* Data() const
+      {
         return m_ownedMemPtr;
-    }
+      }
 
-    size_t Capacity() const
-    {
+      size_t Capacity() const
+      {
         return m_capacity;
-    }
+      }
 
-    size_t Size() const
-    {
+      size_t Size() const
+      {
         return m_nextAllocOffset;
-    }
-};
-
-template <typename T>
-struct pool_element
-{
-    union
-    {
-        struct
-        {
-            T m_data;
-        };
-        struct
-        {
-            uint32 m_nextFreeEleIdx;
-        };
+      }
     };
-};
 
-template <typename T, uint32 NumElements = 0, uint32 Alignment = 1>
-struct PoolAllocator
-{
-    uint32 m_numAllocdElements = 0;
-    uint32 m_maxPoolElements = 0;
-    uint32 m_freeListHead = 0;
-
-    template <typename U>
-    using PoolElement = struct pool_element<U>;
-    PoolElement<T>* m_pool = nullptr;
-    uint32 m_elementSizeInBytes = sizeof(PoolElement<T>);
-
-    PoolAllocator()
+    template <typename T>
+    struct pool_element
     {
+      union
+      {
+        struct
+        {
+          T m_data;
+        };
+
+        struct
+        {
+          uint32 m_nextFreeEleIdx;
+        };
+      };
+    };
+
+    template <typename T, uint32 NumElements = 0, uint32 Alignment = 1>
+    struct PoolAllocator
+    {
+      uint32 m_numAllocdElements = 0;
+      uint32 m_maxPoolElements = 0;
+      uint32 m_freeListHead = 0;
+
+      template <typename U>
+      using PoolElement = struct pool_element<U>;
+      PoolElement<T>* m_pool = nullptr;
+      uint32 m_elementSizeInBytes = sizeof(PoolElement<T>);
+
+      PoolAllocator()
+      {
         TINKER_ASSERT(ISPOW2(Alignment));
         if (NumElements > 0)
         {
-            Init(NumElements, Alignment);
+          Init(NumElements, Alignment);
         }
         else
         {
-            // User must specify alloc'd memory with Init()
+          // User must specify alloc'd memory with Init()
         }
-    }
+      }
 
-    ~PoolAllocator()
-    {
+      ~PoolAllocator()
+      {
         ExplicitFree();
-    }
+      }
 
-    void ExplicitFree()
-    {
+      void ExplicitFree()
+      {
         if (m_pool)
         {
-            Tk::Core::CoreFreeAligned(m_pool);
-            m_pool = nullptr;
-            m_freeListHead = 0;
-            m_maxPoolElements = 0;
+          Tk::Core::CoreFreeAligned(m_pool);
+          m_pool = nullptr;
+          m_freeListHead = 0;
+          m_maxPoolElements = 0;
         }
-    }
+      }
 
-    inline T* PtrFromHandle(uint32 handle)
-    {
+      inline T* PtrFromHandle(uint32 handle)
+      {
         return &m_pool[handle].m_data;
-    }
+      }
 
-    void Init(uint32 maxPoolElements, size_t alignment)
-    {
+      void Init(uint32 maxPoolElements, size_t alignment)
+      {
         TINKER_ASSERT(m_maxPoolElements == 0);
-        // Only call Init() if you did not provide the number of elements as a template at compile-time.
+        // Only call Init() if you did not provide the number of elements as a template at
+        // compile-time.
 
         TINKER_ASSERT(maxPoolElements > 0 && maxPoolElements < TINKER_INVALID_HANDLE);
         m_maxPoolElements = maxPoolElements;
 
-        m_pool = (PoolElement<T>*)Tk::Core::CoreMallocAligned(m_maxPoolElements * m_elementSizeInBytes, alignment);
+        m_pool = (PoolElement<T>*)Tk::Core::CoreMallocAligned(
+          m_maxPoolElements * m_elementSizeInBytes, alignment);
 
         // Init free list
         for (uint32 uiEle = 0; uiEle < m_maxPoolElements - 1; ++uiEle)
         {
-            m_pool[uiEle].m_nextFreeEleIdx = uiEle + 1; // point to next element
+          m_pool[uiEle].m_nextFreeEleIdx = uiEle + 1; // point to next element
         }
         m_pool[m_maxPoolElements - 1].m_nextFreeEleIdx = TINKER_INVALID_HANDLE;
-    }
+      }
 
-    uint32 Alloc()
-    {
+      uint32 Alloc()
+      {
         if (m_freeListHead == TINKER_INVALID_HANDLE)
         {
-            // Pool is full - resize?
-            TINKER_ASSERT(0);
-            return TINKER_INVALID_HANDLE;
+          // Pool is full - resize?
+          TINKER_ASSERT(0);
+          return TINKER_INVALID_HANDLE;
         }
         else
         {
-            uint32 newEle = m_freeListHead;
-            m_freeListHead = m_pool[m_freeListHead].m_nextFreeEleIdx;
-            ++m_numAllocdElements;
+          uint32 newEle = m_freeListHead;
+          m_freeListHead = m_pool[m_freeListHead].m_nextFreeEleIdx;
+          ++m_numAllocdElements;
 
-            if (m_numAllocdElements == m_maxPoolElements)
-            {
-                m_freeListHead = TINKER_INVALID_HANDLE;
-            }
+          if (m_numAllocdElements == m_maxPoolElements)
+          {
+            m_freeListHead = TINKER_INVALID_HANDLE;
+          }
 
-            return newEle;
+          return newEle;
         }
-    }
+      }
 
-    void Dealloc(uint32 handle)
-    {
+      void Dealloc(uint32 handle)
+      {
         TINKER_ASSERT(m_numAllocdElements > 0);
         TINKER_ASSERT(handle < m_maxPoolElements);
         m_pool[handle].m_nextFreeEleIdx = m_freeListHead;
         m_freeListHead = handle;
         --m_numAllocdElements;
-    }
-};
-
-}
-}
+      }
+    };
+  } //namespace Core
+} //namespace Tk

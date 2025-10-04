@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<N10X>
+	<Workspace>
+		<IncludeFilter>*.*,</IncludeFilter>
+		<ExcludeFilter>*.obj,*.lib,*.pch,*.dll,*.pdb,.vs,Debug,Release,x64,obj,*.user,Intermediate,.git,</ExcludeFilter>
+		<SyncFiles>true</SyncFiles>
+		<Recursive>true</Recursive>
+		<ShowEmptyFolders>true</ShowEmptyFolders>
+		<IncludeFilesWithoutExt>false</IncludeFilesWithoutExt>
+		<IsFolder>false</IsFolder>
+		<UseVisualStudioEnvBat>true</UseVisualStudioEnvBat>
+		<CaptureExeOutput>true</CaptureExeOutput>
+		<Configurations>
+			<Configuration>Debug</Configuration>
+			<Configuration>Release</Configuration>
+		</Configurations>
+		<Platforms>
+			<Platform>x64</Platform>
+		</Platforms>
+		<AdditionalIncludePaths>
+			<AdditionalIncludePath>C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.29.30133\ATLMFC\include</AdditionalIncludePath>
+			<AdditionalIncludePath>C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\VC\Tools\MSVC\14.29.30133\include</AdditionalIncludePath>
+			<AdditionalIncludePath>C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\ucrt</AdditionalIncludePath>
+			<AdditionalIncludePath>C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\shared</AdditionalIncludePath>
+			<AdditionalIncludePath>C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\um</AdditionalIncludePath>
+			<AdditionalIncludePath>C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\winrt</AdditionalIncludePath>
+			<AdditionalIncludePath>C:\Program Files (x86)\Windows Kits\10\include\10.0.19041.0\cppwinrt</AdditionalIncludePath>
+		</AdditionalIncludePaths>
+		<Defines></Defines>
+		<ConfigProperties>
+			<ConfigAndPlatform>
+				<Name>Debug:x64</Name>
+				<BuildCommand>timecmd.bat build_app_and_game_dll.bat $(Configuration) VK </BuildCommand>
+				<RebuildCommand></RebuildCommand>
+				<BuildFileCommand></BuildFileCommand>
+				<CleanCommand></CleanCommand>
+				<BuildWorkingDirectory>\Scripts\</BuildWorkingDirectory>
+				<CancelBuild></CancelBuild>
+				<Exe>\Build\TinkerApp.exe</Exe>
+				<Args></Args>
+				<WorkingDirectory></WorkingDirectory>
+				<DebugCommand></DebugCommand>
+				<DebuggerExe></DebuggerExe>
+				<DebugSln></DebugSln>
+				<Defines></Defines>
+				<ForceIncludes></ForceIncludes>
+			</ConfigAndPlatform>
+			<Config>
+				<Name>Debug</Name>
+				<Defines></Defines>
+			</Config>
+			<Platform>
+				<Name>x64</Name>
+				<Defines></Defines>
+			</Platform>
+		</ConfigProperties>
+		<Children></Children>
+	</Workspace>
+</N10X>

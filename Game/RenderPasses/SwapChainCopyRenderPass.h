@@ -2,9 +2,4 @@
 
 #include "RenderPass.h"
 
-namespace SwapChainCopyRenderPass
-{
-
-    RENDER_PASS_EXEC_FUNC(Execute);
-
-}
+namespace SwapChainCopyRenderPass { RENDER_PASS_EXEC_FUNC(Execute); }
