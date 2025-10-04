@@ -23,7 +23,6 @@ namespace Tk
         eArrayOfTextures,
         eArrayOfTexturesRW,
         eMax,
-        ,
       };
     } //namespace DescriptorType
 
@@ -38,7 +37,6 @@ namespace Tk
         eStaging,
         eUniform,
         eMax,
-        ,
       };
     } //namespace BufferUsage
 
@@ -61,7 +59,6 @@ namespace Tk
         eBuffer1D = 0,
         eImage2D,
         eMax,
-        ,
       };
     } //namespace ResourceType
 
@@ -73,7 +70,6 @@ namespace Tk
         eReplace,
         eNoColorAttachment,
         eMax,
-        ,
       };
     } //namespace BlendState
 
@@ -86,7 +82,6 @@ namespace Tk
         eTestOnWriteOn_CCW,
         eTestOnWriteOff_CCW,
         eMax,
-        ,
       };
     } //namespace DepthState
 
@@ -102,7 +97,6 @@ namespace Tk
         Depth_32F,
         TheSwapChainFormat,
         eMax,
-        ,
       };
     } //namespace ImageFormat
 
@@ -118,7 +112,6 @@ namespace Tk
         eGeneral,
         ePresent,
         eMax,
-        ,
       };
     } //namespace ImageLayout
 
@@ -130,7 +123,6 @@ namespace Tk
         eGeOrEqual,
         // TODO: support strictly less than for normal rendering?
         eMax,
-        ,
       };
     } //namespace DepthCompareOp
 
@@ -141,7 +133,6 @@ namespace Tk
         eGraphics = 0,
         eCompute,
         eMax,
-        ,
       };
     } //namespace BindPoint
 
@@ -168,7 +159,6 @@ namespace Tk
       DESCLAYOUT_ID_IMGUI_VBS,
       DESCLAYOUT_ID_IMGUI_TEX,
       DESCLAYOUT_ID_MAX,
-      ,
     };
 
     enum
@@ -182,14 +172,12 @@ namespace Tk
       SHADER_ID_BASIC_MainView,
       SHADER_ID_ANIMATEDPOLY_MainView,
       SHADER_ID_MAX,
-      ,
     };
 
     enum
     {
       SHADER_ID_COMPUTE_COPY = 0,
       SHADER_ID_COMPUTE_MAX,
-      ,
     };
 
     //-----
@@ -426,7 +414,6 @@ namespace Tk
         eDebugMarkerStart,
         eDebugMarkerEnd,
         eMax,
-        ,
       };
 
       const char* debugLabel = "Default Label";
@@ -463,7 +450,6 @@ namespace Tk
         enum
         {
           ePushConstantLimitInBytes = 32u,
-          ,
         };
 
         struct
@@ -763,7 +749,6 @@ namespace Tk
         eBlack2x2 = eTextureIndexStart,
         eBlack2x2RW,
         eMax,
-        ,
       };
     } //namespace DefaultResourceID
 

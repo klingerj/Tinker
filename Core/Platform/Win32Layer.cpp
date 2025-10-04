@@ -1,15 +1,18 @@
 #include "CoreDefines.h"
 #include "PlatformGameAPI.h"
+#include "ThirdParty/imgui-docking/backends/imgui_impl_win32.h"
 #include "Utility/Logging.h"
 #include "Utility/ScopedTimer.h"
 #include "Win32Client.h"
 #include "Win32WorkerThreadPool.h"
-#include "backends/imgui_impl_win32.h"
 
 #define WIN32_LEAN_AND_MEAN
+// clang-format off
+// Must include windows before dbghelp
 #include <Windowsx.h>
-#include <dbghelp.h>
 #include <windows.h>
+#include <dbghelp.h>
+// clang-format on
 
 // TODO: make these to be compile defines
 #define TINKER_PLATFORM_ENABLE_MULTITHREAD

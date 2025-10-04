@@ -84,10 +84,6 @@ set CompileIncludePaths=/I ../
 set CompileIncludePaths=%CompileIncludePaths% /I ../Core 
 set CompileIncludePaths=%CompileIncludePaths% /I ../Tools 
 set CompileIncludePaths=%CompileIncludePaths% /I ../DebugUI 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/dxc_2022_07_18 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/xxHash-0.8.2 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/constexpr-xxh3 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
 
 :: *********************************************************************************************************
 :: TinkerGame - shared library

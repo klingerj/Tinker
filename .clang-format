@@ -104,7 +104,7 @@ DerivePointerAlignment: false
 DisableFormat:   false
 EmptyLineAfterAccessModifier: Never
 EmptyLineBeforeAccessModifier: Always
-EnumTrailingComma: Insert
+EnumTrailingComma: Leave
 FixNamespaceComments: true
 ForEachMacros:
 IfMacros:

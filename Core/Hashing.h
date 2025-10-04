@@ -6,8 +6,8 @@
 #define XXH_INLINE_ALL
 #define XXH_NO_STDLIB
 #define XXH_NO_XXH3
-#include "constexpr-xxh3.h"
-#include "xxhash.h"
+#include "ThirdParty/constexpr-xxh3/constexpr-xxh3.h"
+#include "ThirdParty/xxHash-0.8.2/xxhash.h"
 
 #define DEFAULT_STRING_HASH_SEED ((uint64)0x12'34'56'78'87'65'43'21)
 

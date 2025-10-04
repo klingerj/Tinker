@@ -2,8 +2,8 @@
 #include "DataStructures/Vector.h"
 #include "Platform/PlatformGameAPI.h"
 #include "StringTypes.h"
+#include "ThirdParty/dxc_2022_07_18/inc/dxcapi.h"
 #include <atlbase.h>
-#include <inc/dxcapi.h>
 #include <stdio.h>
 
 namespace Tk

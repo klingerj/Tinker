@@ -10,7 +10,7 @@
 #include "Platform/PlatformGameAPI.h"
 #include "Sorting.h"
 #include "StringTypes.h"
-#include "imgui.h"
+#include "ThirdParty/imgui-docking/imgui.h"
 
 static const uint32 MAX_VERTS = 1024 * 1024;
 static const uint32 MAX_IDXS = MAX_VERTS * 3;
