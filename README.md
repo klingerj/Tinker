@@ -103,6 +103,11 @@ To Build:
 You should now be able to run the game via <code>run_game.bat</code>.  
 You can find more detailed info on the various build scripts [here](Scripts/README.md).
 
+`clang-format` can be run via:  
+<code>> python clang-format.py</code>  
+in a git bash at the top level dir of the repo. It relies on a package called `wcmatch` which should be installed like so:  
+<code>> pip install wcmatch</code>  
+
 ### Dependencies and Licensing
 * [DirectX Shader Compiler (DXC)](https://github.com/microsoft/DirectXShaderCompiler): HLSL shader compiler [(LLVM Release License)](https://github.com/microsoft/DirectXShaderCompiler/blob/main/LICENSE.TXT)
 * [Imgui - docking branch](https://github.com/ocornut/imgui): Debug ui [(MIT license)](ThirdParty/imgui-docking/LICENSE.txt)
