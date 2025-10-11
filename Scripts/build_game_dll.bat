@@ -187,8 +187,8 @@ cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlag
 :: Copy needed dependency DLLs to exe directory
 echo.
 echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
-copy %AbsolutePathPrefixBackslashes%ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
-copy %AbsolutePathPrefixBackslashes%ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
+copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
 echo Done.
 
 :: Delete unnecessary files
