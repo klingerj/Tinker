@@ -10,9 +10,9 @@
 struct Buffer
 {
   uint8* m_data = nullptr;
-  uint64 m_sizeInBytes = 0;
+  size_t m_sizeInBytes = 0;
 
-  void Alloc(uint64 sizeInBytes)
+  void Alloc(size_t sizeInBytes)
   {
     m_data = (uint8*)Tk::Core::CoreMalloc(sizeInBytes);
     m_sizeInBytes = sizeInBytes;

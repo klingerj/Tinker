@@ -1,5 +1,6 @@
 @echo off
 setlocal
+setlocal enabledelayedexpansion
 
 if "%1" == "-h" (goto PrintHelp)
 if "%1" == "-help" (goto PrintHelp)
@@ -19,6 +20,9 @@ echo.
 goto EndScript
 
 :StartScript
+echo.
+echo ***** Building Tinker App *****
+
 set BuildConfig=%1
 if "%BuildConfig%" NEQ "Debug" (
     if "%BuildConfig%" NEQ "Release" (
@@ -32,8 +36,6 @@ set "EnableUnityBuild=0"
 
 :: Features
 :: set "EnableMemTracking=1"
-
-echo ***** Building Tinker App *****
 
 pushd ..
 if NOT EXIST .\Build mkdir .\Build
@@ -56,23 +58,18 @@ if "%BuildConfig%" == "Debug" (
     set CommonCompileFlags=%CommonCompileFlags% /O2 /MT
     )
 
+set CompileIncludePaths=/I ../ 
+set CompileIncludePaths=%CompileIncludePaths% /I ../Core 
+set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
+
 :: *********************************************************************************************************
 :: TinkerApp - primary exe
 
 set SourceListApp= 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32Layer.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32WorkerThreadPool.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32PlatformGameAPI.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32Logging.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32File.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Platform/Win32Client.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Math/VectorTypes.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/AssetFileParsing.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/DataStructures/Vector.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/DataStructures/HashMap.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Utility/MemTracker.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Mem.cpp 
-set SourceListApp=%SourceListApp% %AbsolutePathPrefix%Core/Hashing.cpp 
+:: Glob all files in desired directories
+for /r %AbsolutePathPrefix%Core/ %%i in (*.cpp) do set SourceListApp=!SourceListApp! %%i 
+
+:: Don't glob third party folders right now
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_draw.cpp 
 set SourceListApp=%SourceListApp% %AbsolutePathPrefix%ThirdParty/imgui-docking/imgui_tables.cpp 
@@ -119,16 +116,10 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=%CompileDefines%
     )
 
-set CompileIncludePaths=/I ../ 
-set CompileIncludePaths=%CompileIncludePaths% /I ../Core 
-set CompileIncludePaths=%CompileIncludePaths% /I ../ThirdParty/imgui-docking 
 set LibsToLink=user32.lib ws2_32.lib Shlwapi.lib 
 if "%EnableMemTracking%" == "1" (
     set LibsToLink=%LibsToLink% dbghelp.lib 
 )
-
-echo.
-echo Building TinkerApp.exe...
 
 set OBJDir=%cd%\obj_app\
 if NOT EXIST %OBJDir% mkdir %OBJDir%
@@ -139,6 +130,14 @@ if "%EnableUnityBuild%" == "1" (
 ) else (
     set SourceFiles=%SourceListApp% 
 )
+
+echo.
+echo Found cl.exe: 
+where cl.exe
+echo Found link.exe: 
+where link.exe
+
+echo Building TinkerApp.exe...
 cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %SourceFiles% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
 
 echo.

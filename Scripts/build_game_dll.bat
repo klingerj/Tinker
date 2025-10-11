@@ -24,6 +24,8 @@ echo.
 goto EndScript
 
 :StartScript
+echo.
+echo ***** Building Tinker Game *****
 set BuildConfig=%1
 set GraphicsAPI=%2
 
@@ -51,11 +53,9 @@ if "%GraphicsAPI%" == "VK" (
         )
     )
 
-echo ***** Building Tinker Game *****
-
 pushd ..
 if NOT EXIST .\Build mkdir .\Build
-set AbsolutePathPrefix=%cd%/
+set AbsolutePathPrefix=%cd%\
 set "AbsolutePathPrefix=%AbsolutePathPrefix:\=/%" 
 pushd .\Build
 del TinkerGame*.pdb > NUL 2> NUL
@@ -159,10 +159,10 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set LibsToLink=TinkerApp.lib 
-set LibsToLink=%LibsToLink% ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib 
+set LibsToLink=%LibsToLink% %AbsolutePathPrefix%ThirdParty\dxc_2022_07_18\lib\x64\dxcompiler.lib 
 if "%GraphicsAPI%" == "VK" (
     set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
-    set LibsToLink=!LibsToLink! %VULKAN_SDK%/Lib/vulkan-1.lib
+    set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
 )
 
 set OBJDir=%cd%\obj_game\
@@ -176,14 +176,19 @@ if "%EnableUnityBuild%" == "1" (
 )
 
 echo.
+echo Found cl.exe: 
+where cl.exe
+echo Found link.exe: 
+where link.exe
+
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceFiles% /link %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceFiles% /link /WX /MACHINE:X64 %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
 
 :: Copy needed dependency DLLs to exe directory
 echo.
 echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
+copy %AbsolutePathPrefixBackslashes%ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
+copy %AbsolutePathPrefixBackslashes%ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
 echo Done.
 
 :: Delete unnecessary files

@@ -34,7 +34,7 @@
 				<RebuildCommand></RebuildCommand>
 				<BuildFileCommand></BuildFileCommand>
 				<CleanCommand></CleanCommand>
-				<BuildWorkingDirectory>\Scripts\</BuildWorkingDirectory>
+				<BuildWorkingDirectory>\Scripts</BuildWorkingDirectory>
 				<CancelBuild></CancelBuild>
 				<Exe>\Build\TinkerApp.exe</Exe>
 				<Args></Args>
