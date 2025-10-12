@@ -46,7 +46,7 @@ del TinkerApp.pdb > NUL 2> NUL
 
 :: *********************************************************************************************************
 :: /FAs for .asm file output
-set CommonCompileFlags=/nologo /std:c++20 /GL /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
+set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -107,12 +107,12 @@ set CompileDefines=%CompileDefines% /D_GAME_DLL_PATH=TinkerGame.dll
 set CompileDefines=%CompileDefines% /D_GAME_DLL_HOTLOADCOPY_PATH=TinkerGame_hotload.dll 
 
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsApp=/FdTinkerApp.pdb
-    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
+    set DebugCompileFlags=/FdTinkerApp.pdb
+    set DebugLinkFlags=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%
     ) else (
-    set DebugCompileFlagsApp=/FdTinkerApp.pdb
-    set DebugLinkFlagsApp=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
+    set DebugCompileFlags=/FdTinkerApp.pdb
+    set DebugLinkFlags=/pdb:TinkerApp.pdb /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=%CompileDefines%
     )
 
@@ -132,13 +132,35 @@ if "%EnableUnityBuild%" == "1" (
 )
 
 echo.
-echo Found cl.exe: 
+echo where cl.exe: 
 where cl.exe
-echo Found link.exe: 
+echo where link.exe: 
 where link.exe
 
+echo.
 echo Building TinkerApp.exe...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsApp% %SourceFiles% /link %LibsToLink% %CommonLinkFlags% %DebugLinkFlagsApp% /out:TinkerApp.exe
+:: Kick off compile commands in parallel 
+for %%i in (%SourceFiles%) do start "Compile_TinkerApp" /d %cd% /b cmd /c call ..\Scripts\compile_single_file.bat "%CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlags% %%i" 
+
+:: Wait for each single file compile task to finish
+:waitloop
+:: NOTE: it is possible that this could be kept waiting by other instances of cl.exe on the machine
+:: But get process info from within batch is extremely annoying/slow.
+tasklist /fi "imagename eq cl.exe" | findstr /i "cl.exe" > NUL
+
+if %errorlevel% == 0 (
+    goto waitloop
+) else (
+    echo Done compiling.
+)
+:: nonzero error level means no subprocesses found -> done compiling.
+
+:: Now gather obj files and link
+set ObjList= 
+for /r %OBJDir% %%i in (*.obj) do set ObjList=!ObjList! %%i 
+echo Linking...
+link.exe /WX /MACHINE:X64 %ObjList% %LibsToLink% %CommonLinkFlags% %DebugLinkFlags% /out:TinkerApp.exe
+echo Done linking.
 
 echo.
 if EXIST TinkerApp.exp (

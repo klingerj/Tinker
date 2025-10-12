@@ -38,15 +38,38 @@
 				<CancelBuild></CancelBuild>
 				<Exe>\Build\TinkerApp.exe</Exe>
 				<Args></Args>
-				<WorkingDirectory></WorkingDirectory>
-				<DebugCommand></DebugCommand>
+				<WorkingDirectory>$(WorkspaceDirectory)\Build</WorkingDirectory>
+				<DebugCommand>$(Executable)</DebugCommand>
 				<DebuggerExe></DebuggerExe>
 				<DebugSln></DebugSln>
 				<Defines></Defines>
 				<ForceIncludes></ForceIncludes>
+				<PrioritiseFiles></PrioritiseFiles>
+			</ConfigAndPlatform>
+			<ConfigAndPlatform>
+				<Name>Release:x64</Name>
+				<BuildCommand>timecmd.bat build_app_and_game_dll.bat $(Configuration) VK </BuildCommand>
+				<RebuildCommand></RebuildCommand>
+				<BuildFileCommand></BuildFileCommand>
+				<CleanCommand></CleanCommand>
+				<BuildWorkingDirectory>\Scripts</BuildWorkingDirectory>
+				<CancelBuild></CancelBuild>
+				<Exe>\Build\TinkerApp.exe</Exe>
+				<Args></Args>
+				<WorkingDirectory>$(WorkspaceDirectory)\Build</WorkingDirectory>
+				<DebugCommand>$(Executable)</DebugCommand>
+				<DebuggerExe></DebuggerExe>
+				<DebugSln></DebugSln>
+				<Defines></Defines>
+				<ForceIncludes></ForceIncludes>
+				<PrioritiseFiles></PrioritiseFiles>
 			</ConfigAndPlatform>
 			<Config>
 				<Name>Debug</Name>
+				<Defines></Defines>
+			</Config>
+			<Config>
+				<Name>Release</Name>
 				<Defines></Defines>
 			</Config>
 			<Platform>

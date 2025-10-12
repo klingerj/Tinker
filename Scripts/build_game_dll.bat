@@ -67,7 +67,7 @@ set "EnableUnityBuild=0"
 :: set "EnableMemTracking=1"
 
 :: *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++20 /GL /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
+set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -149,12 +149,12 @@ if "%TIME:~0,1%" == " " (
 set GameDllPdbName=TinkerGame_%BuildTimestamp%.pdb
 
 if "%BuildConfig%" == "Debug" (
-    set DebugCompileFlagsGame=/Fd%GameDllPdbName%
-    set DebugLinkFlagsGame=/pdb:%GameDllPdbName% /NATVIS:../Utils/Natvis/Tinker.natvis
+    set DebugCompileFlags=/Fd%GameDllPdbName%
+    set DebugLinkFlags=/pdb:%GameDllPdbName% /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=!CompileDefines! 
     ) else (
-    set DebugCompileFlagsGame=/Fd%GameDllPdbName%
-    set DebugLinkFlagsGame=/pdb:%GameDllPdbName% /NATVIS:../Utils/Natvis/Tinker.natvis
+    set DebugCompileFlags=/Fd%GameDllPdbName%
+    set DebugLinkFlags=/pdb:%GameDllPdbName% /NATVIS:../Utils/Natvis/Tinker.natvis
     set CompileDefines=!CompileDefines! 
     )
 
@@ -176,13 +176,35 @@ if "%EnableUnityBuild%" == "1" (
 )
 
 echo.
-echo Found cl.exe: 
+echo where cl.exe: 
 where cl.exe
-echo Found link.exe: 
+echo where link.exe: 
 where link.exe
 
+echo.
 echo Building TinkerGame.dll...
-cl %CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlagsGame% %SourceFiles% /link /WX /MACHINE:X64 %CommonLinkFlags% %LibsToLink% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+:: Kick off compile commands in parallel 
+for %%i in (%SourceFiles%) do start "Compile_TinkerGameDll" /d %cd% /b cmd /c call ..\Scripts\compile_single_file.bat "%CommonCompileFlags% %CompileIncludePaths% %CompileDefines% %DebugCompileFlags% %%i" 
+
+:: Wait for each single file compile task to finish
+:waitloop
+:: NOTE: it is possible that this could be kept waiting by other instances of cl.exe on the machine
+:: But get process info from within batch is extremely annoying/slow.
+tasklist /fi "imagename eq cl.exe" | findstr /i "cl.exe" > NUL
+
+if %errorlevel% == 0 (
+    goto waitloop
+) else (
+    echo Done compiling.
+)
+:: nonzero error level means no subprocesses found -> done compiling.
+
+:: Now gather obj files and link
+set ObjList= 
+for /r %OBJDir% %%i in (*.obj) do set ObjList=!ObjList! %%i 
+echo Linking...
+link.exe /WX /MACHINE:X64 %ObjList% %LibsToLink% %CommonLinkFlags% %DebugLinkFlags% /DLL /export:GameUpdate /export:GameDestroy /export:GameWindowResize %DebugLinkFlagsGame% /out:TinkerGame.dll
+echo Done linking.
 
 :: Copy needed dependency DLLs to exe directory
 echo.
