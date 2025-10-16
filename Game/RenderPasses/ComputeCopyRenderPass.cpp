@@ -29,8 +29,8 @@ namespace ComputeCopyRenderPass
     descriptors[3] = BindlessSystem::GetBindlessDescriptorFromID(
       BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
     graphicsCommandStream->CmdDispatch(
-      THREADGROUP_ROUND(renderPass->renderWidth, groupSize),
-      THREADGROUP_ROUND(renderPass->renderHeight, groupSize), 1u,
+      THREADGROUP_ROUND(frameRenderParams.swapChainWidth, groupSize),
+      THREADGROUP_ROUND(frameRenderParams.swapChainHeight, groupSize), 1u,
       Tk::Graphics::SHADER_ID_COMPUTE_COPY, MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors,
       "Compute Copy");
 

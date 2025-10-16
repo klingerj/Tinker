@@ -16,7 +16,10 @@ namespace SwapChainCopyRenderPass
       Tk::Graphics::ImageLayout::eUndefined, Tk::Graphics::ImageLayout::eRenderOptimal,
       "Transition swap chain to render_optimal");
 
-    StartRenderPass(renderPass, graphicsCommandStream);
+    StartRenderPass(renderPass, graphicsCommandStream, frameRenderParams.swapChainWidth,
+                    frameRenderParams.swapChainHeight);
+    // TODO: pass descriptors to the render pass via the render graph 
+    // also, should probably just expand it to have inputs and outputs... 
     Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {

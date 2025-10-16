@@ -32,7 +32,8 @@ namespace ForwardRenderPass
     descriptors[2] = BindlessSystem::GetBindlessDescriptorFromID(
       BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
 
-    StartRenderPass(renderPass, graphicsCommandStream);
+    StartRenderPass(renderPass, graphicsCommandStream, frameRenderParams.swapChainWidth,
+                    frameRenderParams.swapChainHeight);
 
     RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream,
                              Tk::Graphics::SHADER_ID_BASIC_MainView,

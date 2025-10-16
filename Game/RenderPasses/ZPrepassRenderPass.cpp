@@ -29,7 +29,8 @@ namespace ZPrepassRenderPass
     descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(
       BindlessSystem::BindlessArrayID::eConstants);
 
-    StartRenderPass(renderPass, graphicsCommandStream);
+    StartRenderPass(renderPass, graphicsCommandStream, frameRenderParams.swapChainWidth,
+                    frameRenderParams.swapChainHeight);
     RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream,
                              Tk::Graphics::SHADER_ID_BASIC_ZPrepass,
                              Tk::Graphics::BlendState::eNoColorAttachment,

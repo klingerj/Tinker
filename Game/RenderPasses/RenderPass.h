@@ -2,10 +2,17 @@
 
 #include "Graphics/Common/GraphicsCommon.h"
 
+typedef struct frame_render_params
+{
+  uint32 swapChainWidth;
+  uint32 swapChainHeight;
+} FrameRenderParams;
+
 struct GameRenderPass;
 #define RENDER_PASS_EXEC_FUNC(name)                                                      \
   void name(GameRenderPass* renderPass,                                                  \
-            Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
+            Tk::Graphics::GraphicsCommandStream* graphicsCommandStream,                  \
+            const FrameRenderParams& frameRenderParams)
 
 inline RENDER_PASS_EXEC_FUNC(RenderPassExecStub)
 {
@@ -18,8 +25,6 @@ struct GameRenderPass
   Tk::Graphics::ResourceHandle depthRT;
   const char* debugLabel;
   uint32 numColorRTs;
-  uint32 renderWidth;
-  uint32 renderHeight;
 
   typedef RENDER_PASS_EXEC_FUNC(RenderPassExecuteFunc);
   RenderPassExecuteFunc* ExecuteFn = RenderPassExecStub;
@@ -27,8 +32,6 @@ struct GameRenderPass
   void Init()
   {
     numColorRTs = 0;
-    renderWidth = 0;
-    renderWidth = 0;
     debugLabel = NULL;
     depthRT = Tk::Graphics::DefaultResHandle_Invalid;
     for (uint32 i = 0; i < ARRAYCOUNT(colorRTs); ++i)
@@ -39,7 +42,8 @@ struct GameRenderPass
 };
 
 void StartRenderPass(GameRenderPass* renderPass,
-                     Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
+                     Tk::Graphics::GraphicsCommandStream* graphicsCommandStream,
+                     uint32 renderWidth, uint32 renderHeight);
 void EndRenderPass(GameRenderPass* renderPass,
                    Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
 

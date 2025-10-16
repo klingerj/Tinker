@@ -39,17 +39,6 @@ typedef struct texture_metadata
   // TODO: file type/ext?
 } TextureMetadata;
 
-enum
-{
-  eRenderPass_ZPrePass = 0,
-  eRenderPass_MainView,
-  eRenderPass_ToneMapping,
-  eRenderPass_ComputeCopy,
-  eRenderPass_DebugUI,
-  eRenderPass_SwapChainCopy,
-  eRenderPass_Max,
-};
-
 struct TransientPrim
 {
   Tk::Graphics::ResourceHandle indexBufferHandle;
@@ -67,14 +56,6 @@ void DrawAnimatedPoly(TransientPrim* prim, uint32 shaderID, uint32 blendState,
 
 typedef struct game_graphics_data
 {
-  Tk::Graphics::ResourceHandle m_rtColorHandle;
-  Tk::Graphics::ResourceHandle m_rtDepthHandle;
-  Tk::Graphics::ResourceHandle m_rtColorToneMappedHandle;
-  Tk::Graphics::ResourceHandle m_computeColorHandle;
-
-  Tk::Graphics::DescriptorHandle m_toneMappingDescHandle;
-  Tk::Graphics::DescriptorHandle m_swapChainCopyDescHandle;
-
   TransientPrim m_animatedPolygon;
 } GameGraphicsData;
 

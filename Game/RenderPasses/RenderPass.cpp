@@ -8,16 +8,16 @@
 using namespace Tk;
 
 void StartRenderPass(GameRenderPass* renderPass,
-                     Graphics::GraphicsCommandStream* graphicsCommandStream)
+                     Graphics::GraphicsCommandStream* graphicsCommandStream,
+                     uint32 renderWidth, uint32 renderHeight)
 {
-  graphicsCommandStream->CmdRenderPassBegin(
-    renderPass->renderWidth, renderPass->renderHeight, renderPass->numColorRTs,
-    renderPass->colorRTs, renderPass->depthRT, renderPass->debugLabel);
-  graphicsCommandStream->CmdSetViewport(0.0f, 0.0f, (float)renderPass->renderWidth,
-                                        (float)renderPass->renderHeight, DEPTH_MIN,
+  graphicsCommandStream->CmdRenderPassBegin(renderWidth, renderHeight,
+                                            renderPass->numColorRTs, renderPass->colorRTs,
+                                            renderPass->depthRT, renderPass->debugLabel);
+  graphicsCommandStream->CmdSetViewport(0.0f, 0.0f, static_cast<float>(renderWidth),
+                                        static_cast<float>(renderHeight), DEPTH_MIN,
                                         DEPTH_MAX, "Set render pass viewport state");
-  graphicsCommandStream->CmdSetScissor(0, 0, renderPass->renderWidth,
-                                       renderPass->renderHeight,
+  graphicsCommandStream->CmdSetScissor(0, 0, renderWidth, renderHeight,
                                        "Set render pass scissor state");
 }
 

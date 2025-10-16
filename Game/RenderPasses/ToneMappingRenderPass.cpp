@@ -16,7 +16,8 @@ namespace ToneMappingRenderPass
       Tk::Graphics::ImageLayout::eRenderOptimal,
       "Transition tonemapped target to render_optimal");
 
-    StartRenderPass(renderPass, graphicsCommandStream);
+    StartRenderPass(renderPass, graphicsCommandStream, frameRenderParams.swapChainWidth,
+                    frameRenderParams.swapChainHeight);
     Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
