@@ -21,7 +21,7 @@ inline RENDER_PASS_EXEC_FUNC(RenderPassExecStub)
 
 struct GameRenderPass
 {
-  Tk::Graphics::ResourceHandle inputResources[2]; // TODO: revisit :) 
+  Tk::Graphics::ResourceHandle inputResources[2]; // TODO: revisit :)
   Tk::Graphics::ResourceHandle colorRTs[MAX_MULTIPLE_RENDERTARGETS];
   Tk::Graphics::ResourceHandle depthRT;
   const char* debugLabel;
