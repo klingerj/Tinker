@@ -139,6 +139,8 @@ namespace RenderGraph
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].colorRTs[0] =
       m_rtColorToneMappedHandle;
+    hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].inputResources[0] =
+      m_rtColorHandle;
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].depthRT =
       DefaultResHandle_Invalid;
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].debugLabel =

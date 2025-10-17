@@ -8,6 +8,7 @@ namespace SwapChainCopyRenderPass
 {
   RENDER_PASS_EXEC_FUNC(Execute)
   {
+    // TODO: come back, this should transition from eGeneral, not render optimal
     graphicsCommandStream->CmdLayoutTransition(
       gameGraphicsData.m_computeColorHandle, Tk::Graphics::ImageLayout::eRenderOptimal,
       Tk::Graphics::ImageLayout::eShaderRead, "Transition hdr compute to shader read");
@@ -18,8 +19,8 @@ namespace SwapChainCopyRenderPass
 
     StartRenderPass(renderPass, graphicsCommandStream, frameRenderParams.swapChainWidth,
                     frameRenderParams.swapChainHeight);
-    // TODO: pass descriptors to the render pass via the render graph 
-    // also, should probably just expand it to have inputs and outputs... 
+    // TODO: pass descriptors to the render pass via the render graph
+    // also, should probably just expand it to have inputs and outputs...
     Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {

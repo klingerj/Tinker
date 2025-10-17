@@ -205,8 +205,8 @@ static void CreateAllDescriptors()
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
 {
   FrameRenderParams frameRenderParams = {
-    //.swapChainWidth = windowWidth;
-    //.swapChainHeight = windowHeight;
+    .swapChainWidth = windowWidth,
+    .swapChainHeight = windowHeight,
   };
   RenderGraph::Create(frameRenderParams);
 
@@ -404,8 +404,8 @@ extern "C" GAME_UPDATE(GameUpdate)
   }
 
   FrameRenderParams frameRenderParams = {
-    //.swapChainWidth = windowWidth;
-    //.swapChainHeight = windowHeight;
+    .swapChainWidth = windowWidth,
+    .swapChainHeight = windowHeight,
   };
   RenderGraph::Run(&g_graphicsCommandStream, frameRenderParams, g_windowHandles);
 

@@ -21,6 +21,7 @@ inline RENDER_PASS_EXEC_FUNC(RenderPassExecStub)
 
 struct GameRenderPass
 {
+  Tk::Graphics::ResourceHandle inputResources[2]; // TODO: revisit :) 
   Tk::Graphics::ResourceHandle colorRTs[MAX_MULTIPLE_RENDERTARGETS];
   Tk::Graphics::ResourceHandle depthRT;
   const char* debugLabel;
@@ -31,13 +32,17 @@ struct GameRenderPass
 
   void Init()
   {
-    numColorRTs = 0;
-    debugLabel = NULL;
-    depthRT = Tk::Graphics::DefaultResHandle_Invalid;
     for (uint32 i = 0; i < ARRAYCOUNT(colorRTs); ++i)
     {
       colorRTs[i] = Tk::Graphics::DefaultResHandle_Invalid;
     }
+    for (uint32 i = 0; i < ARRAYCOUNT(inputResources); ++i)
+    {
+      inputResources[i] = Tk::Graphics::DefaultResHandle_Invalid;
+    }
+    depthRT = Tk::Graphics::DefaultResHandle_Invalid;
+    numColorRTs = 0;
+    debugLabel = NULL;
   }
 };
 

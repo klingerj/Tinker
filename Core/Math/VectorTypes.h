@@ -1195,13 +1195,14 @@ namespace Tk
 
       bool Intersects(const AABB3D& other) const
       {
+        // TODO: this looks wrong eh 
         return false;
       }
     };
 
 // Vector Ops
-#include <smmintrin.h>
-#include <xmmintrin.h>
+//#include <xmmintrin.h>
+#include <intrin.h>
 
     // mulps - SSE1
     // mulloepi32 - SSE4.1

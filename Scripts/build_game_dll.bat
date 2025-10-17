@@ -67,7 +67,7 @@ set "EnableUnityBuild=0"
 :: set "EnableMemTracking=1"
 
 :: *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
+set CommonCompileFlags=/nologo /std:c++latest /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /arch:AVX2 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (

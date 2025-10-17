@@ -9,7 +9,7 @@ namespace ToneMappingRenderPass
   RENDER_PASS_EXEC_FUNC(Execute)
   {
     graphicsCommandStream->CmdLayoutTransition(
-      gameGraphicsData.m_rtColorHandle, Tk::Graphics::ImageLayout::eRenderOptimal,
+      renderPass->inputResources[0], Tk::Graphics::ImageLayout::eRenderOptimal,
       Tk::Graphics::ImageLayout::eShaderRead, "Transition hdr compute to shader read");
     graphicsCommandStream->CmdLayoutTransition(
       renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eUndefined,
