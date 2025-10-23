@@ -77,7 +77,7 @@ if "%BuildConfig%" == "Debug" (
     set CompileDefines=!CompileDefines!
     )
 
-set CompileIncludePaths= /I ../Core /I ../ThirdParty/dxc_2022_07_18 /I ../ThirdParty/xxHash-0.8.2 
+set CompileIncludePaths= /I ../Core /I ../ /I ../ThirdParty/xxHash-0.8.2 
 set LibsToLink=user32.lib ws2_32.lib ../ThirdParty/dxc_2022_07_18/lib/x64/dxcompiler.lib
 
 echo.

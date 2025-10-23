@@ -304,22 +304,25 @@ namespace Tk
               break;
             }
 
+            case GraphicsCommand::eGPUTimestampReadback:
+            {
+              void* cpuCopyBuffer = GPUTimestamps::GetRawCPUSideTimestampBuffer();
+              const uint32 numTimestampsRecorded =
+                GPUTimestamps::GetLastRecordedTimestampCount();
+              ResolveMostRecentAvailableTimestamps(currentCmdBuf, cpuCopyBuffer,
+                                                   numTimestampsRecorded);
+              GPUTimestamps::ProcessTimestamps();
+              TINKER_ASSERT(GPUTimestamps::GetLastRecordedTimestampCount()
+                            == 0);
+              break;
+            }
+
             case GraphicsCommand::eGPUTimestamp:
             {
-              TINKER_ASSERT(GPUTimestamps::GetMostRecentRecordedTimestampCount()
+              TINKER_ASSERT(GPUTimestamps::GetLastRecordedTimestampCount()
                             <= GPU_TIMESTAMP_NUM_MAX);
-              if (currentCmd.m_timestampStartFrame)
-              {
-                void* cpuCopyBuffer = GPUTimestamps::GetRawCPUSideTimestampBuffer();
-                const uint32 numTimestampsRecorded =
-                  GPUTimestamps::GetMostRecentRecordedTimestampCount();
-                ResolveMostRecentAvailableTimestamps(currentCmdBuf, cpuCopyBuffer,
-                                                     numTimestampsRecorded);
-                GPUTimestamps::ProcessTimestamps();
-              }
-
               RecordCommandGPUTimestamp(
-                currentCmdBuf, GPUTimestamps::GetMostRecentRecordedTimestampCount());
+                currentCmdBuf, GPUTimestamps::GetLastRecordedTimestampCount());
               GPUTimestamps::RecordName(currentCmd.m_timestampNameStr);
               break;
             }

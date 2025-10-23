@@ -8,7 +8,7 @@
 {
   uint2 Coord = DispatchThreadID.xy;
   Material_ComputeCopyImage2D Constants =
-    BindlessConstantBuffer.Load<Material_ComputeCopyImage2D>(64 + 16);
+    BindlessConstantBuffer.Load<Material_ComputeCopyImage2D>(464 /*64 + 16*/);
   //TODO: read constants via a material offset value, e.g.
   //PushConstants.InstanceOffsets[2] which is currently unused
 

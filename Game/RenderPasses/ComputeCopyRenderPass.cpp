@@ -7,15 +7,15 @@ namespace ComputeCopyRenderPass
   RENDER_PASS_EXEC_FUNC(Execute)
   {
     graphicsCommandStream->CmdLayoutTransition(
-      renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eRenderOptimal,
+      renderPass->inputResources[0], Tk::Graphics::ImageLayout::eRenderOptimal,
       Tk::Graphics::ImageLayout::eGeneral, "Transition main view render target to UAV");
     graphicsCommandStream->CmdLayoutTransition(
-      renderPass->colorRTs[1], Tk::Graphics::ImageLayout::eUndefined,
+      renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eUndefined,
       Tk::Graphics::ImageLayout::eGeneral, "Transition compute copy target to UAV");
 
     // Dispatch the CS
     const uint32 groupSize = 16;
-    Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
+    /*Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER] = {};
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
       descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
@@ -27,15 +27,15 @@ namespace ComputeCopyRenderPass
     descriptors[2] = BindlessSystem::GetBindlessDescriptorFromID(
       BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
     descriptors[3] = BindlessSystem::GetBindlessDescriptorFromID(
-      BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
+      BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);*/
     graphicsCommandStream->CmdDispatch(
       THREADGROUP_ROUND(frameRenderParams.swapChainWidth, groupSize),
       THREADGROUP_ROUND(frameRenderParams.swapChainHeight, groupSize), 1u,
-      Tk::Graphics::SHADER_ID_COMPUTE_COPY, MAX_DESCRIPTOR_SETS_PER_SHADER, descriptors,
+      Tk::Graphics::SHADER_ID_COMPUTE_COPY, MAX_DESCRIPTOR_SETS_PER_SHADER, renderPass->descriptorGroup.descriptors,
       "Compute Copy");
 
     graphicsCommandStream->CmdLayoutTransition(
-      renderPass->colorRTs[1], Tk::Graphics::ImageLayout::eGeneral,
+      renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eGeneral,
       Tk::Graphics::ImageLayout::eRenderOptimal, "Transition compute copy target to RT");
   }
 } //namespace ComputeCopyRenderPass

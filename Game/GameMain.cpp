@@ -169,7 +169,7 @@ static void DestroyDescriptors()
   Graphics::DestroyAllDescriptors(); // destroys descriptor pool
 }
 
-static void RegisterActiveTextures()
+static void PushAssetTexturesBindless()
 {
   uint32 index = BindlessSystem::BindlessIndexMax;
   index = BindlessSystem::BindResourceForFrame(
@@ -181,25 +181,6 @@ static void RegisterActiveTextures()
   // TODO: eventually these indices will be hooked up to a material system so that at draw
   // time we can pass these indices as a constant to the gpu for bindless descriptor
   // indexing
-
-  // WIP: Push some render targets into the bindless array for compute copy test pass
-  // TODO: move this struct building to elsewhere
-  alignas(16) ShaderDescriptors::Material_ComputeCopyImage2D copyConstants = {};
-  copyConstants.dims = v2ui(currentWindowWidth, currentWindowHeight);
-  copyConstants.srcIndexBindless = BindlessSystem::BindResourceForFrame(
-    gameGraphicsData.m_rtColorToneMappedHandle,
-    BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
-  copyConstants.dstIndexBindless = BindlessSystem::BindResourceForFrame(
-    gameGraphicsData.m_computeColorHandle,
-    BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
-  uint32 materialDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
-    &copyConstants, sizeof(copyConstants),
-    alignof(ShaderDescriptors::Material_ComputeCopyImage2D));
-}
-
-static void CreateAllDescriptors()
-{
-  BindlessSystem::Create();
 }
 
 static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight)
@@ -310,6 +291,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
   CreateDefaultGeometry(&g_graphicsCommandStream);
   Graphics::CreateAllDefaultResources(&g_graphicsCommandStream);
 
+  BindlessSystem::Create();
   CreateGameRenderingResources(windowWidth, windowHeight);
 
   InitDemo();
@@ -377,11 +359,6 @@ extern "C" GAME_UPDATE(GameUpdate)
     (void)firstGlobalDataByteOffset;
   }
 
-  // Update bindless resource descriptors
-  RegisterActiveTextures(); // TODO: this will eventually be automatically managed by some
-                            // material system (maybe even tracks what's currently in the
-                            // scene)
-
   // Update scene and view
   {
     Update(&MainScene);
@@ -391,22 +368,24 @@ extern "C" GAME_UPDATE(GameUpdate)
     MainView.Update();
   }
 
-  BindlessSystem::Flush();
-
-  {
-    g_graphicsCommandStream.CmdCommandBufferBegin(g_FrameCommandBuffer,
-                                                  "Begin game frame cmd buffer");
-  }
-
-  // Timestamp start of frame
-  {
-    g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp", true);
-  }
+  // Update bindless resource descriptors
+  PushAssetTexturesBindless(); // TODO: this will eventually be automatically managed by some
+                            // material system (maybe even tracks what's currently in the
+                            // scene)
 
   FrameRenderParams frameRenderParams = {
     .swapChainWidth = windowWidth,
     .swapChainHeight = windowHeight,
   };
+  RenderGraph::Prepare(frameRenderParams);
+
+  BindlessSystem::Flush();
+
+  g_graphicsCommandStream.CmdCommandBufferBegin(g_FrameCommandBuffer,
+                                                "Begin game frame cmd buffer");
+  g_graphicsCommandStream.CmdTimestampReadback("TimestampReadback");
+  g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp");
+
   RenderGraph::Run(&g_graphicsCommandStream, frameRenderParams, g_windowHandles);
 
   g_graphicsCommandStream.CmdCommandBufferEnd(g_FrameCommandBuffer);

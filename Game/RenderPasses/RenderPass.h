@@ -1,12 +1,7 @@
 #pragma once
 
 #include "Graphics/Common/GraphicsCommon.h"
-
-typedef struct frame_render_params
-{
-  uint32 swapChainWidth;
-  uint32 swapChainHeight;
-} FrameRenderParams;
+#include "Game/GraphicsTypes.h"
 
 struct GameRenderPass;
 #define RENDER_PASS_EXEC_FUNC(name)                                                      \
@@ -24,25 +19,31 @@ struct GameRenderPass
   Tk::Graphics::ResourceHandle inputResources[2]; // TODO: revisit :)
   Tk::Graphics::ResourceHandle colorRTs[MAX_MULTIPLE_RENDERTARGETS];
   Tk::Graphics::ResourceHandle depthRT;
+  Tk::Graphics::DescriptorGroup descriptorGroup;
   const char* debugLabel;
   uint32 numColorRTs;
+  uint32 numInputResources;
 
   typedef RENDER_PASS_EXEC_FUNC(RenderPassExecuteFunc);
   RenderPassExecuteFunc* ExecuteFn = RenderPassExecStub;
 
   void Init()
   {
-    for (uint32 i = 0; i < ARRAYCOUNT(colorRTs); ++i)
+    for (auto& colorRT : colorRTs)
     {
-      colorRTs[i] = Tk::Graphics::DefaultResHandle_Invalid;
+      colorRT = Tk::Graphics::DefaultResHandle_Invalid;
     }
-    for (uint32 i = 0; i < ARRAYCOUNT(inputResources); ++i)
+
+    for (auto& inputResource : inputResources)
     {
-      inputResources[i] = Tk::Graphics::DefaultResHandle_Invalid;
+      inputResource = Tk::Graphics::DefaultResHandle_Invalid;
     }
+
+    descriptorGroup.Init();
     depthRT = Tk::Graphics::DefaultResHandle_Invalid;
-    numColorRTs = 0;
     debugLabel = NULL;
+    numColorRTs = 0;
+    numInputResources = 0;
   }
 };
 

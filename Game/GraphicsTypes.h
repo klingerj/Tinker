@@ -5,6 +5,12 @@
 #include "Math/VectorTypes.h"
 #include "Platform/PlatformGameAPI.h"
 
+typedef struct frame_render_params
+{
+  uint32 swapChainWidth;
+  uint32 swapChainHeight;
+} FrameRenderParams;
+
 // Buffer that has no persistent staging buffer
 // Meant to updated once with a staging buffer which should
 // then be destroyed.

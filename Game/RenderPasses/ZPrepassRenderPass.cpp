@@ -21,20 +21,12 @@ namespace ZPrepassRenderPass
       Tk::Graphics::ImageLayout::eDepthOptimal,
       "Transition main view depth to depth_attachment_optimal");
 
-    Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
-    for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
-    {
-      descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
-    }
-    descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(
-      BindlessSystem::BindlessArrayID::eConstants);
-
     StartRenderPass(renderPass, graphicsCommandStream, frameRenderParams.swapChainWidth,
                     frameRenderParams.swapChainHeight);
     RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream,
                              Tk::Graphics::SHADER_ID_BASIC_ZPrepass,
                              Tk::Graphics::BlendState::eNoColorAttachment,
-                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
+                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW, renderPass->descriptorGroup.descriptors);
     EndRenderPass(renderPass, graphicsCommandStream);
   }
 } //namespace ZPrepassRenderPass

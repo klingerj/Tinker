@@ -1,4 +1,6 @@
 #include "RenderGraph.h"
+#include "BindlessSystem.h"
+#include "Generated/ShaderDescriptors_Reflection.h"
 #include "Graphics/Common/GraphicsCommon.h"
 #include "GraphicsTypes.h"
 #include "RenderPasses/ComputeCopyRenderPass.h"
@@ -121,6 +123,9 @@ namespace RenderGraph
     hardcodedRenderGraph->renderPassList[eRenderPass_ZPrePass].Init();
     hardcodedRenderGraph->renderPassList[eRenderPass_ZPrePass].numColorRTs = 0;
     hardcodedRenderGraph->renderPassList[eRenderPass_ZPrePass].depthRT = m_rtDepthHandle;
+    hardcodedRenderGraph->renderPassList[eRenderPass_ZPrePass].descriptorGroup.SetDescAtIndex(0,
+                                                    BindlessSystem::GetBindlessDescriptorFromID(
+                                                    BindlessSystem::BindlessArrayID::eConstants));
     hardcodedRenderGraph->renderPassList[eRenderPass_ZPrePass].debugLabel = "Z Prepass";
     hardcodedRenderGraph->renderPassList[eRenderPass_ZPrePass].ExecuteFn =
       ZPrepassRenderPass::Execute;
@@ -130,6 +135,12 @@ namespace RenderGraph
     hardcodedRenderGraph->renderPassList[eRenderPass_MainView].colorRTs[0] =
       m_rtColorHandle;
     hardcodedRenderGraph->renderPassList[eRenderPass_MainView].depthRT = m_rtDepthHandle;
+    hardcodedRenderGraph->renderPassList[eRenderPass_MainView].descriptorGroup.SetDescAtIndex(0,
+                                                    BindlessSystem::GetBindlessDescriptorFromID(
+                                                    BindlessSystem::BindlessArrayID::eConstants));
+    hardcodedRenderGraph->renderPassList[eRenderPass_MainView].descriptorGroup.SetDescAtIndex(2,
+                                                    BindlessSystem::GetBindlessDescriptorFromID(
+                                                    BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled));
     hardcodedRenderGraph->renderPassList[eRenderPass_MainView].debugLabel =
       "Main Forward Render View";
     hardcodedRenderGraph->renderPassList[eRenderPass_MainView].ExecuteFn =
@@ -137,12 +148,15 @@ namespace RenderGraph
 
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].Init();
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].numColorRTs = 1;
+    hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].numInputResources = 1;
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].colorRTs[0] =
       m_rtColorToneMappedHandle;
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].inputResources[0] =
       m_rtColorHandle;
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].depthRT =
       DefaultResHandle_Invalid;
+    hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].descriptorGroup.SetDescAtIndex(0, m_toneMappingDescHandle);
+    hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].descriptorGroup.SetDescAtIndex(1, defaultQuad.m_descriptor);
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].debugLabel =
       "Tone Mapping";
     hardcodedRenderGraph->renderPassList[eRenderPass_ToneMapping].ExecuteFn =
@@ -150,12 +164,19 @@ namespace RenderGraph
 
     hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].Init();
     hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].numColorRTs = 1;
-    hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].colorRTs[0] =
+    hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].numInputResources = 1;
+    hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].inputResources[0] =
       m_rtColorToneMappedHandle;
-    hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].colorRTs[1] =
+    hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].colorRTs[0] =
       m_computeColorHandle;
     hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].depthRT =
       DefaultResHandle_Invalid;
+    hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].descriptorGroup.SetDescAtIndex(0,
+                                                      BindlessSystem::GetBindlessDescriptorFromID(
+                                                      BindlessSystem::BindlessArrayID::eConstants));
+    hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].descriptorGroup.SetDescAtIndex(3,
+                                                      BindlessSystem::GetBindlessDescriptorFromID(
+                                                      BindlessSystem::BindlessArrayID::eTexturesRGBA8RW));
     hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].debugLabel =
       "Compute Copy";
     hardcodedRenderGraph->renderPassList[eRenderPass_ComputeCopy].ExecuteFn =
@@ -173,8 +194,13 @@ namespace RenderGraph
 
     hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].Init();
     hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].numColorRTs = 1;
+    hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].numInputResources = 1;
+    hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].inputResources[0] =
+      m_computeColorHandle;
     hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].depthRT =
       DefaultResHandle_Invalid;
+    hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].descriptorGroup.SetDescAtIndex(0, m_swapChainCopyDescHandle);
+    hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].descriptorGroup.SetDescAtIndex(1, defaultQuad.m_descriptor);
     hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].debugLabel =
       "Swap Chain Copy";
     hardcodedRenderGraph->renderPassList[eRenderPass_SwapChainCopy].ExecuteFn =
@@ -198,11 +224,33 @@ namespace RenderGraph
     Graphics::DestroyResource(m_computeColorHandle);
     m_computeColorHandle = DefaultResHandle_Invalid;
 
-    Graphics::DestroyDescriptor(gameGraphicsData.m_toneMappingDescHandle);
-    gameGraphicsData.m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
+    Graphics::DestroyDescriptor(m_toneMappingDescHandle);
+    m_toneMappingDescHandle = Graphics::DefaultDescHandle_Invalid;
 
-    Graphics::DestroyDescriptor(gameGraphicsData.m_swapChainCopyDescHandle);
-    gameGraphicsData.m_swapChainCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
+    Graphics::DestroyDescriptor(m_swapChainCopyDescHandle);
+    m_swapChainCopyDescHandle = Graphics::DefaultDescHandle_Invalid;
+  }
+  
+  static void PushRenderTargetsBindless(HardcodedRenderGraph* hardcodedRenderGraph,
+                                        const FrameRenderParams& frameRenderParams)
+  {
+    // WIP: Push some render targets into the bindless array for compute copy test pass
+    // TODO: move this struct building to elsewhere
+    alignas(16) ShaderDescriptors::Material_ComputeCopyImage2D copyConstants =
+    {
+      .srcIndexBindless = BindlessSystem::BindResourceForFrame(
+        m_rtColorToneMappedHandle,
+        BindlessSystem::BindlessArrayID::eTexturesRGBA8RW),
+      .dstIndexBindless = BindlessSystem::BindResourceForFrame(
+        m_computeColorHandle,
+        BindlessSystem::BindlessArrayID::eTexturesRGBA8RW),
+      .dims = v2ui(frameRenderParams.swapChainWidth, frameRenderParams.swapChainHeight),
+    };
+    const uint32 materialDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
+      &copyConstants, sizeof(copyConstants),
+      alignof(ShaderDescriptors::Material_ComputeCopyImage2D));
+    // TODO: pass the material constants offset to the render pass 
+    // because it is currently hard-coded in the CS 
   }
 
   static void Run(HardcodedRenderGraph* hardcodedRenderGraph,
@@ -234,6 +282,11 @@ namespace RenderGraph
   void Destroy()
   {
     Destroy(&g_hardcodedRenderGraph);
+  }
+
+  void Prepare(const FrameRenderParams& frameRenderParams)
+  {
+    PushRenderTargetsBindless(&g_hardcodedRenderGraph, frameRenderParams);
   }
 
   void Run(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream,

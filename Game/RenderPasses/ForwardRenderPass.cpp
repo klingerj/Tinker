@@ -22,7 +22,7 @@ namespace ForwardRenderPass
       Tk::Graphics::ImageLayout::eRenderOptimal,
       "Transition main view color to render_optimal");
 
-    Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+    /*Tk::Graphics::DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
     for (uint32 i = 0; i < MAX_DESCRIPTOR_SETS_PER_SHADER; ++i)
     {
       descriptors[i] = Tk::Graphics::DefaultDescHandle_Invalid;
@@ -30,7 +30,7 @@ namespace ForwardRenderPass
     descriptors[0] = BindlessSystem::GetBindlessDescriptorFromID(
       BindlessSystem::BindlessArrayID::eConstants);
     descriptors[2] = BindlessSystem::GetBindlessDescriptorFromID(
-      BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);
+      BindlessSystem::BindlessArrayID::eTexturesRGBA8Sampled);*/
 
     StartRenderPass(renderPass, graphicsCommandStream, frameRenderParams.swapChainWidth,
                     frameRenderParams.swapChainHeight);
@@ -38,7 +38,7 @@ namespace ForwardRenderPass
     RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream,
                              Tk::Graphics::SHADER_ID_BASIC_MainView,
                              Tk::Graphics::BlendState::eAlphaBlend,
-                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW, descriptors);
+                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW, renderPass->descriptorGroup.descriptors);
 
     // TODO: handle this more elegantly
     UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);

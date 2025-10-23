@@ -13,6 +13,7 @@ namespace RenderGraph
 {
   void Create(const FrameRenderParams& frameRenderParams);
   void Destroy();
+  void Prepare(const FrameRenderParams& frameRenderParams);
   void Run(Tk::Graphics::GraphicsCommandStream* graphicsCommandStream,
            const FrameRenderParams& frameRenderParams,
            const Tk::Platform::WindowHandles* windowHandles);
