@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 // clang-format off
-#include "ThirdParty/dxc_2022_07_18/inc/dxcapi.h"
+#include "ThirdParty/dxc_2025_07_14/inc/dxcapi.h"
 // clang-format on 
 
 namespace Tk

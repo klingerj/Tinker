@@ -26,7 +26,8 @@ namespace ZPrepassRenderPass
     RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream,
                              Tk::Graphics::SHADER_ID_BASIC_ZPrepass,
                              Tk::Graphics::BlendState::eNoColorAttachment,
-                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW, renderPass->descriptorGroup.descriptors);
+                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW,
+                             renderPass->descriptorGroup.descriptors);
     EndRenderPass(renderPass, graphicsCommandStream);
   }
 } //namespace ZPrepassRenderPass

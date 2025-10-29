@@ -31,8 +31,8 @@ namespace ComputeCopyRenderPass
     graphicsCommandStream->CmdDispatch(
       THREADGROUP_ROUND(frameRenderParams.swapChainWidth, groupSize),
       THREADGROUP_ROUND(frameRenderParams.swapChainHeight, groupSize), 1u,
-      Tk::Graphics::SHADER_ID_COMPUTE_COPY, MAX_DESCRIPTOR_SETS_PER_SHADER, renderPass->descriptorGroup.descriptors,
-      "Compute Copy");
+      Tk::Graphics::SHADER_ID_COMPUTE_COPY, MAX_DESCRIPTOR_SETS_PER_SHADER,
+      renderPass->descriptorGroup.descriptors, "Compute Copy");
 
     graphicsCommandStream->CmdLayoutTransition(
       renderPass->colorRTs[0], Tk::Graphics::ImageLayout::eGeneral,

@@ -38,7 +38,8 @@ namespace ForwardRenderPass
     RecordRenderPassCommands(renderPass, &MainView, &MainScene, graphicsCommandStream,
                              Tk::Graphics::SHADER_ID_BASIC_MainView,
                              Tk::Graphics::BlendState::eAlphaBlend,
-                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW, renderPass->descriptorGroup.descriptors);
+                             Tk::Graphics::DepthState::eTestOnWriteOn_CCW,
+                             renderPass->descriptorGroup.descriptors);
 
     // TODO: handle this more elegantly
     UpdateAnimatedPoly(&gameGraphicsData.m_animatedPolygon);

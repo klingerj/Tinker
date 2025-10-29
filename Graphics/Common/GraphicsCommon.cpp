@@ -312,8 +312,7 @@ namespace Tk
               ResolveMostRecentAvailableTimestamps(currentCmdBuf, cpuCopyBuffer,
                                                    numTimestampsRecorded);
               GPUTimestamps::ProcessTimestamps();
-              TINKER_ASSERT(GPUTimestamps::GetLastRecordedTimestampCount()
-                            == 0);
+              TINKER_ASSERT(GPUTimestamps::GetLastRecordedTimestampCount() == 0);
               break;
             }
 
@@ -321,8 +320,8 @@ namespace Tk
             {
               TINKER_ASSERT(GPUTimestamps::GetLastRecordedTimestampCount()
                             <= GPU_TIMESTAMP_NUM_MAX);
-              RecordCommandGPUTimestamp(
-                currentCmdBuf, GPUTimestamps::GetLastRecordedTimestampCount());
+              RecordCommandGPUTimestamp(currentCmdBuf,
+                                        GPUTimestamps::GetLastRecordedTimestampCount());
               GPUTimestamps::RecordName(currentCmd.m_timestampNameStr);
               break;
             }

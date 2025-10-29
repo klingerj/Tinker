@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Graphics/Common/GraphicsCommon.h"
 #include "Game/GraphicsTypes.h"
+#include "Graphics/Common/GraphicsCommon.h"
 
 struct GameRenderPass;
 #define RENDER_PASS_EXEC_FUNC(name)                                                      \

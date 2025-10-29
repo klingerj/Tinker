@@ -7,17 +7,20 @@
 [numthreads(16, 16, 1)] void main(uint3 DispatchThreadID : SV_DispatchThreadID)
 {
   uint2 Coord = DispatchThreadID.xy;
-  Material_ComputeCopyImage2D Constants =
-    BindlessConstantBuffer.Load<Material_ComputeCopyImage2D>(464 /*64 + 16*/);
-  //TODO: read constants via a material offset value, e.g.
-  //PushConstants.InstanceOffsets[2] which is currently unused
+  uint2 Dims =
+  BindlessConstantBuffer.Load<AllGlobals>(GLOBAL_CONSTANT_BUFFER_OFFSET).Pass_ComputeCopy_dims;
+  const uint2 resIndices =
+  BindlessConstantBuffer.Load<AllGlobals>(GLOBAL_CONSTANT_BUFFER_OFFSET).Pass_ComputeCopy_srcAndDstResIdx;
 
-  if (Coord.x >= Constants.dims.x || Coord.y >= Constants.dims.y)
+  if (Coord.x >= Dims.x || Coord.y >= Dims.y)
   {
     return;
   }
 
-  float3 Color = BindlessTexturesRW[Constants.srcIndexBindless][Coord].rgb;
+  const uint srcResIdx = resIndices.x;
+  const uint dstResIdx = resIndices.y;
+
+  float3 Color = BindlessTexturesRW[srcResIdx][Coord].rgb;
   float Grayscale = Color.r; // todo do the dot product
-  BindlessTexturesRW[Constants.dstIndexBindless][Coord].rgb = Color.rgb; // Grayscale.rrr;
+  BindlessTexturesRW[dstResIdx][Coord].rgb = Color.rgb; // Grayscale.rrr;
 }

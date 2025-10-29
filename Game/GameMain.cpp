@@ -347,6 +347,15 @@ extern "C" GAME_UPDATE(GameUpdate)
   DebugUI::UI_MainMenu();
   DebugUI::UI_PerformanceOverview();
   DebugUI::UI_RenderPassStats();
+  
+  // Update view
+  {
+    MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
+    MainView.m_projMatrix = g_projMat;
+    MainView.Update();
+  }
+  
+  // TODO: this should just populate the data repository here
   {
     // TODO: put this in View::Update() and write to the data repository from there
     alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
@@ -359,25 +368,28 @@ extern "C" GAME_UPDATE(GameUpdate)
     (void)firstGlobalDataByteOffset;
   }
 
-  // Update scene and view
-  {
-    Update(&MainScene);
-
-    MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
-    MainView.m_projMatrix = g_projMat;
-    MainView.Update();
-  }
+  // TODO: do a scene/gameplay update here 
 
   // Update bindless resource descriptors
-  PushAssetTexturesBindless(); // TODO: this will eventually be automatically managed by some
-                            // material system (maybe even tracks what's currently in the
-                            // scene)
+  PushAssetTexturesBindless(); // TODO: this will eventually be automatically managed by
+                               // some material system (maybe even tracks what's currently
+                               // in the scene)
 
   FrameRenderParams frameRenderParams = {
     .swapChainWidth = windowWidth,
     .swapChainHeight = windowHeight,
   };
   RenderGraph::Prepare(frameRenderParams);
+
+  // Update scene
+  // TODO this is more of a prepare to render step.
+  // Order matters, this pushes instance constants
+  // which must be pushed after globals above.
+  {
+    Update(&MainScene);
+  }
+
+  // TODO: the data repository constant buffer dump would go here.
 
   BindlessSystem::Flush();
 

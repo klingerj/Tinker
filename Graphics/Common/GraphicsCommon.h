@@ -343,7 +343,7 @@ namespace Tk
     // handles that will be bound for a draw call.
     typedef struct descriptor_group
     {
-      // TODO: replace with custom array impl 
+      // TODO: replace with custom array impl
       DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
 
       void Init()

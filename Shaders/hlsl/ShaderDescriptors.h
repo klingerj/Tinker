@@ -4,30 +4,34 @@ struct PushConstantData
   // [0] is offset into bindless constant buffer for globals
   // [1] is offset into instance data uniform array
   // [2], [3] unused
-  // TODO: pack first offset of materials into [2].
-  // Also should pack the size of the instance struct into the globals.
 };
+#define PUSH_CONST_GLOBAL_INDEX 0
+#define PUSH_CONST_INSTANCE_INDEX 1
 
 [[vk::push_constant]]
 PushConstantData PushConstants;
 
+// Globals should always be available from the 0 offset.
+#define GLOBAL_CONSTANT_BUFFER_OFFSET 0
 struct AllGlobals
 {
   float4x4 ViewProjMatrix;
   float4 CamPosition;
+  uint2 Pass_ComputeCopy_dims;
+  uint2 Pass_ComputeCopy_srcAndDstResIdx;
 };
 
 struct InstanceData_Basic
 {
   float4x4 ModelMatrix;
 };
-
-struct Material_ComputeCopyImage2D
+// Keep this value up to date!
+#define INSTANCE_DATA_SIZE_IN_BYTES 64;
+uint CalcInstanceDataByteOffset(uint instanceID)
 {
-  uint srcIndexBindless;
-  uint dstIndexBindless;
-  uint2 dims;
-};
+  return PushConstants.InstanceOffsets[PUSH_CONST_INSTANCE_INDEX] +
+    instanceID * INSTANCE_DATA_SIZE_IN_BYTES;
+}
 
 [[vk::binding(0, 0)]] ByteAddressBuffer BindlessConstantBuffer;
 

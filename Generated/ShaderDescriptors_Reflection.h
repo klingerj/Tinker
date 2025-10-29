@@ -13,7 +13,7 @@ struct PushConstantData
     uint32 InstanceOffsets[4];
     // [0] is offset into instance data uniform array
     // [1] is offset into bindless constant buffer for globals
-    // [2] is offset into bindless constant buffer for material data
+    // [2] is unused 
     // [3] unused
 };
 
@@ -26,13 +26,6 @@ struct AllGlobals
 struct InstanceData_Basic
 {
     alignas(16) m4f ModelMatrix;
-};
-
-struct Material_ComputeCopyImage2D
-{
-    uint32 srcIndexBindless;
-    uint32 dstIndexBindless;
-    v2ui dims;
 };
 
 }

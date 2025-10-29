@@ -159,7 +159,7 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set LibsToLink=TinkerApp.lib 
-set LibsToLink=%LibsToLink% %AbsolutePathPrefix%ThirdParty\dxc_2022_07_18\lib\x64\dxcompiler.lib 
+set LibsToLink=%LibsToLink% %AbsolutePathPrefix%ThirdParty\dxc_2025_07_14\lib\x64\dxcompiler.lib 
 if "%GraphicsAPI%" == "VK" (
     set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
     set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
@@ -209,8 +209,8 @@ echo Done linking.
 :: Copy needed dependency DLLs to exe directory
 echo.
 echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
+copy ..\ThirdParty\dxc_2025_07_14\bin\x64\dxcompiler.dll
+copy ..\ThirdParty\dxc_2025_07_14\bin\x64\dxil.dll
 echo Done.
 
 :: Delete unnecessary files
