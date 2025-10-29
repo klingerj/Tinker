@@ -244,18 +244,12 @@ namespace RenderGraph
       m_rtColorToneMappedHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
     uint32 dstIndex = BindlessSystem::BindResourceForFrame(
       m_computeColorHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
-    
-    uint32 data[4] =
-    {
-      frameRenderParams.swapChainWidth,
-      frameRenderParams.swapChainHeight,
-      srcIndex,
-      dstIndex
-    };
+
+    uint32 data[4] = { frameRenderParams.swapChainWidth,
+                       frameRenderParams.swapChainHeight, srcIndex, dstIndex };
 
     const uint32 materialDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
-      &data[0], sizeof(uint32) * 4,
-      alignof(uint32));
+      &data[0], sizeof(uint32) * 4, alignof(uint32));
   }
 
   static void Run(HardcodedRenderGraph* hardcodedRenderGraph,

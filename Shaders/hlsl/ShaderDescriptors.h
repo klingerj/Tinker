@@ -5,6 +5,7 @@ struct PushConstantData
   // [1] is offset into instance data uniform array
   // [2], [3] unused
 };
+
 #define PUSH_CONST_GLOBAL_INDEX 0
 #define PUSH_CONST_INSTANCE_INDEX 1
 
@@ -13,6 +14,7 @@ PushConstantData PushConstants;
 
 // Globals should always be available from the 0 offset.
 #define GLOBAL_CONSTANT_BUFFER_OFFSET 0
+
 struct AllGlobals
 {
   float4x4 ViewProjMatrix;
@@ -25,12 +27,14 @@ struct InstanceData_Basic
 {
   float4x4 ModelMatrix;
 };
+
 // Keep this value up to date!
 #define INSTANCE_DATA_SIZE_IN_BYTES 64;
+
 uint CalcInstanceDataByteOffset(uint instanceID)
 {
-  return PushConstants.InstanceOffsets[PUSH_CONST_INSTANCE_INDEX] +
-    instanceID * INSTANCE_DATA_SIZE_IN_BYTES;
+  return PushConstants.InstanceOffsets[PUSH_CONST_INSTANCE_INDEX]
+         + instanceID * INSTANCE_DATA_SIZE_IN_BYTES;
 }
 
 [[vk::binding(0, 0)]] ByteAddressBuffer BindlessConstantBuffer;

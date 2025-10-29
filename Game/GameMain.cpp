@@ -347,14 +347,14 @@ extern "C" GAME_UPDATE(GameUpdate)
   DebugUI::UI_MainMenu();
   DebugUI::UI_PerformanceOverview();
   DebugUI::UI_RenderPassStats();
-  
+
   // Update view
   {
     MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
     MainView.m_projMatrix = g_projMat;
     MainView.Update();
   }
-  
+
   // TODO: this should just populate the data repository here
   {
     // TODO: put this in View::Update() and write to the data repository from there
@@ -368,7 +368,7 @@ extern "C" GAME_UPDATE(GameUpdate)
     (void)firstGlobalDataByteOffset;
   }
 
-  // TODO: do a scene/gameplay update here 
+  // TODO: do a scene/gameplay update here
 
   // Update bindless resource descriptors
   PushAssetTexturesBindless(); // TODO: this will eventually be automatically managed by
