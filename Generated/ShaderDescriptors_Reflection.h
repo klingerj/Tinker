@@ -21,6 +21,8 @@ struct AllGlobals
 {
     alignas(16) m4f ViewProjMatrix;
     v4f CamPosition;
+    v2ui Pass_ComputeCopy_dims;
+    v2ui Pass_ComputeCopy_srcAndDstResIdx;
 };
 
 struct InstanceData_Basic

@@ -4,6 +4,7 @@
 #include "BindlessSystem.h"
 #include "Camera.h"
 #include "DebugUI.h"
+#include "DataRepository.h"
 #include "Generated/ShaderDescriptors_Reflection.h"
 #include "Graphics/Common/GPUTimestamps.h"
 #include "Graphics/Common/GraphicsCommon.h"
@@ -299,6 +300,40 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
   return 0;
 }
 
+static void RecordFrameRenderCommands(const FrameRenderParams& frameRenderParams)
+{
+  g_graphicsCommandStream.CmdCommandBufferBegin(g_FrameCommandBuffer,
+                                                "Begin game frame cmd buffer");
+  g_graphicsCommandStream.CmdTimestampReadback("TimestampReadback");
+  g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp");
+
+  RenderGraph::Run(&g_graphicsCommandStream, frameRenderParams, g_windowHandles);
+
+  g_graphicsCommandStream.CmdCommandBufferEnd(g_FrameCommandBuffer);
+}
+
+static void UpdateGPUData(const FrameRenderParams& frameRenderParams)
+{
+  // Update bindless resource descriptors
+  // TODO: this will eventually be automatically managed by
+  // some material system (maybe even tracks what's currently
+  // in the scene)
+  PushAssetTexturesBindless();
+
+  RenderGraph::Prepare(frameRenderParams);
+
+  DataRepo::FlushShaderConstants();
+
+  // Update scene
+  // Order matters, this pushes instance constants
+  // which must be pushed after globals above.
+  {
+    PrepareToRender(&MainScene);
+  }
+
+  BindlessSystem::Flush();
+}
+
 extern "C" GAME_UPDATE(GameUpdate)
 {
   g_graphicsCommandStream.Clear();
@@ -355,52 +390,22 @@ extern "C" GAME_UPDATE(GameUpdate)
     MainView.Update();
   }
 
-  // TODO: this should just populate the data repository here
   {
-    // TODO: put this in View::Update() and write to the data repository from there
-    alignas(16) m4f viewProj = g_projMat * CameraViewMatrix(&g_gameCamera);
-    v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
-    uint32 firstGlobalDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
-      &viewProj, sizeof(viewProj), alignof(m4f));
-    BindlessSystem::PushStructIntoConstantBuffer(&viewProj, sizeof(camPosition),
-                                                 alignof(v4f));
-    TINKER_ASSERT(firstGlobalDataByteOffset == 0);
-    (void)firstGlobalDataByteOffset;
+    // Write misc data to the data repository 
+    alignas(16) v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
+    DataRepo::g_theDataRepository.ShaderConstants_Globals.CamPosition = camPosition;
   }
 
-  // TODO: do a scene/gameplay update here
-
-  // Update bindless resource descriptors
-  PushAssetTexturesBindless(); // TODO: this will eventually be automatically managed by
-                               // some material system (maybe even tracks what's currently
-                               // in the scene)
-
-  FrameRenderParams frameRenderParams = {
-    .swapChainWidth = windowWidth,
-    .swapChainHeight = windowHeight,
-  };
-  RenderGraph::Prepare(frameRenderParams);
-
-  // Update scene
-  // TODO this is more of a prepare to render step.
-  // Order matters, this pushes instance constants
-  // which must be pushed after globals above.
   {
     Update(&MainScene);
   }
 
-  // TODO: the data repository constant buffer dump would go here.
-
-  BindlessSystem::Flush();
-
-  g_graphicsCommandStream.CmdCommandBufferBegin(g_FrameCommandBuffer,
-                                                "Begin game frame cmd buffer");
-  g_graphicsCommandStream.CmdTimestampReadback("TimestampReadback");
-  g_graphicsCommandStream.CmdTimestamp("Begin Frame", "Timestamp");
-
-  RenderGraph::Run(&g_graphicsCommandStream, frameRenderParams, g_windowHandles);
-
-  g_graphicsCommandStream.CmdCommandBufferEnd(g_FrameCommandBuffer);
+  FrameRenderParams frameRenderParams = {
+    .swapChainWidth = currentWindowWidth,
+    .swapChainHeight = currentWindowHeight,
+  };
+  UpdateGPUData(frameRenderParams);
+  RecordFrameRenderCommands(frameRenderParams);
 
   // Process recorded graphics command stream
   {

@@ -1,5 +1,6 @@
 #include "RenderGraph.h"
 #include "BindlessSystem.h"
+#include "DataRepository.h"
 #include "Generated/ShaderDescriptors_Reflection.h"
 #include "Graphics/Common/GraphicsCommon.h"
 #include "GraphicsTypes.h"
@@ -240,16 +241,13 @@ namespace RenderGraph
   static void PushRenderTargetsBindless(HardcodedRenderGraph* hardcodedRenderGraph,
                                         const FrameRenderParams& frameRenderParams)
   {
-    uint32 srcIndex = BindlessSystem::BindResourceForFrame(
+    const uint32 srcIndex = BindlessSystem::BindResourceForFrame(
       m_rtColorToneMappedHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
-    uint32 dstIndex = BindlessSystem::BindResourceForFrame(
+    const uint32 dstIndex = BindlessSystem::BindResourceForFrame(
       m_computeColorHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
 
-    uint32 data[4] = { frameRenderParams.swapChainWidth,
-                       frameRenderParams.swapChainHeight, srcIndex, dstIndex };
-
-    const uint32 materialDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
-      &data[0], sizeof(uint32) * 4, alignof(uint32));
+    DataRepo::g_theDataRepository.ShaderConstants_Globals.Pass_ComputeCopy_dims = v2ui(frameRenderParams.swapChainWidth, frameRenderParams.swapChainHeight);
+    DataRepo::g_theDataRepository.ShaderConstants_Globals.Pass_ComputeCopy_srcAndDstResIdx = v2ui(srcIndex, dstIndex);
   }
 
   static void Run(HardcodedRenderGraph* hardcodedRenderGraph,

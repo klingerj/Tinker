@@ -6,8 +6,8 @@ struct PushConstantData
   // [2], [3] unused
 };
 
-#define PUSH_CONST_GLOBAL_INDEX 0
-#define PUSH_CONST_INSTANCE_INDEX 1
+#define INSTANCE_OFFSET_INDEX_GLOBALS 0
+#define INSTANCE_OFFSET_INDEX_INSTANCE 1
 
 [[vk::push_constant]]
 PushConstantData PushConstants;
@@ -33,7 +33,7 @@ struct InstanceData_Basic
 
 uint CalcInstanceDataByteOffset(uint instanceID)
 {
-  return PushConstants.InstanceOffsets[PUSH_CONST_INSTANCE_INDEX]
+  return PushConstants.InstanceOffsets[INSTANCE_OFFSET_INDEX_INSTANCE]
          + instanceID * INSTANCE_DATA_SIZE_IN_BYTES;
 }
 
