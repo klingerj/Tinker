@@ -246,8 +246,10 @@ namespace RenderGraph
     const uint32 dstIndex = BindlessSystem::BindResourceForFrame(
       m_computeColorHandle, BindlessSystem::BindlessArrayID::eTexturesRGBA8RW);
 
-    DataRepo::g_theDataRepository.ShaderConstants_Globals.Pass_ComputeCopy_dims = v2ui(frameRenderParams.swapChainWidth, frameRenderParams.swapChainHeight);
-    DataRepo::g_theDataRepository.ShaderConstants_Globals.Pass_ComputeCopy_srcAndDstResIdx = v2ui(srcIndex, dstIndex);
+    DataRepo::g_theDataRepository.ShaderConstants_Globals.Pass_ComputeCopy_dims =
+      v2ui(frameRenderParams.swapChainWidth, frameRenderParams.swapChainHeight);
+    DataRepo::g_theDataRepository.ShaderConstants_Globals
+      .Pass_ComputeCopy_srcAndDstResIdx = v2ui(srcIndex, dstIndex);
   }
 
   static void Run(HardcodedRenderGraph* hardcodedRenderGraph,

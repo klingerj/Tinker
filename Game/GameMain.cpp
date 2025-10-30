@@ -3,8 +3,8 @@
 #include "AssetManager.h"
 #include "BindlessSystem.h"
 #include "Camera.h"
-#include "DebugUI.h"
 #include "DataRepository.h"
+#include "DebugUI.h"
 #include "Generated/ShaderDescriptors_Reflection.h"
 #include "Graphics/Common/GPUTimestamps.h"
 #include "Graphics/Common/GraphicsCommon.h"
@@ -391,7 +391,7 @@ extern "C" GAME_UPDATE(GameUpdate)
   }
 
   {
-    // Write misc data to the data repository 
+    // Write misc data to the data repository
     alignas(16) v4f camPosition = v4f(g_gameCamera.m_eye, 1.0f);
     DataRepo::g_theDataRepository.ShaderConstants_Globals.CamPosition = camPosition;
   }

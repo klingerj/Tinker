@@ -63,9 +63,10 @@ void PrepareToRender(Scene* scene)
   scene->m_firstInstanceDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
     instanceData, instanceDataSizeInBytes, instanceDataAlignInBytes);
 }
+
 void Update(Scene* scene)
 {
-  // TODO: something interesting :) 
+  // TODO: something interesting :)
 }
 
 uint32 CreateInstance(Scene* scene, uint32 assetID)
