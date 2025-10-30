@@ -18,7 +18,7 @@ struct VSOutput
 VSOutput main(uint VertexIndex : SV_VertexID, uint InstanceIndex : SV_InstanceID)
 {
   float4x4 ViewProjMat =
-    BindlessConstantBuffer.Load<AllGlobals>(PushConstants.InstanceOffsets[0])
+  BindlessConstantBuffer.Load<AllGlobals>(GLOBAL_CONSTANT_BUFFER_OFFSET)
       .ViewProjMatrix;
   float4x4 ModelMat =
     BindlessConstantBuffer

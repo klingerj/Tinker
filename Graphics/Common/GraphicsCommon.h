@@ -617,7 +617,7 @@ namespace Tk
                sizeof(DescriptorHandle) * numDescriptors);
       }
 
-      void CmdPushConstant(uint32 shaderForLayout, const uint8* srcPushConstantData,
+      void CmdPushConstant(uint32 shaderForLayout, const void* srcPushConstantData,
                            uint32 numPushConstantBytes,
                            const char* dbgLabel = "PushConstant")
       {

@@ -1,13 +1,12 @@
+#define NUM_INSTANCE_OFFSET_CONSTANTS 1
 struct PushConstantData
 {
-  uint InstanceOffsets[4];
-  // [0] is offset into bindless constant buffer for globals
-  // [1] is offset into instance data uniform array
-  // [2], [3] unused
+  uint InstanceOffsets[NUM_INSTANCE_OFFSET_CONSTANTS];
+  // [0] is offset into instance data uniform array
+  // Other entries can be added to this array if needed
 };
 
-#define INSTANCE_OFFSET_INDEX_GLOBALS 0
-#define INSTANCE_OFFSET_INDEX_INSTANCE 1
+#define INSTANCE_OFFSET_INDEX_INSTANCE 0
 
 [[vk::push_constant]]
 PushConstantData PushConstants;

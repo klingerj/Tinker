@@ -334,7 +334,7 @@ namespace DebugUI
           data[2] = translate.x;
           data[3] = translate.y;
           graphicsCommandStream->CmdPushConstant(
-            Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI, (uint8*)data,
+            Tk::Graphics::SHADER_ID_IMGUI_DEBUGUI, &data[0],
             ARRAYCOUNT(data) * sizeof(float), "Imgui push constant");
 
           // Calc tight scissor

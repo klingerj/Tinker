@@ -7,7 +7,7 @@
 
 namespace ShaderDescriptors
 {
-
+#define NUM_INSTANCE_OFFSET_CONSTANTS 1
 struct PushConstantData
 {
     uint32 InstanceOffsets[4];
