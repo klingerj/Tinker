@@ -1,4 +1,5 @@
 #define NUM_INSTANCE_OFFSET_CONSTANTS 1
+
 struct PushConstantData
 {
   uint InstanceOffsets[NUM_INSTANCE_OFFSET_CONSTANTS];

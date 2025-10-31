@@ -56,8 +56,7 @@ void PrepareToRender(Scene* scene)
   const ShaderDescriptors::InstanceData_Basic* instanceData =
     (const ShaderDescriptors::InstanceData_Basic*)scene->m_instanceData_sorted.Data();
   const uint32 instanceDataSizeInBytes =
-    sizeof(ShaderDescriptors::InstanceData_Basic)
-    * scene->m_numInstances;
+    sizeof(ShaderDescriptors::InstanceData_Basic) * scene->m_numInstances;
   const uint32 instanceDataAlignInBytes = alignof(ShaderDescriptors::InstanceData_Basic);
   // Push every model matrix into the constant buffer
   scene->m_firstInstanceDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
