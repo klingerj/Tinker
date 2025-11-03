@@ -61,7 +61,8 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
           instanceCount * sizeof(ShaderDescriptors::InstanceData_Basic)
           + scene->m_firstInstanceDataByteOffset;
         graphicsCommandStream->CmdPushConstant(
-          shaderID, &pushConstantData.InstanceOffsets[0], sizeof(uint32) * ARRAYCOUNT(pushConstantData.InstanceOffsets),
+          shaderID, &pushConstantData.InstanceOffsets[0],
+          sizeof(uint32) * ARRAYCOUNT(pushConstantData.InstanceOffsets),
           "Mesh push constant");
 
         graphicsCommandStream->CmdDraw(
