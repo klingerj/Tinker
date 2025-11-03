@@ -56,12 +56,12 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
         descriptors[1] = meshData->m_descriptor;
 
         // Push constants, e.g. important offsets for bindless resources
-        uint32 pushConstantData[NUM_INSTANCE_OFFSET_CONSTANTS];
-        pushConstantData[0] =
+        ShaderDescriptors::PushConstantData pushConstantData;
+        pushConstantData.InstanceOffsets[0] =
           instanceCount * sizeof(ShaderDescriptors::InstanceData_Basic)
           + scene->m_firstInstanceDataByteOffset;
         graphicsCommandStream->CmdPushConstant(
-          shaderID, &pushConstantData[0], sizeof(uint32) * ARRAYCOUNT(pushConstantData),
+          shaderID, &pushConstantData.InstanceOffsets[0], sizeof(uint32) * ARRAYCOUNT(pushConstantData.InstanceOffsets),
           "Mesh push constant");
 
         graphicsCommandStream->CmdDraw(

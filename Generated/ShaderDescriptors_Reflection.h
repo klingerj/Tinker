@@ -10,11 +10,7 @@ namespace ShaderDescriptors
 #define NUM_INSTANCE_OFFSET_CONSTANTS 1
 struct PushConstantData
 {
-    uint32 InstanceOffsets[4];
-    // [0] is offset into instance data uniform array
-    // [1] is offset into bindless constant buffer for globals
-    // [2] is unused 
-    // [3] unused
+  uint32 InstanceOffsets[NUM_INSTANCE_OFFSET_CONSTANTS];
 };
 
 struct AllGlobals
