@@ -61,7 +61,7 @@ namespace Tk
 
     protected:
       uint8* m_data;
-      size_t m_size; // NOTE: limited to 2^32.
+      size_t m_size;     // NOTE: limited to 2^32.
       size_t m_capacity; // NOTE: limited to 2^32.
       // TODO: even for 32-bit keys, simplify this so we don't have to do weird casting
       // down from size_t to uint32 for hashing and such.

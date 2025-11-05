@@ -18,15 +18,15 @@ namespace Tk
         MemTrackerStaticInitializer();
         ~MemTrackerStaticInitializer();
       };
-      // TODO: working this out, only initialize the mem tracker if
-      // building app. If/when they build together as single exe, this
-      // should still be safe because both TINKER_GAME and TINKER_APP
-      // will be defined.
-      // Probably also check if building game as dll or not.
-      #if defined(TINKER_APP)
-      static MemTrackerStaticInitializer g_memTrackerStaticInitializer;
-      #endif
 
+// TODO: working this out, only initialize the mem tracker if
+// building app. If/when they build together as single exe, this
+// should still be safe because both TINKER_GAME and TINKER_APP
+// will be defined.
+// Probably also check if building game as dll or not.
+#if defined(TINKER_APP)
+      static MemTrackerStaticInitializer g_memTrackerStaticInitializer;
+#endif
     } //namespace Utility
   } //namespace Core
 } //namespace Tk

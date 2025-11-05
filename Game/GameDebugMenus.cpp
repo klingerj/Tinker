@@ -1,9 +1,9 @@
 #include "GameDebugMenus.h"
-#include "Sorting.h"
-#include "Graphics/Common/GPUTimestamps.h"
-#include "Hashing.h"
 #include "DataStructures/HashMap.h"
 #include "DataStructures/Vector.h"
+#include "Graphics/Common/GPUTimestamps.h"
+#include "Hashing.h"
+#include "Sorting.h"
 #include "StringTypes.h"
 #include "ThirdParty/imgui-docking/imgui.h"
 
@@ -104,8 +104,7 @@ void Menu_RenderPassStats()
 
   if (mainMenu_SelectedRPTimings)
   {
-    if (ImGui::Begin("GPU Render Pass Timings", NULL,
-                     ImGuiWindowFlags_AlwaysAutoResize))
+    if (ImGui::Begin("GPU Render Pass Timings", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
       static bool shouldCopyToClip = false;
       static int displayFactorBtnIdx = 0;
@@ -132,11 +131,11 @@ void Menu_RenderPassStats()
       }
 
       ImGuiTableFlags_ tableFlags = (ImGuiTableFlags_)(ImGuiTableFlags_RowBg
-        | ImGuiTableFlags_SizingFixedSame
-        | ImGuiTableFlags_PadOuterX
-        | ImGuiTableFlags_Resizable
-        | ImGuiTableFlags_Sortable
-        | ImGuiTableFlags_SortTristate);
+                                                       | ImGuiTableFlags_SizingFixedSame
+                                                       | ImGuiTableFlags_PadOuterX
+                                                       | ImGuiTableFlags_Resizable
+                                                       | ImGuiTableFlags_Sortable
+                                                       | ImGuiTableFlags_SortTristate);
 
       const uint32 numCols = 5;
       if (ImGui::BeginTable("GPU Render Pass Timings Table", numCols, tableFlags))
@@ -197,7 +196,7 @@ void Menu_RenderPassStats()
             prevRunningAvg + ((currentSample - prevRunningAvg) / entry->numSamples);
           entry->runningTermQ =
             entry->runningTermQ
-          + (currentSample - prevRunningAvg) * (currentSample - entry->runningAvg);
+            + (currentSample - prevRunningAvg) * (currentSample - entry->runningAvg);
           float currStdDev = 0.0f;
           if (entry->numSamples > 1)
           {
@@ -239,7 +238,7 @@ void Menu_RenderPassStats()
                 case 4:
                 {
                   compareResult = entryA->timeData[tableSortSpecs->ColumnIndex - 1]
-                    < entryB->timeData[tableSortSpecs->ColumnIndex - 1];
+                                  < entryB->timeData[tableSortSpecs->ColumnIndex - 1];
                   break;
                 }
 
@@ -280,7 +279,7 @@ void Menu_RenderPassStats()
             csvOutput.Append(displayEntry.name);
             csvOutput.Append(delimiter);
             for (uint32 uiValue = 0; uiValue < DisplayTimestampEntry::DisplayCount;
-            ++uiValue)
+                 ++uiValue)
             {
               int result = sprintf_s(csvOutput.EndOfStrPtr(), csvOutput.LenRemaining(),
                                      "%.2f", displayEntry.timeData[uiValue]);
@@ -305,17 +304,17 @@ void Menu_RenderPassStats()
           ImGui::Text("%s", displayEntry.name);
           ImGui::TableNextColumn();
           ImGui::Text("%.3f", displayEntry.timeData[DisplayTimestampEntry::TimeCurr]
-                      * displayConversionFactor);
+                                * displayConversionFactor);
           ImGui::TableNextColumn();
           ImGui::Text("%.3f", displayEntry.timeData[DisplayTimestampEntry::TimeAvg]
-                      * displayConversionFactor);
+                                * displayConversionFactor);
           ImGui::TableNextColumn();
           ImGui::Text((const char*)u8"± %.2f",
                       displayEntry.timeData[DisplayTimestampEntry::StdDev]
-                      * displayConversionFactor);
+                        * displayConversionFactor);
           ImGui::TableNextColumn();
           ImGui::Text("%.3f", displayEntry.timeData[DisplayTimestampEntry::TimeMax]
-                      * displayConversionFactor);
+                                * displayConversionFactor);
         }
 
         ImGui::EndTable();
@@ -333,7 +332,7 @@ void Menu_MemoryAllocationTracker()
 {
   if (mainMenu_SelectedMemTracker)
   {
-    // TODO 
+    // TODO
   }
 }
 

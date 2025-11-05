@@ -78,7 +78,7 @@ INPUT_CALLBACK(GameCameraRotateVerticalCallback)
 INPUT_CALLBACK(HotloadAllShaders)
 {
   Core::Utility::LogMsg("Game", "Attempting to hotload shaders...\n",
-                            Core::Utility::LogSeverity::eInfo);
+                        Core::Utility::LogSeverity::eInfo);
 
   uint32 result = ShaderCompiler::ErrCode::NonShaderError;
 #ifdef VULKAN
@@ -89,14 +89,13 @@ INPUT_CALLBACK(HotloadAllShaders)
   if (result == ShaderCompiler::ErrCode::Success)
   {
     Graphics::ShaderManager::ReloadShaders();
-    Core::Utility::LogMsg("Game", "...Done.\n",
-                              Core::Utility::LogSeverity::eInfo);
+    Core::Utility::LogMsg("Game", "...Done.\n", Core::Utility::LogSeverity::eInfo);
   }
   else
   {
     // TODO: grab error message from shader compiler
     Core::Utility::LogMsg("Game", "Shader compilation failed.\n",
-                              Core::Utility::LogSeverity::eWarning);
+                          Core::Utility::LogSeverity::eWarning);
   }
 }
 
@@ -212,12 +211,10 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
   // Graphics init
   Graphics::CreateContext(g_windowHandles);
   Graphics::CreateSwapChain(g_windowHandles, windowWidth, windowHeight);
-  g_graphicsCommandStream =
-  {
-    .m_graphicsCommands =
-      static_cast<Graphics::GraphicsCommand*>(Core::CoreMallocAligned(
-        TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX * sizeof(Graphics::GraphicsCommand),
-        CACHE_LINE)),
+  g_graphicsCommandStream = {
+    .m_graphicsCommands = static_cast<Graphics::GraphicsCommand*>(Core::CoreMallocAligned(
+      TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX * sizeof(Graphics::GraphicsCommand),
+      CACHE_LINE)),
     .m_numCommands = 0,
     .m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX
   };
@@ -226,7 +223,7 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
   {
     TINKER_ASSERT(0);
     Core::Utility::LogMsg("Game", "Failed to init shader compiler!",
-                              Core::Utility::LogSeverity::eCritical);
+                          Core::Utility::LogSeverity::eCritical);
   }
   Graphics::ShaderManager::Startup();
   Graphics::ShaderManager::LoadAllShaderResources();
