@@ -61,9 +61,12 @@ namespace Tk
 
     protected:
       uint8* m_data;
-      uint32 m_size;
+      size_t m_size; // NOTE: limited to 2^32.
+      size_t m_capacity; // NOTE: limited to 2^32.
+      // TODO: even for 32-bit keys, simplify this so we don't have to do weird casting
+      // down from size_t to uint32 for hashing and such.
 
-      TINKER_API void Reserve(uint32 numEles, uint32 dataPairSize);
+      TINKER_API void Reserve(size_t numEles, size_t dataPairSize);
       TINKER_API void Clear(size_t dataPairSize);
       TINKER_API uint32 FindIndex(uint32 index, void* key, size_t dataPairSize,
                                   bool CompareKeysFunc(const void*, const void*),
@@ -120,12 +123,17 @@ namespace Tk
         return m_InvalidKey;
       }
 
-      uint32 Size() const
+      size_t Size() const
       {
         return m_size;
       }
 
-      void Reserve(uint32 numEles)
+      size_t Capacity() const
+      {
+        return m_capacity;
+      }
+
+      void Reserve(size_t numEles)
       {
         HashMapBase::Reserve(numEles, ePairSize);
       }
@@ -137,7 +145,7 @@ namespace Tk
 
       uint32 FindIndex(tKey key) const
       {
-        uint32 index = Hash(key, m_size);
+        uint32 index = Hash(key, static_cast<uint32>(m_capacity));
         return HashMapBase::FindIndex(index, &key, ePairSize, CompareKeys<tKey>,
                                       &m_InvalidKey);
       }
@@ -159,14 +167,14 @@ namespace Tk
 
       uint32 Insert(tKey key, tVal value)
       {
-        uint32 index = Hash(key, m_size);
+        uint32 index = Hash(key, static_cast<uint32>(m_capacity));
         return HashMapBase::Insert(index, &key, &value, CompareKeys<tKey>, ePairSize,
                                    ePairValOffset, ePairValSize, &m_InvalidKey);
       }
 
       void Remove(tKey key)
       {
-        uint32 index = Hash(key, m_size);
+        uint32 index = Hash(key, static_cast<uint32>(m_capacity));
         HashMapBase::Remove(index, &key, CompareKeys<tKey>, ePairSize, ePairValOffset,
                             ePairValSize, &m_InvalidKey);
       }

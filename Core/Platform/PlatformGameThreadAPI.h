@@ -95,7 +95,7 @@ namespace Tk
     WorkerJob* CreateNewThreadJob(T t)
     {
       uint8* NewJobMem =
-        (uint8*)Tk::Core::CoreMallocAligned(sizeof(JobFunc<T>), CACHE_LINE);
+        static_cast<uint8*>(Tk::Core::CoreMallocAligned(sizeof(JobFunc<T>), CACHE_LINE));
       JobFunc<T>* NewJob = new (NewJobMem) JobFunc<T>(t);
       NewJob->m_done = 0;
       return NewJob;

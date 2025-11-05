@@ -35,7 +35,7 @@ if "%BuildConfig%" NEQ "Debug" (
 set "EnableUnityBuild=0"
 
 :: Features
-:: set "EnableMemTracking=1"
+set "EnableMemTracking=1"
 
 pushd ..
 if NOT EXIST .\Build mkdir .\Build

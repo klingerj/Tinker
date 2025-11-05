@@ -12,23 +12,13 @@ namespace Tk
   {
     namespace Utility
     {
-      Tk::Core::LinearAllocator StackTraceEntryAllocator;
 
       struct MemRecord
       {
+        Tk::Platform::StackTraceEntry* firstStackTraceEntry = nullptr;
         uint64 memPtr = 0;
         uint64 sizeInBytes = 0;
         uint8 bWasDeallocated = 0;
-
-        Tk::Platform::StackTraceEntry* firstStackTraceEntry = nullptr;
-
-        MemRecord() {}
-
-        /*bool operator==(const MemRecord& other) const
-        {
-            // Only check if memptr is same
-            return (memPtr == other.memPtr);
-        }*/
       };
 
 #define MAX_ALLOCS_RECORDED 65'536
@@ -36,51 +26,67 @@ namespace Tk
       struct MemTracker
       {
         HashMap<uint64, MemRecord, MapHashFn64> m_AllocRecords;
-        uint8 bEnableAllocRecording = 0;
+        Tk::Core::LinearAllocator m_stackTraceEntryAllocator;
+        bool bEnableAllocRecording = false;
 
         MemTracker()
         {
-#ifdef ENABLE_MEM_TRACKING
           m_AllocRecords.Reserve(MAX_ALLOCS_RECORDED);
-          bEnableAllocRecording =
-            1; // prevents this first actual map allocation from being recorded
 
           // Have to manually allocate memory for the mem tracker since it'll call into
           // the mem tracking code before it's fully initted :)
           const uint32 allocatorSizeInBytes = 1024 * 1024 * 128;
-          void* stackTraceAllocation =
-            Tk::Platform::AllocAlignedRaw(allocatorSizeInBytes, CACHE_LINE);
-          StackTraceEntryAllocator.Init(
+          void* stackTraceAllocation = CoreMallocAligned(allocatorSizeInBytes, CACHE_LINE);
+          m_stackTraceEntryAllocator.Init(
             stackTraceAllocation,
             allocatorSizeInBytes); // TODO: use linked list of linear allocators ideally
-#endif
+
+          // Placing this after prevents allocations that this class owns from 
+          // being tracked, because it would try to record allocations into 
+          // the not-yet-allocated structure.
+          bEnableAllocRecording = true;
         }
 
         ~MemTracker()
         {
-#ifdef ENABLE_MEM_TRACKING
-          bEnableAllocRecording = 0;
+          bEnableAllocRecording = false;
           DebugOutputAllMemAllocs();
-          StackTraceEntryAllocator.ExplicitFree();
-#endif
+          m_stackTraceEntryAllocator.ExplicitFree();
         }
       };
 
-      static MemTracker g_MemTracker;
-
-      void RecordMemAlloc(uint64 sizeInBytes, void* memPtr)
+      alignas(MemTracker) static std::byte mem_tracker_buffer[sizeof(MemTracker)];
+      MemTracker& g_MemTracker = reinterpret_cast<MemTracker&>(mem_tracker_buffer);
+      static size_t niftyCounter = 0;
+      MemTrackerStaticInitializer::MemTrackerStaticInitializer()
       {
-        if (!g_MemTracker.bEnableAllocRecording)
+        if (niftyCounter++ == 0)
+        {
+          new (&g_MemTracker) MemTracker();
+        }
+      }
+
+      MemTrackerStaticInitializer::~MemTrackerStaticInitializer()
+      {
+        if (--niftyCounter == 0)
+        {
+          g_MemTracker.~MemTracker();
+        }
+      }
+
+      void RecordMemAlloc(size_t sizeInBytes, void* memPtr)
+      {
+        if (g_MemTracker.bEnableAllocRecording == false)
         {
           return;
         }
 
-        uint64 ptrAsU64 = (uint64)memPtr;
+        size_t ptrAsU64 = reinterpret_cast<size_t>(memPtr);
 
         // Grab stack trace of allocation
         Tk::Platform::StackTraceEntry* topOfStack = nullptr;
         uint32 error =
-          Tk::Platform::WalkStackTrace(&topOfStack, StackTraceEntryAllocator);
+          Tk::Platform::WalkStackTrace(&topOfStack, g_MemTracker.m_stackTraceEntryAllocator);
         if (error != 0)
         {
           TINKER_ASSERT("Failed to get stack trace in mem tracker!");
@@ -97,7 +103,7 @@ namespace Tk
 
       void RecordMemDealloc(void* memPtr)
       {
-        if (!g_MemTracker.bEnableAllocRecording || !memPtr)
+        if (g_MemTracker.bEnableAllocRecording == false || memPtr == nullptr)
         {
           return;
         }
@@ -167,21 +173,29 @@ namespace Tk
 
       void DebugOutputAllMemAllocs()
       {
-        // TODO: You can't really track deallocations perfectly due to destructor order
-        // not being guaranteed, but cool test
-
-        Platform::PrintDebugString(
-          "\n***** MEMTRACKER: Dumping all alloc records *****\n\n");
-        for (uint32 i = 0; i < g_MemTracker.m_AllocRecords.Size(); ++i)
+        const size_t numRecords = g_MemTracker.m_AllocRecords.Size();
+        if (numRecords > 0)
         {
-          uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(i);
+          Platform::PrintDebugString(
+            "\n***** MEMTRACKER: Dumping all alloc records *****\n\n");
+        }
+        else
+        {
+          Platform::PrintDebugString(
+            "\n***** MEMTRACKER: 0 alloc records. *****\n\n");
+        }
+
+        // Currently tries hashing every index to see if it has a valid key.
+        for (size_t i = 0; i < g_MemTracker.m_AllocRecords.Capacity(); ++i)
+        {
+          uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(static_cast<uint32>(i));
           if (key == g_MemTracker.m_AllocRecords.GetInvalidKey())
           {
             continue;
           }
 
-          const MemRecord& record = g_MemTracker.m_AllocRecords.DataAtIndex(i);
-          //if (!record.bWasDeallocated)
+          const MemRecord& record = g_MemTracker.m_AllocRecords.DataAtIndex(static_cast<uint32>(i));
+          if (!record.bWasDeallocated)
           {
             Platform::PrintDebugString("Allocation: ");
 
@@ -226,6 +240,7 @@ namespace Tk
               stackTrace = stackTrace->next;
             }
             Platform::PrintDebugString("\n");
+
           }
         }
         Platform::PrintDebugString("********************\n");

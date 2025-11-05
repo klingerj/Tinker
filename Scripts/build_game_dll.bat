@@ -63,9 +63,6 @@ del TinkerGame*.pdb > NUL 2> NUL
 :: Build settings
 set "EnableUnityBuild=0"
 
-:: Features
-:: set "EnableMemTracking=1"
-
 :: *********************************************************************************************************
 set CommonCompileFlags=/nologo /std:c++latest /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /arch:AVX2 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
@@ -130,9 +127,6 @@ if "%EnableUnityBuild%" == "1" (
 :: Defines 
 set CompileDefines=/DTINKER_GAME 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
-if "%EnableMemTracking%" == "1" (
-    set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
-)
 set CompileDefines=%CompileDefines% /D_ASSETS_DIR=..\\Assets\\ 
 set CompileDefines=%CompileDefines% /D_COOKED_ASSETS_DIR=..\\CookedAssets\\ 
 set CompileDefines=%CompileDefines% /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ 

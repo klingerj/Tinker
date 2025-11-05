@@ -5,6 +5,7 @@
 #include "Camera.h"
 #include "DataRepository.h"
 #include "DebugUI.h"
+#include "GameDebugMenus.h"
 #include "Generated/ShaderDescriptors_Reflection.h"
 #include "Graphics/Common/GPUTimestamps.h"
 #include "Graphics/Common/GraphicsCommon.h"
@@ -31,13 +32,12 @@ static bool connectedToServer = false;
 static uint32 currentWindowWidth = 0;
 static uint32 currentWindowHeight = 0;
 static bool isWindowMinimized;
-static Tk::Platform::WindowHandles* g_windowHandles = nullptr;
+static Platform::WindowHandles* g_windowHandles = nullptr;
 
 #define TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX MAX_UINT16
-Tk::Graphics::GraphicsCommandStream g_graphicsCommandStream;
-Tk::Graphics::CommandBuffer g_FrameCommandBuffer;
+Graphics::GraphicsCommandStream g_graphicsCommandStream;
+Graphics::CommandBuffer g_FrameCommandBuffer;
 
-// For now, this owns all RTs
 GameGraphicsData gameGraphicsData = {};
 
 static Camera g_gameCamera = {};
@@ -77,26 +77,26 @@ INPUT_CALLBACK(GameCameraRotateVerticalCallback)
 
 INPUT_CALLBACK(HotloadAllShaders)
 {
-  Tk::Core::Utility::LogMsg("Game", "Attempting to hotload shaders...\n",
-                            Tk::Core::Utility::LogSeverity::eInfo);
+  Core::Utility::LogMsg("Game", "Attempting to hotload shaders...\n",
+                            Core::Utility::LogSeverity::eInfo);
 
-  uint32 result = Tk::ShaderCompiler::ErrCode::NonShaderError;
+  uint32 result = ShaderCompiler::ErrCode::NonShaderError;
 #ifdef VULKAN
-  result = Tk::ShaderCompiler::CompileAllShadersVK();
+  result = ShaderCompiler::CompileAllShadersVK();
 #else
 #endif
 
-  if (result == Tk::ShaderCompiler::ErrCode::Success)
+  if (result == ShaderCompiler::ErrCode::Success)
   {
-    Tk::Graphics::ShaderManager::ReloadShaders();
-    Tk::Core::Utility::LogMsg("Game", "...Done.\n",
-                              Tk::Core::Utility::LogSeverity::eInfo);
+    Graphics::ShaderManager::ReloadShaders();
+    Core::Utility::LogMsg("Game", "...Done.\n",
+                              Core::Utility::LogSeverity::eInfo);
   }
   else
   {
     // TODO: grab error message from shader compiler
-    Tk::Core::Utility::LogMsg("Game", "Shader compilation failed.\n",
-                              Tk::Core::Utility::LogSeverity::eWarning);
+    Core::Utility::LogMsg("Game", "Shader compilation failed.\n",
+                              Core::Utility::LogSeverity::eWarning);
   }
 }
 
@@ -192,12 +192,12 @@ static void CreateGameRenderingResources(uint32 windowWidth, uint32 windowHeight
   };
   RenderGraph::Create(frameRenderParams);
 
-  g_FrameCommandBuffer = Tk::Graphics::CreateCommandBuffer();
+  g_FrameCommandBuffer = Graphics::CreateCommandBuffer();
 }
 
 INPUT_CALLBACK(ToggleImGuiDisplay)
 {
-  DebugUI::ToggleEnable();
+  ToggleEnable();
 }
 
 static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
@@ -207,27 +207,29 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
   currentWindowWidth = windowWidth;
   currentWindowHeight = windowHeight;
 
-  g_windowHandles = Tk::Platform::GetPlatformWindowHandles();
+  g_windowHandles = Platform::GetPlatformWindowHandles();
 
   // Graphics init
-  Tk::Graphics::CreateContext(g_windowHandles);
-  Tk::Graphics::CreateSwapChain(g_windowHandles, windowWidth, windowHeight);
-  g_graphicsCommandStream = {};
-  g_graphicsCommandStream.m_numCommands = 0;
-  g_graphicsCommandStream.m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX;
-  g_graphicsCommandStream.m_graphicsCommands =
-    (Tk::Graphics::GraphicsCommand*)Tk::Core::CoreMallocAligned(
-      g_graphicsCommandStream.m_maxCommands * sizeof(Tk::Graphics::GraphicsCommand),
-      CACHE_LINE);
+  Graphics::CreateContext(g_windowHandles);
+  Graphics::CreateSwapChain(g_windowHandles, windowWidth, windowHeight);
+  g_graphicsCommandStream =
+  {
+    .m_graphicsCommands =
+      static_cast<Graphics::GraphicsCommand*>(Core::CoreMallocAligned(
+        TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX * sizeof(Graphics::GraphicsCommand),
+        CACHE_LINE)),
+    .m_numCommands = 0,
+    .m_maxCommands = TINKER_PLATFORM_GRAPHICS_COMMAND_STREAM_MAX
+  };
 
-  if (Tk::ShaderCompiler::Init() != Tk::ShaderCompiler::ErrCode::Success)
+  if (ShaderCompiler::Init() != ShaderCompiler::ErrCode::Success)
   {
     TINKER_ASSERT(0);
-    Tk::Core::Utility::LogMsg("Game", "Failed to init shader compiler!",
-                              Tk::Core::Utility::LogSeverity::eCritical);
+    Core::Utility::LogMsg("Game", "Failed to init shader compiler!",
+                              Core::Utility::LogSeverity::eCritical);
   }
-  Tk::Graphics::ShaderManager::Startup();
-  Tk::Graphics::ShaderManager::LoadAllShaderResources();
+  Graphics::ShaderManager::Startup();
+  Graphics::ShaderManager::LoadAllShaderResources();
   g_InputManager.BindKeycodeCallback_KeyDown(
     Platform::Keycode::eF11, HotloadAllShaders); // Bind shader hotloading hotkey
 
@@ -349,7 +351,7 @@ extern "C" GAME_UPDATE(GameUpdate)
   }
 
   // Start frame
-  bool shouldRenderFrame = Tk::Graphics::AcquireFrame(g_windowHandles);
+  bool shouldRenderFrame = Graphics::AcquireFrame(g_windowHandles);
 
   if (!shouldRenderFrame)
   {
@@ -378,11 +380,6 @@ extern "C" GAME_UPDATE(GameUpdate)
 
   BindlessSystem::ResetFrame();
 
-  // Update Imgui menus
-  DebugUI::UI_MainMenu();
-  DebugUI::UI_PerformanceOverview();
-  DebugUI::UI_RenderPassStats();
-
   // Update view
   {
     MainView.m_viewMatrix = CameraViewMatrix(&g_gameCamera);
@@ -405,21 +402,25 @@ extern "C" GAME_UPDATE(GameUpdate)
     .swapChainHeight = currentWindowHeight,
   };
   UpdateGPUData(frameRenderParams);
+
+  // Update Imgui menus
+  UpdateAllDebugMenus();
+
   RecordFrameRenderCommands(frameRenderParams);
 
   // Process recorded graphics command stream
   {
     //TIMED_SCOPED_BLOCK("Graphics command stream processing");
 
-    Tk::Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream);
-    Tk::Graphics::SubmitFrameToGPU(g_windowHandles, g_FrameCommandBuffer);
-    Tk::Graphics::PresentToSwapChain(g_windowHandles);
+    Graphics::ProcessGraphicsCommandStream(&g_graphicsCommandStream);
+    Graphics::SubmitFrameToGPU(g_windowHandles, g_FrameCommandBuffer);
+    Graphics::PresentToSwapChain(g_windowHandles);
     g_graphicsCommandStream.Clear();
 
     // Debug UI - extra submissions
     DebugUI::RenderAndSubmitMultiViewports(&g_graphicsCommandStream);
 
-    Tk::Graphics::EndFrame();
+    Graphics::EndFrame();
   }
 
   if (isGameInitted && isMultiplayer && connectedToServer)
@@ -442,13 +443,13 @@ extern "C" GAME_WINDOW_RESIZE(GameWindowResize)
 {
   if (newWindowWidth == 0 && newWindowHeight == 0)
   {
-    Tk::Graphics::WindowMinimized(windowHandles);
+    Graphics::WindowMinimized(windowHandles);
     isWindowMinimized = true;
   }
   else
   {
     isWindowMinimized = false;
-    Tk::Graphics::WindowResize(windowHandles, newWindowWidth, newWindowHeight);
+    Graphics::WindowResize(windowHandles, newWindowWidth, newWindowHeight);
 
     currentWindowWidth = newWindowWidth;
     currentWindowHeight = newWindowHeight;
@@ -488,9 +489,9 @@ extern "C" GAME_DESTROY(GameDestroy)
     g_AssetManager.FreeMemory();
 
     // Shutdown graphics
-    Tk::Graphics::ShaderManager::Shutdown();
-    Tk::Graphics::DestroySwapChain(g_windowHandles);
-    Tk::Graphics::DestroyContext();
-    Tk::Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
+    Graphics::ShaderManager::Shutdown();
+    Graphics::DestroySwapChain(g_windowHandles);
+    Graphics::DestroyContext();
+    Core::CoreFreeAligned(g_graphicsCommandStream.m_graphicsCommands);
   }
 }
