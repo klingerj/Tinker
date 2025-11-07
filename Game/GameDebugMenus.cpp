@@ -344,8 +344,8 @@ void Menu_MemoryAllocationTracker()
         }
         if (ImGui::BeginTabItem("All"))
         {
-          const Core::Utility::AllocRecordMap&
-            allMemAllocRecords = Core::Utility::GetAllAllocRecords();
+          const Core::Utility::AllocRecordMap& allMemAllocRecords =
+            Core::Utility::GetAllAllocRecords();
           uint64 allocBytesTotal = 0;
           uint64 freedBytesTotal = 0;
 
@@ -386,7 +386,7 @@ void Menu_MemoryAllocationTracker()
             ImGui::Text("bytes\n");
           }
 
-          // Print entries 
+          // Print entries
           for (size_t i = 0; i < allMemAllocRecords.Capacity(); ++i)
           {
             const uint64 key = allMemAllocRecords.KeyAtIndex(static_cast<uint32>(i));
@@ -396,7 +396,7 @@ void Menu_MemoryAllocationTracker()
             }
             const Core::Utility::MemRecord& record =
               allMemAllocRecords.DataAtIndex(static_cast<uint32>(i));
-           
+
             char buffer[256];
             memset(buffer, 0, ARRAYCOUNT(buffer));
             _ui64toa_s(record.sizeInBytes, buffer, ARRAYCOUNT(buffer), 10);

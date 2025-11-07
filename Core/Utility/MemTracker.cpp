@@ -182,7 +182,8 @@ namespace Tk
         // Currently tries hashing every index to see if it has a valid key.
         for (size_t i = 0; i < g_MemTracker.m_AllocRecords.Capacity(); ++i)
         {
-          const uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(static_cast<uint32>(i));
+          const uint64 key =
+            g_MemTracker.m_AllocRecords.KeyAtIndex(static_cast<uint32>(i));
           if (key == g_MemTracker.m_AllocRecords.GetInvalidKey())
           {
             continue;
