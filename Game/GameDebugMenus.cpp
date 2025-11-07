@@ -6,6 +6,8 @@
 #include "Sorting.h"
 #include "StringTypes.h"
 #include "ThirdParty/imgui-docking/imgui.h"
+#include "Utility/MemTracker.h"
+#include <stdlib.h>
 
 using namespace Tk;
 using namespace Graphics;
@@ -332,7 +334,83 @@ void Menu_MemoryAllocationTracker()
 {
   if (mainMenu_SelectedMemTracker)
   {
-    // TODO
+    if (ImGui::Begin("Memory Allocation Overview"))
+    {
+      if (ImGui::BeginTabBar("MemAllocViewsTabBar"))
+      {
+        if (ImGui::BeginTabItem("Per-frame"))
+        {
+          ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("All"))
+        {
+          const Core::Utility::AllocRecordMap&
+            allMemAllocRecords = Core::Utility::GetAllAllocRecords();
+          uint64 allocBytesTotal = 0;
+          uint64 freedBytesTotal = 0;
+
+          // Collect summary stats
+          for (size_t i = 0; i < allMemAllocRecords.Capacity(); ++i)
+          {
+            const uint64 key = allMemAllocRecords.KeyAtIndex(static_cast<uint32>(i));
+            if (key == allMemAllocRecords.GetInvalidKey())
+            {
+              continue;
+            }
+            const Core::Utility::MemRecord& record =
+              allMemAllocRecords.DataAtIndex(static_cast<uint32>(i));
+
+            allocBytesTotal += record.sizeInBytes;
+            if (record.bWasDeallocated)
+            {
+              freedBytesTotal += record.sizeInBytes;
+            }
+          }
+          ImGui::Text("Summary");
+          ImGui::Text("Total bytes requested (malloc only): ");
+          {
+            char buffer[256];
+            memset(buffer, 0, ARRAYCOUNT(buffer));
+            _ui64toa_s(allocBytesTotal, buffer, ARRAYCOUNT(buffer), 10);
+            ImGui::Text(buffer);
+            ImGui::SameLine();
+            ImGui::Text("bytes\n");
+          }
+          ImGui::Text("Total bytes freed (malloc only): ");
+          {
+            char buffer[256];
+            memset(buffer, 0, ARRAYCOUNT(buffer));
+            _ui64toa_s(freedBytesTotal, buffer, ARRAYCOUNT(buffer), 10);
+            ImGui::Text(buffer);
+            ImGui::SameLine();
+            ImGui::Text("bytes\n");
+          }
+
+          // Print entries 
+          for (size_t i = 0; i < allMemAllocRecords.Capacity(); ++i)
+          {
+            const uint64 key = allMemAllocRecords.KeyAtIndex(static_cast<uint32>(i));
+            if (key == allMemAllocRecords.GetInvalidKey())
+            {
+              continue;
+            }
+            const Core::Utility::MemRecord& record =
+              allMemAllocRecords.DataAtIndex(static_cast<uint32>(i));
+           
+            char buffer[256];
+            memset(buffer, 0, ARRAYCOUNT(buffer));
+            _ui64toa_s(record.sizeInBytes, buffer, ARRAYCOUNT(buffer), 10);
+            ImGui::Text(buffer);
+            ImGui::SameLine();
+            ImGui::Text("bytes\n");
+          }
+
+          ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+      }
+    }
+    ImGui::End();
   }
 }
 

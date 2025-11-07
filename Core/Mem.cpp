@@ -1,6 +1,10 @@
 #include "Mem.h"
 #include "Platform/PlatformGameAPI.h"
 
+#ifdef ENABLE_MEM_TRACKING
+  #include "Utility/MemTracker.h"
+#endif
+
 namespace Tk
 {
   namespace Core

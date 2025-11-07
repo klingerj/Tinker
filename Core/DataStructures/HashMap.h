@@ -53,7 +53,7 @@ namespace Tk
     private:
       uint32 ProbeFunc(uint32 index) const
       {
-        return (index + 1) % m_size;
+        return (index + 1) % m_capacity;
       }
 
       TINKER_API void ClearEntry(uint32 dataIndex, size_t dataPairSize,

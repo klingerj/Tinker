@@ -1,9 +1,6 @@
 #include "Utility/MemTracker.h"
 #include "DataStructures/HashMap.h"
 #include "Platform/PlatformGameAPI.h"
-//#include "Allocators.h"
-//#include "StringTypes.h"
-
 #include <string.h>
 
 namespace Tk
@@ -12,19 +9,11 @@ namespace Tk
   {
     namespace Utility
     {
-      struct MemRecord
-      {
-        Tk::Platform::StackTraceEntry* firstStackTraceEntry = nullptr;
-        uint64 memPtr = 0;
-        uint64 sizeInBytes = 0;
-        uint8 bWasDeallocated = 0;
-      };
-
 #define MAX_ALLOCS_RECORDED 65'536
 
       struct MemTracker
       {
-        HashMap<uint64, MemRecord, MapHashFn64> m_AllocRecords;
+        AllocRecordMap m_AllocRecords;
         Tk::Core::LinearAllocator m_stackTraceEntryAllocator;
         bool bEnableAllocRecording = false;
 
@@ -73,6 +62,11 @@ namespace Tk
         {
           g_MemTracker.~MemTracker();
         }
+      }
+
+      const HashMap<uint64, MemRecord, MapHashFn64>& GetAllAllocRecords()
+      {
+        return g_MemTracker.m_AllocRecords;
       }
 
       void RecordMemAlloc(size_t sizeInBytes, void* memPtr)
@@ -188,7 +182,7 @@ namespace Tk
         // Currently tries hashing every index to see if it has a valid key.
         for (size_t i = 0; i < g_MemTracker.m_AllocRecords.Capacity(); ++i)
         {
-          uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(static_cast<uint32>(i));
+          const uint64 key = g_MemTracker.m_AllocRecords.KeyAtIndex(static_cast<uint32>(i));
           if (key == g_MemTracker.m_AllocRecords.GetInvalidKey())
           {
             continue;

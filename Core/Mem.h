@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreDefines.h"
-#include "Utility/MemTracker.h"
 
 namespace Tk
 {
