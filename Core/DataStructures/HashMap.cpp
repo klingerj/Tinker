@@ -11,14 +11,15 @@ namespace Tk
       CoreFree(m_data);
       m_data = nullptr;
       m_size = 0;
+      m_capacity = 0;
     }
 
-    TINKER_API void HashMapBase::Reserve(uint32 numEles, uint32 dataPairSize)
+    TINKER_API void HashMapBase::Reserve(size_t numEles, size_t dataPairSize)
     {
-      if (numEles > m_size)
+      if (numEles > m_capacity)
       {
-        const size_t BytesToAllocate = (size_t)numEles * (size_t)dataPairSize;
-        TINKER_ASSERT(BytesToAllocate <= (size_t)MAX_UINT32);
+        const size_t BytesToAllocate = static_cast<size_t>(numEles) * dataPairSize;
+        TINKER_ASSERT(BytesToAllocate <= static_cast<size_t>(MAX_UINT32));
         void* newData = CoreMalloc(BytesToAllocate);
 
         if (m_data && m_size > 0)
@@ -27,19 +28,20 @@ namespace Tk
           CoreFree(m_data); // free old data
         }
 
-        m_data = (uint8*)newData;
+        m_data = static_cast<uint8*>(newData);
 
         // Init all other elements to invalid
-        uint32 numRemainingEles = numEles - m_size;
+        size_t numRemainingEles = numEles - m_size;
         memset(m_data + m_size * dataPairSize, 0xFF, numRemainingEles * dataPairSize);
 
-        m_size = numEles;
+        m_capacity = numEles;
       }
     }
 
     TINKER_API void HashMapBase::Clear(size_t dataPairSize)
     {
       memset(m_data, eInvalidDataByte, m_size * dataPairSize);
+      m_size = 0;
     }
 
     TINKER_API void HashMapBase::ClearEntry(uint32 dataIndex, size_t dataPairSize,
@@ -81,13 +83,13 @@ namespace Tk
     TINKER_API void* HashMapBase::DataAtIndex(uint32 index, size_t dataPairSize,
                                               size_t dataValueOffset) const
     {
-      TINKER_ASSERT(index < m_size);
+      TINKER_ASSERT(index < m_capacity);
       return m_data + index * dataPairSize + dataValueOffset;
     }
 
     TINKER_API void* HashMapBase::KeyAtIndex(uint32 index, size_t dataPairSize) const
     {
-      TINKER_ASSERT(index < m_size);
+      TINKER_ASSERT(index < m_capacity);
       return m_data + index * dataPairSize;
     }
 
@@ -116,6 +118,7 @@ namespace Tk
             dataValueOffset); // write key - assumes that offset is the same as key size
           memcpy((uint8*)keyToInsertAt + dataValueOffset, value,
                  dataValueSize); // write value
+          ++m_size;
           return currIndex;
         }
         else
@@ -143,6 +146,7 @@ namespace Tk
       {
         void* data = DataAtIndex(dataIndex, dataPairSize, dataValueOffset);
         ClearEntry(dataIndex, dataPairSize, dataValueOffset);
+        --m_size;
       }
     }
   } //namespace Core

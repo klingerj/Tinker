@@ -35,7 +35,7 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
 * <code>SPIR-V-VM/</code> - virtual machine for evaluating SPIR-V shaders (WIP)
 * <code>Test/</code> - simple setup for running unit tests
 * <code>ThirdParty/</code> - external libraries
-  * <code>dxc_2022_07_18/</code> - DirectXCompiler release lib
+  * <code>dxc_2025_07_14/</code> - DirectXShaderCompiler 
   * <code>imgui-docking/</code> - Imgui lib, docking branch
   * <code>xxHash-0.8.2/</code> - xxHash fast string hashing
   * <code>constexpr-xxh3/</code> - compile-time string hashing (produces values identical xxHash)

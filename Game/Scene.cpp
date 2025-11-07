@@ -19,7 +19,7 @@ CMP_LT_FUNC(CompareLessThan_InstanceByAssetID)
   return ((Instance*)A)->m_assetID < ((Instance*)B)->m_assetID;
 }
 
-void Update(Scene* scene)
+void PrepareToRender(Scene* scene)
 {
   // Sort instances for batching of draw calls
   uint32 activeInstanceCounter = 0;
@@ -56,11 +56,16 @@ void Update(Scene* scene)
   const ShaderDescriptors::InstanceData_Basic* instanceData =
     (const ShaderDescriptors::InstanceData_Basic*)scene->m_instanceData_sorted.Data();
   const uint32 instanceDataSizeInBytes =
-    sizeof(ShaderDescriptors::InstanceData_Basic) * scene->m_instanceData_sorted.Size();
+    sizeof(ShaderDescriptors::InstanceData_Basic) * scene->m_numInstances;
   const uint32 instanceDataAlignInBytes = alignof(ShaderDescriptors::InstanceData_Basic);
   // Push every model matrix into the constant buffer
   scene->m_firstInstanceDataByteOffset = BindlessSystem::PushStructIntoConstantBuffer(
     instanceData, instanceDataSizeInBytes, instanceDataAlignInBytes);
+}
+
+void Update(Scene* scene)
+{
+  // TODO: something interesting :)
 }
 
 uint32 CreateInstance(Scene* scene, uint32 assetID)

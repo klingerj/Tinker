@@ -63,11 +63,8 @@ del TinkerGame*.pdb > NUL 2> NUL
 :: Build settings
 set "EnableUnityBuild=0"
 
-:: Features
-:: set "EnableMemTracking=1"
-
 :: *********************************************************************************************************
-set CommonCompileFlags=/nologo /std:c++20 /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
+set CommonCompileFlags=/nologo /std:c++latest /W4 /WX /wd4127 /wd4530 /wd4201 /wd4324 /wd4100 /wd4189 /arch:AVX2 /EHa- /GR- /Gm- /GS- /fp:fast /Zi /FS
 set CommonLinkFlags=/incremental:no /opt:ref /DEBUG
 
 if "%BuildConfig%" == "Debug" (
@@ -130,9 +127,6 @@ if "%EnableUnityBuild%" == "1" (
 :: Defines 
 set CompileDefines=/DTINKER_GAME 
 set CompileDefines=%CompileDefines% /DASSERTS_ENABLE=1 
-if "%EnableMemTracking%" == "1" (
-    set CompileDefines=%CompileDefines% /DENABLE_MEM_TRACKING 
-)
 set CompileDefines=%CompileDefines% /D_ASSETS_DIR=..\\Assets\\ 
 set CompileDefines=%CompileDefines% /D_COOKED_ASSETS_DIR=..\\CookedAssets\\ 
 set CompileDefines=%CompileDefines% /D_SHADERS_SPV_DIR=..\\Shaders\\spv\\ 
@@ -159,7 +153,7 @@ if "%BuildConfig%" == "Debug" (
     )
 
 set LibsToLink=TinkerApp.lib 
-set LibsToLink=%LibsToLink% %AbsolutePathPrefix%ThirdParty\dxc_2022_07_18\lib\x64\dxcompiler.lib 
+set LibsToLink=%LibsToLink% %AbsolutePathPrefix%ThirdParty\dxc_2025_07_14\lib\x64\dxcompiler.lib 
 if "%GraphicsAPI%" == "VK" (
     set CompileIncludePaths=!CompileIncludePaths! /I %VULKAN_SDK%/Include 
     set LibsToLink=!LibsToLink! %VULKAN_SDK%\Lib\vulkan-1.lib
@@ -209,8 +203,8 @@ echo Done linking.
 :: Copy needed dependency DLLs to exe directory
 echo.
 echo Copying required dlls dxcompiler.dll and dxil.dll to exe dir...
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxcompiler.dll
-copy ..\ThirdParty\dxc_2022_07_18\bin\x64\dxil.dll
+copy ..\ThirdParty\dxc_2025_07_14\bin\x64\dxcompiler.dll
+copy ..\ThirdParty\dxc_2025_07_14\bin\x64\dxil.dll
 echo Done.
 
 :: Delete unnecessary files

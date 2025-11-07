@@ -41,7 +41,7 @@
 				<WorkingDirectory>$(WorkspaceDirectory)\Build</WorkingDirectory>
 				<DebugCommand>$(Executable)</DebugCommand>
 				<DebuggerExe></DebuggerExe>
-				<DebugSln></DebugSln>
+				<DebugSln>$(WorkspaceDirectory)\TinkerApp.sln</DebugSln>
 				<Defines></Defines>
 				<ForceIncludes></ForceIncludes>
 				<PrioritiseFiles></PrioritiseFiles>

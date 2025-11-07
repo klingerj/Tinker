@@ -1,11 +1,13 @@
 #pragma once
 
+#include "Game/GraphicsTypes.h"
 #include "Graphics/Common/GraphicsCommon.h"
 
 struct GameRenderPass;
 #define RENDER_PASS_EXEC_FUNC(name)                                                      \
   void name(GameRenderPass* renderPass,                                                  \
-            Tk::Graphics::GraphicsCommandStream* graphicsCommandStream)
+            Tk::Graphics::GraphicsCommandStream* graphicsCommandStream,                  \
+            const FrameRenderParams& frameRenderParams)
 
 inline RENDER_PASS_EXEC_FUNC(RenderPassExecStub)
 {
@@ -14,32 +16,40 @@ inline RENDER_PASS_EXEC_FUNC(RenderPassExecStub)
 
 struct GameRenderPass
 {
+  Tk::Graphics::ResourceHandle inputResources[2]; // TODO: revisit :)
   Tk::Graphics::ResourceHandle colorRTs[MAX_MULTIPLE_RENDERTARGETS];
   Tk::Graphics::ResourceHandle depthRT;
+  Tk::Graphics::DescriptorGroup descriptorGroup;
   const char* debugLabel;
   uint32 numColorRTs;
-  uint32 renderWidth;
-  uint32 renderHeight;
+  uint32 numInputResources;
 
   typedef RENDER_PASS_EXEC_FUNC(RenderPassExecuteFunc);
   RenderPassExecuteFunc* ExecuteFn = RenderPassExecStub;
 
   void Init()
   {
-    numColorRTs = 0;
-    renderWidth = 0;
-    renderWidth = 0;
-    debugLabel = NULL;
-    depthRT = Tk::Graphics::DefaultResHandle_Invalid;
-    for (uint32 i = 0; i < ARRAYCOUNT(colorRTs); ++i)
+    for (auto& colorRT : colorRTs)
     {
-      colorRTs[i] = Tk::Graphics::DefaultResHandle_Invalid;
+      colorRT = Tk::Graphics::DefaultResHandle_Invalid;
     }
+
+    for (auto& inputResource : inputResources)
+    {
+      inputResource = Tk::Graphics::DefaultResHandle_Invalid;
+    }
+
+    descriptorGroup.Init();
+    depthRT = Tk::Graphics::DefaultResHandle_Invalid;
+    debugLabel = NULL;
+    numColorRTs = 0;
+    numInputResources = 0;
   }
 };
 
 void StartRenderPass(GameRenderPass* renderPass,
-                     Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
+                     Tk::Graphics::GraphicsCommandStream* graphicsCommandStream,
+                     uint32 renderWidth, uint32 renderHeight);
 void EndRenderPass(GameRenderPass* renderPass,
                    Tk::Graphics::GraphicsCommandStream* graphicsCommandStream);
 

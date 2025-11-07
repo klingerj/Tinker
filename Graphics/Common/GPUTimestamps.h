@@ -23,7 +23,7 @@ namespace Tk
 
       void RecordName(const char* timestampName);
       void* GetRawCPUSideTimestampBuffer();
-      uint32 GetMostRecentRecordedTimestampCount();
+      uint32 GetLastRecordedTimestampCount();
       void ProcessTimestamps();
 
       TimestampData GetTimestampData();

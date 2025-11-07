@@ -710,6 +710,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
   }
 
   g_GameCode.GameDestroy();
+  // This is not truly necessary, but at least prompts static deinitialization
+  // which is valuable for the memory allocation tracker.
+  FreeLibrary(g_GameCode.GameDll);
 
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
   ThreadPool::Shutdown();

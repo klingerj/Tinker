@@ -339,7 +339,30 @@ namespace Tk
 #define DefaultFramebufferHandle_Invalid FramebufferHandle()
 #define DefaultDescHandle_Invalid DescriptorHandle()
 
-    // List of resource handles in a descriptor set, convenience struct
+    // A single wrapper struct containing the any and all descriptor
+    // handles that will be bound for a draw call.
+    typedef struct descriptor_group
+    {
+      // TODO: replace with custom array impl
+      DescriptorHandle descriptors[MAX_DESCRIPTOR_SETS_PER_SHADER];
+
+      void Init()
+      {
+        for (auto& desc : descriptors)
+        {
+          desc = DefaultDescHandle_Invalid;
+        }
+      }
+
+      void SetDescAtIndex(size_t index, const DescriptorHandle& descHandle)
+      {
+        assert(index < ARRAYCOUNT(descriptors));
+        descriptors[index] = descHandle;
+      }
+
+    } DescriptorGroup;
+
+    // Wrapper struct for all resource handles in a single descriptor handle (VkDescSet).
     typedef struct descriptor_set_data_handles
     {
       ResourceHandle handles[MAX_BINDINGS_PER_SET];
@@ -410,6 +433,7 @@ namespace Tk
         eLayoutTransition,
         eClearImage,
         eCopy,
+        eGPUTimestampReadback,
         eGPUTimestamp,
         eDebugMarkerStart,
         eDebugMarkerEnd,
@@ -524,9 +548,9 @@ namespace Tk
         struct
         {
           const char* m_timestampNameStr;
-          bool m_timestampStartFrame;
         };
 
+        // GPU Timestamp readback
         // Debug marker start
         // Debug marker end
         // NOTE: no actual data required
@@ -593,7 +617,7 @@ namespace Tk
                sizeof(DescriptorHandle) * numDescriptors);
       }
 
-      void CmdPushConstant(uint32 shaderForLayout, const uint8* srcPushConstantData,
+      void CmdPushConstant(uint32 shaderForLayout, const void* srcPushConstantData,
                            uint32 numPushConstantBytes,
                            const char* dbgLabel = "PushConstant")
       {
@@ -707,14 +731,19 @@ namespace Tk
         command->m_sizeInBytes = sizeInBytes;
       }
 
-      void CmdTimestamp(const char* nameStr, const char* dbgLabel = "Timestamp",
-                        bool startFrame = false)
+      void CmdTimestampReadback(const char* dbgLabel = "TimestampReadback")
+      {
+        GraphicsCommand* command = GetNextCommand();
+        command->m_commandType = GraphicsCommand::eGPUTimestampReadback;
+        command->debugLabel = dbgLabel;
+      }
+
+      void CmdTimestamp(const char* nameStr, const char* dbgLabel = "Timestamp")
       {
         GraphicsCommand* command = GetNextCommand();
         command->m_commandType = GraphicsCommand::eGPUTimestamp;
         command->debugLabel = dbgLabel;
         command->m_timestampNameStr = nameStr;
-        command->m_timestampStartFrame = startFrame;
       }
 
       void CmdDebugMarkerStart(const char* dbgLabel = "DebugMarkerStart")

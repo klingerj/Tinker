@@ -31,7 +31,7 @@ namespace Tk
         return gpuTimestampCPUCopy;
       }
 
-      uint32 GetMostRecentRecordedTimestampCount()
+      uint32 GetLastRecordedTimestampCount()
       {
         return numGPUTimestampsRecorded[GetCurrentFrameInFlightIndex()];
       }
@@ -41,7 +41,7 @@ namespace Tk
         uint32 currentFrame = GetCurrentFrameInFlightIndex();
         uint32 numTimestamps = numGPUTimestampsRecorded[currentFrame];
 
-        if (numTimestamps < 1)
+        if (numTimestamps == 0)
         {
           return;
         }

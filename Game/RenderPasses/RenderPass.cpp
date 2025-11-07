@@ -8,16 +8,16 @@
 using namespace Tk;
 
 void StartRenderPass(GameRenderPass* renderPass,
-                     Graphics::GraphicsCommandStream* graphicsCommandStream)
+                     Graphics::GraphicsCommandStream* graphicsCommandStream,
+                     uint32 renderWidth, uint32 renderHeight)
 {
-  graphicsCommandStream->CmdRenderPassBegin(
-    renderPass->renderWidth, renderPass->renderHeight, renderPass->numColorRTs,
-    renderPass->colorRTs, renderPass->depthRT, renderPass->debugLabel);
-  graphicsCommandStream->CmdSetViewport(0.0f, 0.0f, (float)renderPass->renderWidth,
-                                        (float)renderPass->renderHeight, DEPTH_MIN,
+  graphicsCommandStream->CmdRenderPassBegin(renderWidth, renderHeight,
+                                            renderPass->numColorRTs, renderPass->colorRTs,
+                                            renderPass->depthRT, renderPass->debugLabel);
+  graphicsCommandStream->CmdSetViewport(0.0f, 0.0f, static_cast<float>(renderWidth),
+                                        static_cast<float>(renderHeight), DEPTH_MIN,
                                         DEPTH_MAX, "Set render pass viewport state");
-  graphicsCommandStream->CmdSetScissor(0, 0, renderPass->renderWidth,
-                                       renderPass->renderHeight,
+  graphicsCommandStream->CmdSetScissor(0, 0, renderWidth, renderHeight,
                                        "Set render pass scissor state");
 }
 
@@ -34,9 +34,6 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
 {
   // Track number of instances for proper indexing into uniform buffer of instance data
   uint32 instanceCount = 0;
-
-  // Push constants, e.g. important offsets for bindless resources
-  uint32 pushConstantData[4] = {};
 
   if (scene->m_numInstances > 0)
   {
@@ -58,13 +55,15 @@ void RecordRenderPassCommands(GameRenderPass* renderPass, View* view, Scene* sce
 
         descriptors[1] = meshData->m_descriptor;
 
-        pushConstantData[0] = 0; // global descriptor offset
-        pushConstantData[1] =
+        // Push constants, e.g. important offsets for bindless resources
+        ShaderDescriptors::PushConstantData pushConstantData;
+        pushConstantData.InstanceOffsets[0] =
           instanceCount * sizeof(ShaderDescriptors::InstanceData_Basic)
           + scene->m_firstInstanceDataByteOffset;
         graphicsCommandStream->CmdPushConstant(
-          shaderID, (uint8*)&pushConstantData,
-          sizeof(uint32) * ARRAYCOUNT(pushConstantData), "Mesh push constant");
+          shaderID, &pushConstantData.InstanceOffsets[0],
+          sizeof(uint32) * ARRAYCOUNT(pushConstantData.InstanceOffsets),
+          "Mesh push constant");
 
         graphicsCommandStream->CmdDraw(
           meshData->m_numIndices, currentNumInstances, 0, 0, shaderID, blendState,

@@ -36,6 +36,7 @@ struct Scene
 
 void Init(Scene* scene, uint32 maxInstances, InputManager* inputManager);
 void Update(Scene* scene);
+void PrepareToRender(Scene* scene);
 
 uint32 CreateInstance(Scene* scene, uint32 assetID);
 void DestroyInstance(Scene* scene, uint32 instanceID);

@@ -6,7 +6,7 @@ if "%1" == "help" (goto PrintHelp)
 goto StartScript
 
 :PrintHelp
-echo Usage: build_engine.bat ^<build_mode^> ^<graphics_api^>
+echo Usage: build_app_and_game_dll.bat ^<build_mode^> ^<graphics_api^>
 echo.
 echo build_mode:
 echo   Release
@@ -17,7 +17,7 @@ echo   VK (uses VULKAN_SDK environment variable)
 echo   D3D12
 echo.
 echo For example:
-echo build_app.bat Release VK
+echo build_app_and_game_dll.bat Release VK
 echo.
 goto EndScript
 
