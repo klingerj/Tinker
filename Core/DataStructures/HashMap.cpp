@@ -40,7 +40,7 @@ namespace Tk
 
     TINKER_API void HashMapBase::Clear(size_t dataPairSize)
     {
-      memset(m_data, eInvalidDataByte, m_size * dataPairSize);
+      memset(m_data, eInvalidDataByte, m_capacity * dataPairSize);
       m_size = 0;
     }
 
