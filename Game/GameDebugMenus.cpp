@@ -3,11 +3,13 @@
 #include "DataStructures/Vector.h"
 #include "Graphics/Common/GPUTimestamps.h"
 #include "Hashing.h"
+#include "Platform/PlatformGameAPI.h"
 #include "Sorting.h"
 #include "StringTypes.h"
 #include "ThirdParty/imgui-docking/imgui.h"
 #include "Utility/MemTracker.h"
 #include <stdlib.h>
+#include <vector>
 
 using namespace Tk;
 using namespace Graphics;
@@ -342,14 +344,28 @@ void Menu_MemoryAllocationTracker()
         {
           ImGui::EndTabItem();
         }
+
         if (ImGui::BeginTabItem("All"))
         {
+          // Pull out memory tracker data
           const Core::Utility::AllocRecordMap& allMemAllocRecords =
             Core::Utility::GetAllAllocRecords();
           uint64 allocBytesTotal = 0;
           uint64 freedBytesTotal = 0;
 
-          // Collect summary stats
+          struct DisplayMemRecordData
+          {
+            uint64 sizeInBytes;
+            Tk::Platform::StackTraceEntry* stackTraceEntry;
+          };
+
+          // NOTE! We only use std::vector here because by allocating with 
+          // a Tk::Core::Vector, it will record the allocation in the 
+          // mem tracker, which directly f's with this code.
+          static std::vector<DisplayMemRecordData> displayMemRecords;
+          displayMemRecords.clear();
+          displayMemRecords.reserve(static_cast<uint32>(allMemAllocRecords.Size()));
+
           for (size_t i = 0; i < allMemAllocRecords.Capacity(); ++i)
           {
             const uint64 key = allMemAllocRecords.KeyAtIndex(static_cast<uint32>(i));
@@ -365,7 +381,12 @@ void Menu_MemoryAllocationTracker()
             {
               freedBytesTotal += record.sizeInBytes;
             }
+
+            displayMemRecords.push_back(
+              { .sizeInBytes = record.sizeInBytes,
+                .stackTraceEntry = record.firstStackTraceEntry });
           }
+
           ImGui::Text("Summary");
           ImGui::Text("Total bytes requested (malloc only): ");
           {
@@ -374,7 +395,7 @@ void Menu_MemoryAllocationTracker()
             _ui64toa_s(allocBytesTotal, buffer, ARRAYCOUNT(buffer), 10);
             ImGui::Text(buffer);
             ImGui::SameLine();
-            ImGui::Text("bytes\n");
+            ImGui::Text(" bytes\n");
           }
           ImGui::Text("Total bytes freed (malloc only): ");
           {
@@ -383,28 +404,103 @@ void Menu_MemoryAllocationTracker()
             _ui64toa_s(freedBytesTotal, buffer, ARRAYCOUNT(buffer), 10);
             ImGui::Text(buffer);
             ImGui::SameLine();
-            ImGui::Text("bytes\n");
+            ImGui::Text(" freed\n");
           }
 
-          // Print entries
-          for (size_t i = 0; i < allMemAllocRecords.Capacity(); ++i)
+          ImGuiTableFlags_ tableFlags =
+            (ImGuiTableFlags_)(ImGuiTableFlags_RowBg
+                               | ImGuiTableFlags_SizingFixedSame
+                               | ImGuiTableFlags_PadOuterX
+                               | ImGuiTableFlags_Resizable
+                               | ImGuiTableFlags_Sortable
+                               | ImGuiTableFlags_SortTristate);
+
+          const uint32 numCols = 2;
+          if (ImGui::BeginTable("Memory Allocation Table", numCols, tableFlags))
           {
-            const uint64 key = allMemAllocRecords.KeyAtIndex(static_cast<uint32>(i));
-            if (key == allMemAllocRecords.GetInvalidKey())
+            ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
+            ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.2f, 0.2f, 0.2f, 0.2f));
+            ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 1.0f, 0.5f));
+
+            const char* headerStrings[numCols] = {
+              "Bytes",
+              "Stack Trace",
+            };
+
+            // Column headers
+            ImGui::TableSetupColumn(headerStrings[0],
+                                    ImGuiTableColumnFlags_DefaultSort
+                                      | ImGuiTableColumnFlags_PreferSortDescending);
+            ImGui::TableSetupColumn(headerStrings[1], ImGuiTableColumnFlags_NoSort);
+            // TODO: actually sort by the string column. And then sort by size.
+            // TODO: And then also sort by deallocated or not.
+            // and need to set up the UI button to offset the stack trace.
+            ImGui::TableHeadersRow();
+
+            ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
+            if (sortSpecs->SpecsCount)
             {
-              continue;
+              const ImGuiTableColumnSortSpecs* tableSortSpecs = sortSpecs->Specs;
+
+              // TODO: This allocates, need to provide a temporary allocator.
+              // Could put it inside the MergeSort call and set it up to be per-thread
+              // later.
+              Core::MergeSort(
+                displayMemRecords.data(), static_cast<uint32>(displayMemRecords.size()),
+                [=](const void* A, const void* B)
+                {
+                  const DisplayMemRecordData* entryA = (DisplayMemRecordData*)A;
+                  const DisplayMemRecordData* entryB = (DisplayMemRecordData*)B;
+
+                  bool compareResult = 0;
+                  switch (tableSortSpecs->ColumnIndex)
+                  {
+                    case 0:
+                    {
+                      compareResult = entryA->sizeInBytes < entryB->sizeInBytes;
+                      break;
+                    }
+
+                    default:
+                    {
+                      break;
+                    }
+                  }
+
+                  if (tableSortSpecs->SortDirection == ImGuiSortDirection_Descending)
+                  {
+                    compareResult = !compareResult;
+                  }
+
+                  return compareResult;
+                });
             }
-            const Core::Utility::MemRecord& record =
-              allMemAllocRecords.DataAtIndex(static_cast<uint32>(i));
 
-            char buffer[256];
-            memset(buffer, 0, ARRAYCOUNT(buffer));
-            _ui64toa_s(record.sizeInBytes, buffer, ARRAYCOUNT(buffer), 10);
-            ImGui::Text(buffer);
-            ImGui::SameLine();
-            ImGui::Text("bytes\n");
+            for (const DisplayMemRecordData& displayMemRecord : displayMemRecords)
+            {
+              int numJumps = 4;
+              Tk::Platform::StackTraceEntry* stackTraceEntry =
+                displayMemRecord.stackTraceEntry;
+              while (numJumps-- && stackTraceEntry->next)
+              {
+                stackTraceEntry = stackTraceEntry->next;
+              }
+
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              ImGui::Text("%u", displayMemRecord.sizeInBytes);
+              ImGui::TableNextColumn();
+              ImGui::Text("%s:%d", stackTraceEntry->functionName.Data(),
+                          stackTraceEntry->lineNum);
+            }
+
+            ImGui::EndTable();
+            ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
+            ImGui::PopStyleColor();
           }
-
           ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
