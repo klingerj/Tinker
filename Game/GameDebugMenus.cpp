@@ -359,8 +359,8 @@ void Menu_MemoryAllocationTracker()
             Tk::Platform::StackTraceEntry* stackTraceEntry;
           };
 
-          // NOTE! We only use std::vector here because by allocating with 
-          // a Tk::Core::Vector, it will record the allocation in the 
+          // NOTE! We only use std::vector here because by allocating with
+          // a Tk::Core::Vector, it will record the allocation in the
           // mem tracker, which directly f's with this code.
           static std::vector<DisplayMemRecordData> displayMemRecords;
           displayMemRecords.clear();
