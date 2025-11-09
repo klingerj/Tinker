@@ -1,5 +1,6 @@
 #include "Win32WorkerThreadPool.h"
 #include "PlatformGameAPI.h"
+#include <atomic>
 #include <emmintrin.h>
 #include <process.h>
 #include <windows.h>
@@ -18,7 +19,6 @@ namespace Tk
       {
         alignas(CACHE_LINE) volatile uint32 terminate = 0;
         volatile bool didTerminate = 1;
-        uint32 threadId = 0;
         alignas(CACHE_LINE) uint64 semaphoreHandle = TINKER_INVALID_HANDLE;
         alignas(CACHE_LINE) Core::RingBuffer<WorkerJob*> jobs;
       } ThreadInfo;
@@ -27,10 +27,8 @@ namespace Tk
       static volatile uint32 g_NumThreads = 0;
       static volatile uint32 g_SchedulerCounter = 0;
 
-      uint32 NumWorkerThreads()
-      {
-        return g_NumThreads;
-      }
+      std::atomic_int g_threadIDCtr = 0;
+      static thread_local volatile uint32 s_threadID = g_threadIDCtr++;
 
       void __cdecl WorkerThreadFunction(void* arg)
       {
@@ -75,7 +73,6 @@ namespace Tk
           g_Threads[i].jobs.Init(NUM_JOBS_PER_WORKER);
           g_Threads[i].terminate = 0;
           g_Threads[i].didTerminate = 0;
-          g_Threads[i].threadId = i;
           g_Threads[i].semaphoreHandle = (uint64)CreateSemaphoreEx(
             0, 0, NUM_JOBS_PER_WORKER, 0, 0, SEMAPHORE_ALL_ACCESS);
           _beginthread(WorkerThreadFunction, WORKER_THREAD_STACK_SIZE, &g_Threads[i]);
@@ -94,7 +91,8 @@ namespace Tk
         for (uint32 i = 0; i < g_NumThreads; ++i)
         {
           while (!g_Threads[i].didTerminate)
-            ;
+          {
+          }
         }
 
         // Free the job buffers
@@ -128,5 +126,15 @@ namespace Tk
         }
       }
     } //namespace ThreadPool
+
+    uint32 GetCurrThreadID()
+    {
+      return ThreadPool::s_threadID;
+    }
+
+    uint32 NumWorkerThreads()
+    {
+      return ThreadPool::g_NumThreads;
+    }
   } //namespace Platform
 } //namespace Tk

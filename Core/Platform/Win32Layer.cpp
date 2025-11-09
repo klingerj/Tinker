@@ -178,7 +178,7 @@ namespace Tk
     {
 #ifdef TINKER_PLATFORM_ENABLE_MULTITHREAD
       uint32 NumJobs = JobList->m_numJobs;
-      uint32 NumThreads = ThreadPool::NumWorkerThreads() + 1;
+      uint32 NumThreads = NumWorkerThreads() + 1;
       uint32 NumJobsPerThread = NumJobs / NumThreads;
       uint32 NumJobsLeftover = NumJobs % NumThreads;
 

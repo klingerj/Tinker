@@ -84,10 +84,15 @@ T RoundValueToPow2(T val, T pow2)
 
 #define FLOAT_EQUAL(a, b) fabs(a - b) < FLT_EPSILON
 
+inline size_t Mebibytes(uint32 unitAmount)
+{
+  return unitAmount * 1024 * 1024;
+}
+
 inline uint32 SafeTruncateUint64(uint64 value)
 {
   TINKER_ASSERT(value <= 0xff'ff'ff'ff);
-  return (uint32)value;
+  return static_cast<uint32>(value);
 }
 
 #define ARRAYCOUNT(arr) (sizeof((arr)) / sizeof((arr)[0]))

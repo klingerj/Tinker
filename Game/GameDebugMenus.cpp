@@ -217,9 +217,9 @@ void Menu_RenderPassStats()
         }
 
         ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
-        if (sortSpecs->SpecsCount)
+        if (sortSpecs->SpecsCount > 0)
         {
-          const ImGuiTableColumnSortSpecs* tableSortSpecs = sortSpecs->Specs;
+          const ImGuiTableColumnSortSpecs& tableSortSpecs = sortSpecs->Specs[0];
 
           Core::MergeSort(
             (DisplayTimestampEntry*)entryDisplayList.Data(), entryDisplayList.Size(),
@@ -229,7 +229,7 @@ void Menu_RenderPassStats()
               const DisplayTimestampEntry* entryB = (DisplayTimestampEntry*)B;
 
               bool compareResult = 0;
-              switch (tableSortSpecs->ColumnIndex)
+              switch (tableSortSpecs.ColumnIndex)
               {
                 case 0:
                 {
@@ -241,8 +241,8 @@ void Menu_RenderPassStats()
                 case 3:
                 case 4:
                 {
-                  compareResult = entryA->timeData[tableSortSpecs->ColumnIndex - 1]
-                                  < entryB->timeData[tableSortSpecs->ColumnIndex - 1];
+                  compareResult = entryA->timeData[tableSortSpecs.ColumnIndex - 1]
+                                  < entryB->timeData[tableSortSpecs.ColumnIndex - 1];
                   break;
                 }
 
@@ -252,7 +252,7 @@ void Menu_RenderPassStats()
                 }
               }
 
-              if (tableSortSpecs->SortDirection == ImGuiSortDirection_Descending)
+              if (tableSortSpecs.SortDirection == ImGuiSortDirection_Descending)
               {
                 compareResult = !compareResult;
               }
@@ -357,6 +357,7 @@ void Menu_MemoryAllocationTracker()
           {
             uint64 sizeInBytes;
             Tk::Platform::StackTraceEntry* stackTraceEntry;
+            uint8 bWasDeallocated;
           };
 
           // NOTE! We only use std::vector here because by allocating with
@@ -382,9 +383,9 @@ void Menu_MemoryAllocationTracker()
               freedBytesTotal += record.sizeInBytes;
             }
 
-            displayMemRecords.push_back(
-              { .sizeInBytes = record.sizeInBytes,
-                .stackTraceEntry = record.firstStackTraceEntry });
+            displayMemRecords.push_back({ .sizeInBytes = record.sizeInBytes,
+                                          .stackTraceEntry = record.firstStackTraceEntry,
+                                          .bWasDeallocated = record.bWasDeallocated });
           }
 
           ImGui::Text("Summary");
@@ -407,6 +408,28 @@ void Menu_MemoryAllocationTracker()
             ImGui::Text(" freed\n");
           }
 
+          static int numStackTracePops = 4;
+          if (ImGui::InputInt("Pop Stack Trace Num", &numStackTracePops))
+          {
+          }
+
+          auto GetPartiallyPoppedStackTrace =
+            [=](Tk::Platform::StackTraceEntry* stackTraceEntry)
+          {
+            if (numStackTracePops < 0)
+            {
+              return stackTraceEntry;
+            }
+
+            Tk::Platform::StackTraceEntry* stackTraceEntryModified = stackTraceEntry;
+            int numPops = numStackTracePops;
+            while (numPops-- && stackTraceEntryModified->next)
+            {
+              stackTraceEntryModified = stackTraceEntryModified->next;
+            }
+            return stackTraceEntryModified;
+          };
+
           ImGuiTableFlags_ tableFlags =
             (ImGuiTableFlags_)(ImGuiTableFlags_RowBg
                                | ImGuiTableFlags_SizingFixedSame
@@ -421,7 +444,6 @@ void Menu_MemoryAllocationTracker()
             ImGui::PushStyleColor(ImGuiCol_TableHeaderBg, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
             ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImVec4(0.2f, 0.2f, 0.2f, 0.2f));
             ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, ImVec4(0.4f, 0.3f, 0.0f, 0.2f));
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 1.0f, 0.5f));
 
             const char* headerStrings[numCols] = {
               "Bytes",
@@ -433,19 +455,11 @@ void Menu_MemoryAllocationTracker()
                                     ImGuiTableColumnFlags_DefaultSort
                                       | ImGuiTableColumnFlags_PreferSortDescending);
             ImGui::TableSetupColumn(headerStrings[1], ImGuiTableColumnFlags_NoSort);
-            // TODO: actually sort by the string column. And then sort by size.
-            // TODO: And then also sort by deallocated or not.
-            // and need to set up the UI button to offset the stack trace.
             ImGui::TableHeadersRow();
 
             ImGuiTableSortSpecs* sortSpecs = ImGui::TableGetSortSpecs();
-            if (sortSpecs->SpecsCount)
+            if (/*sortSpecs->SpecsDirty && */ sortSpecs->SpecsCount > 0)
             {
-              const ImGuiTableColumnSortSpecs* tableSortSpecs = sortSpecs->Specs;
-
-              // TODO: This allocates, need to provide a temporary allocator.
-              // Could put it inside the MergeSort call and set it up to be per-thread
-              // later.
               Core::MergeSort(
                 displayMemRecords.data(), static_cast<uint32>(displayMemRecords.size()),
                 [=](const void* A, const void* B)
@@ -454,11 +468,40 @@ void Menu_MemoryAllocationTracker()
                   const DisplayMemRecordData* entryB = (DisplayMemRecordData*)B;
 
                   bool compareResult = 0;
-                  switch (tableSortSpecs->ColumnIndex)
+
+                  const ImGuiTableColumnSortSpecs& tableSortSpecs = sortSpecs->Specs[0];
+                  switch (tableSortSpecs.ColumnIndex)
                   {
                     case 0:
                     {
-                      compareResult = entryA->sizeInBytes < entryB->sizeInBytes;
+                      // Sort first by whether or not an allocation was deallocated or
+                      // not. Then, by size. Then, by displayed string data (function
+                      // name).
+                      compareResult = entryA->bWasDeallocated < entryB->bWasDeallocated;
+
+                      if (entryA->bWasDeallocated == entryB->bWasDeallocated)
+                      {
+                        compareResult = entryA->sizeInBytes < entryB->sizeInBytes;
+                        if (entryA->sizeInBytes == entryB->sizeInBytes)
+                        {
+                          Tk::Platform::StackTraceEntry* stackTraceEntryA =
+                            GetPartiallyPoppedStackTrace(entryA->stackTraceEntry);
+                          Tk::Platform::StackTraceEntry* stackTraceEntryB =
+                            GetPartiallyPoppedStackTrace(entryB->stackTraceEntry);
+                          compareResult = strcmp(stackTraceEntryA->functionName.Data(),
+                                                 stackTraceEntryB->functionName.Data())
+                                              < 0
+                                            ? 1
+                                            : 0;
+                        }
+
+                        // NOTE: don't want to reverse if the deallocated flag is not
+                        // equal.
+                        if (tableSortSpecs.SortDirection == ImGuiSortDirection_Descending)
+                        {
+                          compareResult = !compareResult;
+                        }
+                      }
                       break;
                     }
 
@@ -468,23 +511,24 @@ void Menu_MemoryAllocationTracker()
                     }
                   }
 
-                  if (tableSortSpecs->SortDirection == ImGuiSortDirection_Descending)
-                  {
-                    compareResult = !compareResult;
-                  }
-
                   return compareResult;
                 });
+              //sortSpecs->SpecsDirty = false;
             }
 
+            // Push default text color
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 0.9f));
             for (const DisplayMemRecordData& displayMemRecord : displayMemRecords)
             {
               int numJumps = 4;
               Tk::Platform::StackTraceEntry* stackTraceEntry =
-                displayMemRecord.stackTraceEntry;
-              while (numJumps-- && stackTraceEntry->next)
+                GetPartiallyPoppedStackTrace(displayMemRecord.stackTraceEntry);
+
+              // This shouldn't cause excessive pushing and popping because
+              // the records are sorted by this deallocation bool.
+              if (displayMemRecord.bWasDeallocated)
               {
-                stackTraceEntry = stackTraceEntry->next;
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0f, 0.5f));
               }
 
               ImGui::TableNextRow();
@@ -493,6 +537,11 @@ void Menu_MemoryAllocationTracker()
               ImGui::TableNextColumn();
               ImGui::Text("%s:%d", stackTraceEntry->functionName.Data(),
                           stackTraceEntry->lineNum);
+
+              if (displayMemRecord.bWasDeallocated)
+              {
+                ImGui::PopStyleColor();
+              }
             }
 
             ImGui::EndTable();

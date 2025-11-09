@@ -2,6 +2,7 @@
 
 #include "CoreDefines.h"
 #include "Mem.h"
+#include "Platform/PlatformGameThreadAPI.h"
 #include <string.h>
 
 namespace Tk
@@ -80,11 +81,11 @@ namespace Tk
     void MergeSort(T* data, uint32 numEles, CmpFunc Compare)
     {
       const uint32 eleSize = sizeof(T);
-      // TODO: remove this temp alloc
-      uint8* tmpList = (uint8*)CoreMalloc(numEles * eleSize);
+      uint8* tmpList = GetThreadTempAllocator().Alloc(
+        numEles * eleSize, CACHE_LINE); //(uint8*)CoreMalloc(numEles * eleSize);
       memcpy(tmpList, data, numEles * eleSize);
       MergeSortRecursive((uint8*)data, numEles, eleSize, Compare, tmpList);
-      Tk::Core::CoreFree(tmpList);
+      GetThreadTempAllocator().Free();
     }
   } //namespace Core
 } //namespace Tk

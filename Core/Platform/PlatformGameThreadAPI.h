@@ -39,7 +39,8 @@ namespace Tk
     inline void WaitOnJob(WorkerJob* job)
     {
       while (!job->m_done)
-        ;
+      {
+      }
     }
 
     struct WorkerJobList
@@ -53,7 +54,7 @@ namespace Tk
       {
       }
 
-      ~WorkerJobList() {}
+      ~WorkerJobList() = default;
 
       void Init(uint32 numJobs)
       {
@@ -107,5 +108,8 @@ namespace Tk
 #define ENQUEUE_WORKER_THREAD_JOB_LIST(name) TINKER_API void name(WorkerJobList* JobList)
     ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Unassisted);
     ENQUEUE_WORKER_THREAD_JOB_LIST(EnqueueWorkerThreadJobList_Assisted);
+
+    TINKER_API uint32 NumWorkerThreads();
+    TINKER_API uint32 GetCurrThreadID();
   } //namespace Platform
 } //namespace Tk

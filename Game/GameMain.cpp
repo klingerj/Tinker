@@ -208,6 +208,10 @@ static uint32 GameInit(uint32 windowWidth, uint32 windowHeight)
 
   g_windowHandles = Platform::GetPlatformWindowHandles();
 
+  // Necessary allocators
+  Core::InitPerThreadAllocators(Platform::NumWorkerThreads()
+                                + 1); // + 1 for this main thread
+
   // Graphics init
   Graphics::CreateContext(g_windowHandles);
   Graphics::CreateSwapChain(g_windowHandles, windowWidth, windowHeight);

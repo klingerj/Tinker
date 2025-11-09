@@ -57,7 +57,7 @@ namespace Tk
       if (m_size == m_capacity)
       {
         // Alloc new data
-        uint32 newCapacity = m_capacity + 1;
+        uint32 newCapacity = m_capacity * 2;
         void* newData = CoreMalloc(newCapacity * eleSize);
         memcpy(newData, m_data, m_capacity * eleSize);
         m_capacity = newCapacity;
@@ -71,6 +71,14 @@ namespace Tk
       {
         memcpy(m_data + m_size * eleSize, data, eleSize);
         ++m_size;
+      }
+    }
+
+    void VectorBase::PopBack()
+    {
+      if (m_size > 0)
+      {
+        --m_size;
       }
     }
 

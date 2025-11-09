@@ -12,8 +12,6 @@ namespace Tk
       void EnqueueSingleJob(WorkerJob* Job);
       void EnqueueJobList(WorkerJobList* JobList);
       void EnqueueJobSubList(WorkerJobList* JobList, uint32 NumJobs);
-
-      uint32 NumWorkerThreads();
     } //namespace ThreadPool
   } //namespace Platform
 } //namespace Tk

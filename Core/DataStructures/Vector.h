@@ -28,6 +28,7 @@ namespace Tk
       TINKER_API void Resize(uint32 numEles, uint32 eleSize);
       TINKER_API void Clear();
       TINKER_API void PushBackRaw(void* data, uint32 eleSize);
+      TINKER_API void PopBack();
       TINKER_API uint32 Find(void* data, uint32 eleSize, CompareFunc Compare) const;
     };
 
@@ -77,6 +78,11 @@ namespace Tk
       void PushBackRaw(const T& data)
       {
         VectorBase::PushBackRaw((void*)&data, sizeof(T));
+      }
+
+      void PopBack()
+      {
+        VectorBase::PopBack();
       }
 
       static CMP_FUNC(DefaultEqualsCompare)
