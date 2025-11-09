@@ -28,6 +28,8 @@
                     <ArrayItems>
                     <Size>m_size</Size>
                     <ValuePointer>(Tk::Core::HashMap&lt;$T1,$T2,$T3&gt;::Pair*)m_data</ValuePointer>
+						<Size>m_capacity</Size>
+						<ValuePointer>(Tk::Core::HashMap&lt;$T1,$T2,$T3&gt;::Pair*)m_capacity</ValuePointer>
                     </ArrayItems>
                 </Expand>
             </Synthetic>
