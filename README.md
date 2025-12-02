@@ -68,7 +68,8 @@ My second game engine project. Made with things learned from Handmade Hero, cowo
   * Custom memory allocators
   * Compile-time as well as run-time evaluated string hashes
 * Memory allocation tracking
-  * Tracks entire stack trace 
+  * Tracks entire stack trace
+  * Imgui menu visual 
 * Simple linear algebra library
   * SIMD matrix multiply 
 * Game asset file loading
